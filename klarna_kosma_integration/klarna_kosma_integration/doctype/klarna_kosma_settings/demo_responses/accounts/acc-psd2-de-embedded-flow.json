@@ -1,0 +1,83 @@
+{
+	"data": {
+		"result": {
+			"accounts": [
+				{
+					"id": "0",
+					"alias": "Girokonto",
+					"account_number": "23456789",
+					"iban": "AT850000000023456789",
+					"holder_name": "Max Mustermann",
+					"bic": "TESTAT20XXX",
+					"transfer_type": "FULL",
+					"account_type": "DEFAULT",
+					"capabilities": {
+						"account_details": {
+							"available": true
+						},
+						"transactions": {
+							"available": true
+						},
+						"balances": {
+							"available": true
+						},
+						"transfer": {
+							"available": true
+						}
+					}
+				},
+				{
+					"id": "1",
+					"alias": "Girokonto",
+					"account_number": "2345678902",
+					"iban": "AT610000000345678902",
+					"holder_name":"Musterman, Petra",
+					"bic": "TESTAT20XXX",
+					"transfer_type": "FULL",
+					"account_type": "DEFAULT",
+					"capabilities": {
+						"account_details": {
+							"available": true
+						},
+						"transactions": {
+							"available": true
+						},
+						"balances": {
+							"available": true
+						},
+						"transfer": {
+							"available": true
+						}
+					}
+				},
+				{
+					"id": "2",
+					"alias": "Girokonto",
+					"account_number": "12345678",
+					"iban": "AT340000000012345678",
+					"holder_name": "Warnecke Hans-Gerd",
+					"bic": "TESTAT20XXX",
+					"transfer_type": "FULL",
+					"account_type": "DEFAULT",
+					"capabilities": {
+						"account_details": {
+							"available": true
+						},
+						"transactions": {
+							"available": true
+						},
+						"balances": {
+							"available": true
+						},
+						"transfer": {
+							"available": true
+						}
+					}
+				}
+			],
+			"type": "accounts"
+		},
+		"client_token": "<TOKEN>",
+		"state": "FINISHED"
+	}
+}

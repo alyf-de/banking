@@ -1,0 +1,23 @@
+
+// Response value structure with all possible keys
+{
+	"id": ?String,
+	"alias": ?String,
+	"account_number": ?String,
+	"iban": ?String,
+	"holder_name": ?String,
+	"holder_address": ?AddressData,
+	"bank_code": ?String,
+	"bic": ?String,
+	"national_branch_code": ?String,
+	"bank_name": ?String,
+	"bank_address": ?AddressData,
+	"transfer_type": ?Enum<'NONE', 'DOMESTIC', 'FULL', 'REFERENCE', 'RESTRICTED'>,
+	"account_type": ?Enum<'DEFAULT', 'SAVING', 'CREDITCARD', 'DEPOT'>,
+	"balance": ?Amount,
+	"capabilities": ?{
+		<flow_type>: {
+			"available": Boolean
+		}
+	}
+}

@@ -1,0 +1,152 @@
+{
+    "data": {
+        "result": {
+            "accounts": [
+                {
+                    "id": "NzRiOWMzOWItNDQxYi00ZGYzLWIyZjItODA5Y2Y1MWFjNzQ0",
+                    "alias": "My checking account",
+                    "account_number": "000000005686751168",
+                    "iban": "DE43000000005686751168",
+                    "holder_name": "Max Mustermann",
+                    "bic": "TESTDE10XXX",
+                    "bank_address": {
+                        "country": "DE"
+                    },
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "YmI5NDAzZDctMGNmNi00ZjNiLTkyZGItM2JiNGVkZDM3ZDkw",
+                    "alias": "My salary account",
+                    "account_number": "000000006636981175",
+                    "iban": "DE18000000006636981175",
+                    "holder_name": "Hans Mustermann",
+                    "holder_address": {
+                        "street_address": "Hügelstr. 5",
+                        "postalcode": "01234",
+                        "city": "Musterstadt",
+                        "region": "Hessen",
+                        "country": "DE"
+                    },
+                    "bank_address": {
+                        "country": "DE"
+                    },
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "YzQ1MzZlMDQtOGZjNy00YWFlLWEyOTEtNjcyZjYzMTJhM2Q3",
+                    "alias": "My overdraft account",
+                    "account_number": "000000004896641138",
+                    "iban": "DE55000000004896641138",
+                    "holder_name": "Max Mustermann",
+                    "bic": "TESTDE10XXX",
+                    "bank_address": {
+                        "country": "DE"
+                    },
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "YTM5ODI4ZWItNjk5NC00NTdhLTkxZjItYzI5ZmExMzU5Y2Nm",
+                    "alias": "My saving account",
+                    "account_number": "000000008746441159",
+                    "iban": "DE28000000008746441159",
+                    "holder_name": "Max Mustermann",
+                    "bic": "TESTDE10XXX",
+                    "bank_address": {
+                        "country": "DE"
+                    },
+                    "transfer_type": "REFERENCE",
+                    "account_type": "SAVING",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": false
+                        }
+                    }
+                },
+                {
+                    "id": "OGFjYWRhNDAtYzJhZC0xMWViLTg1MjktMDI0MmFjMTMwMDAz",
+                    "alias": "My Restricted account",
+                    "account_number": "000000008116641159",
+                    "iban": "DE90000000008116641159",
+                    "holder_name": "Max Mustermann",
+                    "bic": "TESTDE10XXX",
+                    "bank_address": {
+                        "country": "DE"
+                    },
+                    "transfer_type": "RESTRICTED",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": false
+                        },
+                        "balances": {
+                            "available": false
+                        },
+                        "transfer": {
+                            "available": false
+                        }
+                    }
+                }
+            ],
+            "type": "accounts"
+        },
+        "client_token": "<TOKEN>",
+        "state": "FINISHED"
+    }
+}

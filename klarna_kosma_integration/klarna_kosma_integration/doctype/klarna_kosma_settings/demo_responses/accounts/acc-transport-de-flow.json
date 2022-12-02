@@ -1,0 +1,156 @@
+{
+    "data": {
+        "result": {
+            "accounts": [
+                {
+                    "id": "0",
+                    "alias": "Girokonto (Max Mustermann)",
+                    "account_number": "23456789",
+                    "iban": "DE06000000000023456789",
+                    "holder_name": "Max Mustermann",
+                    "bic": "TESTDE20XXX",
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "1",
+                    "alias": "Girokonto (Musterman, Petra)",
+                    "account_number": "2345678902",
+                    "iban": "DE86000000002345678902",
+                    "holder_name": "Musterman, Petra",
+                    "bic": "TESTDE20XXX",
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "2",
+                    "alias": "Girokonto (Warnecke Hans-Gerd)",
+                    "account_number": "12345678",
+                    "iban": "DE52000000000012345678",
+                    "holder_name": "Warnecke Hans-Gerd",
+                    "bic": "TESTDE20XXX",
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "3",
+                    "alias": "Girokonto (Maria & Josef Warnecke)",
+                    "account_number": "1234567899",
+                    "iban": "DE30000000001234567899",
+                    "holder_name": "Maria & Josef Warnecke",
+                    "bic": "TESTDE20XXX",
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "4",
+                    "alias": "Girokonto (Jürgen Mustermann)",
+                    "account_number": "112233",
+                    "iban": "DE25000000000000112233",
+                    "holder_name": "Jürgen Mustermann",
+                    "bic": "TESTDE20XXX",
+                    "transfer_type": "FULL",
+                    "account_type": "DEFAULT",
+                    "capabilities": {
+                        "account_details": {
+                            "available": true
+                        },
+                        "transactions": {
+                            "available": true
+                        },
+                        "balances": {
+                            "available": true
+                        },
+                        "transfer": {
+                            "available": true
+                        }
+                    }
+                },
+                {
+                    "id": "5",
+                    "alias": "Tagesgeldkonto (Hansi Mustermann)",
+                    "account_number": "98765432",
+                    "iban": "DE45000000000098765432",
+                    "holder_name": "Hansi Mustermann",
+                    "bank_code": "00000",
+                    "bic": "TESTDE20XXX",
+                    "transfer_type": "NONE",
+                    "account_type": "SAVING",
+                    "capabilities": {
+                        "account_details": {
+                            "available": false
+                        },
+                        "transactions": {
+                            "available": false
+                        },
+                        "balances": {
+                            "available": false
+                        },
+                        "transfer": {
+                            "available": false
+                        }
+                    }
+                }
+            ],
+            "type": "accounts"
+        },
+        "client_token": "<TOKEN>",
+        "state": "FINISHED"
+    }
+}
