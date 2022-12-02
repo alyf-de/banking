@@ -99,7 +99,6 @@ class KlarnaKosmaConnect {
 	async complete_flow() {
 			const flow_data = await this.fetch_flow_data();
 			await this.add_bank_and_accounts(flow_data);
-			frappe.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
 	}
 
 	async fetch_flow_data() {
@@ -133,6 +132,10 @@ class KlarnaKosmaConnect {
 					},
 					freeze: true,
 					freeze_message: __("Adding Bank Acounts ...")
+				}).then((r) => {
+					if (!r.exc) {
+						frappe.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
+					}
 				});
 			}
 		} catch(e) {
