@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include klarna_kosma_integration *.css
+recursive-include klarna_kosma_integration *.csv
+recursive-include klarna_kosma_integration *.html
+recursive-include klarna_kosma_integration *.ico
+recursive-include klarna_kosma_integration *.js
+recursive-include klarna_kosma_integration *.json
+recursive-include klarna_kosma_integration *.md
+recursive-include klarna_kosma_integration *.png
+recursive-include klarna_kosma_integration *.py
+recursive-include klarna_kosma_integration *.svg
+recursive-include klarna_kosma_integration *.txt
+recursive-exclude klarna_kosma_integration *.pyc

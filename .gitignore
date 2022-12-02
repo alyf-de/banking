@@ -1,0 +1,8 @@
+.DS_Store
+*.pyc
+*.egg-info
+*.swp
+tags
+klarna_kosma_integration/docs/current
+node_modules/
+__pycache__
