@@ -26,10 +26,7 @@ def fetch_flow_data(session_id, flow_id):
 	return flow_data
 
 @frappe.whitelist()
-def add_bank_and_accounts(accounts, company):
-	import pprint
-	pprint.pprint(accounts)
-
+def add_bank_and_accounts(accounts, company, bank_name=None):
 	accounts = json.loads(accounts)
 	accounts = accounts.get("data").get("result").get("accounts")
 
@@ -38,7 +35,7 @@ def add_bank_and_accounts(accounts, company):
 		frappe.throw(_("Please setup a default bank account for company {0}").format(company))
 
 	for account in accounts:
-		bank = add_bank(account)
+		bank = add_bank(account, bank_name)
 
 		if not frappe.db.exists("Bank Account Type", account.get("account_type")):
 			frappe.get_doc({"doctype": "Bank Account Type", "account_type": account.get("account_type")}).insert()

@@ -19,10 +19,6 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 			});
 
 			// Button to Refresh Bank Accounts fetched (above flow again, rewrite existing data/add new)
-
-			frm.add_custom_button(__("Sync Transactions"), () => {
-				// fetch transactions (enqueue)
-			})
 		}
 
 	}
@@ -83,22 +79,67 @@ class KlarnaKosmaConnect {
 			window.XS2A.startFlow(
 				me.client_token,
 				{
+					unfoldConsentDetails: true,
 					onFinished: () => {
 						me.complete_flow();
 					},
 					onError: error => {
-						console.error('onError: something bad happened.', error)
+						console.error('onError: something bad happened.', error);
+					},
+					onAbort: () => {
+						console.log("Kosma Authentication Aborted");
 					},
 				}
 			)
 		} catch (e) {
-			console.error(e)
+			console.error(e);
 		}
 	}
 
 	async complete_flow() {
-			const flow_data = await this.fetch_flow_data();
-			await this.add_bank_and_accounts(flow_data);
+			let flow_data = await this.fetch_flow_data();
+			let accounts = flow_data["message"]["data"]["result"]["accounts"];
+
+			// Check if atleast one account has bank name if not prompt for bank name
+			const bank_exists = accounts.some((account) => account["bank_name"])
+
+			if (bank_exists) {
+				this.add_bank_and_accounts(flow_data);
+			} else {
+				let fields = [
+					{
+						fieldtype: "Data",
+						label: __("Bank Name"),
+						fieldname: "bank_name",
+						depends_on: "eval: !doc.existing_bank",
+						mandatory_depends_on: "eval: !doc.existing_bank",
+						description: __("Bank under which accounts must be created"),
+					},
+					{
+						fieldtype: "Check",
+						label: __("Link with existing Bank"),
+						fieldname: "existing_bank",
+					},
+					{
+						fieldtype: "Link",
+						label: __("Bank"),
+						options: "Bank",
+						fieldname: "bank",
+						depends_on: "existing_bank",
+						description: __("Existing Bank under which accounts must be created"),
+						reqd: 1
+					},
+				];
+
+				frappe.prompt(fields, data => {
+					console.log(data);
+					let bank_name = data.existing_bank ? data.bank : data.bank_name;
+					this.add_bank_and_accounts(flow_data, bank_name);
+				},
+				__("Provide a Bank Name"),
+				__("Continue"));
+			}
+
 	}
 
 	async fetch_flow_data() {
@@ -113,14 +154,20 @@ class KlarnaKosmaConnect {
 				freeze: true,
 				freeze_message: __("Please wait. Fetching Bank Acounts ...")
 			});
+
+			if (!data.message || data.exc) {
+				frappe.throw(__("Failed to fetch Bank Accounts."));
+				console.log(data);
+			}
+
 			return data;
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error fetching flow data. Check console."))
+			frappe.throw(__("Error fetching flow data. Check console."));
 		}
 	}
 
-	async add_bank_and_accounts(flow_data) {
+	async add_bank_and_accounts(flow_data, bank_name=null) {
 		let me = this;
 		try {
 			if (flow_data.message) {
@@ -128,7 +175,8 @@ class KlarnaKosmaConnect {
 					method: "add_bank_and_accounts",
 					args: {
 						accounts: flow_data.message,
-						company: me.company
+						company: me.company,
+						bank_name: bank_name,
 					},
 					freeze: true,
 					freeze_message: __("Adding Bank Acounts ...")
@@ -140,7 +188,7 @@ class KlarnaKosmaConnect {
 			}
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error adding bank and accounts. Check console."))
+			frappe.throw(__("Error adding bank and accounts. Check console."));
 		}
 	}
 

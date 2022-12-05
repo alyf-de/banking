@@ -8,10 +8,9 @@ from frappe import _
 
 from erpnext.accounts.doctype.bank.bank import Bank
 
-def add_bank(bank_data: Dict) -> Bank:
-	bank, bank_name = None, bank_data.get("bank_name")
+def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
+	bank, bank_name = None, bank_data.get("bank_name") or bank_name
 
-	# TODO: get bank name. Demo response has no bank name
 	if not bank_name:
 		frappe.log_error(title=_("Bank Name missing"), message=json.dumps(bank_data))
 		frappe.throw(_("Failed to get Bank Name linked to account"))
@@ -40,7 +39,8 @@ def add_bank(bank_data: Dict) -> Bank:
 	return bank
 
 def create_bank_account(account, bank, company, default_gl_account):
-	bank_account_name = "{} - {}".format(account.get("name"), bank.get("bank_name"))
+	account_name = get_account_name(account)
+	bank_account_name = "{} - {}".format(account_name, bank.get("bank_name"))
 	existing_bank_account = frappe.db.exists("Bank Account", bank_account_name)
 
 	if not existing_bank_account:
@@ -50,7 +50,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 					"doctype": "Bank Account",
 					"bank": bank.get("bank_name"),
 					"account": default_gl_account.account,
-					"account_name": account.get("alias"), # TODO: No Name in response. Generate name ?
+					"account_name": account_name,
 					# TODO: add custom field for account holder name ?
 					"account_type": account.get("account_type", ""),
 					"bank_account_no": account.get("account_number"),
@@ -68,7 +68,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 		except Exception:
 			frappe.log_error(title=_("Bank Account creation has failed"), message=frappe.get_traceback())
 			frappe.throw(
-				_("There was an error creating Bank Account while linking with Kosma."),
+				_("There was an error creating a Bank Account while linking with Kosma."),
 				title=_("Kosma Link Failed"),
 			)
 	else:
@@ -77,7 +77,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 			existing_account.update(
 				{
 					"bank": bank.get("bank_name"),
-					"account_name": account.get("account_name"),
+					"account_name": account_name,
 					"account_type": account.get("account_type", ""),
 				}
 			)
@@ -90,3 +90,22 @@ def create_bank_account(account, bank, company, default_gl_account):
 				),
 				title=_("Kosma Link Failed"),
 			)
+
+def get_account_name(account):
+	"""
+	Generates and returns distinguishable account name.
+
+	Here we can consider alias + holder name to make a distinct account name
+	E.g. of Aliases:
+		- Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
+		- Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
+		- (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
+	"""
+	is_account_alias_distinct = "(" in account.get("alias")
+	if is_account_alias_distinct:
+		account_name = account.get("alias")
+	else:
+		account_name = f"{account.get('alias')} ({account.get('holder_name')})"
+
+	return account_name
+
