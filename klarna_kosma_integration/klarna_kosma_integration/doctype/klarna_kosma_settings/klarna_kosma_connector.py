@@ -3,10 +3,11 @@
 
 import json
 from typing import Dict
-import requests
 
 import frappe
+import requests
 from frappe import _
+
 
 class KlarnaKosmaConnector:
 	def __init__(self) -> None:
@@ -19,18 +20,18 @@ class KlarnaKosmaConnector:
 		Get Client Token to render XS2A App
 		"""
 		session_details = self._start_session()
-		session_data = {
-			"session_id": session_details.get("data").get("session_id")
-		}
+		session_data = {"session_id": session_details.get("data").get("session_id")}
 
 		flows = session_details.get("data").get("flows")
 		flow_data = self._start_flow_in_session(flows=flows)
 
-		session_data.update({
-			"client_token": flow_data.get("data").get("client_token"),
-			"flow_id": flow_data.get("data").get("flow_id"),
-			"flow_state": flow_data.get("data").get("state")
-		})
+		session_data.update(
+			{
+				"client_token": flow_data.get("data").get("client_token"),
+				"flow_id": flow_data.get("data").get("flow_id"),
+				"flow_state": flow_data.get("data").get("state"),
+			}
+		)
 		return session_data
 
 	def execute_flow(self, session_id, flow_id):
@@ -51,30 +52,22 @@ class KlarnaKosmaConnector:
 		finally:
 			self._end_session(session_id)
 
-
 	def _get_headers(self, content_type: str = None):
 		return {
 			"Content-Type": content_type or "application/json",
-			"Authorization": "Token {0}".format(self.api_token)
+			"Authorization": "Token {0}".format(self.api_token),
 		}
 
 	def _start_session(self):
 		# TODO: fetch public IP, user agent
-		data = {
-			"psu": {
-				"ip_address": "49.36.101.156",
-				"user_agent": "any"
-			}
-		}
+		data = {"psu": {"ip_address": "49.36.101.156", "user_agent": "any"}}
 		try:
 			session_response = requests.put(
-				url=self.base_url,
-				headers=self._get_headers(),
-				data=json.dumps(data)
+				url=self.base_url, headers=self._get_headers(), data=json.dumps(data)
 			)
 			session_response_val = session_response.json()
 
-			if session_response.status_code >=400:
+			if session_response.status_code >= 400:
 				error = session_response_val.get("error")
 				frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
 
@@ -83,14 +76,13 @@ class KlarnaKosmaConnector:
 			frappe.throw(_("Failed to start Kosma session"))
 
 	def _start_flow_in_session(self, flows: Dict[str, str] = None):
-		flow_link = flows.get("accounts") # URL
+		flow_link = flows.get("accounts")  # URL
 
 		if not flow_link:
 			frappe.throw(_("An error occurred while starting a flow"))
 
 		accounts_flow_response = requests.put(
-			url=flow_link,
-			headers=self._get_headers()
+			url=flow_link, headers=self._get_headers()
 		).json()
 		return accounts_flow_response
 

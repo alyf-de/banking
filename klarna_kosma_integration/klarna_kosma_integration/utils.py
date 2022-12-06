@@ -4,9 +4,9 @@ import json
 from typing import Dict
 
 import frappe
+from erpnext.accounts.doctype.bank.bank import Bank
 from frappe import _
 
-from erpnext.accounts.doctype.bank.bank import Bank
 
 def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
 	bank, bank_name = None, bank_data.get("bank_name") or bank_name
@@ -22,7 +22,7 @@ def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
 					"doctype": "Bank",
 					"bank_name": bank_name,
 					"swift_number": bank_data.get("bic"),
-					"iban": bank_data.get("iban")
+					"iban": bank_data.get("iban"),
 				}
 			)
 			bank.insert()
@@ -30,13 +30,11 @@ def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
 			frappe.log_error(title=_("Bank creation failed"), message=frappe.get_traceback())
 	else:
 		bank = frappe.get_doc("Bank", bank_name)
-		bank.update({
-			"bank_name": bank_name,
-			"swift_number": bank_data.get("bic")
-		})
+		bank.update({"bank_name": bank_name, "swift_number": bank_data.get("bic")})
 		bank.save()
 
 	return bank
+
 
 def create_bank_account(account, bank, company, default_gl_account):
 	account_name = get_account_name(account)
@@ -63,10 +61,14 @@ def create_bank_account(account, bank, company, default_gl_account):
 			new_account.insert()
 		except frappe.UniqueValidationError:
 			frappe.msgprint(
-				_("Bank account {0} already exists and could not be created again").format(new_account.name)
+				_("Bank account {0} already exists and could not be created again").format(
+					new_account.name
+				)
 			)
 		except Exception:
-			frappe.log_error(title=_("Bank Account creation has failed"), message=frappe.get_traceback())
+			frappe.log_error(
+				title=_("Bank Account creation has failed"), message=frappe.get_traceback()
+			)
 			frappe.throw(
 				_("There was an error creating a Bank Account while linking with Kosma."),
 				title=_("Kosma Link Failed"),
@@ -83,7 +85,9 @@ def create_bank_account(account, bank, company, default_gl_account):
 			)
 			existing_account.save()
 		except Exception:
-			frappe.log_error(title=_("Bank Account update has failed"), message=frappe.get_traceback())
+			frappe.log_error(
+				title=_("Bank Account update has failed"), message=frappe.get_traceback()
+			)
 			frappe.throw(
 				_("There was an error updating Bank Account {} while linking with Kosma.").format(
 					existing_bank_account
@@ -91,15 +95,16 @@ def create_bank_account(account, bank, company, default_gl_account):
 				title=_("Kosma Link Failed"),
 			)
 
+
 def get_account_name(account):
 	"""
 	Generates and returns distinguishable account name.
 
 	Here we can consider alias + holder name to make a distinct account name
 	E.g. of Aliases:
-		- Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
-		- Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
-		- (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
+	        - Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
+	        - Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
+	        - (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
 	"""
 	is_account_alias_distinct = "(" in account.get("alias")
 	if is_account_alias_distinct:
@@ -108,4 +113,3 @@ def get_account_name(account):
 		account_name = f"{account.get('alias')} ({account.get('holder_name')})"
 
 	return account_name
-
