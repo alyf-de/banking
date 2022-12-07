@@ -50,6 +50,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 					"account": default_gl_account.account,
 					"account_name": account_name,
 					# TODO: add custom field for account holder name ?
+					"kosma_account_id": account.get("id"),
 					"account_type": account.get("account_type", ""),
 					"bank_account_no": account.get("account_number"),
 					"iban": account.get("iban"),
@@ -81,6 +82,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 					"bank": bank.get("bank_name"),
 					"account_name": account_name,
 					"account_type": account.get("account_type", ""),
+					"kosma_account_id": account.get("id"),
 				}
 			)
 			existing_account.save()
