@@ -12,6 +12,12 @@ from frappe.model.document import Document
 from klarna_kosma_integration.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
+from klarna_kosma_integration.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_consent import (
+	KlarnaKosmaConsent,
+)
+from klarna_kosma_integration.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_flow import (
+	KlarnaKosmaFlow,
+)
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	add_bank,
 	create_bank_account,
@@ -24,15 +30,20 @@ class KlarnaKosmaSettings(Document):
 
 @frappe.whitelist()
 def get_client_token():
-	kosma = KlarnaKosmaConnector()
+	kosma = KlarnaKosmaFlow()
 	return kosma.get_client_token()
 
 
 @frappe.whitelist()
-def fetch_flow_data(session_id, flow_id):
-	kosma = KlarnaKosmaConnector()
-	flow_data = kosma.execute_flow(session_id, flow_id)
-	return flow_data
+def fetch_accounts(api_type: str, session_id: str = None, flow_id: str = None):
+	if api_type == "flow":
+		kosma = KlarnaKosmaFlow()
+		accounts_data = kosma.fetch_accounts(session_id, flow_id)
+	else:
+		kosma = KlarnaKosmaConsent()
+		accounts_data = kosma.fetch_accounts()
+
+	return accounts_data
 
 
 @frappe.whitelist()
@@ -53,3 +64,21 @@ def add_bank_and_accounts(accounts, company, bank_name=None):
 			).insert()
 
 		create_bank_account(account, bank, company, default_gl_account)
+
+
+@frappe.whitelist()
+def fetch_transactions(api_type: str, session_id: str = None, flow_id: str = None):
+	if api_type == "flow":
+		kosma = KlarnaKosmaFlow()
+		transactions_data = kosma.fetch_transactions(session_id, flow_id)
+	else:
+		kosma = KlarnaKosmaConsent()
+		transactions_data = kosma.fetch_transactions()
+
+	return transactions_data
+
+
+@frappe.whitelist()
+def needs_consent():
+	kosma = KlarnaKosmaConnector()
+	return kosma.consent_needed

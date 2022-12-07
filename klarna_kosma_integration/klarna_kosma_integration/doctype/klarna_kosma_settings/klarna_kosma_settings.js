@@ -12,30 +12,66 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 					fieldname: "company",
 					reqd: 1
 				}, (data) => {
-					new KlarnaKosmaConnect(frm, data.company);
+					new KlarnaKosmaConnect({
+						frm: frm,
+						company: data.company
+					});
 				},
 				__("Select a company"),
 				__("Continue"));
 			});
 
-			// Button to Refresh Bank Accounts fetched (above flow again, rewrite existing data/add new)
+			frm.add_custom_button(__("Sync Transactions"), () => {
+				frappe.prompt({
+					fieldtype: "Link",
+					options: "Bank Account",
+					label: __("Bank Account"),
+					fieldname: "bank_account",
+					reqd: 1
+				}, (data) => {
+					new KlarnaKosmaConnect({
+						frm: frm,
+						account: data.bank_account
+					});
+				},
+				__("Select a Bank Account"),
+				__("Continue"));
+			});
 		}
 
 	}
 });
 
 class KlarnaKosmaConnect {
-	// Renders XS2A App (which authenticates) and hands over control to server side to fetch data
-	constructor(form_obj, company) {
-		this.frm = form_obj;
-		this.company = company;
+	constructor(opts) {
+		Object.assign(this, opts);
+
+		this.flow = this.account ? "transactions" : "accounts";
 		this.init_kosma_connect();
 	}
 
 	async init_kosma_connect () {
-		this.session = await this.get_client_token();
-		this.client_token = this.session.client_token;
-		this.render_xs2a_app();
+		this.consent_needed = await this.needs_consent()
+		this.api_type = this.consent_needed ? "flow" : "consent";
+
+		if (this.consent_needed) {
+			// Renders XS2A App (which authenticates/gets consent)
+			// and hands over control to server side for data fetch & business logic
+			this.session = await this.get_client_token();
+			this.render_xs2a_app();
+		} else {
+			// fetches data using the consent API without user intervention
+			this.complete_flow();
+		}
+	}
+
+	async needs_consent() {
+		let consent_needed = await this.frm.call({
+			method: "needs_consent",
+			freeze: true,
+			freeze_message: __("Checking for consent...")
+		}).then(resp => resp.message);
+		return consent_needed;
 	}
 
 	async get_client_token (){
@@ -77,11 +113,11 @@ class KlarnaKosmaConnect {
 		let me = this;
 		try {
 			window.XS2A.startFlow(
-				me.client_token,
+				me.session.client_token,
 				{
 					unfoldConsentDetails: true,
 					onFinished: () => {
-						me.complete_flow();
+						me.complete_flow()
 					},
 					onError: error => {
 						console.error('onError: something bad happened.', error);
@@ -96,8 +132,12 @@ class KlarnaKosmaConnect {
 		}
 	}
 
-	async complete_flow() {
-			let flow_data = await this.fetch_flow_data();
+	complete_flow() {
+		this.flow === "accounts" ? this.complete_accounts_flow() : this.complete_transactions_flow();
+	}
+
+	async complete_accounts_flow() {
+			let flow_data = await this.fetch_accounts_data();
 			let accounts = flow_data["message"]["data"]["result"]["accounts"];
 
 			// Check if atleast one account has bank name if not prompt for bank name
@@ -142,15 +182,24 @@ class KlarnaKosmaConnect {
 
 	}
 
-	async fetch_flow_data() {
-		let me = this;
+	complete_transactions_flow()  {
+		// call server side method to sync transactions
+	}
+
+	async fetch_accounts_data() {
+		let args = { api_type: this.api_type };
+
+		if (this.consent_needed) {
+			Object.assign(args, {
+				session_id: this.session.session_id,
+				flow_id: this.session.flow_id
+			});
+		}
+
 		try {
 			const data = await this.frm.call({
-				method: "fetch_flow_data",
-				args: {
-					session_id: me.session.session_id,
-					flow_id: me.session.flow_id
-				},
+				method: "fetch_accounts",
+				args: args,
 				freeze: true,
 				freeze_message: __("Please wait. Fetching Bank Acounts ...")
 			});
@@ -159,7 +208,6 @@ class KlarnaKosmaConnect {
 				frappe.throw(__("Failed to fetch Bank Accounts."));
 				console.log(data);
 			}
-
 			return data;
 		} catch(e) {
 			console.log(e);
