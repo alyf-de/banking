@@ -9,7 +9,7 @@ import requests
 from frappe import _
 from frappe.utils import add_days, nowdate
 
-from klarna_kosma_integration.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_connector import (
+from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
 
@@ -59,9 +59,6 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		finally:
 			self._end_session(session_id)
 
-	def sync_transactions(self):
-		pass
-
 	def _start_session(self):
 		"""
 		Start a Kosma Session and return session details
@@ -73,11 +70,11 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			data["consent_scope"] = {
 				"lifetime": 90,
 				"accounts": {
-					"from_date": "2022-04-01",  # TODO: fetch date from fiscal year
+					"from_date": "2019-01-01",  # TODO: fetch date from fiscal year
 					"to_date": add_days(nowdate(), 90),
 				},
 				"transactions": {
-					"from_date": "2022-04-01",  # TODO: fetch date from fiscal year
+					"from_date": "2019-01-01",  # TODO: fetch date from fiscal year
 					"to_date": add_days(nowdate(), 90),
 				},
 			}
@@ -123,3 +120,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			)
 		except Exception:
 			frappe.throw(_("Failed to end Kosma session"))
+
+
+def sync_transactions(self):
+	pass

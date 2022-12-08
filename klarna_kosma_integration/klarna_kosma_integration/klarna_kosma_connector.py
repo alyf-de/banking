@@ -21,6 +21,11 @@ class KlarnaKosmaConnector:
 		)
 		self.consent_needed = self._needs_consent() if self.settings.consent_expiry else True
 
+		self.psu = {
+			"user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
+			"ip_address": "49.36.101.156",
+		}
+
 	def _get_headers(self, content_type: str = None):
 		return {
 			"Content-Type": content_type or "application/json",

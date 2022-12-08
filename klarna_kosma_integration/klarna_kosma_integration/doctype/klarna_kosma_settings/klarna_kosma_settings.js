@@ -2,23 +2,17 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Klarna Kosma Settings', {
-	refresh: function(frm) {
+	refresh: (frm) => {
 		if (frm.doc.enabled) {
 			frm.add_custom_button(__('Link Bank Accounts'), () => {
-				frappe.prompt({
-					fieldtype: "Link",
-					options: "Company",
-					label: __("Company"),
-					fieldname: "company",
-					reqd: 1
-				}, (data) => {
-					new KlarnaKosmaConnect({
-						frm: frm,
-						company: data.company
-					});
-				},
-				__("Select a company"),
-				__("Continue"));
+				frm.trigger("refresh_banks");
+			});
+
+			frm.add_custom_button(__('Reset Consent'), () => {
+				frm.call({method: "clear_consent"}).then(() => {
+					frm.reload_doc();
+					frm.trigger("refresh_banks");
+				});
 			});
 
 			frm.add_custom_button(__("Sync Transactions"), () => {
@@ -39,6 +33,23 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 			});
 		}
 
+	},
+
+	refresh_banks: (frm) => {
+		frappe.prompt({
+			fieldtype: "Link",
+			options: "Company",
+			label: __("Company"),
+			fieldname: "company",
+			reqd: 1
+		}, (data) => {
+			new KlarnaKosmaConnect({
+				frm: frm,
+				company: data.company
+			});
+		},
+		__("Select a company"),
+		__("Continue"));
 	}
 });
 
@@ -183,7 +194,30 @@ class KlarnaKosmaConnect {
 	}
 
 	complete_transactions_flow()  {
-		// call server side method to sync transactions
+		// get args
+		let me = this;
+		let args = {
+			api_type: this.api_type,
+			account: this.account
+		};
+
+		if (this.consent_needed) {
+			Object.assign(args, {
+				session_id: this.session.session_id,
+				flow_id: this.session.flow_id
+			});
+		}
+		try {
+			this.frm.call({
+				method: "sync_transactions",
+				args: args,
+				freeze: true,
+				freeze_message: __("Please wait. Syncing Bank Transactions ...")
+			});
+		} catch(e) {
+			console.log(e);
+			frappe.throw(__("Error fetching flow data. Check console."));
+		}
 	}
 
 	async fetch_accounts_data() {

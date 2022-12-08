@@ -1,0 +1,459 @@
+{
+    "data": {
+        "result": {
+            "transactions": [
+                {
+                    "transaction_id": "50d18876ee83099984eb0e1ef1c93e3f",
+                    "reference": "eBay, Additional information about Ebay",
+                    "bank_references": {
+                        "unstructured": "eBay",
+                        "additional_information": "Additional information about Ebay"
+                    },
+                    "counter_party": {
+                        "id": "YmI5NDAzZDctMGNmNi00ZjNiLTkyZGItM2JiNGVkZDM3ZDkw",
+                        "alias": "My salary account",
+                        "account_number": "000000006636981175",
+                        "iban": "DE18000000006636981175",
+                        "holder_name": "Hans Mustermann",
+                        "holder_address": {
+                            "street_address": "Hügelstr. 5",
+                            "postalcode": "01234",
+                            "city": "Musterstadt",
+                            "region": "Hessen",
+                            "country": "DE"
+                        },
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-12-02",
+                    "value_date": "2022-12-03",
+                    "booking_date": "2022-12-02",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 324229,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "a7fdab5b3937e193bcc1ff79934d3e79",
+                    "reference": "zalando plus fashion-service 5812871289, Additional information about Zalando",
+                    "bank_references": {
+                        "unstructured": "zalando plus fashion-service 5812871289",
+                        "additional_information": "Additional information about Zalando"
+                    },
+                    "counter_party": {
+                        "id": "ODE5NGNlMzAtZGY2OS00N2JiLTgzNjQtYmI5ZTc4NDljM2Ux",
+                        "account_number": "000000008116641159",
+                        "iban": "DE90000000008116641159",
+                        "holder_name": "Zalando",
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-12-01",
+                    "value_date": "2022-12-02",
+                    "booking_date": "2022-12-01",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 13990,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "9c59156d4bea01cbc61b73e34bf10588",
+                    "reference": "LASTSCHRIFT / BELASTUNG AMAZON PRIME VIDEO END-TO-END-REF.: / MANDATSREF.: GLÄUBIGER-ID: Ref. AMAZON MEDIA EU S.A R.L., Additional information about Amazon",
+                    "bank_references": {
+                        "unstructured": "LASTSCHRIFT / BELASTUNG AMAZON PRIME VIDEO END-TO-END-REF.: / MANDATSREF.: GLÄUBIGER-ID: Ref. AMAZON MEDIA EU S.A R.L.",
+                        "additional_information": "Additional information about Amazon"
+                    },
+                    "counter_party": {
+                        "id": "OWFjYmRmOWItZDY3Ny00MGU2LTg2MjktZWZlYzU5NGI0ZDgw",
+                        "account_number": "000000001716448159",
+                        "iban": "DE53000000001716448159",
+                        "holder_name": "AMAZON MEDIA EU S.A R.L.",
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-12-01",
+                    "value_date": "2022-12-02",
+                    "booking_date": "2022-12-01",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 6500,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "3cd2c0595fe803ae5bcfb1334568757f",
+                    "reference": "transfer, Additional information about the transfer",
+                    "bank_references": {
+                        "unstructured": "transfer",
+                        "additional_information": "Additional information about the transfer"
+                    },
+                    "counter_party": {
+                        "id": "YmI5NDAzZDctMGNmNi00ZjNiLTkyZGItM2JiNGVkZDM3ZDkw",
+                        "alias": "My salary account",
+                        "account_number": "000000006636981175",
+                        "iban": "DE18000000006636981175",
+                        "holder_name": "Hans Mustermann",
+                        "holder_address": {
+                            "street_address": "Hügelstr. 5",
+                            "postalcode": "01234",
+                            "city": "Musterstadt",
+                            "region": "Hessen",
+                            "country": "DE"
+                        },
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-29",
+                    "value_date": "2022-11-29",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 50000,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "aa1fa05ae1d76654da7bd271b645c30a",
+                    "reference": "Netflix 2388191, Additional information about Netflix",
+                    "bank_references": {
+                        "unstructured": "Netflix 2388191",
+                        "additional_information": "Additional information about Netflix"
+                    },
+                    "counter_party": {
+                        "id": "ODI4ODRjZjAtODU0MS00MjY1LThhN2UtYTk5NjYwMGMxNGZj",
+                        "holder_name": "Netflix",
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-28",
+                    "value_date": "2022-11-29",
+                    "booking_date": "2022-11-28",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 1199,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "2c1de6e0c8798ff6ca511284341d56ab",
+                    "reference": "Thanks for the coffee, Additional information about that coffee",
+                    "bank_references": {
+                        "unstructured": "Thanks for the coffee",
+                        "additional_information": "Additional information about that coffee"
+                    },
+                    "counter_party": {
+                        "id": "ZDFiYzc1YzEtNmRiOS00ODY1LTk1NTYtMjg5YjdkMGNkYzQ4",
+                        "account_number": "000000002716442159",
+                        "iban": "DE18000000002716442159",
+                        "holder_name": "Angela Murkel",
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-28",
+                    "value_date": "2022-11-29",
+                    "booking_date": "2022-11-28",
+                    "state": "PROCESSED",
+                    "type": "CREDIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 580,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "7719b188bf37724c8102d55a7223a54f",
+                    "reference": "523628918, Additional information",
+                    "bank_references": {
+                        "unstructured": "523628918",
+                        "additional_information": "Additional information"
+                    },
+                    "counter_party": {
+                        "id": "YjYyODYzMzgtNTExZi00MDQyLThmY2MtMzkyNjU5NGI1MGI3",
+                        "holder_name": "Spotify",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-28",
+                    "value_date": "2022-11-29",
+                    "booking_date": "2022-11-28",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 7791,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "4b020576191ebc04b9d44921cd34e6ef",
+                    "reference": "REWE SAGT DANKE. 1251611//Linden/DE, Additional information about Rewe",
+                    "bank_references": {
+                        "unstructured": "REWE SAGT DANKE. 1251611//Linden/DE",
+                        "additional_information": "Additional information about Rewe"
+                    },
+                    "counter_party": {
+                        "id": "MzUwNWZiZDMtMDBhMy00ODk2LWI1NTMtYTdkOWI5Njc4MzI3",
+                        "holder_name": "REWE Alexander Mar",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-27",
+                    "value_date": "2022-11-28",
+                    "booking_date": "2022-11-27",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 2320,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "463b8c45f4aceb228d4600b6343f3791",
+                    "reference": "302-123123-1900368 AMZN Mktp DE HEWEHASQE, Additional information about Amazon",
+                    "bank_references": {
+                        "unstructured": "302-123123-1900368 AMZN Mktp DE HEWEHASQE",
+                        "additional_information": "Additional information about Amazon"
+                    },
+                    "counter_party": {
+                        "id": "NWI4NzVjMDktZDQ0OC00NzY4LWJjM2QtOTc4NTM2YzY3YjIw",
+                        "holder_name": "AMAZON PAYMENTS EUROPE S.C.A.",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-24",
+                    "value_date": "2022-11-25",
+                    "booking_date": "2022-11-24",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 4999,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "b8a1dca24c632eb8ec5e9d825344b534",
+                    "reference": "VK 3543774/WETTENBERGRING 1/ ABHOCHS 20,00 ABWA+Mittelhess.Wasserbetriebe, Additional information about ABWA",
+                    "bank_references": {
+                        "unstructured": "VK 3543774/WETTENBERGRING 1/ ABHOCHS 20,00 ABWA+Mittelhess.Wasserbetriebe",
+                        "additional_information": "Additional information about ABWA"
+                    },
+                    "counter_party": {
+                        "id": "ZDUzMTk3YjUtZGFhZS00M2UyLWIzMjAtNTdiZmYwNjRmYjE3",
+                        "holder_name": "Stadtwerke Giessen AG",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-23",
+                    "booking_date": "2022-11-23",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 15200,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "a7b08375d13ebbee08d3cb7a133d1b5b",
+                    "reference": "Miete + Nebenkosten, Additional information about the rent",
+                    "bank_references": {
+                        "unstructured": "Miete + Nebenkosten",
+                        "additional_information": "Additional information about the rent"
+                    },
+                    "counter_party": {
+                        "id": "NDc1MjZiOGYtMjhmZi00OWRjLWI0NDQtZWRkYTFiMTM1Mzcz",
+                        "account_number": "000000003716541159",
+                        "iban": "DE02000000003716541159",
+                        "holder_name": "Franz Maier",
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-21",
+                    "value_date": "2022-11-22",
+                    "booking_date": "2022-11-21",
+                    "state": "PROCESSED",
+                    "type": "CREDIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 75000,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "66c1ece556154678377390481f81cf72",
+                    "reference": "Cancelled: Kd-Nr..260293061,Rg-Nr..273723473/5,Mehr Infosunter.Ihre Mobilfunkrechnung., Additional information about the cancellation",
+                    "bank_references": {
+                        "unstructured": "Cancelled: Kd-Nr..260293061,Rg-Nr..273723473/5,Mehr Infosunter.Ihre Mobilfunkrechnung.",
+                        "additional_information": "Additional information about the cancellation"
+                    },
+                    "counter_party": {
+                        "id": "Y2U5ZDExOGEtZTUyZC00NDA4LTlhZGItYWU3MTQyNDdiYzY0",
+                        "account_number": "000000004716441199",
+                        "iban": "DE46000000004716441199",
+                        "holder_name": "Telefonica Germany GmbH + Co. OHG",
+                        "transfer_type": "FULL"
+                    },
+                    "date": "2022-11-21",
+                    "value_date": "2022-11-22",
+                    "booking_date": "2022-11-21",
+                    "state": "CANCELED",
+                    "type": "DEBIT",
+                    "method": "DIRECT_DEBIT",
+                    "amount": {
+                        "amount": 2500,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "d5098dc4868fc8c8ffa4249f255f4b7c",
+                    "reference": "Rundfunk 01.2019 - 03.2019 Beitragsnr. 61261261Aenderungen ganz bequem. www.rundfunkbeitrag.de, Additional information about the contract",
+                    "bank_references": {
+                        "unstructured": "Rundfunk 01.2019 - 03.2019 Beitragsnr. 61261261Aenderungen ganz bequem. www.rundfunkbeitrag.de",
+                        "additional_information": "Additional information about the contract"
+                    },
+                    "counter_party": {
+                        "id": "NGQ5NWMxZTgtNDFjMS00YTQ0LWFjZWItMzhlMzc0Yzc5M2E0",
+                        "account_number": "000000005716441119",
+                        "iban": "DE27000000005716441119",
+                        "holder_name": "Rundfunk ARD, ZDF, DRadio",
+                        "transfer_type": "FULL"
+                    },
+                    "date": "2022-11-18",
+                    "value_date": "2022-11-19",
+                    "booking_date": "2022-11-18",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 5250,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "0a17cd586421d8d0acf8496b52e2e6d6",
+                    "reference": "transfer, Additional information about the transfer",
+                    "bank_references": {
+                        "unstructured": "transfer",
+                        "additional_information": "Additional information about the transfer"
+                    },
+                    "counter_party": {
+                        "id": "YmI5NDAzZDctMGNmNi00ZjNiLTkyZGItM2JiNGVkZDM3ZDkw",
+                        "alias": "My salary account",
+                        "account_number": "000000006636981175",
+                        "iban": "DE18000000006636981175",
+                        "holder_name": "Hans Mustermann",
+                        "holder_address": {
+                            "street_address": "Hügelstr. 5",
+                            "postalcode": "01234",
+                            "city": "Musterstadt",
+                            "region": "Hessen",
+                            "country": "DE"
+                        },
+                        "transfer_type": "FULL",
+                        "account_type": "DEFAULT"
+                    },
+                    "date": "2022-11-17",
+                    "value_date": "2022-11-17",
+                    "booking_date": "2022-11-17",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 15000,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "4910a6ba29252a018c650151a3cf311c",
+                    "reference": "Uber transfer, 4541fce0-fba6-45bf-a0c2-ff176da98476, Additional information about Uber",
+                    "bank_references": {
+                        "unstructured": "Uber transfer",
+                        "end_to_end": "4541fce0-fba6-45bf-a0c2-ff176da98476",
+                        "additional_information": "Additional information about Uber"
+                    },
+                    "counter_party": {
+                        "id": "MzNkOGRlNzEtYTVkMy00M2Q2LTgwMzctOGZlZTRiNGUzMmU2",
+                        "account_number": "000000005478456489",
+                        "iban": "DE69000000005478456489",
+                        "holder_name": "Uber",
+                        "transfer_type": "FULL"
+                    },
+                    "date": "2022-11-16",
+                    "value_date": "2022-11-17",
+                    "booking_date": "2022-11-16",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 571,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "486a861fd6f9b3ec77979c666228bf10",
+                    "reference": "b6a6616c-8c39-4576-a560-6db75fe4d41e, Additional information",
+                    "bank_references": {
+                        "end_to_end": "b6a6616c-8c39-4576-a560-6db75fe4d41e",
+                        "additional_information": "Additional information"
+                    },
+                    "counter_party": {
+                        "id": "MzNkOGRlNzEtYTVkMy00M2Q2LTgwMzctOGZlZTRiNGUzMmU2",
+                        "account_number": "000000005478456489",
+                        "iban": "DE69000000005478456489",
+                        "holder_name": "Uber",
+                        "transfer_type": "FULL"
+                    },
+                    "date": "2022-11-16",
+                    "value_date": "2022-11-16",
+                    "booking_date": "2022-11-16",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 197,
+                        "currency": "EUR"
+                    }
+                },
+                {
+                    "transaction_id": "9649ebf4bdc358a5e029a15626964e4a",
+                    "reference": "Uber Eats meal 278591, RF369912345678901234588, Klarna AB, Additional information about Uber Eats",
+                    "bank_references": {
+                        "structured": "Uber Eats meal 278591",
+                        "message": "Klarna AB",
+                        "additional_information": "Additional information about Uber Eats",
+                        "national": "RF369912345678901234588"
+                    },
+                    "counter_party": {
+                        "id": "ZDllMjBmMTAtMzFhNi00NzBkLWFiOTQtMDFjNWZiMjBkMzY1",
+                        "account_number": "000000007382156416",
+                        "iban": "DE72000000007382156416",
+                        "holder_name": "Uber Eats",
+                        "transfer_type": "FULL"
+                    },
+                    "date": "2022-11-15",
+                    "value_date": "2022-11-16",
+                    "booking_date": "2022-11-15",
+                    "state": "PROCESSED",
+                    "type": "DEBIT",
+                    "method": "TRANSFER",
+                    "amount": {
+                        "amount": 2471,
+                        "currency": "EUR"
+                    }
+                }
+            ],
+            "from_date": "2022-01-01",
+            "to_date": "2022-12-08"
+        },
+        "consent_token": "<TOKEN>"
+    }
+}

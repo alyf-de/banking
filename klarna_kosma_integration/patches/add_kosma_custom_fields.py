@@ -15,3 +15,15 @@ def execute():
 			read_only=1,
 		),
 	)
+
+	create_custom_field(
+		"Bank Transaction",
+		dict(
+			owner="Administrator",
+			fieldname="kosma_party_name",
+			label="Kosma Party Name",
+			fieldtype="Data",
+			insert_after="party",
+			read_only=1,
+		),
+	)

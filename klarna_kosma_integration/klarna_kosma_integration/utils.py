@@ -1,11 +1,12 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import Dict
+from typing import Dict, List
 
 import frappe
 from erpnext.accounts.doctype.bank.bank import Bank
 from frappe import _
+from frappe.utils import getdate
 
 
 def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
@@ -115,3 +116,58 @@ def get_account_name(account):
 		account_name = f"{account.get('alias')} ({account.get('holder_name')})"
 
 	return account_name
+
+
+def create_bank_transactions(account: str, transactions: List[Dict]) -> None:
+	last_sync_date = None
+
+	try:
+		for transaction in reversed(transactions):
+			new_bank_transaction(account, transaction)
+			last_sync_date = transaction.get("value_date")
+
+	except Exception:
+		frappe.log_error(title=_("Kosma Transaction Error"), message=frappe.get_traceback())
+		frappe.throw(_("Error creating transactions"))
+	finally:
+		if last_sync_date:
+			frappe.db.set_value("Bank Account", account, "last_integration_date", last_sync_date)
+
+
+def new_bank_transaction(account: str, transaction: Dict):
+	amount_data = transaction.get("amount", {})
+	amount = (
+		amount_data.get("amount", 0) / 100
+	)  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
+
+	is_credit = transaction.get("type") == "CREDIT"
+	debit = 0 if is_credit else float(amount)
+	credit = float(amount) if is_credit else 0
+
+	state_map = {
+		"PROCESSED": "Settled",
+		"PENDING": "Pending",
+		"CANCELED": "Settled",  # TODO: is this status ok ? Should we even consider making cancelled/failed records
+		"FAILED": "Settled",
+	}
+	status = state_map[transaction.get("state")]
+
+	transaction_id = transaction.get("transaction_id")
+	if not frappe.db.exists("Bank Transaction", {"transaction_id": transaction_id}):
+		new_transaction = frappe.get_doc(
+			{
+				"doctype": "Bank Transaction",
+				"date": getdate(transaction.get("value_date")),
+				"status": status,
+				"bank_account": account,
+				"deposit": debit,
+				"withdrawal": credit,
+				"currency": amount_data.get("currency"),
+				"transaction_id": transaction_id,
+				"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
+				"description": transaction.get("reference"),
+				"kosma_party_name": transaction.get("counter_party", {}).get("holder_name"),
+			}
+		)
+		new_transaction.insert()
+		new_transaction.submit()
