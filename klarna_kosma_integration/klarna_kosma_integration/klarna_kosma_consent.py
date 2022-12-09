@@ -24,25 +24,34 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 			frappe.throw(_("The Consent Token has expired or is not available"))
 
 	def fetch_accounts(self):
-		data = {"consent_token": self.settings.consent_token, "psu": self.psu}
+		"""
+		Fetch Accounts using Consent API
+		"""
+		try:
+			data = {"consent_token": self.settings.consent_token, "psu": self.psu}
 
-		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/accounts/get"
+			consent_url = f"{self.base_consent_url}{self.settings.consent_id}/accounts/get"
 
-		accounts_response = requests.post(
-			url=consent_url,
-			headers=self._get_headers(content_type="application/json;charset=utf-8"),
-			data=json.dumps(data),
-		)
-		accounts_response_val = accounts_response.json()
-		self._exchange_consent_token(accounts_response_val)
+			accounts_response = requests.post(
+				url=consent_url,
+				headers=self._get_headers(content_type="application/json;charset=utf-8"),
+				data=json.dumps(data),
+			)
+			accounts_response_val = accounts_response.json()
+			self._exchange_consent_token(accounts_response_val)
 
-		if accounts_response.status_code >= 400:
-			error = accounts_response_val.get("error")
-			frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
-		else:
-			return accounts_response_val
+			if accounts_response.status_code >= 400:
+				error = accounts_response_val.get("error")
+				frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
+			else:
+				return accounts_response_val
+		except Exception:
+			frappe.throw(_("Failed to fetch accounts"))
 
 	def fetch_transactions(self, account: str, account_id: str, start_date: str):
+		"""
+		Fetch Transactions using Consent API and insert records after each page (Results could be paginated)
+		"""
 		next_page = True
 		to_date = formatdate(today(), "YYYY-MM-dd")
 		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/transactions/get"
@@ -53,7 +62,7 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 			"account_id": account_id,
 			"from_date": start_date,
 			"to_date": to_date,
-			"preferred_pagination_size": 100,
+			"preferred_pagination_size": 1000,
 			"psu": self.psu,
 		}
 

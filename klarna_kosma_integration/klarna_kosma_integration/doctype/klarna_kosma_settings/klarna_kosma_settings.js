@@ -88,6 +88,7 @@ class KlarnaKosmaConnect {
 	async get_client_token (){
 		let session_data = await this.frm.call({
 			method: "get_client_token",
+			args: { current_flow: this.flow },
 			freeze: true,
 			freeze_message: __("Please wait. Redirecting to Bank...")
 		}).then(resp => resp.message);
@@ -195,7 +196,6 @@ class KlarnaKosmaConnect {
 
 	complete_transactions_flow()  {
 		// get args
-		let me = this;
 		let args = {
 			api_type: this.api_type,
 			account: this.account

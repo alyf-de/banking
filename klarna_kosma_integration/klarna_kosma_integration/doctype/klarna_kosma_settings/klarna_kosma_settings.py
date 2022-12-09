@@ -29,9 +29,9 @@ class KlarnaKosmaSettings(Document):
 
 
 @frappe.whitelist()
-def get_client_token():
+def get_client_token(current_flow: str):
 	kosma = KlarnaKosmaFlow()
-	return kosma.get_client_token()
+	return kosma.get_client_token(current_flow)
 
 
 @frappe.whitelist()

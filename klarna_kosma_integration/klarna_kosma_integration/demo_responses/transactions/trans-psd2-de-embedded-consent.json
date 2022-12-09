@@ -452,7 +452,8 @@
                 }
             ],
             "from_date": "2022-01-01",
-            "to_date": "2022-12-08"
+            "to_date": "2022-12-08",
+            "pagination": "<OPTIONAL OBJECT>"
         },
         "consent_token": "<TOKEN>"
     }
