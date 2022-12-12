@@ -202,10 +202,7 @@ class KlarnaKosmaConnect {
 		};
 
 		if (this.consent_needed) {
-			Object.assign(args, {
-				session_id: this.session.session_id,
-				flow_id: this.session.flow_id
-			});
+			Object.assign(args, { session_id_short: this.session.session_id_short });
 		}
 		try {
 			this.frm.call({
@@ -224,10 +221,7 @@ class KlarnaKosmaConnect {
 		let args = { api_type: this.api_type };
 
 		if (this.consent_needed) {
-			Object.assign(args, {
-				session_id: this.session.session_id,
-				flow_id: this.session.flow_id
-			});
+			Object.assign(args, { session_id_short: this.session.session_id_short });
 		}
 
 		try {

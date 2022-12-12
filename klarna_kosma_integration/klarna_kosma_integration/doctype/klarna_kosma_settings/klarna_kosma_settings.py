@@ -35,10 +35,10 @@ def get_client_token(current_flow: str):
 
 
 @frappe.whitelist()
-def fetch_accounts(api_type: str, session_id: str = None, flow_id: str = None):
+def fetch_accounts(api_type: str, session_id_short: str):
 	if api_type == "flow":
 		kosma = KlarnaKosmaFlow()
-		accounts_data = kosma.fetch_accounts(session_id, flow_id)
+		accounts_data = kosma.fetch_accounts(session_id_short)
 	else:
 		kosma = KlarnaKosmaConsent()
 		accounts_data = kosma.fetch_accounts()
@@ -67,9 +67,7 @@ def add_bank_and_accounts(accounts, company, bank_name=None):
 
 
 @frappe.whitelist()
-def sync_transactions(
-	account: str, api_type: str, session_id: str = None, flow_id: str = None
-):
+def sync_transactions(account: str, api_type: str, session_id_short: str) -> None:
 	# TODO: remove now=True
 	if api_type == "consent":
 		frappe.enqueue(
@@ -81,8 +79,7 @@ def sync_transactions(
 		frappe.enqueue(
 			"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_flow.sync_transactions",
 			account=account,
-			session_id=session_id,
-			flow_id=flow_id,
+			session_id_short=session_id_short,
 			now=True,
 		)
 

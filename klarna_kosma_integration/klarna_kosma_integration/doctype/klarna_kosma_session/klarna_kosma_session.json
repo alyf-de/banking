@@ -1,0 +1,103 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:session_id_short",
+ "creation": "2022-12-12 16:54:14.651721",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "session_id_short",
+  "session_config",
+  "column_break_2",
+  "session_id",
+  "status",
+  "flow_details_section",
+  "flow_id",
+  "column_break_8",
+  "flow_state"
+ ],
+ "fields": [
+  {
+   "fieldname": "session_id_short",
+   "fieldtype": "Data",
+   "label": "Session ID Short",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "session_id",
+   "fieldtype": "Password",
+   "label": "Session ID",
+   "read_only": 1
+  },
+  {
+   "default": "Running",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Running\nClosed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "session_config",
+   "fieldtype": "Text",
+   "label": "Session Config",
+   "read_only": 1
+  },
+  {
+   "fieldname": "flow_details_section",
+   "fieldtype": "Section Break",
+   "label": "Flow Details"
+  },
+  {
+   "fieldname": "flow_id",
+   "fieldtype": "Password",
+   "label": "Flow ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_8",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "flow_state",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Flow State",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-12-12 19:47:43.652661",
+ "modified_by": "Administrator",
+ "module": "Klarna Kosma Integration",
+ "name": "Klarna Kosma Session",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

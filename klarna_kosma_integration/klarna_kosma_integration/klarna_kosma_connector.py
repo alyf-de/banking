@@ -1,8 +1,6 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 
-import json
-
 import frappe
 import requests
 
@@ -32,7 +30,7 @@ class KlarnaKosmaConnector:
 			"Authorization": "Token {0}".format(self.api_token),
 		}
 
-	def _get_consent_token(self, session_id: str):
+	def _get_set_consent_token(self, session_id: str):
 		"Get consent token and store in Settings."
 		if self.consent_needed:
 			# TODO: get consent URL and consent lifetime from session document

@@ -9,6 +9,14 @@ from frappe import _
 from frappe.utils import getdate
 
 
+def get_session_flow_ids(session_id_short: str):
+	# TODO: figure out why flow_id is not encrypted
+	doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
+	session_id = doc.get_password("session_id")
+
+	return session_id, doc.flow_id
+
+
 def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
 	bank, bank_name = None, bank_data.get("bank_name") or bank_name
 
@@ -161,7 +169,7 @@ def new_bank_transaction(account: str, transaction: Dict):
 				"status": status,
 				"bank_account": account,
 				"deposit": debit,
-				"withdrawal": credit,
+				"withdrawal": credit,  # TODO: verify
 				"currency": amount_data.get("currency"),
 				"transaction_id": transaction_id,
 				"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
