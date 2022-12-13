@@ -7,10 +7,13 @@ import frappe
 import requests
 
 from frappe import _
-from frappe.utils import add_days, formatdate, nowdate, today
 
 from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
+)
+from klarna_kosma_integration.klarna_kosma_integration.kosma_account import KosmaAccount
+from klarna_kosma_integration.klarna_kosma_integration.kosma_transaction import (
+	KosmaTransaction,
 )
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_bank_transactions,
@@ -27,19 +30,16 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		Returns Client Token to render XS2A App & Short Session ID to track session
 		"""
 		session_details = self._start_session()
-
-		session_id_short = session_details.get("session_id_short")
-		flows = session_details.get("flows")
-
 		flow_data = self._start_flow(
-			current_flow, session_id_short=session_id_short, flows=flows
+			current_flow,
+			session_id_short=session_details.get("session_id_short"),
+			flows=session_details.get("flows"),
 		)
 
 		session_data = {
-			"session_id_short": session_id_short,
+			"session_id_short": session_details.get("session_id_short"),
 			"client_token": flow_data.get("client_token"),
 		}
-
 		return session_data
 
 	def fetch_accounts(self, session_id_short: str):
@@ -56,11 +56,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			flow_response.raise_for_status()
 			flow_response_val = flow_response.json()
 
-			flow_state = flow_response_val.get("data").get("state")
-			frappe.db.set_value(
-				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
-			)
-
+			self._update_flow_state(flow_response_val, session_id_short)
 			self._get_set_consent_token(session_id)
 
 			return flow_response_val
@@ -69,26 +65,16 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		finally:
 			self._end_session(session_id, session_id_short)
 
-	def fetch_transactions(
-		self, account_data: Dict, start_date: str, session_id_short: str
-	):
+	def fetch_transactions(self, account: str, start_date: str, session_id_short: str):
 		"""
 		Fetch Transactions using Flow API and insert records after each page (Results could be paginated)
 		"""
 		# TODO: CHECK IF WORKING (shows server issue currently), handle 'incomplete: true' in response
 		next_page = True
-		to_date = formatdate(today(), "YYYY-MM-dd")
+		data = KosmaTransaction.payload(account, start_date, flow=True)
 
 		session_id, flow_id = get_session_flow_ids(session_id_short)
 		flow_url = f"{self.base_url}{session_id}/flows/{flow_id}"
-
-		data = {
-			"account_id": account_data.get("account_id"),
-			"account_number": account_data.get("account_no"),
-			"from_date": start_date,
-			"to_date": to_date,
-			"preferred_pagination_size": 1000,
-		}
 
 		try:
 			while next_page:
@@ -101,24 +87,17 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 				transactions_val = transactions_resp.json()
 
 				# Process Request Response
-				flow_state = transactions_val.get("data").get("state")
-				frappe.db.set_value(
-					"Klarna Kosma Session", session_id_short, "flow_state", flow_state
-				)
-
+				self._update_flow_state(transactions_val, session_id_short)
 				self._get_set_consent_token(session_id)
 
-				result = transactions_val.get("data", {}).get("result", {})
-				pagination = result.get("pagination", {})
-				next_page = bool(pagination and pagination.get("next"))
-
 				# prep for next call
+				transaction = KosmaTransaction(transactions_val)
+				next_page = transaction.is_next_page()
 				if next_page:
-					flow_url = pagination.get("url")
-					data = {"offset": pagination.get("next").get("offset")}
+					flow_url, data = transaction.next_page_request()
 
-				if result.get("transactions", {}):
-					create_bank_transactions(account_data.get("account"), result.get("transactions"))
+				if transaction.transaction_list:
+					create_bank_transactions(account, transaction.transaction_list)
 
 		except Exception:
 			self._handle_exception(_("Failed to get Bank Transactions."))
@@ -131,12 +110,9 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		"""
 		# TODO: fetch public IP, user agent
 		data = {"psu": self.psu}
-		dates = {
-			"from_date": "2019-01-01",
-			"to_date": add_days(nowdate(), 90),
-		}  # TODO: fetch date from fiscal year
 
 		if self.consent_needed:
+			dates = self._get_session_flow_date_range()
 			data["consent_scope"] = {
 				"lifetime": 90,
 				"accounts": dates,
@@ -174,16 +150,12 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		"""
 		Start flow > Generate & return Client Token
 		"""
-		flow_link = flows.get(current_flow)  # URL
-		if not flow_link:
-			frappe.throw(_(f"{current_flow.title()} Flow is not available"))
-
-		data = {}
-		if current_flow == "transactions":
-			data = {
-				"from_date": "2020-01-01",  # TODO: fetch date from fiscal year
-				"to_date": formatdate(today(), "YYYY-MM-dd"),
-			}
+		flow_link = flows.get(current_flow, "")
+		data = (
+			{}
+			if current_flow == "accounts"
+			else self._get_session_flow_date_range(is_flow=False)
+		)
 
 		try:
 			flow_response = requests.put(
@@ -222,18 +194,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 
 @frappe.whitelist()
 def sync_transactions(account: str, session_id_short: str):
-	last_sync_date, account_id, account_no = frappe.db.get_value(
-		"Bank Account",
-		account,
-		["last_integration_date", "kosma_account_id", "bank_account_no"],
-	)
-	if last_sync_date:
-		start_date = formatdate(last_sync_date, "YYYY-MM-dd")
-	else:
-		start_date = "2020-01-01"  # TODO: fetch date from fiscal year
-		# formatdate("2022-04-01", "YYYY-MM-dd")
-
-	account_data = dict(account=account, account_id=account_id, account_no=account_no)
+	start_date = KosmaAccount.last_sync_date(account)
 
 	kosma = KlarnaKosmaFlow()
-	kosma.fetch_transactions(account_data, start_date, session_id_short)
+	kosma.fetch_transactions(account, start_date, session_id_short)

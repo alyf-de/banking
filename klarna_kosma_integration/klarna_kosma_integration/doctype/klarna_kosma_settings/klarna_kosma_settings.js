@@ -150,7 +150,7 @@ class KlarnaKosmaConnect {
 
 	async complete_accounts_flow() {
 			let flow_data = await this.fetch_accounts_data();
-			let accounts = flow_data["message"]["data"]["result"]["accounts"];
+			let accounts = flow_data["message"]["accounts"];
 
 			// Check if atleast one account has bank name if not prompt for bank name
 			const bank_exists = accounts.some((account) => account["bank_name"])

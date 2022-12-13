@@ -11,6 +11,10 @@ from frappe.utils import formatdate, today
 from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
+from klarna_kosma_integration.klarna_kosma_integration.kosma_account import KosmaAccount
+from klarna_kosma_integration.klarna_kosma_integration.kosma_transaction import (
+	KosmaTransaction,
+)
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_bank_transactions,
 	to_json,
@@ -30,7 +34,6 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 		"""
 		try:
 			data = {"consent_token": self.settings.consent_token, "psu": self.psu}
-
 			consent_url = f"{self.base_consent_url}{self.settings.consent_id}/accounts/get"
 
 			accounts_response = requests.post(
@@ -47,23 +50,16 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 		except Exception:
 			self._handle_exception(_("Failed to get Bank Accounts."))
 
-	def fetch_transactions(self, account: str, account_id: str, start_date: str):
+	def fetch_transactions(self, account: str, start_date: str):
 		"""
 		Fetch Transactions using Consent API and insert records after each page (Results could be paginated)
 		"""
 		next_page = True
-		to_date = formatdate(today(), "YYYY-MM-dd")
-		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/transactions/get"
 		settings = frappe.get_single("Klarna Kosma Settings")
+		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/transactions/get"
 
-		data = {
-			"consent_token": settings.consent_token,
-			"account_id": account_id,
-			"from_date": start_date,
-			"to_date": to_date,
-			"preferred_pagination_size": 1000,
-			"psu": self.psu,
-		}
+		data = KosmaTransaction.payload(account, start_date)
+		data.update({"consent_token": settings.consent_token, "psu": self.psu})
 
 		try:
 			while next_page:
@@ -78,23 +74,15 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 				transactions_resp.raise_for_status()
 
 				# Process Request Response
-				result = transactions_val.get("data", {}).get("result", {})
-
-				pagination = result.get("pagination", {})
-				next_page = bool(pagination and pagination.get("next"))
-
-				# prep for next call
+				transaction = KosmaTransaction(transactions_val)
+				next_page = transaction.is_next_page()
 				if next_page:
-					consent_url = pagination.get("url")
+					consent_url, data = transaction.next_page_request()
 					settings.reload()
-					data = {
-						"consent_token": settings.consent_token,
-						"offset": pagination.get("next").get("offset"),
-						"psu": self.psu,
-					}
+					data.update({"consent_token": settings.consent_token, "psu": self.psu})
 
-				if result.get("transactions"):
-					create_bank_transactions(account, result.get("transactions"))
+				if transaction.transaction_list:
+					create_bank_transactions(account, transaction.transaction_list)
 
 		except Exception:
 			self._handle_exception(_("Failed to get Bank Transactions."))
@@ -116,14 +104,7 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 
 @frappe.whitelist()
 def sync_transactions(account: str):
-	last_sync_date, account_id = frappe.db.get_value(
-		"Bank Account", account, ["last_integration_date", "kosma_account_id"]
-	)
-	if last_sync_date:
-		start_date = formatdate(last_sync_date, "YYYY-MM-dd")
-	else:
-		start_date = "2020-01-01"  # TODO: fetch date from fiscal year
-		# formatdate("2022-04-01", "YYYY-MM-dd")
+	start_date = KosmaAccount.last_sync_date(account)
 
 	kosma = KlarnaKosmaConsent()
-	kosma.fetch_transactions(account, account_id, start_date)
+	kosma.fetch_transactions(account, start_date)

@@ -1,11 +1,12 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-
+from typing import Dict
 import frappe
 import requests
 
 from frappe import _
-from frappe.utils import add_days, add_to_date, get_datetime, nowdate
+from frappe.utils import add_days, add_to_date, formatdate, get_datetime, nowdate
+from erpnext.accounts.utils import get_fiscal_year
 
 
 class KlarnaKosmaConnector:
@@ -64,3 +65,18 @@ class KlarnaKosmaConnector:
 	def _handle_exception(self, error_msg: str):
 		frappe.log_error(title=_("Kosma Error"), message=frappe.get_traceback())
 		frappe.throw(title=_("Kosma Error"), msg=error_msg)
+
+	def _update_flow_state(self, response_data: Dict, session_id_short: str) -> None:
+		flow_state = response_data.get("data").get("state")
+		frappe.db.set_value(
+			"Klarna Kosma Session", session_id_short, "flow_state", flow_state
+		)
+
+	def _get_session_flow_date_range(self, is_flow: bool = False):
+		# TODO: verify logic
+		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
+		start_date = current_fiscal_year.year_start_date
+		return {
+			"from_date": formatdate(start_date, "YYYY-MM-dd"),
+			"to_date": nowdate() if is_flow else add_days(nowdate(), 90),
+		}

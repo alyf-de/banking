@@ -130,11 +130,10 @@ def get_account_name(account):
 
 def create_bank_transactions(account: str, transactions: List[Dict]) -> None:
 	last_sync_date = None
-
 	try:
 		for transaction in reversed(transactions):
 			new_bank_transaction(account, transaction)
-			last_sync_date = transaction.get("value_date")
+			last_sync_date = transaction.get("value_date") or transaction.get("date")
 
 	except Exception:
 		frappe.log_error(title=_("Kosma Transaction Error"), message=frappe.get_traceback())
@@ -167,7 +166,7 @@ def new_bank_transaction(account: str, transaction: Dict):
 		new_transaction = frappe.get_doc(
 			{
 				"doctype": "Bank Transaction",
-				"date": getdate(transaction.get("value_date")),
+				"date": getdate(transaction.get("value_date") or transaction.get("date")),
 				"status": status,
 				"bank_account": account,
 				"deposit": debit,

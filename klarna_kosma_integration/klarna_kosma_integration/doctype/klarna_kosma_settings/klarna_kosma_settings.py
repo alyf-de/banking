@@ -43,13 +43,13 @@ def fetch_accounts(api_type: str, session_id_short: str = None):
 		kosma = KlarnaKosmaConsent()
 		accounts_data = kosma.fetch_accounts()
 
-	return accounts_data
+	return accounts_data.get("data", {}).get("result", {})
 
 
 @frappe.whitelist()
 def add_bank_and_accounts(accounts, company, bank_name=None):
 	accounts = json.loads(accounts)
-	accounts = accounts.get("data").get("result").get("accounts")
+	accounts = accounts.get("accounts")
 
 	default_gl_account = get_default_bank_cash_account(company, "Bank")
 	if not default_gl_account:
