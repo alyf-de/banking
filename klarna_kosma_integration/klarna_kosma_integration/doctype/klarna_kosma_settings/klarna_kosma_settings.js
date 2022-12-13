@@ -165,7 +165,7 @@ class KlarnaKosmaConnect {
 						fieldname: "bank_name",
 						depends_on: "eval: !doc.existing_bank",
 						mandatory_depends_on: "eval: !doc.existing_bank",
-						description: __("Bank under which accounts must be created"),
+						description: __("New Bank under which accounts must be created"),
 					},
 					{
 						fieldtype: "Check",
@@ -178,13 +178,12 @@ class KlarnaKosmaConnect {
 						options: "Bank",
 						fieldname: "bank",
 						depends_on: "existing_bank",
+						mandatory_depends_on: "existing_bank",
 						description: __("Existing Bank under which accounts must be created"),
-						reqd: 1
 					},
 				];
 
 				frappe.prompt(fields, data => {
-					console.log(data);
 					let bank_name = data.existing_bank ? data.bank : data.bank_name;
 					this.add_bank_and_accounts(flow_data, bank_name);
 				},

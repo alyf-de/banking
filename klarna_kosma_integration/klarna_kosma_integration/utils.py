@@ -1,7 +1,8 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import Dict, List
+import requests
+from typing import Dict, List, Union
 
 import frappe
 from erpnext.accounts.doctype.bank.bank import Bank
@@ -18,7 +19,7 @@ def get_session_flow_ids(session_id_short: str):
 
 
 def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
-	bank, bank_name = None, bank_data.get("bank_name") or bank_name
+	bank_name = bank_data.get("bank_name") or bank_name
 
 	if not bank_name:
 		frappe.log_error(title=_("Bank Name missing"), message=json.dumps(bank_data))
@@ -37,6 +38,7 @@ def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
 			bank.insert()
 		except Exception:
 			frappe.log_error(title=_("Bank creation failed"), message=frappe.get_traceback())
+			frappe.throw(title=_("Kosma Link Error"), msg=_("Bank creation has failed"))
 	else:
 		bank = frappe.get_doc("Bank", bank_name)
 		bank.update({"bank_name": bank_name, "swift_number": bank_data.get("bic")})
@@ -81,7 +83,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 			)
 			frappe.throw(
 				_("There was an error creating a Bank Account while linking with Kosma."),
-				title=_("Kosma Link Failed"),
+				title=_("Kosma Link Error"),
 			)
 	else:
 		try:
@@ -103,7 +105,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 				_("There was an error updating Bank Account {} while linking with Kosma.").format(
 					existing_bank_account
 				),
-				title=_("Kosma Link Failed"),
+				title=_("Kosma Link Error"),
 			)
 
 
@@ -179,3 +181,11 @@ def new_bank_transaction(account: str, transaction: Dict):
 		)
 		new_transaction.insert()
 		new_transaction.submit()
+
+
+def to_json(response: requests.models.Response) -> Union[Dict, None]:
+	"""
+	Check if response is in JSON format. If not, return None
+	"""
+	is_json = "application/json" in response.headers.get("Content-Type", "")
+	return response.json() if is_json else None

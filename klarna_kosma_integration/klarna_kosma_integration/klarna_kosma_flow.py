@@ -31,13 +31,13 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		session_id_short = session_details.get("session_id_short")
 		flows = session_details.get("flows")
 
-		flow_data = self._start_flow_in_session(
+		flow_data = self._start_flow(
 			current_flow, session_id_short=session_id_short, flows=flows
 		)
 
 		session_data = {
 			"session_id_short": session_id_short,
-			"client_token": flow_data.get("data").get("client_token"),
+			"client_token": flow_data.get("client_token"),
 		}
 
 		return session_data
@@ -53,22 +53,19 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 				url=self.base_url + "{0}/flows/{1}".format(session_id, flow_id),
 				headers=self._get_headers(),
 			)
+			flow_response.raise_for_status()
 			flow_response_val = flow_response.json()
 
-			if flow_response.status_code >= 400:
-				error = flow_response_val.get("error")
-				frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
-			else:
-				flow_state = flow_response_val.get("data").get("state")
-				frappe.db.set_value(
-					"Klarna Kosma Session", session_id_short, "flow_state", flow_state
-				)
+			flow_state = flow_response_val.get("data").get("state")
+			frappe.db.set_value(
+				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
+			)
 
-				self._get_set_consent_token(session_id)
+			self._get_set_consent_token(session_id)
 
-				return flow_response_val
+			return flow_response_val
 		except Exception:
-			frappe.throw(_("Failed to get Kosma flow data"))
+			self._handle_exception(_("Failed to get Bank Accounts."))
 		finally:
 			self._end_session(session_id, session_id_short)
 
@@ -95,38 +92,36 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 
 		try:
 			while next_page:
-				transactions_resp = requests.get(  # API Call
+				transactions_resp = requests.get(
 					url=flow_url,
 					headers=self._get_headers(content_type="application/json;charset=utf-8"),
 					data=json.dumps(data),
 				)
+				transactions_resp.raise_for_status()
 				transactions_val = transactions_resp.json()
 
 				# Process Request Response
-				if transactions_resp.status_code >= 400:
-					error = transactions_val.get("error")
-					frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
-				else:
-					flow_state = transactions_val.get("data").get("state")
-					frappe.db.set_value(
-						"Klarna Kosma Session", session_id_short, "flow_state", flow_state
-					)
+				flow_state = transactions_val.get("data").get("state")
+				frappe.db.set_value(
+					"Klarna Kosma Session", session_id_short, "flow_state", flow_state
+				)
 
-					self._get_set_consent_token(session_id)
-					result = transactions_val.get("data", {}).get("result", {})
+				self._get_set_consent_token(session_id)
 
-					pagination = result.get("pagination", {})
-					next_page = bool(pagination and pagination.get("next"))
+				result = transactions_val.get("data", {}).get("result", {})
+				pagination = result.get("pagination", {})
+				next_page = bool(pagination and pagination.get("next"))
 
-					# prep for next call
-					if next_page:
-						flow_url = pagination.get("url")
-						data = {"offset": pagination.get("next").get("offset")}
+				# prep for next call
+				if next_page:
+					flow_url = pagination.get("url")
+					data = {"offset": pagination.get("next").get("offset")}
 
-					if result.get("transactions", {}):
-						create_bank_transactions(account_data.get("account"), result.get("transactions"))
+				if result.get("transactions", {}):
+					create_bank_transactions(account_data.get("account"), result.get("transactions"))
+
 		except Exception:
-			frappe.throw(_("Failed to get Kosma transaction data"))
+			self._handle_exception(_("Failed to get Bank Transactions."))
 		finally:
 			self._end_session(session_id, session_id_short)
 
@@ -135,38 +130,31 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		Start a Kosma Session and return session details
 		"""
 		# TODO: fetch public IP, user agent
-		data = {"psu": {"ip_address": "49.36.101.156", "user_agent": "any"}}
+		data = {"psu": self.psu}
+		dates = {
+			"from_date": "2019-01-01",
+			"to_date": add_days(nowdate(), 90),
+		}  # TODO: fetch date from fiscal year
 
 		if self.consent_needed:
 			data["consent_scope"] = {
 				"lifetime": 90,
-				"accounts": {
-					"from_date": "2019-01-01",  # TODO: fetch date from fiscal year
-					"to_date": add_days(nowdate(), 90),
-				},
-				"transactions": {
-					"from_date": "2019-01-01",  # TODO: fetch date from fiscal year
-					"to_date": add_days(nowdate(), 90),
-				},
+				"accounts": dates,
+				"transactions": dates,
 			}
-
 		try:
 			session_response = requests.put(
 				url=self.base_url, headers=self._get_headers(), data=json.dumps(data)
 			)
-			session_response_val = session_response.json()
+			session_response.raise_for_status()
+			session_response_val = session_response.json()  # TODO: check if json else None
 
-			if session_response.status_code >= 400:
-				error = session_response_val.get("error")
-				frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
-			else:
-				session_data = session_response_val.get("data")
-				self._create_session_doc(session_data, session_config=data)
+			session_data = session_response_val.get("data")
+			self._create_session_doc(session_data, session_config=data)
 
-				return session_data
-
+			return session_data
 		except Exception:
-			frappe.throw(_("Failed to start Kosma session"))
+			self._handle_exception(_("Failed to start Kosma Session."))
 
 	def _create_session_doc(self, session_data: Dict, session_config: Dict) -> None:
 		session_doc = frappe.get_doc(
@@ -180,14 +168,13 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		)
 		session_doc.insert()
 
-	def _start_flow_in_session(
+	def _start_flow(
 		self, current_flow: str, session_id_short: str, flows: Dict[str, str] = None
 	):
 		"""
-		Start flow > generate & return Client Token
+		Start flow > Generate & return Client Token
 		"""
 		flow_link = flows.get(current_flow)  # URL
-
 		if not flow_link:
 			frappe.throw(_(f"{current_flow.title()} Flow is not available"))
 
@@ -198,21 +185,25 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 				"to_date": formatdate(today(), "YYYY-MM-dd"),
 			}
 
-		flow_response = requests.put(
-			url=flow_link, headers=self._get_headers(), data=json.dumps(data)
-		).json()
+		try:
+			flow_response = requests.put(
+				url=flow_link, headers=self._get_headers(), data=json.dumps(data)
+			)
+			flow_response.raise_for_status()
+			flow_response_data = flow_response.json().get("data", {})
 
-		# Update Flow info in Session Doc
-		frappe.db.set_value(
-			"Klarna Kosma Session",
-			session_id_short,
-			{
-				"flow_id": flow_response.get("data").get("flow_id"),
-				"flow_state": flow_response.get("data").get("state"),
-			},
-		)
-
-		return flow_response
+			# Update Flow info in Session Doc
+			frappe.db.set_value(
+				"Klarna Kosma Session",
+				session_id_short,
+				{
+					"flow_id": flow_response_data.get("flow_id"),
+					"flow_state": flow_response_data.get("state"),
+				},
+			)
+			return flow_response_data
+		except Exception:
+			self._handle_exception(_("Failed to start Kosma Flow."))
 
 	def _end_session(self, session_id: str = None, session_id_short: str = None):
 		"""
@@ -226,7 +217,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			frappe.db.set_value("Klarna Kosma Session", session_id_short, "status", "Closed")
 			frappe.db.commit()
 		except Exception:
-			frappe.throw(_("Failed to end Kosma session"))
+			self._handle_exception(_("Failed to end Kosma session"))
 
 
 @frappe.whitelist()

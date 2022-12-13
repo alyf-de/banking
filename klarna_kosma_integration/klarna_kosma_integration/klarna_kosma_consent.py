@@ -13,6 +13,7 @@ from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector im
 )
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_bank_transactions,
+	to_json,
 )
 
 
@@ -37,16 +38,14 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 				headers=self._get_headers(content_type="application/json;charset=utf-8"),
 				data=json.dumps(data),
 			)
-			accounts_response_val = accounts_response.json()
-			self._exchange_consent_token(accounts_response_val)
 
-			if accounts_response.status_code >= 400:
-				error = accounts_response_val.get("error")
-				frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
-			else:
-				return accounts_response_val
+			accounts_response_val = to_json(accounts_response)
+			self._exchange_consent_token(accounts_response_val)
+			accounts_response.raise_for_status()
+
+			return accounts_response_val
 		except Exception:
-			frappe.throw(_("Failed to fetch accounts"))
+			self._handle_exception(_("Failed to get Bank Accounts."))
 
 	def fetch_transactions(self, account: str, account_id: str, start_date: str):
 		"""
@@ -66,21 +65,19 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 			"psu": self.psu,
 		}
 
-		while next_page:
-			transactions_resp = requests.post(  # API Call
-				url=consent_url,
-				headers=self._get_headers(content_type="application/json;charset=utf-8"),
-				data=json.dumps(data),
-			)
-			transactions_val = transactions_resp.json()
+		try:
+			while next_page:
+				transactions_resp = requests.post(  # API Call
+					url=consent_url,
+					headers=self._get_headers(content_type="application/json;charset=utf-8"),
+					data=json.dumps(data),
+				)
 
-			self._exchange_consent_token(transactions_val)
+				transactions_val = to_json(transactions_resp)
+				self._exchange_consent_token(transactions_val)
+				transactions_resp.raise_for_status()
 
-			# Process Request Response
-			if transactions_resp.status_code >= 400:
-				error = transactions_val.get("error")
-				frappe.throw(_(str(error.get("code")) + ": " + error.get("message")))
-			else:
+				# Process Request Response
 				result = transactions_val.get("data", {}).get("result", {})
 
 				pagination = result.get("pagination", {})
@@ -98,6 +95,9 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 
 				if result.get("transactions"):
 					create_bank_transactions(account, result.get("transactions"))
+
+		except Exception:
+			self._handle_exception(_("Failed to get Bank Transactions."))
 
 	def _exchange_consent_token(self, response):
 		if not response:

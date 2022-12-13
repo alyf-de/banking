@@ -31,27 +31,27 @@ class KlarnaKosmaConnector:
 		}
 
 	def _get_set_consent_token(self, session_id: str):
-		"Get consent token and store in Settings."
-		if self.consent_needed:
-			# TODO: get consent URL and consent lifetime from session document
-			consent_url = f"{self.base_url}{session_id}/consent/get"
-			consent_response = requests.post(
-				url=consent_url,
-				headers=self._get_headers(content_type="application/json;charset=utf-8"),
-			)
-			consent_response_val = consent_response.json()
+		"""
+		Get consent token and store in Settings.
+		"""
+		if not self.consent_needed:
+			return
 
-			if consent_response.status_code >= 400:
-				error = consent_response_val.get("error")
-				frappe.throw(_("Failed to get consent: " + error.get("message")))
-			else:
-				consent_data = consent_response_val.get("data")
-				consent = {
-					"consent_id": consent_data.get("consent_id"),
-					"consent_token": consent_data.get("consent_token"),
-					"consent_expiry": add_days(get_datetime(), 90),
-				}
-				frappe.db.set_single_value("Klarna Kosma Settings", consent)
+		consent_url = f"{self.base_url}{session_id}/consent/get"
+		consent_response = requests.post(
+			url=consent_url,
+			headers=self._get_headers(content_type="application/json;charset=utf-8"),
+		)
+		consent_response_val = consent_response.json()
+		consent_response.raise_for_status()
+
+		consent_data = consent_response_val.get("data")
+		consent = {
+			"consent_id": consent_data.get("consent_id"),
+			"consent_token": consent_data.get("consent_token"),
+			"consent_expiry": add_days(get_datetime(), 90),
+		}
+		frappe.db.set_single_value("Klarna Kosma Settings", consent)
 
 	def _needs_consent(self):
 		"Returns False if there is atleast 1 hour before consent expires."
@@ -60,3 +60,7 @@ class KlarnaKosmaConnector:
 		expiry_with_buffer = add_to_date(consent_expiry, hours=-1)
 
 		return now > expiry_with_buffer
+
+	def _handle_exception(self, error_msg: str):
+		frappe.log_error(title=_("Kosma Error"), message=frappe.get_traceback())
+		frappe.throw(title=_("Kosma Error"), msg=error_msg)
