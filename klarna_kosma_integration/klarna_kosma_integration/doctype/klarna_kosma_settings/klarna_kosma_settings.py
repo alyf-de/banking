@@ -35,13 +35,9 @@ def get_client_token(current_flow: str):
 
 
 @frappe.whitelist()
-def fetch_accounts(api_type: str, session_id_short: str = None):
-	if api_type == "flow":
-		kosma = KlarnaKosmaFlow()
-		accounts_data = kosma.fetch_accounts(session_id_short)
-	else:
-		kosma = KlarnaKosmaConsent()
-		accounts_data = kosma.fetch_accounts()
+def fetch_accounts(session_id_short: str = None):
+	kosma = KlarnaKosmaFlow()
+	accounts_data = kosma.fetch_accounts(session_id_short)
 
 	return accounts_data.get("data", {}).get("result", {})
 
@@ -67,23 +63,21 @@ def add_bank_and_accounts(accounts, company, bank_name=None):
 
 
 @frappe.whitelist()
-def sync_transactions(
-	account: str, api_type: str, session_id_short: str = None
-) -> None:
+def sync_transactions(account: str) -> None:
+	if needs_consent():
+		# TODO: check bank wise consent
+		action_msg = _(" Please click on the ") + "<b>Reset Token</b>" + _(" button.")
+		frappe.throw(
+			msg=_("The Consent Token has expired or is not available.") + action_msg,
+			title=_("Kosma Error"),
+		)
+
 	# TODO: remove now=True
-	if api_type == "consent":
-		frappe.enqueue(
-			"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_consent.sync_transactions",
-			account=account,
-			now=True,
-		)
-	else:
-		frappe.enqueue(
-			"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_flow.sync_transactions",
-			account=account,
-			session_id_short=session_id_short,
-			now=True,
-		)
+	frappe.enqueue(
+		"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_consent.sync_transactions",
+		account=account,
+		now=True,
+	)
 
 	frappe.msgprint(
 		_("Transaction Sync is in progress in the background."), alert=True, indicator="green"

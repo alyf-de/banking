@@ -57,32 +57,21 @@ class KlarnaKosmaConnect {
 	constructor(opts) {
 		Object.assign(this, opts);
 
+		// Account is passed to fetch transactions and company to fetch accounts
 		this.flow = this.account ? "transactions" : "accounts";
 		this.init_kosma_connect();
 	}
 
 	async init_kosma_connect () {
-		this.consent_needed = await this.needs_consent()
-		this.api_type = this.consent_needed ? "flow" : "consent";
-
-		if (this.consent_needed) {
+		if (this.flow == "accounts") {
 			// Renders XS2A App (which authenticates/gets consent)
 			// and hands over control to server side for data fetch & business logic
 			this.session = await this.get_client_token();
 			this.render_xs2a_app();
 		} else {
 			// fetches data using the consent API without user intervention
-			this.complete_flow();
+			this.complete_transactions_flow();
 		}
-	}
-
-	async needs_consent() {
-		let consent_needed = await this.frm.call({
-			method: "needs_consent",
-			freeze: true,
-			freeze_message: __("Checking for consent...")
-		}).then(resp => resp.message);
-		return consent_needed;
 	}
 
 	async get_client_token (){
@@ -129,7 +118,7 @@ class KlarnaKosmaConnect {
 				{
 					unfoldConsentDetails: true,
 					onFinished: () => {
-						me.complete_flow()
+						me.complete_accounts_flow();
 					},
 					onError: error => {
 						console.error('onError: something bad happened.', error);
@@ -142,10 +131,6 @@ class KlarnaKosmaConnect {
 		} catch (e) {
 			console.error(e);
 		}
-	}
-
-	complete_flow() {
-		this.flow === "accounts" ? this.complete_accounts_flow() : this.complete_transactions_flow();
 	}
 
 	async complete_accounts_flow() {
@@ -194,15 +179,8 @@ class KlarnaKosmaConnect {
 	}
 
 	complete_transactions_flow()  {
-		// get args
-		let args = {
-			api_type: this.api_type,
-			account: this.account
-		};
-
-		if (this.consent_needed) {
-			Object.assign(args, { session_id_short: this.session.session_id_short });
-		}
+		// Enqueue transactions fetch via Consent API
+		let args = { account: this.account };
 		try {
 			this.frm.call({
 				method: "sync_transactions",
@@ -212,17 +190,12 @@ class KlarnaKosmaConnect {
 			});
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error fetching flow data. Check console."));
+			frappe.throw(__("Error syncing Bank Transactions. Check console."));
 		}
 	}
 
 	async fetch_accounts_data() {
-		let args = { api_type: this.api_type };
-
-		if (this.consent_needed) {
-			Object.assign(args, { session_id_short: this.session.session_id_short });
-		}
-
+		let args = { session_id_short: this.session.session_id_short };
 		try {
 			const data = await this.frm.call({
 				method: "fetch_accounts",

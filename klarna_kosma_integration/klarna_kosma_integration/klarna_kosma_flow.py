@@ -67,6 +67,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 
 	def fetch_transactions(self, account: str, start_date: str, session_id_short: str):
 		"""
+		[Not in use. Kept for future scope.]
 		Fetch Transactions using Flow API and insert records after each page (Results could be paginated)
 		"""
 		# TODO: CHECK IF WORKING (shows server issue currently), handle 'incomplete: true' in response
@@ -192,8 +193,10 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			self._handle_exception(_("Failed to end Kosma session"))
 
 
-@frappe.whitelist()
 def sync_transactions(account: str, session_id_short: str):
+	"""
+	[Not used but API maintained for future use]
+	"""
 	start_date = KosmaAccount.last_sync_date(account)
 
 	kosma = KlarnaKosmaFlow()
