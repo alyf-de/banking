@@ -6,7 +6,6 @@ import frappe
 import requests
 
 from frappe import _
-from frappe.utils import formatdate, today
 
 from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
@@ -25,41 +24,18 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 	def __init__(self) -> None:
 		super(KlarnaKosmaConsent, self).__init__()
 
-		if self.consent_needed:
-			frappe.throw(_("The Consent Token has expired or is not available"))
-
-	def fetch_accounts(self):
-		"""
-		Fetch Accounts using Consent API
-		"""
-		try:
-			data = {"consent_token": self.settings.consent_token, "psu": self.psu}
-			consent_url = f"{self.base_consent_url}{self.settings.consent_id}/accounts/get"
-
-			accounts_response = requests.post(
-				url=consent_url,
-				headers=self._get_headers(content_type="application/json;charset=utf-8"),
-				data=json.dumps(data),
-			)
-
-			accounts_response_val = to_json(accounts_response)
-			self._exchange_consent_token(accounts_response_val)
-			accounts_response.raise_for_status()
-
-			return accounts_response_val
-		except Exception:
-			self._handle_exception(_("Failed to get Bank Accounts."))
-
 	def fetch_transactions(self, account: str, start_date: str):
 		"""
 		Fetch Transactions using Consent API and insert records after each page (Results could be paginated)
 		"""
+		bank_name = frappe.db.get_value("Bank Account", account, "bank")
+		consent_id, consent_token = self._get_consent_data(bank_name)
+
 		next_page = True
-		settings = frappe.get_single("Klarna Kosma Settings")
-		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/transactions/get"
+		consent_url = f"{self.base_consent_url}{consent_id}/transactions/get"
 
 		data = KosmaTransaction.payload(account, start_date)
-		data.update({"consent_token": settings.consent_token, "psu": self.psu})
+		data.update({"consent_token": consent_token, "psu": self.psu})
 
 		try:
 			while next_page:
@@ -69,8 +45,9 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 					data=json.dumps(data),
 				)
 
+				# Error response may have consent token. Raise error after exchange
 				transactions_val = to_json(transactions_resp)
-				self._exchange_consent_token(transactions_val)
+				new_consent_token = self._exchange_consent_token(transactions_val, bank_name)
 				transactions_resp.raise_for_status()
 
 				# Process Request Response
@@ -78,8 +55,7 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 				next_page = transaction.is_next_page()
 				if next_page:
 					consent_url, data = transaction.next_page_request()
-					settings.reload()
-					data.update({"consent_token": settings.consent_token, "psu": self.psu})
+					data.update({"consent_token": new_consent_token, "psu": self.psu})
 
 				if transaction.transaction_list:
 					create_bank_transactions(account, transaction.transaction_list)
@@ -87,8 +63,8 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 		except Exception:
 			self._handle_exception(_("Failed to get Bank Transactions."))
 
-	def _exchange_consent_token(self, response):
-		if not response:
+	def _exchange_consent_token(self, response: dict, bank: str):
+		if (not response) or (not isinstance(response, dict)):
 			return
 
 		if response.get("error"):
@@ -97,9 +73,16 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 			new_consent_token = response.get("data", {}).get("consent_token")
 
 		if new_consent_token:
-			frappe.db.set_single_value(
-				"Klarna Kosma Settings", {"consent_token": new_consent_token}
-			)
+			frappe.db.set_value("Bank", bank, "consent_token", new_consent_token)
+
+		return new_consent_token
+
+	def _get_consent_data(self, bank_name):
+		"""Get stored bank consent."""
+		if self.needs_consent(bank_name):
+			frappe.throw(_("The Consent Token has expired or is not available"))
+
+		return frappe.db.get_value("Bank", bank_name, ["consent_id", "consent_token"])
 
 
 @frappe.whitelist()
@@ -108,3 +91,27 @@ def sync_transactions(account: str):
 
 	kosma = KlarnaKosmaConsent()
 	kosma.fetch_transactions(account, start_date)
+
+
+# def fetch_accounts(self):
+# 	"""
+# 	[Not in use. Maintained for future use]
+# 	Fetch Accounts using Consent API
+# 	"""
+# 	try:
+# 		data = {"consent_token": self.settings.consent_token, "psu": self.psu}
+# 		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/accounts/get"
+
+# 		accounts_response = requests.post(
+# 			url=consent_url,
+# 			headers=self._get_headers(content_type="application/json;charset=utf-8"),
+# 			data=json.dumps(data),
+# 		)
+
+# 		accounts_response_val = to_json(accounts_response)
+# 		self._exchange_consent_token(accounts_response_val)
+# 		accounts_response.raise_for_status()
+
+# 		return accounts_response_val
+# 	except Exception:
+# 		self._handle_exception(_("Failed to get Bank Accounts."))

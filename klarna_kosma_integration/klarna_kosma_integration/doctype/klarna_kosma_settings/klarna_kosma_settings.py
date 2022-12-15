@@ -1,6 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from typing import Dict
 
 import frappe
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
@@ -12,15 +13,12 @@ from frappe.model.document import Document
 from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
-from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_consent import (
-	KlarnaKosmaConsent,
-)
 from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_flow import (
 	KlarnaKosmaFlow,
 )
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
-	add_bank,
 	create_bank_account,
+	update_bank,
 )
 
 
@@ -35,7 +33,7 @@ def get_client_token(current_flow: str):
 
 
 @frappe.whitelist()
-def fetch_accounts(session_id_short: str = None):
+def fetch_accounts(session_id_short: str = None) -> Dict:
 	kosma = KlarnaKosmaFlow()
 	accounts_data = kosma.fetch_accounts(session_id_short)
 
@@ -43,7 +41,7 @@ def fetch_accounts(session_id_short: str = None):
 
 
 @frappe.whitelist()
-def add_bank_and_accounts(accounts, company, bank_name=None):
+def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
 	accounts = json.loads(accounts)
 	accounts = accounts.get("accounts")
 
@@ -52,23 +50,25 @@ def add_bank_and_accounts(accounts, company, bank_name=None):
 		frappe.throw(_("Please setup a default bank account for company {0}").format(company))
 
 	for account in accounts:
-		bank = add_bank(account, bank_name)
+		update_bank(account, bank_name)
 
 		if not frappe.db.exists("Bank Account Type", account.get("account_type")):
 			frappe.get_doc(
 				{"doctype": "Bank Account Type", "account_type": account.get("account_type")}
 			).insert()
 
-		create_bank_account(account, bank, company, default_gl_account)
+		create_bank_account(account, bank_name, company, default_gl_account)
 
 
 @frappe.whitelist()
 def sync_transactions(account: str) -> None:
-	if needs_consent():
-		# TODO: check bank wise consent
+	bank = frappe.db.get_value("Bank Account", account, "bank")
+
+	if needs_consent(bank):
 		action_msg = _(" Please click on the ") + "<b>Reset Token</b>" + _(" button.")
 		frappe.throw(
-			msg=_("The Consent Token has expired or is not available.") + action_msg,
+			msg=_(f"The Consent Token has expired or is not available for Bank {bank}.")
+			+ action_msg,
 			title=_("Kosma Error"),
 		)
 
@@ -85,9 +85,9 @@ def sync_transactions(account: str) -> None:
 
 
 @frappe.whitelist()
-def needs_consent():
+def needs_consent(bank: str) -> bool:
 	kosma = KlarnaKosmaConnector()
-	return kosma.consent_needed
+	return kosma.needs_consent(bank)
 
 
 @frappe.whitelist()

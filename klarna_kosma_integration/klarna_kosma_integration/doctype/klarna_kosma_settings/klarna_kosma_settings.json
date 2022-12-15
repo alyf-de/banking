@@ -11,12 +11,7 @@
   "section_break_2",
   "client_id",
   "column_break_4",
-  "api_token",
-  "consents_section",
-  "consent_token",
-  "consent_id",
-  "column_break_9",
-  "consent_expiry"
+  "api_token"
  ],
  "fields": [
   {
@@ -46,40 +41,12 @@
    "label": "API Token",
    "length": 619,
    "mandatory_depends_on": "enabled"
-  },
-  {
-   "fieldname": "consent_token",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Consent Token",
-   "read_only": 1
-  },
-  {
-   "fieldname": "consent_expiry",
-   "fieldtype": "Datetime",
-   "label": "Consent Expiry",
-   "read_only": 1
-  },
-  {
-   "fieldname": "consents_section",
-   "fieldtype": "Section Break",
-   "label": "Consents"
-  },
-  {
-   "fieldname": "consent_id",
-   "fieldtype": "Data",
-   "label": "Consent ID",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_9",
-   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-12-07 13:49:36.439204",
+ "modified": "2022-12-15 18:04:54.884883",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Klarna Kosma Settings",

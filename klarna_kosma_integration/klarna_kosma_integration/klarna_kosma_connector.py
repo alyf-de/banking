@@ -12,15 +12,14 @@ from erpnext.accounts.utils import get_fiscal_year
 class KlarnaKosmaConnector:
 	def __init__(self) -> None:
 		self.settings = frappe.get_single("Klarna Kosma Settings")
-
 		self.api_token = self.settings.get_password("api_token")
+
 		self.base_url = "https://api.openbanking.playground.klarna.com/xs2a/v1/sessions/"
 		self.base_consent_url = (
 			"https://api.openbanking.playground.klarna.com/xs2a/v1/consents/"
 		)
-		self.consent_needed = self._needs_consent() if self.settings.consent_expiry else True
 
-		self.psu = {
+		self.psu = {  # TODO: fetch public IP, user agent
 			"user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
 			"ip_address": "49.36.101.156",
 		}
@@ -31,11 +30,11 @@ class KlarnaKosmaConnector:
 			"Authorization": "Token {0}".format(self.api_token),
 		}
 
-	def _get_set_consent_token(self, session_id: str):
+	def _set_consent_token(self, session_id: str, bank_name: str):
 		"""
-		Get consent token and store in Settings.
+		Get bank consent token after successful flow and store in Bank.
 		"""
-		if not self.consent_needed:
+		if not self.needs_consent(bank_name):
 			return
 
 		consent_url = f"{self.base_url}{session_id}/consent/get"
@@ -43,22 +42,27 @@ class KlarnaKosmaConnector:
 			url=consent_url,
 			headers=self._get_headers(content_type="application/json;charset=utf-8"),
 		)
-		consent_response_val = consent_response.json()
 		consent_response.raise_for_status()
 
+		consent_response_val = consent_response.json()
 		consent_data = consent_response_val.get("data")
+
 		consent = {
 			"consent_id": consent_data.get("consent_id"),
 			"consent_token": consent_data.get("consent_token"),
 			"consent_expiry": add_days(get_datetime(), 90),
 		}
-		frappe.db.set_single_value("Klarna Kosma Settings", consent)
+		frappe.db.set_value("Bank", bank_name, consent)
 
-	def _needs_consent(self):
+	@staticmethod
+	def needs_consent(bank: str) -> bool:
 		"Returns False if there is atleast 1 hour before consent expires."
+		consent_expiry = frappe.get_value("Bank", bank, "consent_expiry")
+		if not consent_expiry:
+			return True
+
 		now = get_datetime()
-		consent_expiry = get_datetime(self.settings.consent_expiry)
-		expiry_with_buffer = add_to_date(consent_expiry, hours=-1)
+		expiry_with_buffer = add_to_date(get_datetime(consent_expiry), hours=-1)
 
 		return now > expiry_with_buffer
 

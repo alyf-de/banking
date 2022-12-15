@@ -135,56 +135,17 @@ class KlarnaKosmaConnect {
 
 	async complete_accounts_flow() {
 			let flow_data = await this.fetch_accounts_data();
-			let accounts = flow_data["message"]["accounts"];
+			let bank_name = flow_data["message"]["bank_name"];
 
-			// Check if atleast one account has bank name if not prompt for bank name
-			const bank_exists = accounts.some((account) => account["bank_name"])
-
-			if (bank_exists) {
-				this.add_bank_and_accounts(flow_data);
-			} else {
-				let fields = [
-					{
-						fieldtype: "Data",
-						label: __("Bank Name"),
-						fieldname: "bank_name",
-						depends_on: "eval: !doc.existing_bank",
-						mandatory_depends_on: "eval: !doc.existing_bank",
-						description: __("New Bank under which accounts must be created"),
-					},
-					{
-						fieldtype: "Check",
-						label: __("Link with existing Bank"),
-						fieldname: "existing_bank",
-					},
-					{
-						fieldtype: "Link",
-						label: __("Bank"),
-						options: "Bank",
-						fieldname: "bank",
-						depends_on: "existing_bank",
-						mandatory_depends_on: "existing_bank",
-						description: __("Existing Bank under which accounts must be created"),
-					},
-				];
-
-				frappe.prompt(fields, data => {
-					let bank_name = data.existing_bank ? data.bank : data.bank_name;
-					this.add_bank_and_accounts(flow_data, bank_name);
-				},
-				__("Provide a Bank Name"),
-				__("Continue"));
-			}
-
+			this.add_bank_accounts(flow_data, bank_name);
 	}
 
-	complete_transactions_flow()  {
+	async complete_transactions_flow()  {
 		// Enqueue transactions fetch via Consent API
-		let args = { account: this.account };
 		try {
-			this.frm.call({
+			await this.frm.call({
 				method: "sync_transactions",
-				args: args,
+				args: { account: this.account },
 				freeze: true,
 				freeze_message: __("Please wait. Syncing Bank Transactions ...")
 			});
@@ -195,18 +156,16 @@ class KlarnaKosmaConnect {
 	}
 
 	async fetch_accounts_data() {
-		let args = { session_id_short: this.session.session_id_short };
 		try {
 			const data = await this.frm.call({
 				method: "fetch_accounts",
-				args: args,
+				args: { session_id_short: this.session.session_id_short },
 				freeze: true,
 				freeze_message: __("Please wait. Fetching Bank Acounts ...")
 			});
 
 			if (!data.message || data.exc) {
 				frappe.throw(__("Failed to fetch Bank Accounts."));
-				console.log(data);
 			}
 			return data;
 		} catch(e) {
@@ -215,12 +174,12 @@ class KlarnaKosmaConnect {
 		}
 	}
 
-	async add_bank_and_accounts(flow_data, bank_name=null) {
+	async add_bank_accounts(flow_data, bank_name) {
 		let me = this;
 		try {
 			if (flow_data.message) {
 				this.frm.call({
-					method: "add_bank_and_accounts",
+					method: "add_bank_accounts",
 					args: {
 						accounts: flow_data.message,
 						company: me.company,

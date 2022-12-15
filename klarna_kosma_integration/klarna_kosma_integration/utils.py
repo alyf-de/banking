@@ -18,38 +18,43 @@ def get_session_flow_ids(session_id_short: str):
 	return session_id, doc.flow_id
 
 
-def add_bank(bank_data: Dict, bank_name: str = None) -> Bank:
-	bank_name = bank_data.get("bank_name") or bank_name
-
+def add_bank(bank_data: Dict) -> str:
+	"""
+	Create Bank record if absent else update Bank record
+	"""
+	bank_name = bank_data.get("bank_name")
 	if not bank_name:
 		frappe.log_error(title=_("Bank Name missing"), message=json.dumps(bank_data))
 		frappe.throw(_("Failed to get Bank Name linked to account"))
 
 	if not frappe.db.exists("Bank", bank_name):
 		try:
-			bank = frappe.get_doc(
+			frappe.get_doc(
 				{
 					"doctype": "Bank",
 					"bank_name": bank_name,
 					"swift_number": bank_data.get("bic"),
-					"iban": bank_data.get("iban"),
 				}
-			)
-			bank.insert()
+			).insert()
 		except Exception:
 			frappe.log_error(title=_("Bank creation failed"), message=frappe.get_traceback())
 			frappe.throw(title=_("Kosma Link Error"), msg=_("Bank creation has failed"))
 	else:
-		bank = frappe.get_doc("Bank", bank_name)
-		bank.update({"bank_name": bank_name, "swift_number": bank_data.get("bic")})
-		bank.save()
+		update_bank(bank_data, bank_name)
 
-	return bank
+	return bank_name
 
 
-def create_bank_account(account, bank, company, default_gl_account):
+def update_bank(bank_data, bank_name):
+	"""
+	Update Bank Data
+	"""
+	frappe.db.set_value("Bank", bank_name, "swift_number", bank_data.get("bic"))
+
+
+def create_bank_account(account, bank_name, company, default_gl_account):
 	account_name = get_account_name(account)
-	bank_account_name = "{} - {}".format(account_name, bank.get("bank_name"))
+	bank_account_name = "{} - {}".format(account_name, bank_name)
 	existing_bank_account = frappe.db.exists("Bank Account", bank_account_name)
 
 	if not existing_bank_account:
@@ -57,7 +62,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 			new_account = frappe.get_doc(
 				{
 					"doctype": "Bank Account",
-					"bank": bank.get("bank_name"),
+					"bank": bank_name,
 					"account": default_gl_account.account,
 					"account_name": account_name,
 					# TODO: add custom field for account holder name ?
@@ -90,7 +95,7 @@ def create_bank_account(account, bank, company, default_gl_account):
 			existing_account = frappe.get_doc("Bank Account", existing_bank_account)
 			existing_account.update(
 				{
-					"bank": bank.get("bank_name"),
+					"bank": bank_name,
 					"account_name": account_name,
 					"account_type": account.get("account_type", ""),
 					"kosma_account_id": account.get("id"),

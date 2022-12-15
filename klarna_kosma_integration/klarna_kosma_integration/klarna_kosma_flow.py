@@ -12,11 +12,8 @@ from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector im
 	KlarnaKosmaConnector,
 )
 from klarna_kosma_integration.klarna_kosma_integration.kosma_account import KosmaAccount
-from klarna_kosma_integration.klarna_kosma_integration.kosma_transaction import (
-	KosmaTransaction,
-)
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
-	create_bank_transactions,
+	add_bank,
 	get_session_flow_ids,
 )
 
@@ -44,7 +41,9 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 
 	def fetch_accounts(self, session_id_short: str):
 		"""
-		Fetch Accounts using Flow API
+		- Fetch Accounts using Flow API
+		- Create Bank Record from Session Bank data (better UX, less user interaction)
+		- Set consent token in Bank record
 		"""
 		try:
 			session_id, flow_id = get_session_flow_ids(session_id_short)
@@ -56,8 +55,11 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			flow_response.raise_for_status()
 			flow_response_val = flow_response.json()
 
+			bank_name = self._get_session_bank(session_id)
 			self._update_flow_state(flow_response_val, session_id_short)
-			self._get_set_consent_token(session_id)
+			self._set_consent_token(session_id, bank_name)
+
+			flow_response_val["data"]["result"]["bank_name"] = bank_name
 
 			return flow_response_val
 		except Exception:
@@ -65,60 +67,16 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		finally:
 			self._end_session(session_id, session_id_short)
 
-	def fetch_transactions(self, account: str, start_date: str, session_id_short: str):
-		"""
-		[Not in use. Kept for future scope.]
-		Fetch Transactions using Flow API and insert records after each page (Results could be paginated)
-		"""
-		# TODO: CHECK IF WORKING (shows server issue currently), handle 'incomplete: true' in response
-		next_page = True
-		data = KosmaTransaction.payload(account, start_date, flow=True)
-
-		session_id, flow_id = get_session_flow_ids(session_id_short)
-		flow_url = f"{self.base_url}{session_id}/flows/{flow_id}"
-
-		try:
-			while next_page:
-				transactions_resp = requests.get(
-					url=flow_url,
-					headers=self._get_headers(content_type="application/json;charset=utf-8"),
-					data=json.dumps(data),
-				)
-				transactions_resp.raise_for_status()
-				transactions_val = transactions_resp.json()
-
-				# Process Request Response
-				self._update_flow_state(transactions_val, session_id_short)
-				self._get_set_consent_token(session_id)
-
-				# prep for next call
-				transaction = KosmaTransaction(transactions_val)
-				next_page = transaction.is_next_page()
-				if next_page:
-					flow_url, data = transaction.next_page_request()
-
-				if transaction.transaction_list:
-					create_bank_transactions(account, transaction.transaction_list)
-
-		except Exception:
-			self._handle_exception(_("Failed to get Bank Transactions."))
-		finally:
-			self._end_session(session_id, session_id_short)
-
 	def _start_session(self):
 		"""
 		Start a Kosma Session and return session details
 		"""
-		# TODO: fetch public IP, user agent
-		data = {"psu": self.psu}
+		dates = self._get_session_flow_date_range()
+		data = {
+			"psu": self.psu,
+			"consent_scope": {"lifetime": 90, "accounts": dates, "transactions": dates},
+		}
 
-		if self.consent_needed:
-			dates = self._get_session_flow_date_range()
-			data["consent_scope"] = {
-				"lifetime": 90,
-				"accounts": dates,
-				"transactions": dates,
-			}
 		try:
 			session_response = requests.put(
 				url=self.base_url, headers=self._get_headers(), data=json.dumps(data)
@@ -153,9 +111,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		"""
 		flow_link = flows.get(current_flow, "")
 		data = (
-			{}
-			if current_flow == "accounts"
-			else self._get_session_flow_date_range(is_flow=False)
+			{} if current_flow == "accounts" else self._get_session_flow_date_range(is_flow=True)
 		)
 
 		try:
@@ -192,6 +148,21 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		except Exception:
 			self._handle_exception(_("Failed to end Kosma session"))
 
+	def _get_session_bank(self, session_id: str):
+		"""
+		Get Flow session's chosen Bank and create Bank record if absent.
+		"""
+		session_data_response = requests.get(
+			url=f"{self.base_url}{session_id}", headers=self._get_headers()
+		)
+		session_data_response.raise_for_status()
+		session_data = session_data_response.json()
+
+		bank_data = session_data.get("data", {}).get("bank", {})
+		bank_name = add_bank(bank_data)
+
+		return bank_name
+
 
 def sync_transactions(account: str, session_id_short: str):
 	"""
@@ -201,3 +172,44 @@ def sync_transactions(account: str, session_id_short: str):
 
 	kosma = KlarnaKosmaFlow()
 	kosma.fetch_transactions(account, start_date, session_id_short)
+
+
+# def fetch_transactions(self, account: str, start_date: str, session_id_short: str):
+# 	"""
+# 	[Not in use. Kept for future scope.]
+# 	Fetch Transactions using Flow API and insert records after each page (Results could be paginated)
+# 	"""
+# 	# todo: CHECK IF WORKING (shows server issue currently), handle 'incomplete: true' in response
+# 	next_page = True
+# 	data = KosmaTransaction.payload(account, start_date, flow=True)
+
+# 	session_id, flow_id = get_session_flow_ids(session_id_short)
+# 	flow_url = f"{self.base_url}{session_id}/flows/{flow_id}"
+
+# 	try:
+# 		while next_page:
+# 			transactions_resp = requests.get(
+# 				url=flow_url,
+# 				headers=self._get_headers(content_type="application/json;charset=utf-8"),
+# 				data=json.dumps(data),
+# 			)
+# 			transactions_resp.raise_for_status()
+# 			transactions_val = transactions_resp.json()
+
+# 			# Process Request Response
+# 			self._update_flow_state(transactions_val, session_id_short)
+# 			self._set_consent_token(session_id)
+
+# 			# prep for next call
+# 			transaction = KosmaTransaction(transactions_val)
+# 			next_page = transaction.is_next_page()
+# 			if next_page:
+# 				flow_url, data = transaction.next_page_request()
+
+# 			if transaction.transaction_list:
+# 				create_bank_transactions(account, transaction.transaction_list)
+
+# 	except Exception:
+# 		self._handle_exception(_("Failed to get Bank Transactions."))
+# 	finally:
+# 		self._end_session(session_id, session_id_short)

@@ -16,9 +16,9 @@ class KosmaTransaction:
 		return next_page
 
 	def next_page_request(self):
-		flow_url = self.pagination.get("url")
+		url = self.pagination.get("url")
 		data = {"offset": self.pagination.get("next").get("offset")}
-		return flow_url, data
+		return url, data
 
 	@staticmethod
 	def payload(account: str, start_date: str, flow: bool = False):
