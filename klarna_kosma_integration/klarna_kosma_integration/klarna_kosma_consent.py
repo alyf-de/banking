@@ -73,16 +73,22 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 			new_consent_token = response.get("data", {}).get("consent_token")
 
 		if new_consent_token:
-			frappe.db.set_value("Bank", bank, "consent_token", new_consent_token)
+			bank_doc = frappe.get_doc("Bank", bank)
+			bank_doc.consent_token = new_consent_token
+			bank_doc.save()
+			frappe.db.commit()
 
 		return new_consent_token
 
 	def _get_consent_data(self, bank_name):
 		"""Get stored bank consent."""
 		if self.needs_consent(bank_name):
-			frappe.throw(_("The Consent Token has expired or is not available"))
+			frappe.throw(
+				_(f"The Consent Token has expired or is not available for Bank {bank_name}")
+			)
 
-		return frappe.db.get_value("Bank", bank_name, ["consent_id", "consent_token"])
+		bank_doc = frappe.get_doc("Bank", bank_name)
+		return bank_doc.consent_id, bank_doc.get_password("consent_token")
 
 
 @frappe.whitelist()

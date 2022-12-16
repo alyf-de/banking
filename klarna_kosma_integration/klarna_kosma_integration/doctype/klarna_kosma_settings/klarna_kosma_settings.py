@@ -64,11 +64,13 @@ def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
 def sync_transactions(account: str) -> None:
 	bank = frappe.db.get_value("Bank Account", account, "bank")
 
-	if needs_consent(bank):
-		action_msg = _(" Please click on the ") + "<b>Reset Token</b>" + _(" button.")
+	if needs_consent(bank):  # UX
+		error_msg = _(f"The Consent Token has expired or is not available for Bank {bank}.")
+		action_msg = (
+			_(" Please click on the ") + "<b>Sync Bank and Accounts</b>" + _(" button.")
+		)
 		frappe.throw(
-			msg=_(f"The Consent Token has expired or is not available for Bank {bank}.")
-			+ action_msg,
+			msg=error_msg + action_msg,
 			title=_("Kosma Error"),
 		)
 

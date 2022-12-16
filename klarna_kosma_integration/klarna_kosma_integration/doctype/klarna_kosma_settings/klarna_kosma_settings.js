@@ -4,15 +4,8 @@
 frappe.ui.form.on('Klarna Kosma Settings', {
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
-			frm.add_custom_button(__('Link Bank Accounts'), () => {
+			frm.add_custom_button(__('Sync Bank and Accounts'), () => {
 				frm.trigger("refresh_banks");
-			});
-
-			frm.add_custom_button(__('Reset Consent'), () => {
-				frm.call({method: "clear_consent"}).then(() => {
-					frm.reload_doc();
-					frm.trigger("refresh_banks");
-				});
 			});
 
 			frm.add_custom_button(__("Sync Transactions"), () => {
@@ -142,17 +135,13 @@ class KlarnaKosmaConnect {
 
 	async complete_transactions_flow()  {
 		// Enqueue transactions fetch via Consent API
-		try {
-			await this.frm.call({
-				method: "sync_transactions",
-				args: { account: this.account },
-				freeze: true,
-				freeze_message: __("Please wait. Syncing Bank Transactions ...")
-			});
-		} catch(e) {
-			console.log(e);
-			frappe.throw(__("Error syncing Bank Transactions. Check console."));
-		}
+		await this.frm.call({
+			method: "sync_transactions",
+			args: { account: this.account },
+			freeze: true,
+			freeze_message: __("Please wait. Syncing Bank Transactions ...")
+		});
+
 	}
 
 	async fetch_accounts_data() {

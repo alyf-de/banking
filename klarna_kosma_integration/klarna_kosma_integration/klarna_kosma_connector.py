@@ -34,9 +34,6 @@ class KlarnaKosmaConnector:
 		"""
 		Get bank consent token after successful flow and store in Bank.
 		"""
-		if not self.needs_consent(bank_name):
-			return
-
 		consent_url = f"{self.base_url}{session_id}/consent/get"
 		consent_response = requests.post(
 			url=consent_url,
@@ -52,7 +49,11 @@ class KlarnaKosmaConnector:
 			"consent_token": consent_data.get("consent_token"),
 			"consent_expiry": add_days(get_datetime(), 90),
 		}
-		frappe.db.set_value("Bank", bank_name, consent)
+
+		# Required to encrypt token
+		bank_doc = frappe.get_doc("Bank", bank_name)
+		bank_doc.update(consent)
+		bank_doc.save()
 
 	@staticmethod
 	def needs_consent(bank: str) -> bool:

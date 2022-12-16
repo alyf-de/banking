@@ -60,6 +60,7 @@ def execute():
 				fieldname="consent_token",
 				label="Consent Token",
 				fieldtype="Password",
+				length=2760,
 				insert_after="consent_cb",
 				read_only=1,
 			),
