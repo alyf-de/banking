@@ -84,7 +84,9 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 		"""Get stored bank consent."""
 		if self.needs_consent(bank_name):
 			frappe.throw(
-				_(f"The Consent Token has expired or is not available for Bank {bank_name}")
+				_("The Consent Token has expired/is unavailable for Bank {0}.").format(
+					frappe.bold(bank_name)
+				)
 			)
 
 		bank_doc = frappe.get_doc("Bank", bank_name)
