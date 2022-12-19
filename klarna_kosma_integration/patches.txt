@@ -1,1 +1,0 @@
-klarna_kosma_integration.patches.add_kosma_custom_fields
