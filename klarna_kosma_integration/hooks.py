@@ -183,6 +183,7 @@ kosma_custom_fields = {
 			fieldtype="Data",
 			insert_after="mask",
 			read_only=1,
+			translatable=0,
 		)
 	],
 	"Bank Transaction": [
@@ -193,6 +194,7 @@ kosma_custom_fields = {
 			fieldtype="Data",
 			insert_after="party",
 			read_only=1,
+			translatable=0,
 		)
 	],
 	"Bank": [
@@ -210,6 +212,7 @@ kosma_custom_fields = {
 			fieldtype="Data",
 			insert_after="consent_section",
 			read_only=1,
+			translatable=0,
 		),
 		dict(
 			owner="Administrator",
