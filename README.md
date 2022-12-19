@@ -1,8 +1,5 @@
 <div align="center">
-	<picture>
-		<source srcset="https://user-images.githubusercontent.com/25857446/208396676-9b9c83ed-50fd-4db8-8463-e1faf9884306.svg">
-		<img src="https://github.com/frappe/design/raw/master/logos/png/bench-logo.png" height="128">
-	</picture>
+	<img src="https://user-images.githubusercontent.com/25857446/208396676-9b9c83ed-50fd-4db8-8463-e1faf9884306.svg" height="128">
 	<h2>Klarna Kosma Integration</h2>
 </div>
 
