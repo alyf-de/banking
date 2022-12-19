@@ -55,9 +55,8 @@ def update_bank(bank_data, bank_name):
 def create_bank_account(account, bank_name, company, default_gl_account):
 	account_name = get_account_name(account)
 	bank_account_name = "{} - {}".format(account_name, bank_name)
-	existing_bank_account = frappe.db.exists("Bank Account", bank_account_name)
 
-	if not existing_bank_account:
+	if not frappe.db.exists("Bank Account", bank_account_name):
 		try:
 			new_account = frappe.get_doc(
 				{
@@ -91,27 +90,29 @@ def create_bank_account(account, bank_name, company, default_gl_account):
 				title=_("Kosma Link Error"),
 			)
 	else:
-		try:
-			existing_account = frappe.get_doc("Bank Account", existing_bank_account)
-			existing_account.update(
-				{
-					"bank": bank_name,
-					"account_name": account_name,
-					"account_type": account.get("account_type", ""),
-					"kosma_account_id": account.get("id"),
-				}
-			)
-			existing_account.save()
-		except Exception:
-			frappe.log_error(
-				title=_("Bank Account update has failed"), message=frappe.get_traceback()
-			)
-			frappe.throw(
-				_("There was an error updating Bank Account {} while linking with Kosma.").format(
-					existing_bank_account
-				),
-				title=_("Kosma Link Error"),
-			)
+		update_account(account, bank_account_name)
+
+
+def update_account(account_data: str, bank_account_name: str):
+	try:
+		account = frappe.get_doc("Bank Account", bank_account_name)
+		account.update(
+			{
+				"account_type": account_data.get("account_type", ""),
+				"kosma_account_id": account_data.get("id"),
+			}
+		)
+		account.save()
+	except Exception:
+		frappe.log_error(
+			title=_("Kosma Error - Bank Account Update"), message=frappe.get_traceback()
+		)
+		frappe.throw(
+			_("There was an error updating Bank Account {} while linking with Kosma.").format(
+				bank_account_name
+			),
+			title=_("Kosma Link Error"),
+		)
 
 
 def get_account_name(account):
@@ -120,9 +121,9 @@ def get_account_name(account):
 
 	Here we can consider alias + holder name to make a distinct account name
 	E.g. of Aliases:
-	        - Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
-	        - Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
-	        - (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
+	                - Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
+	                - Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
+	                - (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
 	"""
 	is_account_alias_distinct = "(" in account.get("alias")
 	if is_account_alias_distinct:
@@ -151,8 +152,9 @@ def create_bank_transactions(account: str, transactions: List[Dict]) -> None:
 def new_bank_transaction(account: str, transaction: Dict):
 	amount_data = transaction.get("amount", {})
 	amount = (
-		amount_data.get("amount", 0) / 100
-	)  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
+		amount_data.get("amount", 0)
+		/ 100  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
+	)
 
 	is_credit = transaction.get("type") == "CREDIT"
 	debit = 0 if is_credit else float(amount)

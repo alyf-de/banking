@@ -16,13 +16,38 @@ from klarna_kosma_integration.klarna_kosma_integration.kosma_transaction import 
 )
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_bank_transactions,
+	get_account_name,
 	to_json,
+	update_account,
 )
 
 
 class KlarnaKosmaConsent(KlarnaKosmaConnector):
 	def __init__(self) -> None:
 		super(KlarnaKosmaConsent, self).__init__()
+
+	def fetch_accounts(self, bank_name: str):
+		"""
+		Fetch Accounts for a Bank using Consent API
+		"""
+		try:
+			consent_id, consent_token = self._get_consent_data(bank_name)
+			data = {"consent_token": consent_token, "psu": self.psu}
+			consent_url = f"{self.base_consent_url}{consent_id}/accounts/get"
+
+			accounts_response = requests.post(
+				url=consent_url,
+				headers=self._get_headers(content_type="application/json;charset=utf-8"),
+				data=json.dumps(data),
+			)
+
+			accounts_response_val = to_json(accounts_response)
+			self._exchange_consent_token(accounts_response_val, bank_name)
+			accounts_response.raise_for_status()
+
+			return accounts_response_val
+		except Exception:
+			self._handle_exception(_("Failed to get Bank Accounts."))
 
 	def fetch_transactions(self, account: str, start_date: str):
 		"""
@@ -101,25 +126,29 @@ def sync_transactions(account: str):
 	kosma.fetch_transactions(account, start_date)
 
 
-# def fetch_accounts(self):
-# 	"""
-# 	[Not in use. Maintained for future use]
-# 	Fetch Accounts using Consent API
-# 	"""
-# 	try:
-# 		data = {"consent_token": self.settings.consent_token, "psu": self.psu}
-# 		consent_url = f"{self.base_consent_url}{self.settings.consent_id}/accounts/get"
+@frappe.whitelist()
+def sync_all_accounts_and_transactions():
+	"""
+	Refresh all Bank accounts and enqueue their transactions sync.
+	"""
+	banks = frappe.get_all("Bank", filters={"consent_id": ["is", "set"]}, pluck="name")
+	kosma = KlarnaKosmaConsent()
 
-# 		accounts_response = requests.post(
-# 			url=consent_url,
-# 			headers=self._get_headers(content_type="application/json;charset=utf-8"),
-# 			data=json.dumps(data),
-# 		)
+	# Update all bank accounts
+	accounts_list = []
+	for bank in banks:
+		accounts = kosma.fetch_accounts(bank)
+		accounts = accounts.get("data", {}).get("result", {}).get("accounts")
 
-# 		accounts_response_val = to_json(accounts_response)
-# 		self._exchange_consent_token(accounts_response_val)
-# 		accounts_response.raise_for_status()
+		for account in accounts:
+			account_name = get_account_name(account)
+			bank_account_name = "{} - {}".format(account_name, bank)
 
-# 		return accounts_response_val
-# 	except Exception:
-# 		self._handle_exception(_("Failed to get Bank Accounts."))
+			if not frappe.db.exists("Bank Account", bank_account_name):
+				continue
+
+			update_account(account, bank_account_name)
+			accounts_list.append(bank_account_name)  # list of legitimate bank account names
+
+	for bank_account in accounts_list:
+		frappe.enqueue(sync_transactions, account=bank_account)

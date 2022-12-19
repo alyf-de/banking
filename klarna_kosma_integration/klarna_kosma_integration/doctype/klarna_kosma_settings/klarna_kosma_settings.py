@@ -76,15 +76,17 @@ def sync_transactions(account: str) -> None:
 			title=_("Kosma Error"),
 		)
 
-	# TODO: remove now=True
 	frappe.enqueue(
 		"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_consent.sync_transactions",
 		account=account,
-		now=True,
 	)
 
 	frappe.msgprint(
-		_("Transaction Sync is in progress in the background."), alert=True, indicator="green"
+		_(
+			"Transaction Sync is in progress in the background. Please check the Bank Transaction List for updates."
+		),
+		alert=True,
+		indicator="green",
 	)
 
 

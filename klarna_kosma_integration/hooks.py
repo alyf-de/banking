@@ -113,23 +113,11 @@ app_license = "MIT"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"klarna_kosma_integration.tasks.all"
-# 	],
-# 	"daily": [
-# 		"klarna_kosma_integration.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"klarna_kosma_integration.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"klarna_kosma_integration.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"klarna_kosma_integration.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_consent.sync_all_accounts_and_transactions"
+	],
+}
 
 # Testing
 # -------

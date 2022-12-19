@@ -164,14 +164,14 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		return bank_name
 
 
-def sync_transactions(account: str, session_id_short: str):
-	"""
-	[Not used but API maintained for future use]
-	"""
-	start_date = KosmaAccount.last_sync_date(account)
+# def sync_transactions(account: str, session_id_short: str):
+# 	"""
+# 	[Not used but API maintained for future use]
+# 	"""
+# 	start_date = KosmaAccount.last_sync_date(account)
 
-	kosma = KlarnaKosmaFlow()
-	kosma.fetch_transactions(account, start_date, session_id_short)
+# 	kosma = KlarnaKosmaFlow()
+# 	kosma.fetch_transactions(account, start_date, session_id_short)
 
 
 # def fetch_transactions(self, account: str, start_date: str, session_id_short: str):
