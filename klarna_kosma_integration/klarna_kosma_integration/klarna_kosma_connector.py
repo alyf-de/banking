@@ -14,10 +14,11 @@ class KlarnaKosmaConnector:
 		self.settings = frappe.get_single("Klarna Kosma Settings")
 		self.api_token = self.settings.get_password("api_token")
 
-		self.base_url = "https://api.openbanking.playground.klarna.com/xs2a/v1/sessions/"
-		self.base_consent_url = (
-			"https://api.openbanking.playground.klarna.com/xs2a/v1/consents/"
-		)
+		is_playground = "playground." if self.settings.env == "Playground" else ""
+		kosma_domain = f"api.openbanking.{is_playground}klarna.com"
+
+		self.base_url = f"https://{kosma_domain}/xs2a/v1/sessions/"
+		self.base_consent_url = f"https://{kosma_domain}/xs2a/v1/consents/"
 
 		self.psu = {  # TODO: fetch public IP, user agent
 			"user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",

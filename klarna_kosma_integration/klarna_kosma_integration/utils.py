@@ -11,11 +11,8 @@ from frappe.utils import getdate
 
 
 def get_session_flow_ids(session_id_short: str):
-	# TODO: figure out why flow_id is not encrypted
 	doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
-	session_id = doc.get_password("session_id")
-
-	return session_id, doc.flow_id
+	return doc.get_password("session_id"), doc.get_password("flow_id")
 
 
 def add_bank(bank_data: Dict) -> str:

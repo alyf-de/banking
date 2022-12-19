@@ -122,14 +122,15 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			flow_response_data = flow_response.json().get("data", {})
 
 			# Update Flow info in Session Doc
-			frappe.db.set_value(
-				"Klarna Kosma Session",
-				session_id_short,
+			session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
+			session_doc.update(
 				{
 					"flow_id": flow_response_data.get("flow_id"),
 					"flow_state": flow_response_data.get("state"),
-				},
+				}
 			)
+			session_doc.save()
+
 			return flow_response_data
 		except Exception:
 			self._handle_exception(_("Failed to start Kosma Flow."))

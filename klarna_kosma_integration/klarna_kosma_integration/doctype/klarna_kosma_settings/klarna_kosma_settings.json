@@ -11,6 +11,7 @@
   "section_break_2",
   "client_id",
   "column_break_4",
+  "env",
   "api_token"
  ],
  "fields": [
@@ -41,12 +42,19 @@
    "label": "API Token",
    "length": 619,
    "mandatory_depends_on": "enabled"
+  },
+  {
+   "fieldname": "env",
+   "fieldtype": "Select",
+   "label": "Klarna Kosma Environment",
+   "mandatory_depends_on": "enabled",
+   "options": "Playground\nProduction"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-12-15 18:04:54.884883",
+ "modified": "2022-12-19 14:08:54.068709",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Klarna Kosma Settings",
