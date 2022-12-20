@@ -173,8 +173,8 @@ def new_bank_transaction(account: str, transaction: Dict):
 				"date": getdate(transaction.get("value_date") or transaction.get("date")),
 				"status": status,
 				"bank_account": account,
-				"deposit": debit,
-				"withdrawal": credit,  # TODO: verify
+				"deposit": credit,
+				"withdrawal": debit,
 				"currency": amount_data.get("currency"),
 				"transaction_id": transaction_id,
 				"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
