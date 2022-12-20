@@ -23,7 +23,6 @@ This app integrates Klarna Kosma's Open Banking API with ERPNext.
 2. Install [ERPNext](https://github.com/frappe/erpnext)
 3. `bench get-app https://github.com/alyf-de/klarna_kosma_integration.git`
 4. `bench --site <sitename> install-app klarna_kosma_integration`
-5. `bench --site <sitename> migrate`
 
 ## Getting Started
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.

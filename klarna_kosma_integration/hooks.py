@@ -64,7 +64,7 @@ app_license = "MIT"
 # ------------
 
 # before_install = "klarna_kosma_integration.install.before_install"
-# after_install = "klarna_kosma_integration.install.after_install"
+after_install = "klarna_kosma_integration.install.after_install"
 
 # Uninstallation
 # ------------
@@ -173,3 +173,69 @@ scheduler_events = {
 # auth_hooks = [
 # 	"klarna_kosma_integration.auth.validate"
 # ]
+
+kosma_custom_fields = {
+	"Bank Account": [
+		dict(
+			owner="Administrator",
+			fieldname="kosma_account_id",
+			label="Kosma Account ID",
+			fieldtype="Data",
+			insert_after="mask",
+			read_only=1,
+			translatable=0,
+		)
+	],
+	"Bank Transaction": [
+		dict(
+			owner="Administrator",
+			fieldname="kosma_party_name",
+			label="Kosma Party Name",
+			fieldtype="Data",
+			insert_after="party",
+			read_only=1,
+			translatable=0,
+		)
+	],
+	"Bank": [
+		dict(
+			owner="Administrator",
+			fieldname="consent_section",
+			label="Bank Consent Information",
+			fieldtype="Section Break",
+			insert_after="bank_transaction_mapping",
+		),
+		dict(
+			owner="Administrator",
+			fieldname="consent_id",
+			label="Consent ID",
+			fieldtype="Data",
+			insert_after="consent_section",
+			read_only=1,
+			translatable=0,
+		),
+		dict(
+			owner="Administrator",
+			fieldname="consent_expiry",
+			label="Consent Expiry",
+			fieldtype="Datetime",
+			insert_after="consent_id",
+			read_only=1,
+		),
+		dict(
+			owner="Administrator",
+			fieldname="consent_cb",
+			fieldtype="Column Break",
+			insert_after="consent_expiry",
+		),
+		dict(
+			owner="Administrator",
+			fieldname="consent_token",
+			label="Consent Token",
+			fieldtype="Password",
+			length=2760,
+			insert_after="consent_cb",
+			read_only=1,
+		),
+	],
+}
