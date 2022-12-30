@@ -8,10 +8,9 @@ import requests
 
 from frappe import _
 
-from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
+from klarna_kosma_integration.connectors.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
-from klarna_kosma_integration.klarna_kosma_integration.kosma_account import KosmaAccount
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	add_bank,
 	get_session_flow_ids,

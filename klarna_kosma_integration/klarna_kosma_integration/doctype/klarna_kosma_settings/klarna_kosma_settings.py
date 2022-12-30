@@ -10,10 +10,10 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 from frappe import _
 from frappe.model.document import Document
 
-from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_connector import (
+from klarna_kosma_integration.connectors.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
-from klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_flow import (
+from klarna_kosma_integration.connectors.klarna_kosma_flow import (
 	KlarnaKosmaFlow,
 )
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
@@ -77,7 +77,7 @@ def sync_transactions(account: str) -> None:
 		)
 
 	frappe.enqueue(
-		"klarna_kosma_integration.klarna_kosma_integration.klarna_kosma_consent.sync_transactions",
+		"klarna_kosma_integration.connectors.klarna_kosma_consent.sync_transactions",
 		account=account,
 	)
 
