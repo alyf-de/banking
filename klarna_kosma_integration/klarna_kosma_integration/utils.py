@@ -5,7 +5,6 @@ import requests
 from typing import Dict, List, Union
 
 import frappe
-from erpnext.accounts.doctype.bank.bank import Bank
 from frappe import _
 from frappe.utils import getdate
 
