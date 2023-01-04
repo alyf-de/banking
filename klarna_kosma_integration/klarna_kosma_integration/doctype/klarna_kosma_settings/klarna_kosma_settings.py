@@ -10,14 +10,13 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 from frappe import _
 from frappe.model.document import Document
 
-from klarna_kosma_integration.connectors.klarna_kosma_connector import (
-	KlarnaKosmaConnector,
-)
 from klarna_kosma_integration.connectors.klarna_kosma_flow import (
 	KlarnaKosmaFlow,
 )
+
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_bank_account,
+	needs_consent,
 	update_bank,
 )
 
@@ -28,8 +27,32 @@ class KlarnaKosmaSettings(Document):
 
 @frappe.whitelist()
 def get_client_token(current_flow: str):
-	kosma = KlarnaKosmaFlow()
-	return kosma.get_client_token(current_flow)
+	"""
+	Returns Client Token to render XS2A App & Short Session ID to track session
+	"""
+	settings = frappe.get_single("Klarna Kosma Settings")
+	config = dict(env=settings.env, api_token=settings.get_password("api_token"))
+
+	flow = KlarnaKosmaFlow(config)
+	session_details = flow.start_session()
+	# Update Flow info in Session Doc
+	# session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
+	# session_doc.update(
+	# 	{
+	# 		"flow_id": flow_response_data.get("flow_id"),
+	# 		"flow_state": flow_response_data.get("state"),
+	# 	}
+	# )
+	# session_doc.save()
+
+	flow_data = flow.start(flow_type=current_flow, flows=session_details.get("flows"))
+	# update flow id and flow state
+
+	session_data = {
+		"session_id_short": session_details.get("session_id_short"),
+		"client_token": flow_data.get("client_token"),
+	}
+	return session_data
 
 
 @frappe.whitelist()
@@ -87,23 +110,4 @@ def sync_transactions(account: str) -> None:
 		),
 		alert=True,
 		indicator="green",
-	)
-
-
-@frappe.whitelist()
-def needs_consent(bank: str) -> bool:
-	kosma = KlarnaKosmaConnector()
-	return kosma.needs_consent(bank)
-
-
-@frappe.whitelist()
-def clear_consent():
-	frappe.db.set_value(
-		"Klarna Kosma Settings",
-		None,
-		{
-			"consent_token": None,
-			"consent_id": None,
-			"consent_expiry": None,
-		},
 	)

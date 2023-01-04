@@ -6,7 +6,18 @@ from typing import Dict, List, Union
 
 import frappe
 from frappe import _
-from frappe.utils import getdate
+from frappe.utils import add_to_date, getdate, get_datetime
+
+
+def needs_consent(bank: str) -> bool:
+	"Returns False if there is atleast 1 hour before consent expires."
+	consent_expiry = frappe.db.get_value("Bank", bank, "consent_expiry")
+	if not consent_expiry:
+		return True
+
+	now = get_datetime()
+	expiry_with_buffer = add_to_date(get_datetime(consent_expiry), hours=-1)
+	return now > expiry_with_buffer
 
 
 def get_session_flow_ids(session_id_short: str):
