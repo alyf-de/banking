@@ -2,15 +2,18 @@
 # For license information, please see license.txt
 import json
 import requests
-from typing import Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import frappe
 from frappe import _
 from frappe.utils import add_to_date, getdate, get_datetime
 
+if TYPE_CHECKING:
+	from frappe.model.document import Document
+
 
 def needs_consent(bank: str) -> bool:
-	"Returns False if there is atleast 1 hour before consent expires."
+	"""Returns False if there is atleast 1 hour before consent expires."""
 	consent_expiry = frappe.db.get_value("Bank", bank, "consent_expiry")
 	if not consent_expiry:
 		return True
@@ -21,8 +24,50 @@ def needs_consent(bank: str) -> bool:
 
 
 def get_session_flow_ids(session_id_short: str):
+	"""Get stored Session & Flow IDs."""
 	doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
 	return doc.get_password("session_id"), doc.get_password("flow_id")
+
+
+def get_consent_data(bank_name: str):
+	"""Get stored bank consent."""
+	if needs_consent(bank_name):
+		frappe.throw(
+			_("The Consent Token has expired/is unavailable for Bank {0}.").format(
+				frappe.bold(bank_name)
+			)
+		)
+
+	bank_doc = frappe.get_doc("Bank", bank_name)
+	return bank_doc.consent_id, bank_doc.get_password("consent_token")
+
+
+def exchange_consent_token(response: Dict, bank: str) -> str:
+	if (not response) or (not isinstance(response, dict)):
+		return
+
+	new_consent_token = response.get("consent_token")
+
+	if new_consent_token:
+		bank_doc = frappe.get_doc("Bank", bank)
+		bank_doc.consent_token = new_consent_token
+		bank_doc.save()
+		frappe.db.commit()
+
+	return new_consent_token
+
+
+def create_session_doc(session_data: Dict) -> "Document":
+	session_doc = frappe.get_doc(
+		{
+			"doctype": "Klarna Kosma Session",
+			"session_id_short": session_data.get("session_id_short"),
+			"session_id": session_data.get("session_id"),
+			"session_config": json.dumps(session_data.get("consent_scope")),
+			"status": "Running",
+		}
+	)
+	return session_doc.insert()
 
 
 def add_bank(bank_data: Dict) -> str:
@@ -52,14 +97,17 @@ def add_bank(bank_data: Dict) -> str:
 	return bank_name
 
 
-def update_bank(bank_data, bank_name):
-	"""
-	Update Bank Data
-	"""
+def update_bank(bank_data: Dict, bank_name: str) -> None:
+	"""Update Bank Data"""
+	if not frappe.db.exists("Bank", bank_name):
+		return
+
 	frappe.db.set_value("Bank", bank_name, "swift_number", bank_data.get("bic"))
 
 
-def create_bank_account(account, bank_name, company, default_gl_account):
+def create_bank_account(
+	account: Dict, bank_name: str, company: str, default_gl_account: Dict
+) -> None:
 	account_name = get_account_name(account)
 	bank_account_name = "{} - {}".format(account_name, bank_name)
 
@@ -100,7 +148,7 @@ def create_bank_account(account, bank_name, company, default_gl_account):
 		update_account(account, bank_account_name)
 
 
-def update_account(account_data: str, bank_account_name: str):
+def update_account(account_data: str, bank_account_name: str) -> None:
 	try:
 		account = frappe.get_doc("Bank Account", bank_account_name)
 		account.update(
@@ -122,7 +170,7 @@ def update_account(account_data: str, bank_account_name: str):
 		)
 
 
-def get_account_name(account):
+def get_account_name(account: Dict) -> str:
 	"""
 	Generates and returns distinguishable account name.
 
@@ -156,12 +204,10 @@ def create_bank_transactions(account: str, transactions: List[Dict]) -> None:
 			frappe.db.set_value("Bank Account", account, "last_integration_date", last_sync_date)
 
 
-def new_bank_transaction(account: str, transaction: Dict):
+def new_bank_transaction(account: str, transaction: Dict) -> None:
 	amount_data = transaction.get("amount", {})
-	amount = (
-		amount_data.get("amount", 0)
-		/ 100  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
-	)
+	# https://docs.openbanking.klarna.com/xs2a/objects/amount.html
+	amount = amount_data.get("amount", 0) / 100
 
 	is_credit = transaction.get("type") == "CREDIT"
 	debit = 0 if is_credit else float(amount)
