@@ -8,11 +8,11 @@ from erpnext.accounts.utils import get_fiscal_year
 
 
 class KlarnaKosmaConnector:
-	def __init__(self, config: Dict = None) -> None:
-		is_playground = "playground." if config.env == "Playground" else ""
+	def __init__(self, env: str, api_token: str) -> None:
+		is_playground = "playground." if env == "Playground" else ""
 		kosma_domain = f"api.openbanking.{is_playground}klarna.com"
 
-		self.api_token = config.api_token
+		self.api_token = api_token
 		self.psu = {  # TODO: fetch public IP, user agent
 			"user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
 			"ip_address": "49.36.101.156",

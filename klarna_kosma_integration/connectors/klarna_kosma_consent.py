@@ -17,8 +17,8 @@ from klarna_kosma_integration.klarna_kosma_integration.utils import (
 
 
 class KlarnaKosmaConsent(KlarnaKosmaConnector):
-	def __init__(self, config) -> None:
-		super(KlarnaKosmaConsent, self).__init__(config)
+	def __init__(self, env: str, api_token: str) -> None:
+		super(KlarnaKosmaConsent, self).__init__(env, api_token)
 
 	def accounts(self, consent_id: str, consent_token: str) -> Dict:
 		"""

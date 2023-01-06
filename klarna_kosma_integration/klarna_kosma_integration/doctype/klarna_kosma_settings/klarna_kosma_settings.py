@@ -48,9 +48,7 @@ def get_client_token(current_flow: str) -> Dict:
 	"""
 	settings = frappe.get_single("Klarna Kosma Settings")
 
-	flow = KlarnaKosmaFlow(
-		config=frappe._dict(env=settings.env, api_token=settings.get_password("api_token"))
-	)
+	flow = KlarnaKosmaFlow(env=settings.env, api_token=settings.get_password("api_token"))
 
 	session_details = flow.start_session()
 	session_doc = create_session_doc(session_details)
@@ -78,9 +76,7 @@ def fetch_accounts_and_bank(session_id_short: str = None) -> Dict:
 	"""Fetch Accounts via Flow API after XS2A App interaction."""
 	session_id, flow_id = get_session_flow_ids(session_id_short)
 	settings = frappe.get_single("Klarna Kosma Settings")
-	flow = KlarnaKosmaFlow(
-		config=frappe._dict(env=settings.env, api_token=settings.get_password("api_token"))
-	)
+	flow = KlarnaKosmaFlow(env=settings.env, api_token=settings.get_password("api_token"))
 
 	accounts_data = flow.accounts(session_id, flow_id)  # Fetch Accounts
 	frappe.db.set_value("Klarna Kosma Session", session_id_short, "flow_state", "FINISHED")
@@ -175,7 +171,7 @@ def sync_kosma_transactions(account: str):
 
 	settings = frappe.get_single("Klarna Kosma Settings")
 	kosma = KlarnaKosmaConsent(
-		config=frappe._dict(env=settings.env, api_token=settings.get_password("api_token"))
+		env=settings.env, api_token=settings.get_password("api_token")
 	)
 
 	next_page, url, offset = True, None, None
@@ -230,14 +226,14 @@ def sync_all_accounts_and_transactions():
 	"""
 	banks = frappe.get_all("Bank", filters={"consent_id": ["is", "set"]}, pluck="name")
 	settings = frappe.get_single("Klarna Kosma Settings")
+	env, api_token = settings.env, settings.get_password("api_token")
 
 	# Update all bank accounts
 	accounts_list = []
 	for bank in banks:
-		config = frappe._dict(env=settings.env, api_token=settings.get_password("api_token"))
 		consent_id, consent_token = get_consent_data(bank)
 
-		accounts = KlarnaKosmaConsent(config).accounts(consent_id, consent_token)
+		accounts = KlarnaKosmaConsent(env, api_token).accounts(consent_id, consent_token)
 		exchange_consent_token(accounts, bank)
 
 		accounts = accounts.get("result", {}).get("accounts")

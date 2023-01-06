@@ -159,7 +159,6 @@ class KlarnaKosmaConnect {
 			return data;
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error fetching flow data. Check console."));
 		}
 	}
 
@@ -184,7 +183,6 @@ class KlarnaKosmaConnect {
 			}
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error adding bank and accounts. Check console."));
 		}
 	}
 

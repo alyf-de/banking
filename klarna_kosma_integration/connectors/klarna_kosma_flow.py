@@ -16,8 +16,8 @@ from klarna_kosma_integration.connectors.klarna_kosma_connector import (
 
 
 class KlarnaKosmaFlow(KlarnaKosmaConnector):
-	def __init__(self, config) -> None:
-		super(KlarnaKosmaFlow, self).__init__(config)
+	def __init__(self, env: str, api_token: str) -> None:
+		super(KlarnaKosmaFlow, self).__init__(env, api_token)
 
 	def start(self, flows: Dict, flow_type: str) -> Dict:
 		"""
