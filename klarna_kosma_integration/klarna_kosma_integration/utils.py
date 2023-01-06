@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, getdate, get_datetime
+from frappe.utils import add_to_date, formatdate, getdate, get_datetime, nowdate
 
 if TYPE_CHECKING:
 	from frappe.model.document import Document
+
+from erpnext.accounts.utils import get_fiscal_year
 
 
 def needs_consent(bank: str) -> bool:
@@ -247,4 +249,16 @@ def to_json(response: requests.models.Response) -> Union[Dict, None]:
 	Check if response is in JSON format. If not, return None
 	"""
 	is_json = "application/json" in response.headers.get("Content-Type", "")
-	return response.json() if is_json else None
+	return response.json() if is_json else {}
+
+
+def account_last_sync_date(account_name: str):
+	last_sync_date = frappe.db.get_value(
+		"Bank Account", account_name, "last_integration_date"
+	)
+	if last_sync_date:
+		return formatdate(last_sync_date, "YYYY-MM-dd")
+	else:
+		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
+		date = current_fiscal_year.year_start_date
+		return formatdate(date, "YYYY-MM-dd")

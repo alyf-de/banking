@@ -1,10 +1,19 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-from typing import Dict
+from typing import Dict, Union
 
 from frappe import _
 from frappe.utils import add_days, formatdate, nowdate
 from erpnext.accounts.utils import get_fiscal_year
+
+
+class KosmaError(Exception):
+	"""
+	Exception raised for errors while accessing Klarna Kosma endpoints.
+	"""
+
+	def __init__(self, msg: str):
+		self.message = msg
 
 
 class KlarnaKosmaConnector:
@@ -36,3 +45,16 @@ class KlarnaKosmaConnector:
 			"from_date": formatdate(start_date, "YYYY-MM-dd"),
 			"to_date": nowdate() if is_flow else add_days(nowdate(), 90),
 		}
+
+	def raise_for_status(self, response: Dict) -> Union["KosmaError", None]:
+		if not response.get("error"):
+			return
+
+		explanation = response.get("error").get("errors", [])
+		if explanation:
+			message = explanation[0]
+			message = f"{message.get('location')}: {message.get('message')}"
+		else:
+			message = response.get("error").get("message")
+
+		raise KosmaError(message)

@@ -33,9 +33,8 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 			data=json.dumps(data),
 		)
 
-		accounts_response_val = to_json(accounts_response).get("data", {})
-
-		return accounts_response_val
+		accounts_response_val = to_json(accounts_response)
+		return accounts_response_val.get("data", {}) or accounts_response_val
 
 	def transactions(
 		self,
@@ -63,6 +62,6 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 		)
 
 		# Error response may have consent token. Raise error after exchange
-		transactions_val = to_json(transactions_resp).get("data", {})
+		transactions_val = to_json(transactions_resp)
 
-		return transactions_val
+		return transactions_val.get("data", {}) or transactions_val

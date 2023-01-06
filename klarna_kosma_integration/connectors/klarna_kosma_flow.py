@@ -32,8 +32,9 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		flow_response = requests.put(
 			url=flow_link, headers=self.get_headers(), data=json.dumps(data)
 		)
-		flow_response_data = flow_response.json().get("data", {})
-		return flow_response_data
+
+		flow_response_data = flow_response.json()
+		return flow_response_data.get("data", {}) or flow_response_data
 
 	def accounts(self, session_id: str, flow_id: str) -> Dict:
 		"""
@@ -45,9 +46,9 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 			url=f"{self.base_url}{session_id}/flows/{flow_id}",
 			headers=self.get_headers(),
 		)
-		flow_response_val = flow_response.json().get("data", {})
 
-		return flow_response_val
+		flow_response_val = flow_response.json()
+		return flow_response_val.get("data", {}) or flow_response_val
 
 	def start_session(self) -> Dict:
 		"""
@@ -62,11 +63,14 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		session_response = requests.put(
 			url=self.base_url, headers=self.get_headers(), data=json.dumps(data)
 		)
+
 		session_response_val = session_response.json()
 
 		session_data = session_response_val.get("data", {})
-		session_data["consent_scope"] = data.get("consent_scope")
-		return session_data
+		if session_data:
+			session_data["consent_scope"] = data.get("consent_scope")
+
+		return session_data or session_response_val
 
 	def end_session(self, session_id: str = None) -> None:
 		"""
@@ -83,9 +87,9 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		session_data_response = requests.get(
 			url=f"{self.base_url}{session_id}", headers=self.get_headers()
 		)
-		session_data = session_data_response.json().get("data", {})
 
-		return session_data
+		session_data = session_data_response.json()
+		return session_data.get("data", {}) or session_data
 
 	def get_consent(self, session_id: str) -> Dict:
 		"""
@@ -98,12 +102,13 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		)
 
 		consent_response_val = consent_response.json()
-		consent_data = consent_response_val.get("data", {})
 
-		consent = {
-			"consent_id": consent_data.get("consent_id"),
-			"consent_token": consent_data.get("consent_token"),
-			"consent_expiry": add_days(get_datetime(), 90),
-		}
+		consent_data, consent = consent_response_val.get("data", {}), None
+		if consent_data:
+			consent = {
+				"consent_id": consent_data.get("consent_id"),
+				"consent_token": consent_data.get("consent_token"),
+				"consent_expiry": add_days(get_datetime(), 90),
+			}
 
-		return consent
+		return consent or consent_response_val
