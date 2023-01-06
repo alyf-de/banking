@@ -176,7 +176,7 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Session"))
 
-	def set_consent(consent: Dict, bank_name: str) -> None:
+	def set_consent(self, consent: Dict, bank_name: str) -> None:
 		bank_doc = frappe.get_doc("Bank", bank_name)
 		bank_doc.update(consent)
 		bank_doc.save()
