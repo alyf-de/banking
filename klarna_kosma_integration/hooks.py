@@ -115,7 +115,7 @@ after_install = "klarna_kosma_integration.install.after_install"
 
 scheduler_events = {
 	"daily": [
-		"klarna_kosma_integration.connectors.klarna_kosma_consent.sync_all_accounts_and_transactions"
+		"klarna_kosma_integration.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_settings.sync_all_accounts_and_transactions"
 	],
 }
 

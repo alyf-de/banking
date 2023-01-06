@@ -6,4 +6,6 @@ from frappe.model.document import Document
 
 
 class KlarnaKosmaSession(Document):
+	"""DocType that stores Kosma Session details."""
+
 	pass

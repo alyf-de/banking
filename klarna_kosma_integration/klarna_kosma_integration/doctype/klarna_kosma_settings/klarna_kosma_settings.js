@@ -147,7 +147,7 @@ class KlarnaKosmaConnect {
 	async fetch_accounts_data() {
 		try {
 			const data = await this.frm.call({
-				method: "fetch_accounts",
+				method: "fetch_accounts_and_bank",
 				args: { session_id_short: this.session.session_id_short },
 				freeze: true,
 				freeze_message: __("Please wait. Fetching Bank Acounts ...")
@@ -159,7 +159,6 @@ class KlarnaKosmaConnect {
 			return data;
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error fetching flow data. Check console."));
 		}
 	}
 
@@ -184,7 +183,6 @@ class KlarnaKosmaConnect {
 			}
 		} catch(e) {
 			console.log(e);
-			frappe.throw(__("Error adding bank and accounts. Check console."));
 		}
 	}
 

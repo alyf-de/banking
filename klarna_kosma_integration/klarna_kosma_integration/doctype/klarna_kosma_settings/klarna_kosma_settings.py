@@ -10,14 +10,12 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 from frappe import _
 from frappe.model.document import Document
 
-from klarna_kosma_integration.connectors.klarna_kosma_connector import (
-	KlarnaKosmaConnector,
-)
-from klarna_kosma_integration.connectors.klarna_kosma_flow import (
-	KlarnaKosmaFlow,
-)
+from klarna_kosma_integration.klarna_kosma_integration.kosma import Kosma
 from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_bank_account,
+	get_account_name,
+	needs_consent,
+	update_account,
 	update_bank,
 )
 
@@ -27,17 +25,20 @@ class KlarnaKosmaSettings(Document):
 
 
 @frappe.whitelist()
-def get_client_token(current_flow: str):
-	kosma = KlarnaKosmaFlow()
-	return kosma.get_client_token(current_flow)
+def get_client_token(current_flow: str) -> Dict:
+	"""
+	Returns Client Token to render XS2A App & Short Session ID to track session
+	"""
+	return Kosma().get_client_token(current_flow)
 
 
 @frappe.whitelist()
-def fetch_accounts(session_id_short: str = None) -> Dict:
-	kosma = KlarnaKosmaFlow()
-	accounts_data = kosma.fetch_accounts(session_id_short)
-
-	return accounts_data.get("data", {}).get("result", {})
+def fetch_accounts_and_bank(session_id_short: str = None) -> Dict:
+	"""
+	Fetch Accounts via Flow API after XS2A App interaction.
+	"""
+	accounts_data = Kosma().flow_accounts(session_id_short)
+	return accounts_data.get("result", {})
 
 
 @frappe.whitelist()
@@ -62,6 +63,9 @@ def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
 
 @frappe.whitelist()
 def sync_transactions(account: str) -> None:
+	"""
+	Enqueue transactions sync via the Consent API.
+	"""
 	bank = frappe.db.get_value("Bank Account", account, "bank")
 
 	if needs_consent(bank):  # UX
@@ -77,13 +81,13 @@ def sync_transactions(account: str) -> None:
 		)
 
 	frappe.enqueue(
-		"klarna_kosma_integration.connectors.klarna_kosma_consent.sync_transactions",
+		"klarna_kosma_integration.klarna_kosma_integration.kosma.sync_kosma_transactions",
 		account=account,
 	)
 
 	frappe.msgprint(
 		_(
-			"Transaction Sync is in progress in the background. Please check the Bank Transaction List for updates."
+			"Background Transaction Sync is in progress. Please check the Bank Transaction List for updates."
 		),
 		alert=True,
 		indicator="green",
@@ -91,19 +95,27 @@ def sync_transactions(account: str) -> None:
 
 
 @frappe.whitelist()
-def needs_consent(bank: str) -> bool:
-	kosma = KlarnaKosmaConnector()
-	return kosma.needs_consent(bank)
+def sync_all_accounts_and_transactions():
+	"""
+	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
+	Called via hooks.
+	"""
+	banks = frappe.get_all("Bank", filters={"consent_id": ["is", "set"]}, pluck="name")
 
+	# Update all bank accounts
+	accounts_list = []
+	for bank in banks:
+		accounts = Kosma().consent_accounts(bank)
 
-@frappe.whitelist()
-def clear_consent():
-	frappe.db.set_value(
-		"Klarna Kosma Settings",
-		None,
-		{
-			"consent_token": None,
-			"consent_id": None,
-			"consent_expiry": None,
-		},
-	)
+		for account in accounts:
+			account_name = get_account_name(account)
+			bank_account_name = "{} - {}".format(account_name, bank)
+
+			if not frappe.db.exists("Bank Account", bank_account_name):
+				continue
+
+			update_account(account, bank_account_name)
+			accounts_list.append(bank_account_name)  # list of legitimate bank account names
+
+	for bank_account in accounts_list:
+		sync_transactions(account=bank_account)
