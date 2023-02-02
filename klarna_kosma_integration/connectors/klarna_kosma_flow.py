@@ -1,23 +1,25 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from multiprocessing import connection
-from typing import Dict
+from typing import Dict, Optional
 
 import requests
-
 from frappe import _
 from frappe.utils import add_days, get_datetime
-
-
 from klarna_kosma_integration.connectors.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
 
 
 class KlarnaKosmaFlow(KlarnaKosmaConnector):
-	def __init__(self, env: str, api_token: str) -> None:
-		super(KlarnaKosmaFlow, self).__init__(env, api_token)
+	def __init__(
+		self,
+		env: str,
+		api_token: str,
+		user_agent: Optional[str] = None,
+		ip_address: Optional[str] = None,
+	) -> None:
+		super(KlarnaKosmaFlow, self).__init__(env, api_token, user_agent, ip_address)
 
 	def start(self, flows: Dict, flow_type: str) -> Dict:
 		"""
@@ -56,9 +58,9 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		"""
 		dates = self.get_date_range()
 		data = {
-			"psu": self.psu,
 			"consent_scope": {"lifetime": 90, "accounts": dates, "transactions": dates},
 		}
+		self.add_psu(data)
 
 		session_response = requests.put(
 			url=self.base_url, headers=self.get_headers(), data=json.dumps(data)
