@@ -9,7 +9,7 @@
  "engine": "InnoDB",
  "field_order": [
   "session_id_short",
-  "session_config",
+  "consent_scope",
   "column_break_2",
   "session_id",
   "status",
@@ -46,12 +46,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "session_config",
-   "fieldtype": "Text",
-   "label": "Session Config",
-   "read_only": 1
-  },
-  {
    "fieldname": "flow_details_section",
    "fieldtype": "Section Break",
    "label": "Flow Details"
@@ -72,11 +66,17 @@
    "in_list_view": 1,
    "label": "Flow State",
    "read_only": 1
+  },
+  {
+   "fieldname": "consent_scope",
+   "fieldtype": "Text",
+   "label": "Consent Scope",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-12-12 19:47:43.652661",
+ "modified": "2023-02-10 13:08:06.863642",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Klarna Kosma Session",
