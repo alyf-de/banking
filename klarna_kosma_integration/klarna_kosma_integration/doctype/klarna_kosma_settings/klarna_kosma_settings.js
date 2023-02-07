@@ -14,7 +14,14 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 					options: "Bank Account",
 					label: __("Bank Account"),
 					fieldname: "bank_account",
-					reqd: 1
+					reqd: 1,
+					get_query: () => {
+						return {
+							filters: {
+								"kosma_account_id": ["is", "set"],
+							}
+						};
+					},
 				}, (data) => {
 					new KlarnaKosmaConnect({
 						frm: frm,
