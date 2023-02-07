@@ -1,10 +1,9 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
-from frappe import _
-from frappe.utils import add_days, formatdate, nowdate
 from erpnext.accounts.utils import get_fiscal_year
+from frappe.utils import add_days, formatdate, nowdate
 
 
 class KosmaError(Exception):
@@ -17,15 +16,19 @@ class KosmaError(Exception):
 
 
 class KlarnaKosmaConnector:
-	def __init__(self, env: str, api_token: str) -> None:
+	def __init__(
+		self,
+		env: str,
+		api_token: str,
+		user_agent: Optional[str] = None,
+		ip_address: Optional[str] = None,
+	) -> None:
 		is_playground = "playground." if env == "Playground" else ""
 		kosma_domain = f"api.openbanking.{is_playground}klarna.com"
 
 		self.api_token = api_token
-		self.psu = {  # TODO: fetch public IP, user agent
-			"user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
-			"ip_address": "49.36.101.156",
-		}
+		self.user_agent = user_agent
+		self.ip_address = ip_address
 		self.base_url = f"https://{kosma_domain}/xs2a/v1/sessions/"
 		self.base_consent_url = f"https://{kosma_domain}/xs2a/v1/consents/"
 
@@ -58,3 +61,10 @@ class KlarnaKosmaConnector:
 			message = response.get("error").get("message")
 
 		raise KosmaError(message)
+
+	def add_psu(self, payload: dict) -> None:
+		if self.user_agent and self.ip_address:
+			payload["psu"] = {
+				"ip_address": self.ip_address,
+				"user_agent": self.user_agent,
+			}
