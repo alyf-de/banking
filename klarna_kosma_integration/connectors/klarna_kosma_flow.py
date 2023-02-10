@@ -18,8 +18,11 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		api_token: str,
 		user_agent: Optional[str] = None,
 		ip_address: Optional[str] = None,
+		start_date: Optional[str] = None,
 	) -> None:
-		super(KlarnaKosmaFlow, self).__init__(env, api_token, user_agent, ip_address)
+		super(KlarnaKosmaFlow, self).__init__(
+			env, api_token, user_agent, ip_address, start_date
+		)
 
 	def start(self, flows: Dict, flow_type: str) -> Dict:
 		"""
@@ -58,7 +61,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		"""
 		dates = self.get_date_range()
 		data = {
-			"consent_scope": {"lifetime": 90, "accounts": dates, "transactions": dates},
+			"consent_scope": {"lifetime": 90, "accounts": {}, "transactions": dates},
 		}
 		self.add_psu(data)
 

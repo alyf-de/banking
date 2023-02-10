@@ -1,6 +1,6 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-from typing import Dict
+from typing import Dict, Optional
 
 import frappe
 from frappe import _
@@ -25,20 +25,19 @@ class Kosma:
 
 	def __init__(self) -> None:
 		self.ip_address = get_current_ip()
-		self.user_agent = (
-			frappe.get_request_header("User-Agent") if frappe.request else None
-		)
+		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
 
 		settings = frappe.get_single("Klarna Kosma Settings")
 		self.api_token = settings.get_password("api_token")
 		self.env = settings.env
 
-	def get_flow(self):
+	def get_flow(self, start_date: Optional[str] = None):
 		return KlarnaKosmaFlow(
 			env=self.env,
 			api_token=self.api_token,
 			user_agent=self.user_agent,
 			ip_address=self.ip_address,
+			start_date=start_date,
 		)
 
 	def get_consent(self):
@@ -49,8 +48,10 @@ class Kosma:
 			ip_address=self.ip_address,
 		)
 
-	def get_client_token(self, current_flow: str) -> Dict:
-		flow = self.get_flow()
+	def get_client_token(
+		self, current_flow: str, start_date: Optional[str] = None
+	) -> Dict:
+		flow = self.get_flow(start_date)
 		session_details = self.start_session(flow)
 		flow_data = self.start_flow(flow, current_flow, session_details)
 
@@ -140,9 +141,7 @@ class Kosma:
 	) -> None:
 		try:
 			flow_obj.end_session(session_id)
-			frappe.db.set_value(
-				"Klarna Kosma Session", session_id_short, "status", "Closed"
-			)
+			frappe.db.set_value("Klarna Kosma Session", session_id_short, "status", "Closed")
 			frappe.db.commit()
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to end Kosma session"))
@@ -151,9 +150,7 @@ class Kosma:
 		self, flow_obj: "KlarnaKosmaFlow", current_flow: str, session: Dict
 	) -> Dict:
 		try:
-			flow_data = flow_obj.start(
-				flow_type=current_flow, flows=session.get("flows")
-			)
+			flow_data = flow_obj.start(flow_type=current_flow, flows=session.get("flows"))
 			flow_obj.raise_for_status(flow_data)
 
 			# Update Flow info in Session Doc

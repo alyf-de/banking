@@ -22,6 +22,7 @@ class KlarnaKosmaConnector:
 		api_token: str,
 		user_agent: Optional[str] = None,
 		ip_address: Optional[str] = None,
+		start_date: Optional[str] = None,
 	) -> None:
 		is_playground = "playground." if env == "Playground" else ""
 		kosma_domain = f"api.openbanking.{is_playground}klarna.com"
@@ -29,6 +30,7 @@ class KlarnaKosmaConnector:
 		self.api_token = api_token
 		self.user_agent = user_agent
 		self.ip_address = ip_address
+		self.start_date = start_date
 		self.base_url = f"https://{kosma_domain}/xs2a/v1/sessions/"
 		self.base_consent_url = f"https://{kosma_domain}/xs2a/v1/consents/"
 
@@ -43,7 +45,8 @@ class KlarnaKosmaConnector:
 
 	def _get_session_flow_date_range(self, is_flow: bool = False) -> Dict:
 		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
-		start_date = current_fiscal_year.year_start_date
+		start_date = self.start_date or current_fiscal_year.year_start_date
+
 		return {
 			"from_date": formatdate(start_date, "YYYY-MM-dd"),
 			"to_date": nowdate() if is_flow else add_days(nowdate(), 90),

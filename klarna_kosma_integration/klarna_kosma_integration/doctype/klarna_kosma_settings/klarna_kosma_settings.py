@@ -24,11 +24,11 @@ class KlarnaKosmaSettings(Document):
 
 
 @frappe.whitelist()
-def get_client_token(current_flow: str) -> Dict:
+def get_client_token(current_flow: str, start_date: str) -> Dict:
 	"""
 	Returns Client Token to render XS2A App & Short Session ID to track session
 	"""
-	return Kosma().get_client_token(current_flow)
+	return Kosma().get_client_token(current_flow, start_date)
 
 
 @frappe.whitelist()
@@ -47,9 +47,7 @@ def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
 
 	default_gl_account = get_default_bank_cash_account(company, "Bank")
 	if not default_gl_account:
-		frappe.throw(
-			_("Please setup a default bank account for company {0}").format(company)
-		)
+		frappe.throw(_("Please setup a default bank account for company {0}").format(company))
 
 	for account in accounts:
 		update_bank(account, bank_name)
@@ -115,9 +113,9 @@ def sync_all_accounts_and_transactions():
 				continue
 
 			update_account(account, bank_account_name)
-			accounts_list.append(
-				bank_account_name
-			)  # list of legitimate bank account names
+
+			# list of legitimate bank account names
+			accounts_list.append(bank_account_name)
 
 	for bank_account in accounts_list:
 		sync_transactions(account=bank_account)
