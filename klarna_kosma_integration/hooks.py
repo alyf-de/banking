@@ -216,10 +216,18 @@ kosma_custom_fields = {
 		),
 		dict(
 			owner="Administrator",
-			fieldname="consent_expiry",
-			label="Consent Expiry",
-			fieldtype="Datetime",
+			fieldname="consent_start",
+			label="Consent Start Date",
+			fieldtype="Date",
 			insert_after="consent_id",
+			read_only=1,
+		),
+		dict(
+			owner="Administrator",
+			fieldname="consent_expiry",
+			label="Consent Expiry Date",
+			fieldtype="Datetime",
+			insert_after="consent_start",
 			read_only=1,
 		),
 		dict(
@@ -238,4 +246,21 @@ kosma_custom_fields = {
 			read_only=1,
 		),
 	],
+}
+
+kosma_property_setters = {
+	"Bank Account": [
+		dict(
+			fieldname="last_integration_date",
+			property="read_only",
+			value=1,
+			fieldtype="Check",
+		),
+		dict(
+			fieldname="last_integration_date",
+			property="description",
+			value="",
+			fieldtype="Small Text",
+		),
+	]
 }
