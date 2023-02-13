@@ -24,5 +24,5 @@ def make_property_setters():
 					doctype,
 					**property_setter,
 					validate_fields_for_doctype=False,
-					for_doctype=not property_setter[0]
+					for_doctype=not property_setter.get("fieldname")
 				)

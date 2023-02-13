@@ -15,6 +15,7 @@ from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_session_doc,
 	exchange_consent_token,
 	get_consent_data,
+	get_consent_start_date,
 	get_current_ip,
 	get_session_flow_ids,
 )
@@ -76,7 +77,7 @@ class Kosma:
 
 			# Get and store Bank Consent in Bank record
 			consent = flow.get_consent(session_id)
-			self.set_consent(consent, bank_name)
+			self.set_consent(consent, bank_name, session_id_short)
 
 			return accounts_data
 		except Exception as exc:
@@ -179,7 +180,8 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Session"))
 
-	def set_consent(self, consent: Dict, bank_name: str) -> None:
+	def set_consent(self, consent: Dict, bank_name: str, session_id_short: str) -> None:
+		consent["consent_start"] = get_consent_start_date(session_id_short)
 		bank_doc = frappe.get_doc("Bank", bank_name)
 		bank_doc.update(consent)
 		bank_doc.save()

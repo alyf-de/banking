@@ -6,12 +6,10 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_to_date, formatdate, get_datetime, getdate, nowdate
+from frappe.utils import add_to_date, formatdate, get_datetime, getdate
 
 if TYPE_CHECKING:
 	from frappe.model.document import Document
-
-from erpnext.accounts.utils import get_fiscal_year
 
 
 def needs_consent(bank: str) -> bool:
@@ -254,15 +252,26 @@ def to_json(response: requests.models.Response) -> Union[Dict, None]:
 
 
 def account_last_sync_date(account_name: str):
-	last_sync_date = frappe.db.get_value(
-		"Bank Account", account_name, "last_integration_date"
+	"""Get Account's Last Integration Date or Consent Start Date."""
+	last_sync_date, bank = frappe.db.get_value(
+		"Bank Account", account_name, ["last_integration_date", "bank"]
 	)
 	if last_sync_date:
 		return formatdate(last_sync_date, "YYYY-MM-dd")
 	else:
-		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
-		date = current_fiscal_year.year_start_date
+		date = frappe.db.get_value("Bank", bank, "consent_start")
 		return formatdate(date, "YYYY-MM-dd")
+
+
+def get_consent_start_date(session_id_short: str) -> str:
+	"""Get start date for current consent token."""
+	consent_scope = frappe.get_value(
+		"Klarna Kosma Session", session_id_short, "consent_scope"
+	)
+	consent_start = (
+		json.loads(consent_scope).get("transactions", {}).get("from_date", None)
+	)
+	return consent_start
 
 
 def get_current_ip() -> Optional[str]:

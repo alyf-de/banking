@@ -254,13 +254,13 @@ kosma_property_setters = {
 			fieldname="last_integration_date",
 			property="read_only",
 			value=1,
-			fieldtype="Check",
+			property_type="Check",
 		),
 		dict(
 			fieldname="last_integration_date",
 			property="description",
 			value="",
-			fieldtype="Small Text",
+			property_type="Small Text",
 		),
 	]
 }
