@@ -32,13 +32,14 @@ class Kosma:
 		self.api_token = settings.get_password("api_token")
 		self.env = settings.env
 
-	def get_flow(self, start_date: Optional[str] = None):
+	def get_flow(self, from_date: Optional[str] = None, to_date: Optional[str] = None):
 		return KlarnaKosmaFlow(
 			env=self.env,
 			api_token=self.api_token,
 			user_agent=self.user_agent,
 			ip_address=self.ip_address,
-			start_date=start_date,
+			from_date=from_date,
+			to_date=to_date,
 		)
 
 	def get_consent(self):
@@ -50,11 +51,15 @@ class Kosma:
 		)
 
 	def get_client_token(
-		self, current_flow: str, start_date: Optional[str] = None
+		self,
+		current_flow: str,
+		account: Optional[str] = None,
+		from_date: Optional[str] = None,
+		to_date: Optional[str] = None,
 	) -> Dict:
-		flow = self.get_flow(start_date)
+		flow = self.get_flow(from_date, to_date)
 		session_details = self.start_session(flow)
-		flow_data = self.start_flow(flow, current_flow, session_details)
+		flow_data = self.start_flow(flow, current_flow, session_details, account)
 
 		return {
 			"session_id_short": session_details.get("session_id_short"),
@@ -82,6 +87,29 @@ class Kosma:
 			return accounts_data
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Bank Accounts."))
+		finally:
+			self.end_session(flow, session_id, session_id_short)
+
+	def flow_transactions(self, account: str, session_id_short: str):
+		next_page, url, offset = True, None, None
+		flow = self.get_flow()
+
+		try:
+			session_id, flow_id = get_session_flow_ids(session_id_short)
+			while next_page:
+				transactions = flow.transactions(session_id, flow_id, url, offset)
+				flow.raise_for_status(transactions)
+
+				# Process Request Response
+				transaction = KosmaTransaction(transactions)
+				next_page = transaction.is_next_page()
+				if next_page:
+					url, offset = transaction.next_page_request()
+
+				if transaction.transaction_list:
+					create_bank_transactions(account, transaction.transaction_list)
+		except Exception as exc:
+			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
 		finally:
 			self.end_session(flow, session_id, session_id_short)
 
@@ -148,10 +176,22 @@ class Kosma:
 			self.handle_exception(exc, _("Failed to end Kosma session"))
 
 	def start_flow(
-		self, flow_obj: "KlarnaKosmaFlow", current_flow: str, session: Dict
+		self,
+		flow_obj: "KlarnaKosmaFlow",
+		current_flow: str,
+		session: Dict,
+		account: Optional[str] = None,
 	) -> Dict:
 		try:
-			flow_data = flow_obj.start(flow_type=current_flow, flows=session.get("flows"))
+			iban, account_id = frappe.db.get_value(
+				"Bank Account", account, ["iban", "kosma_account_id"]
+			)
+			flow_data = flow_obj.start(
+				flows=session.get("flows"),
+				flow_type=current_flow,
+				iban=iban,
+				account_id=account_id,
+			)
 			flow_obj.raise_for_status(flow_data)
 
 			# Update Flow info in Session Doc
@@ -196,7 +236,10 @@ class Kosma:
 
 
 @frappe.whitelist()
-def sync_kosma_transactions(account: str):
+def sync_kosma_transactions(account: str, session_id_short: Optional[str] = None):
 	"""Fetch and insert paginated Kosma transactions"""
-	start_date = account_last_sync_date(account)
-	Kosma().consent_transactions(account, start_date)
+	if session_id_short:
+		Kosma().flow_transactions(account, session_id_short)
+	else:
+		start_date = account_last_sync_date(account)
+		Kosma().consent_transactions(account, start_date)

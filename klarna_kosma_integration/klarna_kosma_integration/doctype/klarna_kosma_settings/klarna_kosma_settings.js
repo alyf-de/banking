@@ -4,33 +4,17 @@
 frappe.ui.form.on('Klarna Kosma Settings', {
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
-			frm.add_custom_button(__('Sync Bank and Accounts'), () => {
-				frm.trigger("refresh_banks");
+			frm.add_custom_button(__('Link Bank and Accounts'), () => {
+				frm.events.refresh_banks();
 			});
 
-			frm.add_custom_button(__("Sync Transactions"), () => {
-				frappe.prompt({
-					fieldtype: "Link",
-					options: "Bank Account",
-					label: __("Bank Account"),
-					fieldname: "bank_account",
-					reqd: 1,
-					get_query: () => {
-						return {
-							filters: {
-								"kosma_account_id": ["is", "set"],
-							}
-						};
-					},
-				}, (data) => {
-					new KlarnaKosmaConnect({
-						frm: frm,
-						account: data.bank_account
-					});
-				},
-				__("Select a Bank Account"),
-				__("Continue"));
-			});
+			frm.add_custom_button(__("Transactions"), () => {
+				frm.events.sync_transactions(frm, false);
+			}, __("Sync"));
+
+			frm.add_custom_button(__("Older Transactions"), () => {
+				frm.events.sync_transactions(frm, true);
+			}, __("Sync"));
 		}
 
 	},
@@ -47,8 +31,8 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 		frappe.db.get_value(
 			"Bank", {consent_id: ["is", "set"]}, "name"
 		).then((result) => {
-			// Prompt for start date if new setup
 			if (!result.message.name) {
+				// Prompt for start date if new setup
 				fields.push({
 					fieldtype: "Date",
 					label: __("Start Date"),
@@ -61,6 +45,7 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 			frappe.prompt(fields, (data) => {
 				new KlarnaKosmaConnect({
 					frm: frm,
+					flow: "accounts",
 					company: data.company,
 					start_date: data.start_date || null
 				});
@@ -68,20 +53,103 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 			__("Setup Bank & Accounts Sync"),
 			__("Continue"));
 		});
+	},
+
+	sync_transactions: (frm, is_older) => {
+		let fields = [
+			{
+				fieldtype: "Link",
+				options: "Bank Account",
+				label: __("Bank Account"),
+				fieldname: "bank_account",
+				reqd: 1,
+				get_query: () => {
+					return {
+						filters: {
+							"kosma_account_id": ["is", "set"],
+						}
+					};
+				},
+			},
+			{
+				fieldtype: "Section Break",
+				fieldname: "sb_1",
+			},
+			{
+				fieldtype: "Date",
+				label: __("From Date"),
+				fieldname: "from_date",
+				reqd: 1
+			},
+			{
+				fieldtype: "Column Break",
+				fieldname: "cb_1",
+			},
+			{
+				fieldtype: "Date",
+				label: __("To Date"),
+				fieldname: "to_date",
+				reqd: 1
+			},
+			{
+				fieldtype: "Section Break",
+				fieldname: "sb_2",
+				hide_border: 1
+			},
+			{
+				fieldtype: "HTML",
+				fieldname: "info"
+			}
+		];
+		if (!is_older) {
+			fields = fields.slice(0, 1);
+		}
+
+		let dialog = new frappe.ui.Dialog({
+			title: is_older? __("Sync Older Transactions") : __("Sync Transactions"),
+			fields: fields,
+			primary_action_label: __("Sync"),
+			primary_action: (data) => {
+				dialog.hide();
+				new KlarnaKosmaConnect({
+					frm: frm,
+					flow: "transactions",
+					account: data.bank_account,
+					from_date: is_older ? data.from_date : null,
+					to_date: is_older ? data.to_date : null,
+				});
+			}
+		});
+
+		if (is_older) {
+			dialog.get_field("info").$wrapper.html(
+				`<div
+					class="form-message blue"
+					style="
+						padding: var(--padding-sm) var(--padding-sm);
+						background-color: var(--alert-bg-info);
+					"
+				>
+					<span>${frappe.utils.icon("solid-info", "md")}</span>
+					<span class="small" style="padding-left: 5px">
+						Requires Bank Authentication
+					</span>
+				</div>`
+			);
+		}
+		dialog.show();
 	}
 });
 
 class KlarnaKosmaConnect {
 	constructor(opts) {
 		Object.assign(this, opts);
-
-		// Account is passed to fetch transactions and company to fetch accounts
-		this.flow = this.account ? "transactions" : "accounts";
+		this.use_flow_api = this.flow == "accounts" || (this.from_date && this.to_date);
 		this.init_kosma_connect();
 	}
 
 	async init_kosma_connect () {
-		if (this.flow == "accounts") {
+		if (this.use_flow_api) {
 			// Renders XS2A App (which authenticates/gets consent)
 			// and hands over control to server side for data fetch & business logic
 			this.session = await this.get_client_token();
@@ -97,7 +165,9 @@ class KlarnaKosmaConnect {
 			method: "get_client_token",
 			args: {
 				current_flow: this.flow,
-				start_date: this.start_date
+				from_date: this.flow === "accounts" ? this.start_date : this.from_date,
+				to_date: this.to_date,
+				account: this.account || null
 			},
 			freeze: true,
 			freeze_message: __("Please wait. Redirecting to Bank...")
@@ -139,13 +209,18 @@ class KlarnaKosmaConnect {
 				{
 					unfoldConsentDetails: true,
 					onFinished: () => {
-						me.complete_accounts_flow();
+						if (me.flow === "accounts")
+							me.complete_accounts_flow();
+						else
+							me.complete_transactions_flow();
 					},
 					onError: error => {
 						console.error('onError: something bad happened.', error);
+						// TODO: Log Error and End session
 					},
 					onAbort: () => {
 						console.log("Kosma Authentication Aborted");
+						// TODO: Log Error and End session
 					},
 				}
 			)
@@ -165,7 +240,10 @@ class KlarnaKosmaConnect {
 		// Enqueue transactions fetch via Consent API
 		await this.frm.call({
 			method: "sync_transactions",
-			args: { account: this.account },
+			args: {
+				account: this.account,
+				session_id_short: this.use_flow_api ? this.session.session_id_short : null
+			},
 			freeze: true,
 			freeze_message: __("Please wait. Syncing Bank Transactions ...")
 		});

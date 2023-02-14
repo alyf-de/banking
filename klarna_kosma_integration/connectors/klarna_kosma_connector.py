@@ -22,7 +22,6 @@ class KlarnaKosmaConnector:
 		api_token: str,
 		user_agent: Optional[str] = None,
 		ip_address: Optional[str] = None,
-		start_date: Optional[str] = None,
 	) -> None:
 		is_playground = "playground." if env == "Playground" else ""
 		kosma_domain = f"api.openbanking.{is_playground}klarna.com"
@@ -30,7 +29,6 @@ class KlarnaKosmaConnector:
 		self.api_token = api_token
 		self.user_agent = user_agent
 		self.ip_address = ip_address
-		self.start_date = start_date
 		self.base_url = f"https://{kosma_domain}/xs2a/v1/sessions/"
 		self.base_consent_url = f"https://{kosma_domain}/xs2a/v1/consents/"
 
@@ -43,13 +41,14 @@ class KlarnaKosmaConnector:
 			"Authorization": "Token {0}".format(self.api_token),
 		}
 
-	def _get_session_flow_date_range(self, is_flow: bool = False) -> Dict:
+	def _get_session_flow_date_range(self, from_date, to_date) -> Dict:
 		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
-		start_date = self.start_date or current_fiscal_year.year_start_date
+		start_date = from_date or current_fiscal_year.year_start_date
+		to_date = to_date or add_days(nowdate(), 90)
 
 		return {
 			"from_date": formatdate(start_date, "YYYY-MM-dd"),
-			"to_date": nowdate() if is_flow else add_days(nowdate(), 90),
+			"to_date": formatdate(to_date, "YYYY-MM-dd"),
 		}
 
 	def raise_for_status(self, response: Dict) -> Union["KosmaError", None]:

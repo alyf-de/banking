@@ -1,7 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import Dict
+from typing import Dict, Optional
 
 import frappe
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
@@ -24,11 +24,16 @@ class KlarnaKosmaSettings(Document):
 
 
 @frappe.whitelist()
-def get_client_token(current_flow: str, start_date: str) -> Dict:
+def get_client_token(
+	current_flow: str,
+	account: Optional[str],
+	from_date: Optional[str],
+	to_date: Optional[str],
+) -> Dict:
 	"""
 	Returns Client Token to render XS2A App & Short Session ID to track session
 	"""
-	return Kosma().get_client_token(current_flow, start_date)
+	return Kosma().get_client_token(current_flow, account, from_date, to_date)
 
 
 @frappe.whitelist()
@@ -64,13 +69,13 @@ def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
 
 
 @frappe.whitelist()
-def sync_transactions(account: str) -> None:
+def sync_transactions(account: str, session_id_short: Optional[str]) -> None:
 	"""
 	Enqueue transactions sync via the Consent API.
 	"""
 	bank = frappe.db.get_value("Bank Account", account, "bank")
 
-	if needs_consent(bank):  # UX
+	if not session_id_short and needs_consent(bank):  # UX
 		frappe.throw(
 			msg=_(
 				"The Consent Token has expired/is unavailable for Bank {0}. Please click on the {1} button"
@@ -81,6 +86,8 @@ def sync_transactions(account: str) -> None:
 	frappe.enqueue(
 		"klarna_kosma_integration.klarna_kosma_integration.kosma.sync_kosma_transactions",
 		account=account,
+		session_id_short=session_id_short,
+		now=True,
 	)
 
 	frappe.msgprint(
