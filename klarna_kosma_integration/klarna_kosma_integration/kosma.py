@@ -107,7 +107,7 @@ class Kosma:
 					url, offset = transaction.next_page_request()
 
 				if transaction.transaction_list:
-					create_bank_transactions(account, transaction.transaction_list)
+					create_bank_transactions(account, transaction.transaction_list, via_flow_api=True)
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
 		finally:

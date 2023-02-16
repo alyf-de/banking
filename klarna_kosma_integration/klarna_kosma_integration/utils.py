@@ -190,11 +190,19 @@ def get_account_name(account: Dict) -> str:
 	return account_name
 
 
-def create_bank_transactions(account: str, transactions: List[Dict]) -> None:
+def create_bank_transactions(
+	account: str, transactions: List[Dict], via_flow_api: bool = False
+) -> None:
 	last_sync_date = None
 	try:
 		for transaction in reversed(transactions):
 			new_bank_transaction(account, transaction)
+
+			if via_flow_api:
+				# Don't set last integration date if via Flow API
+				# (one time action with arbitrary time period)
+				continue
+
 			last_sync_date = transaction.get("value_date") or transaction.get("date")
 
 	except Exception:
