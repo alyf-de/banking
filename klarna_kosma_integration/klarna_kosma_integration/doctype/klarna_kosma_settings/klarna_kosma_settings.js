@@ -8,13 +8,14 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 				frm.events.refresh_banks(frm);
 			});
 
-			frm.add_custom_button(__("Transactions"), () => {
-				frm.events.sync_transactions(frm, false);
-			}, __("Sync"));
+			frm.add_custom_button(__("Sync Transactions"), () => {
+				frm.events.sync_transactions(frm);
+			});
 
-			frm.add_custom_button(__("Older Transactions"), () => {
-				frm.events.sync_transactions(frm, true);
-			}, __("Sync"));
+			// TODO: Transactions via Flow API
+			// frm.add_custom_button(__("Older Transactions"), () => {
+			// 	frm.events.sync_transactions(frm, true);
+			// }, __("Sync"));
 		}
 
 	},
@@ -55,7 +56,7 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 		});
 	},
 
-	sync_transactions: (frm, is_older) => {
+	sync_transactions: (frm, is_older=false) => {
 		let fields = [
 			{
 				fieldtype: "Link",
