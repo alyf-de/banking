@@ -26,9 +26,9 @@ class KlarnaKosmaSettings(Document):
 @frappe.whitelist()
 def get_client_token(
 	current_flow: str,
-	account: Optional[str],
-	from_date: Optional[str],
-	to_date: Optional[str],
+	account: Optional[str] = None,
+	from_date: Optional[str] = None,
+	to_date: Optional[str] = None,
 ) -> Dict:
 	"""
 	Returns Client Token to render XS2A App & Short Session ID to track session

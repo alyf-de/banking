@@ -183,9 +183,13 @@ class Kosma:
 		account: Optional[str] = None,
 	) -> Dict:
 		try:
-			iban, account_id = frappe.db.get_value(
-				"Bank Account", account, ["iban", "kosma_account_id"]
-			)
+			iban, account_id = None, None
+
+			if account:
+				iban, account_id = frappe.db.get_value(
+					"Bank Account", account, ["iban", "kosma_account_id"]
+				)
+
 			flow_data = flow_obj.start(
 				flows=session.get("flows"),
 				flow_type=current_flow,

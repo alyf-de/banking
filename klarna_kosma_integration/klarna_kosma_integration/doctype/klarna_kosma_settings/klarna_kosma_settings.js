@@ -5,7 +5,7 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
 			frm.add_custom_button(__('Link Bank and Accounts'), () => {
-				frm.events.refresh_banks();
+				frm.events.refresh_banks(frm);
 			});
 
 			frm.add_custom_button(__("Transactions"), () => {
@@ -165,9 +165,9 @@ class KlarnaKosmaConnect {
 			method: "get_client_token",
 			args: {
 				current_flow: this.flow,
+				account: this.account || null,
 				from_date: this.flow === "accounts" ? this.start_date : this.from_date,
 				to_date: this.to_date,
-				account: this.account || null
 			},
 			freeze: true,
 			freeze_message: __("Please wait. Redirecting to Bank...")
