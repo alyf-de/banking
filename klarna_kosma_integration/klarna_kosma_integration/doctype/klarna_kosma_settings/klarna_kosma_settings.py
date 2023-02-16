@@ -87,7 +87,6 @@ def sync_transactions(account: str, session_id_short: Optional[str]) -> None:
 		"klarna_kosma_integration.klarna_kosma_integration.kosma.sync_kosma_transactions",
 		account=account,
 		session_id_short=session_id_short,
-		now=True,
 	)
 
 	frappe.msgprint(
