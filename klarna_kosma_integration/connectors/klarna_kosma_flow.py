@@ -128,8 +128,8 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		self,
 		session_id: str,
 		flow_id: str,
-		url: Optional[str],
-		offset: Optional[str],
+		url: Optional[str] = None,
+		offset: Optional[str] = None,
 	) -> Dict:
 		"""
 		Fetch Transactions for a single page using Consent API
