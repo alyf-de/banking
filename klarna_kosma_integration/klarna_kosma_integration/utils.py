@@ -1,7 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import frappe
 import requests
@@ -251,9 +251,9 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 		new_transaction.submit()
 
 
-def to_json(response: requests.models.Response) -> Union[Dict, None]:
+def to_json(response: requests.models.Response) -> Dict:
 	"""
-	Check if response is in JSON format. If not, return None
+	Check if response is in JSON format. If not, return {}
 	"""
 	is_json = "application/json" in response.headers.get("Content-Type", "")
 	return response.json() if is_json else {}

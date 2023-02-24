@@ -64,12 +64,17 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		flow_response_val = flow_response.json()
 		return flow_response_val.get("data", {}) or flow_response_val
 
-	def start_session(self) -> Dict:
+	def start_session(self, iban: Optional[str] = None) -> Dict:
 		"""
 		Start a Kosma Session and return session details
 		"""
-		dates = self.get_date_range(self.from_date, self.to_date)
-		data = {"consent_scope": {"lifetime": 90, "accounts": {}, "transactions": dates}}
+		transaction_data = self.get_date_range(self.from_date, self.to_date)
+		if iban:
+			transaction_data["ibans"] = [iban]
+
+		data = {
+			"consent_scope": {"lifetime": 90, "accounts": {}, "transactions": transaction_data}
+		}
 		self.add_psu(data)
 
 		session_response = requests.put(
@@ -135,13 +140,12 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		Fetch Transactions for a single page using Consent API
 		"""
 		flow_url = url or f"{self.base_url}{session_id}/flows/{flow_id}"
-		data = {}
-		if offset:
-			data["offset"] = offset
+		data = {"offset": offset} if offset else {}
 
 		transactions_resp = requests.get(
-			url=flow_url, headers=self.get_headers(), data=json.dumps(data)
+			url=flow_url, headers=self.get_headers(), data=json.dumps(data) if data else data
 		)
+		# NOTE: strange case where kosma returns a 403 if data is a stringified empty dict
 
 		transactions_val = to_json(transactions_resp)
 		return transactions_val.get("data", {}) or transactions_val

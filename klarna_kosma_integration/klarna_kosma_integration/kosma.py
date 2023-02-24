@@ -58,7 +58,7 @@ class Kosma:
 		to_date: Optional[str] = None,
 	) -> Dict:
 		flow = self.get_flow(from_date, to_date)
-		session_details = self.start_session(flow)
+		session_details = self.start_session(flow, account)
 		flow_data = self.start_flow(flow, current_flow, session_details, account)
 
 		return {
@@ -111,6 +111,11 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
 		finally:
+			flow_state = transactions.get("state", "EXCEPTION")
+			frappe.db.set_value(
+				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
+			)
+
 			self.end_session(flow, session_id, session_id_short)
 
 	def consent_accounts(self, bank: str):
@@ -156,10 +161,15 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
 
-	def start_session(self, flow_obj: "KlarnaKosmaFlow") -> Dict:
+	def start_session(
+		self, flow_obj: "KlarnaKosmaFlow", account: Optional[str] = None
+	) -> Dict:
 		try:
-			session_details = flow_obj.start_session()
+			iban = frappe.db.get_value("Bank Account", account, "iban")
+
+			session_details = flow_obj.start_session(iban)
 			flow_obj.raise_for_status(session_details)
+
 			create_session_doc(session_details)
 			return session_details
 		except Exception as exc:

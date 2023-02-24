@@ -44,6 +44,9 @@ class KlarnaKosmaConnector:
 	def _get_session_flow_date_range(
 		self, from_date: Optional[str] = None, to_date: Optional[str] = None
 	) -> Dict:
+		"""
+		Returns: {"from_date": "YYYY-MM-dd", "to_date": "YYYY-MM-dd"}
+		"""
 		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
 		start_date = from_date or current_fiscal_year.year_start_date
 		to_date = to_date or add_days(nowdate(), 90)
