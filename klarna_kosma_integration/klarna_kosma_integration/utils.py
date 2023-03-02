@@ -1,17 +1,15 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_to_date, formatdate, get_datetime, getdate, nowdate
+from frappe.utils import add_to_date, formatdate, get_datetime, getdate
 
 if TYPE_CHECKING:
 	from frappe.model.document import Document
-
-from erpnext.accounts.utils import get_fiscal_year
 
 
 def needs_consent(bank: str) -> bool:
@@ -65,7 +63,7 @@ def create_session_doc(session_data: Dict) -> "Document":
 			"doctype": "Klarna Kosma Session",
 			"session_id_short": session_data.get("session_id_short"),
 			"session_id": session_data.get("session_id"),
-			"session_config": json.dumps(session_data.get("consent_scope")),
+			"consent_scope": json.dumps(session_data.get("consent_scope")),
 			"status": "Running",
 		}
 	)
@@ -91,9 +89,7 @@ def add_bank(bank_data: Dict) -> str:
 				}
 			).insert()
 		except Exception:
-			frappe.log_error(
-				title=_("Bank creation failed"), message=frappe.get_traceback()
-			)
+			frappe.log_error(title=_("Bank creation failed"), message=frappe.get_traceback())
 			frappe.throw(title=_("Kosma Link Error"), msg=_("Bank creation has failed"))
 	else:
 		update_bank(bank_data, bank_name)
@@ -136,9 +132,9 @@ def create_bank_account(
 			new_account.insert()
 		except frappe.UniqueValidationError:
 			frappe.msgprint(
-				_(
-					"Bank account {0} already exists and could not be created again"
-				).format(new_account.name)
+				_("Bank account {0} already exists and could not be created again").format(
+					new_account.name
+				)
 			)
 		except Exception:
 			frappe.log_error(
@@ -146,9 +142,7 @@ def create_bank_account(
 				message=frappe.get_traceback(),
 			)
 			frappe.throw(
-				_(
-					"There was an error creating a Bank Account while linking with Kosma."
-				),
+				_("There was an error creating a Bank Account while linking with Kosma."),
 				title=_("Kosma Link Error"),
 			)
 	else:
@@ -170,9 +164,9 @@ def update_account(account_data: str, bank_account_name: str) -> None:
 			title=_("Kosma Error - Bank Account Update"), message=frappe.get_traceback()
 		)
 		frappe.throw(
-			_(
-				"There was an error updating Bank Account {} while linking with Kosma."
-			).format(bank_account_name),
+			_("There was an error updating Bank Account {} while linking with Kosma.").format(
+				bank_account_name
+			),
 			title=_("Kosma Link Error"),
 		)
 
@@ -183,9 +177,9 @@ def get_account_name(account: Dict) -> str:
 
 	Here we can consider alias + holder name to make a distinct account name
 	E.g. of Aliases:
-					- Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
-					- Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
-					- (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
+	        - Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
+	        - Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
+	        - (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
 	"""
 	is_account_alias_distinct = "(" in account.get("alias")
 	if is_account_alias_distinct:
@@ -196,23 +190,27 @@ def get_account_name(account: Dict) -> str:
 	return account_name
 
 
-def create_bank_transactions(account: str, transactions: List[Dict]) -> None:
+def create_bank_transactions(
+	account: str, transactions: List[Dict], via_flow_api: bool = False
+) -> None:
 	last_sync_date = None
 	try:
 		for transaction in reversed(transactions):
 			new_bank_transaction(account, transaction)
+
+			if via_flow_api:
+				# Don't set last integration date if via Flow API
+				# (one time action with arbitrary time period)
+				continue
+
 			last_sync_date = transaction.get("value_date") or transaction.get("date")
 
 	except Exception:
-		frappe.log_error(
-			title=_("Kosma Transaction Error"), message=frappe.get_traceback()
-		)
+		frappe.log_error(title=_("Kosma Transaction Error"), message=frappe.get_traceback())
 		frappe.throw(_("Error creating transactions"))
 	finally:
 		if last_sync_date:
-			frappe.db.set_value(
-				"Bank Account", account, "last_integration_date", last_sync_date
-			)
+			frappe.db.set_value("Bank Account", account, "last_integration_date", last_sync_date)
 
 
 def new_bank_transaction(account: str, transaction: Dict) -> None:
@@ -237,46 +235,51 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 		new_transaction = frappe.get_doc(
 			{
 				"doctype": "Bank Transaction",
-				"date": getdate(
-					transaction.get("value_date") or transaction.get("date")
-				),
+				"date": getdate(transaction.get("value_date") or transaction.get("date")),
 				"status": status,
 				"bank_account": account,
 				"deposit": credit,
 				"withdrawal": debit,
 				"currency": amount_data.get("currency"),
 				"transaction_id": transaction_id,
-				"reference_number": transaction.get("bank_references", {}).get(
-					"end_to_end"
-				),
+				"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
 				"description": transaction.get("reference"),
-				"kosma_party_name": transaction.get("counter_party", {}).get(
-					"holder_name"
-				),
+				"kosma_party_name": transaction.get("counter_party", {}).get("holder_name"),
 			}
 		)
 		new_transaction.insert()
 		new_transaction.submit()
 
 
-def to_json(response: requests.models.Response) -> Union[Dict, None]:
+def to_json(response: requests.models.Response) -> Dict:
 	"""
-	Check if response is in JSON format. If not, return None
+	Check if response is in JSON format. If not, return {}
 	"""
 	is_json = "application/json" in response.headers.get("Content-Type", "")
 	return response.json() if is_json else {}
 
 
 def account_last_sync_date(account_name: str):
-	last_sync_date = frappe.db.get_value(
-		"Bank Account", account_name, "last_integration_date"
+	"""Get Account's Last Integration Date or Consent Start Date."""
+	last_sync_date, bank = frappe.db.get_value(
+		"Bank Account", account_name, ["last_integration_date", "bank"]
 	)
 	if last_sync_date:
 		return formatdate(last_sync_date, "YYYY-MM-dd")
 	else:
-		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
-		date = current_fiscal_year.year_start_date
+		date = frappe.db.get_value("Bank", bank, "consent_start")
 		return formatdate(date, "YYYY-MM-dd")
+
+
+def get_consent_start_date(session_id_short: str) -> str:
+	"""Get start date for current consent token."""
+	consent_scope = frappe.get_value(
+		"Klarna Kosma Session", session_id_short, "consent_scope"
+	)
+	consent_start = (
+		json.loads(consent_scope).get("transactions", {}).get("from_date", None)
+	)
+	return consent_start
 
 
 def get_current_ip() -> Optional[str]:
@@ -290,8 +293,6 @@ def get_current_ip() -> Optional[str]:
 
 	ip_address = frappe.local.request_ip
 	if ip_address == "127.0.0.1":
-		ip_address = requests.get(
-			"https://checkip.amazonaws.com", timeout=3
-		).text.strip()
+		ip_address = requests.get("https://checkip.amazonaws.com", timeout=3).text.strip()
 
 	return ip_address

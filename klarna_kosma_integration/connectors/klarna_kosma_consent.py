@@ -44,8 +44,8 @@ class KlarnaKosmaConsent(KlarnaKosmaConnector):
 		start_date: str,
 		consent_id: str,
 		consent_token: str,
-		url: Optional[str],
-		offset: Optional[str],
+		url: Optional[str] = None,
+		offset: Optional[str] = None,
 	) -> Dict:
 		"""
 		Fetch Transactions using Consent API and insert records after each page (Results could be paginated)

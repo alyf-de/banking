@@ -1,6 +1,6 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-from typing import Dict
+from typing import Dict, Optional
 
 import frappe
 from frappe import _
@@ -15,6 +15,7 @@ from klarna_kosma_integration.klarna_kosma_integration.utils import (
 	create_session_doc,
 	exchange_consent_token,
 	get_consent_data,
+	get_consent_start_date,
 	get_current_ip,
 	get_session_flow_ids,
 )
@@ -25,20 +26,20 @@ class Kosma:
 
 	def __init__(self) -> None:
 		self.ip_address = get_current_ip()
-		self.user_agent = (
-			frappe.get_request_header("User-Agent") if frappe.request else None
-		)
+		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
 
 		settings = frappe.get_single("Klarna Kosma Settings")
 		self.api_token = settings.get_password("api_token")
 		self.env = settings.env
 
-	def get_flow(self):
+	def get_flow(self, from_date: Optional[str] = None, to_date: Optional[str] = None):
 		return KlarnaKosmaFlow(
 			env=self.env,
 			api_token=self.api_token,
 			user_agent=self.user_agent,
 			ip_address=self.ip_address,
+			from_date=from_date,
+			to_date=to_date,
 		)
 
 	def get_consent(self):
@@ -49,10 +50,16 @@ class Kosma:
 			ip_address=self.ip_address,
 		)
 
-	def get_client_token(self, current_flow: str) -> Dict:
-		flow = self.get_flow()
-		session_details = self.start_session(flow)
-		flow_data = self.start_flow(flow, current_flow, session_details)
+	def get_client_token(
+		self,
+		current_flow: str,
+		account: Optional[str] = None,
+		from_date: Optional[str] = None,
+		to_date: Optional[str] = None,
+	) -> Dict:
+		flow = self.get_flow(from_date, to_date)
+		session_details = self.start_session(flow, account)
+		flow_data = self.start_flow(flow, current_flow, session_details, account)
 
 		return {
 			"session_id_short": session_details.get("session_id_short"),
@@ -75,12 +82,40 @@ class Kosma:
 
 			# Get and store Bank Consent in Bank record
 			consent = flow.get_consent(session_id)
-			self.set_consent(consent, bank_name)
+			self.set_consent(consent, bank_name, session_id_short)
 
 			return accounts_data
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Bank Accounts."))
 		finally:
+			self.end_session(flow, session_id, session_id_short)
+
+	def flow_transactions(self, account: str, session_id_short: str):
+		next_page, url, offset = True, None, None
+		flow = self.get_flow()
+
+		try:
+			session_id, flow_id = get_session_flow_ids(session_id_short)
+			while next_page:
+				transactions = flow.transactions(session_id, flow_id, url, offset)
+				flow.raise_for_status(transactions)
+
+				# Process Request Response
+				transaction = KosmaTransaction(transactions)
+				next_page = transaction.is_next_page()
+				if next_page:
+					url, offset = transaction.next_page_request()
+
+				if transaction.transaction_list:
+					create_bank_transactions(account, transaction.transaction_list, via_flow_api=True)
+		except Exception as exc:
+			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
+		finally:
+			flow_state = transactions.get("state", "EXCEPTION")
+			frappe.db.set_value(
+				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
+			)
+
 			self.end_session(flow, session_id, session_id_short)
 
 	def consent_accounts(self, bank: str):
@@ -126,10 +161,15 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
 
-	def start_session(self, flow_obj: "KlarnaKosmaFlow") -> Dict:
+	def start_session(
+		self, flow_obj: "KlarnaKosmaFlow", account: Optional[str] = None
+	) -> Dict:
 		try:
-			session_details = flow_obj.start_session()
+			iban = frappe.db.get_value("Bank Account", account, "iban")
+
+			session_details = flow_obj.start_session(iban)
 			flow_obj.raise_for_status(session_details)
+
 			create_session_doc(session_details)
 			return session_details
 		except Exception as exc:
@@ -140,19 +180,31 @@ class Kosma:
 	) -> None:
 		try:
 			flow_obj.end_session(session_id)
-			frappe.db.set_value(
-				"Klarna Kosma Session", session_id_short, "status", "Closed"
-			)
+			frappe.db.set_value("Klarna Kosma Session", session_id_short, "status", "Closed")
 			frappe.db.commit()
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to end Kosma session"))
 
 	def start_flow(
-		self, flow_obj: "KlarnaKosmaFlow", current_flow: str, session: Dict
+		self,
+		flow_obj: "KlarnaKosmaFlow",
+		current_flow: str,
+		session: Dict,
+		account: Optional[str] = None,
 	) -> Dict:
 		try:
+			iban, account_id = None, None
+
+			if account:
+				iban, account_id = frappe.db.get_value(
+					"Bank Account", account, ["iban", "kosma_account_id"]
+				)
+
 			flow_data = flow_obj.start(
-				flow_type=current_flow, flows=session.get("flows")
+				flows=session.get("flows"),
+				flow_type=current_flow,
+				iban=iban,
+				account_id=account_id,
 			)
 			flow_obj.raise_for_status(flow_data)
 
@@ -182,7 +234,8 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Session"))
 
-	def set_consent(self, consent: Dict, bank_name: str) -> None:
+	def set_consent(self, consent: Dict, bank_name: str, session_id_short: str) -> None:
+		consent["consent_start"] = get_consent_start_date(session_id_short)
 		bank_doc = frappe.get_doc("Bank", bank_name)
 		bank_doc.update(consent)
 		bank_doc.save()
@@ -197,7 +250,10 @@ class Kosma:
 
 
 @frappe.whitelist()
-def sync_kosma_transactions(account: str):
+def sync_kosma_transactions(account: str, session_id_short: Optional[str] = None):
 	"""Fetch and insert paginated Kosma transactions"""
-	start_date = account_last_sync_date(account)
-	Kosma().consent_transactions(account, start_date)
+	if session_id_short:
+		Kosma().flow_transactions(account, session_id_short)
+	else:
+		start_date = account_last_sync_date(account)
+		Kosma().consent_transactions(account, start_date)
