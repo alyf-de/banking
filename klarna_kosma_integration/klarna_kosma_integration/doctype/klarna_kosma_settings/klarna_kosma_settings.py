@@ -69,7 +69,7 @@ def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
 
 
 @frappe.whitelist()
-def sync_transactions(account: str, session_id_short: Optional[str]) -> None:
+def sync_transactions(account: str, session_id_short: Optional[str] = None) -> None:
 	"""
 	Enqueue transactions sync via the Consent API.
 	"""
