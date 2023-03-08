@@ -64,7 +64,7 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		flow_response_val = flow_response.json()
 		return flow_response_val.get("data", {}) or flow_response_val
 
-	def start_session(self, iban: Optional[str] = None) -> Dict:
+	def start_session(self, flow_type: str, iban: Optional[str] = None) -> Dict:
 		"""
 		Start a Kosma Session and return session details
 		"""
@@ -72,9 +72,13 @@ class KlarnaKosmaFlow(KlarnaKosmaConnector):
 		if iban:
 			transaction_data["ibans"] = [iban]
 
-		data = {
-			"consent_scope": {"lifetime": 90, "accounts": {}, "transactions": transaction_data}
-		}
+		data = {"consent_scope": {"lifetime": 90, "transactions": transaction_data}}
+
+		if flow_type == "accounts":
+			# Avoid accounts scope in a transactions flow to avoid accounts fetch
+			# Transactions in scope can be used for both flows
+			data["consent_scope"]["accounts"] = {}
+
 		self.add_psu(data)
 
 		session_response = requests.put(
