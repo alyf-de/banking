@@ -4,11 +4,11 @@ name: CI
 on:
   push:
     branches:
-      - version-13
+      - version-14
   pull_request:
 
 concurrency:
-  group: version-13-klarna_kosma_integration-${{ github.event.number }}
+  group: version-14-klarna_kosma_integration-${{ github.event.number }}
   cancel-in-progress: true
 
 jobs:
