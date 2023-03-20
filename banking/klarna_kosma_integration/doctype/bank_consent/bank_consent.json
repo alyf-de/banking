@@ -78,15 +78,16 @@
   },
   {
    "fieldname": "session_id",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Session ID",
+   "options": "Klarna Kosma Session",
    "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-03-20 18:24:34.287548",
+ "modified": "2023-03-20 19:41:31.794293",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Consent",
