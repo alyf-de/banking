@@ -66,36 +66,39 @@ class Kosma:
 			"client_token": flow_data.get("client_token"),
 		}
 
-	def flow_accounts(self, session_id_short: str) -> Dict:
+	def flow_accounts(self, session_id_short: str, company: str) -> Dict:
 		try:
-			session_id, flow_id = get_session_flow_ids(session_id_short)
 			flow = self.get_flow()
+			session_id, flow_id = get_session_flow_ids(session_id_short)
+
 			accounts_data = flow.accounts(session_id, flow_id)  # Fetch Accounts
 			flow.raise_for_status(accounts_data)
-
-			frappe.db.set_value(
-				"Klarna Kosma Session", session_id_short, "flow_state", "FINISHED"
-			)
 
 			bank_name = self.get_session_bank(flow, session_id)
 			accounts_data["result"]["bank_name"] = bank_name
 
 			# Get and store Bank Consent in Bank record
 			consent = flow.get_consent(session_id)
-			self.set_consent(consent, bank_name, session_id_short)
+			self.set_consent(consent, bank_name, session_id_short, company)
 
 			return accounts_data
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Bank Accounts."))
 		finally:
+			flow_state = accounts_data.get("state", "EXCEPTION")
+			frappe.db.set_value(
+				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
+			)
+
 			self.end_session(flow, session_id, session_id_short)
 
 	def flow_transactions(self, account: str, session_id_short: str):
 		next_page, url, offset = True, None, None
-		flow = self.get_flow()
 
 		try:
+			flow = self.get_flow()
 			session_id, flow_id = get_session_flow_ids(session_id_short)
+
 			while next_page:
 				transactions = flow.transactions(session_id, flow_id, url, offset)
 				flow.raise_for_status(transactions)
@@ -118,13 +121,13 @@ class Kosma:
 
 			self.end_session(flow, session_id, session_id_short)
 
-	def consent_accounts(self, bank: str):
+	def consent_accounts(self, bank: str, company: str):
 		try:
-			consent_id, consent_token = get_consent_data(bank)
+			consent_id, consent_token = get_consent_data(bank, company)
 			consent = self.get_consent()
 			accounts = consent.accounts(consent_id, consent_token)
 
-			exchange_consent_token(accounts, bank)
+			exchange_consent_token(accounts, bank, company)
 			consent.raise_for_status(accounts)
 
 			accounts = accounts.get("result", {}).get("accounts")
@@ -133,10 +136,10 @@ class Kosma:
 			self.handle_exception(exc, _("Failed to get Bank Accounts."))
 
 	def consent_transactions(self, account: str, start_date: str):
-		account_id, bank = frappe.db.get_value(
-			"Bank Account", account, ["kosma_account_id", "bank"]
+		account_id, bank, company = frappe.db.get_value(
+			"Bank Account", account, ["kosma_account_id", "bank", "company"]
 		)
-		consent_id, consent_token = get_consent_data(bank)
+		consent_id, consent_token = get_consent_data(bank, company)
 		consent = self.get_consent()
 
 		next_page, url, offset = True, None, None
@@ -146,7 +149,7 @@ class Kosma:
 					account_id, start_date, consent_id, consent_token, url, offset
 				)
 
-				new_consent_token = exchange_consent_token(transactions, bank)
+				new_consent_token = exchange_consent_token(transactions, bank, company)
 				consent.raise_for_status(transactions)
 
 				# Process Request Response
@@ -234,11 +237,27 @@ class Kosma:
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to get Kosma Session"))
 
-	def set_consent(self, consent: Dict, bank_name: str, session_id_short: str) -> None:
+	def set_consent(
+		self, consent: Dict, bank_name: str, session_id_short: str, company: str
+	) -> None:
 		consent["consent_start"] = get_consent_start_date(session_id_short)
-		bank_doc = frappe.get_doc("Bank", bank_name)
-		bank_doc.update(consent)
-		bank_doc.save()
+		consent["session_id"] = session_id_short
+
+		if frappe.db.exists("Bank Consent", {"bank": bank_name, "company": company}):
+			bank_consent = frappe.get_doc(
+				"Bank Consent", {"bank": bank_name, "company": company}
+			)
+		else:
+			bank_consent = frappe.get_doc(
+				{
+					"doctype": "Bank Consent",
+					"bank": bank_name,
+					"company": company,
+				}
+			)
+
+		bank_consent.update(consent)
+		bank_consent.save()
 
 	def handle_exception(self, exc, error_msg: str):
 		frappe.log_error(title=_("Kosma Error"), message=frappe.get_traceback())
