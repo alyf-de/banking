@@ -12,9 +12,11 @@ if TYPE_CHECKING:
 	from frappe.model.document import Document
 
 
-def needs_consent(bank: str) -> bool:
+def needs_consent(bank: str, company: str) -> bool:
 	"""Returns False if there is atleast 1 hour before consent expires."""
-	consent_expiry = frappe.db.get_value("Bank", bank, "consent_expiry")
+	consent_expiry = frappe.db.get_value(
+		"Bank Consent", {"bank": bank, "company": company}, "consent_expiry"
+	)
 	if not consent_expiry:
 		return True
 
@@ -29,29 +31,29 @@ def get_session_flow_ids(session_id_short: str):
 	return doc.get_password("session_id"), doc.get_password("flow_id")
 
 
-def get_consent_data(bank_name: str):
+def get_consent_data(bank_name: str, company: str):
 	"""Get stored bank consent."""
-	if needs_consent(bank_name):
+	if needs_consent(bank_name, company):
 		frappe.throw(
 			_("The Consent Token has expired/is unavailable for Bank {0}.").format(
 				frappe.bold(bank_name)
 			)
 		)
 
-	bank_doc = frappe.get_doc("Bank", bank_name)
-	return bank_doc.consent_id, bank_doc.get_password("consent_token")
+	bank_consent = frappe.get_doc("Bank Consent", {"bank": bank_name, "company": company})
+	return bank_consent.consent_id, bank_consent.get_password("consent_token")
 
 
-def exchange_consent_token(response: Dict, bank: str) -> str:
+def exchange_consent_token(response: Dict, bank: str, company: str) -> str:
 	if (not response) or (not isinstance(response, dict)):
 		return
 
 	new_consent_token = response.get("consent_token")
 
 	if new_consent_token:
-		bank_doc = frappe.get_doc("Bank", bank)
-		bank_doc.consent_token = new_consent_token
-		bank_doc.save()
+		bank_consent = frappe.get_doc("Bank Consent", {"bank": bank, "company": company})
+		bank_consent.consent_token = new_consent_token
+		bank_consent.save()
 		frappe.db.commit()
 
 	return new_consent_token
@@ -261,13 +263,15 @@ def to_json(response: requests.models.Response) -> Dict:
 
 def account_last_sync_date(account_name: str):
 	"""Get Account's Last Integration Date or Consent Start Date."""
-	last_sync_date, bank = frappe.db.get_value(
-		"Bank Account", account_name, ["last_integration_date", "bank"]
+	last_sync_date, bank, company = frappe.db.get_value(
+		"Bank Account", account_name, ["last_integration_date", "bank", "company"]
 	)
 	if last_sync_date:
 		return formatdate(last_sync_date, "YYYY-MM-dd")
 	else:
-		date = frappe.db.get_value("Bank", bank, "consent_start")
+		date = frappe.db.get_value(
+			"Bank Consent", {"bank": bank, "company": company}, "consent_start"
+		)
 		return formatdate(date, "YYYY-MM-dd")
 
 

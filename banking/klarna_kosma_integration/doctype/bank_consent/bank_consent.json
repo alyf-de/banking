@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "autoname": "format:{bank}-{company}",
+ "creation": "2023-03-20 13:13:26.938849",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "bank",
+  "column_break_0jpla",
+  "company",
+  "session_id",
+  "consent_information_section",
+  "consent_id",
+  "consent_start",
+  "consent_expiry",
+  "column_break_ojhkx",
+  "consent_token"
+ ],
+ "fields": [
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Bank",
+   "options": "Bank",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_0jpla",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consent_information_section",
+   "fieldtype": "Section Break",
+   "label": "Consent Information"
+  },
+  {
+   "fieldname": "consent_id",
+   "fieldtype": "Data",
+   "label": "Consent ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consent_start",
+   "fieldtype": "Date",
+   "label": "Consent Start Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consent_expiry",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Consent Expiry Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ojhkx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "consent_token",
+   "fieldtype": "Password",
+   "label": "Consent Token",
+   "length": 2760,
+   "read_only": 1
+  },
+  {
+   "fieldname": "session_id",
+   "fieldtype": "Data",
+   "label": "Session ID",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2023-03-20 18:24:34.287548",
+ "modified_by": "Administrator",
+ "module": "Klarna Kosma Integration",
+ "name": "Bank Consent",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

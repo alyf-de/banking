@@ -20,39 +20,33 @@ frappe.ui.form.on('Klarna Kosma Settings', {
 	},
 
 	refresh_banks: (frm) => {
-		let fields = [{
-			fieldtype: "Link",
-			options: "Company",
-			label: __("Company"),
-			fieldname: "company",
-			reqd: 1
-		}];
-
-		frappe.db.get_value(
-			"Bank", {consent_id: ["is", "set"]}, "name"
-		).then((result) => {
-			if (!result.message.name) {
-				// Prompt for start date if new setup
-				fields.push({
-					fieldtype: "Date",
-					label: __("Start Date"),
-					fieldname: "start_date",
-					description: __("Access and Sync bank records from this date."),
-					reqd: 1,
-				});
-			}
-
-			frappe.prompt(fields, (data) => {
-				new KlarnaKosmaConnect({
-					frm: frm,
-					flow: "accounts",
-					company: data.company,
-					start_date: data.start_date || null
-				});
+		let fields = [
+			{
+				fieldtype: "Link",
+				options: "Company",
+				label: __("Company"),
+				fieldname: "company",
+				reqd: 1
 			},
-			__("Setup Bank & Accounts Sync"),
-			__("Continue"));
-		});
+			{
+				fieldtype: "Date",
+				label: __("Start Date (Optional)"),
+				fieldname: "start_date",
+				description: __("Access and Sync bank records from this date."),
+			}
+		];
+
+		frappe.prompt(fields, (data) => {
+			new KlarnaKosmaConnect({
+				frm: frm,
+				flow: "accounts",
+				company: data.company,
+				start_date: data.start_date || null
+			});
+		},
+		__("Setup Bank & Accounts Sync"),
+		__("Continue"));
+
 	},
 
 	sync_transactions: (frm, is_older=false) => {
@@ -254,7 +248,10 @@ class KlarnaKosmaConnect {
 		try {
 			const data = await this.frm.call({
 				method: "fetch_accounts_and_bank",
-				args: { session_id_short: this.session.session_id_short },
+				args: {
+					session_id_short: this.session.session_id_short,
+					company: this.company,
+				},
 				freeze: true,
 				freeze_message: __("Please wait. Fetching Bank Acounts ...")
 			});
