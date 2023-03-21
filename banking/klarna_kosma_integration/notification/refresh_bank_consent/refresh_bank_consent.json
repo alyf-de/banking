@@ -1,0 +1,29 @@
+{
+ "attach_print": 0,
+ "channel": "Email",
+ "condition": "(frappe.utils.now_datetime() < doc.consent_expiry) if doc.consent_expiry else False",
+ "creation": "2023-03-21 14:26:43.974603",
+ "date_changed": "consent_expiry",
+ "days_in_advance": 7,
+ "docstatus": 0,
+ "doctype": "Notification",
+ "document_type": "Bank Consent",
+ "enabled": 1,
+ "event": "Days Before",
+ "idx": 0,
+ "is_standard": 1,
+ "message": "<div style=\"border: 1px solid #A6B1B9; border-radius: 4px; margin: 1rem;\">\n\t<table\n\t\tclass=\"panel-header\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"\n\t\tstyle=\"border-spacing: 5px; font-size: 14px;\"\n\t>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td height=\"20\"></td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td>\n\t\t\t\t<a href=\"{{ frappe.utils.get_url() }}\">\n\t\t\t\t\t<img\n\t\t\t\t\t\twidth=\"60\"\n\t\t\t\t\t\tsrc=\"{{ app_logo_url }}\"\n\t\t\t\t\t\talt=\"alyf-logo\" border=\"0\"\n\t\t\t\t\t\taria-hidden=\"true\"\n\t\t\t\t\t>\n\t\t\t\t</a>\n\t\t\t</td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td height=\"20\"></td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td>\n\t\t\t\tHello,\n\t\t\t</td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"> </td>\n\t\t\t<td height=\"10\"></td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td>\n\t\t\t\t<p>\n\t\t\t\t\t<b>Your Bank Consent for Bank <u>{{ doc.bank }}</u> and Company <u>{{ doc.company }}</u> expires in 7 days on {{ frappe.utils.global_date_format(doc.consent_expiry) }}.\n\t\t\t\t\t</b>\n\t\t\t\t</p>\n\t\t\t\t<p>\n\t\t\t\t\tTo continue with automated Bank Transactions & Bank Accounts sync, go to Klarna Kosma Settings and click on <b>Link Bank and Accounts</b>:\n\t\t\t\t</p>\n\t\t\t</td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td height=\"10\"></td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td>\n\t\t\t\t<a\n\t\t\t\t\thref=\"{{ frappe.utils.get_url_to_form('Klarna Kosma Settings', 'Klarna Kosma Settings') }}\"\n\t\t\t\t\tclass=\"btn btn-primary btn-xs\"\n\t\t\t\t\ttarget=\"_blank\"\n\t\t\t\t>\n\t\t\t\t\tRenew Now\n\t\t\t\t</a>\n\t\t\t</td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td height=\"20\"></td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td>\n\t\t\t\t<p style=\"color: #74808B; font-size: 12px;\">\n\t\t\t\t\tNote: This is a system generated e-mail\n\t\t\t\t</p>\n\t\t\t</td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td width=\"30\"></td>\n\t\t\t<td height=\"10\"></td>\n\t\t\t<td width=\"30\"></td>\n\t\t</tr>\n\t</table>\n</div>\n",
+ "modified": "2023-03-21 21:00:54.729488",
+ "modified_by": "Administrator",
+ "module": "Klarna Kosma Integration",
+ "name": "Refresh Bank Consent",
+ "owner": "Administrator",
+ "recipients": [
+  {
+   "receiver_by_role": "System Manager"
+  }
+ ],
+ "send_system_notification": 1,
+ "send_to_all_assignees": 0,
+ "subject": "ALYF Banking: Renewal of Bank Consent ({{ doc.name }})"
+}
