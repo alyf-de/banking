@@ -31,6 +31,7 @@ bench get-app payments --branch version-14
 bench get-app erpnext --branch version-14
 bench get-app klarna_kosma_integration "${GITHUB_WORKSPACE}"
 
+bench start &> bench_run_logs.txt &
 bench new-site --db-root-password root --admin-password admin test_site --install-app erpnext
 bench --site test_site install-app klarna_kosma_integration
 bench setup requirements --dev

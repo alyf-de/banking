@@ -122,7 +122,7 @@ scheduler_events = {
 # Testing
 # -------
 
-# before_tests = "klarna_kosma_integration.install.before_tests"
+before_tests = "klarna_kosma_integration.utils.before_tests"
 
 # Overriding Methods
 # ------------------------------
