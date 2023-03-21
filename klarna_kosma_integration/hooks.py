@@ -6,6 +6,7 @@ app_publisher = "ALYF GmbH"
 app_description = "Klarna Kosma Open Banking Integration"
 app_email = "hallo@alyf.de"
 app_license = "MIT"
+app_logo_url = "/assets/klarna_kosma_integration/images/alyf-logo.png"
 
 # Includes in <head>
 # ------------------
