@@ -8,7 +8,7 @@ on:
   pull_request:
 
 concurrency:
-  group: version-14-klarna_kosma_integration-${{ github.event.number }}
+  group: version-14-banking-${{ github.event.number }}
   cancel-in-progress: true
 
 jobs:
@@ -71,6 +71,6 @@ jobs:
         working-directory: /home/runner/frappe-bench
         run: |
           bench --site test_site set-config allow_tests true
-          bench --site test_site run-tests --app klarna_kosma_integration
+          bench --site test_site run-tests --app banking
         env:
           TYPE: server

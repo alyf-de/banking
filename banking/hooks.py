@@ -1,9 +1,9 @@
 from . import __version__ as app_version
 
-app_name = "klarna_kosma_integration"
-app_title = "Klarna Kosma Integration"
+app_name = "banking"
+app_title = "ALYF Banking"
 app_publisher = "ALYF GmbH"
-app_description = "Klarna Kosma Open Banking Integration"
+app_description = "Banking Integration by ALYF GmbH"
 app_email = "hallo@alyf.de"
 app_license = "MIT"
 
@@ -11,15 +11,15 @@ app_license = "MIT"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/klarna_kosma_integration/css/klarna_kosma_integration.css"
-# app_include_js = "/assets/klarna_kosma_integration/js/klarna_kosma_integration.js"
+# app_include_css = "/assets/banking/css/banking.css"
+# app_include_js = "/assets/banking/js/banking.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/klarna_kosma_integration/css/klarna_kosma_integration.css"
-# web_include_js = "/assets/klarna_kosma_integration/js/klarna_kosma_integration.js"
+# web_include_css = "/assets/banking/css/banking.css"
+# web_include_js = "/assets/banking/js/banking.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "klarna_kosma_integration/public/scss/website"
+# website_theme_scss = "banking/public/scss/website"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
@@ -56,27 +56,27 @@ app_license = "MIT"
 
 # add methods and filters to jinja environment
 # jinja = {
-# 	"methods": "klarna_kosma_integration.utils.jinja_methods",
-# 	"filters": "klarna_kosma_integration.utils.jinja_filters"
+# 	"methods": "banking.utils.jinja_methods",
+# 	"filters": "banking.utils.jinja_filters"
 # }
 
 # Installation
 # ------------
 
-# before_install = "klarna_kosma_integration.install.before_install"
-after_install = "klarna_kosma_integration.install.after_install"
+# before_install = "banking.install.before_install"
+after_install = "banking.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "klarna_kosma_integration.uninstall.before_uninstall"
-# after_uninstall = "klarna_kosma_integration.uninstall.after_uninstall"
+# before_uninstall = "banking.uninstall.before_uninstall"
+# after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "klarna_kosma_integration.notifications.get_notification_config"
+# notification_config = "banking.notifications.get_notification_config"
 
 # Permissions
 # -----------
@@ -115,27 +115,27 @@ after_install = "klarna_kosma_integration.install.after_install"
 
 scheduler_events = {
 	"daily": [
-		"klarna_kosma_integration.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_settings.sync_all_accounts_and_transactions"
+		"banking.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_settings.sync_all_accounts_and_transactions"
 	],
 }
 
 # Testing
 # -------
 
-before_tests = "klarna_kosma_integration.utils.before_tests"
+before_tests = "banking.utils.before_tests"
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "klarna_kosma_integration.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "banking.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "klarna_kosma_integration.task.get_dashboard_data"
+# 	"Task": "banking.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -171,7 +171,7 @@ before_tests = "klarna_kosma_integration.utils.before_tests"
 # --------------------------------
 
 # auth_hooks = [
-# 	"klarna_kosma_integration.auth.validate"
+# 	"banking.auth.validate"
 # ]
 
 kosma_custom_fields = {

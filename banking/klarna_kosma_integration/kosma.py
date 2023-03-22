@@ -4,11 +4,12 @@ from typing import Dict, Optional
 
 import frappe
 from frappe import _
-from klarna_kosma_integration.connectors.klarna_kosma_connector import KosmaError
-from klarna_kosma_integration.connectors.klarna_kosma_consent import KlarnaKosmaConsent
-from klarna_kosma_integration.connectors.klarna_kosma_flow import KlarnaKosmaFlow
-from klarna_kosma_integration.connectors.kosma_transaction import KosmaTransaction
-from klarna_kosma_integration.klarna_kosma_integration.utils import (
+
+from banking.connectors.klarna_kosma_connector import KosmaError
+from banking.connectors.klarna_kosma_consent import KlarnaKosmaConsent
+from banking.connectors.klarna_kosma_flow import KlarnaKosmaFlow
+from banking.connectors.kosma_transaction import KosmaTransaction
+from banking.klarna_kosma_integration.utils import (
 	account_last_sync_date,
 	add_bank,
 	create_bank_transactions,
@@ -57,9 +58,13 @@ class Kosma:
 		from_date: Optional[str] = None,
 		to_date: Optional[str] = None,
 	) -> Dict:
-		flow = self.get_flow(from_date, to_date)
-		session_details = self.start_session(flow, account)
-		flow_data = self.start_flow(flow, current_flow, session_details, account)
+		flow_obj = self.get_flow(from_date, to_date)
+		session_details = self.start_session(
+			flow_obj=flow_obj, flow_type=current_flow, account=account
+		)
+		flow_data = self.start_flow(
+			flow_obj, current_flow=current_flow, session=session_details, account=account
+		)
 
 		return {
 			"session_id_short": session_details.get("session_id_short"),
@@ -165,12 +170,15 @@ class Kosma:
 			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
 
 	def start_session(
-		self, flow_obj: "KlarnaKosmaFlow", account: Optional[str] = None
+		self,
+		flow_obj: "KlarnaKosmaFlow",
+		flow_type: str,
+		account: Optional[str] = None,
 	) -> Dict:
 		try:
-			iban = frappe.db.get_value("Bank Account", account, "iban")
+			iban = frappe.db.get_value("Bank Account", account, "iban") if account else None
 
-			session_details = flow_obj.start_session(iban)
+			session_details = flow_obj.start_session(flow_type, iban)
 			flow_obj.raise_for_status(session_details)
 
 			create_session_doc(session_details)
