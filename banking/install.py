@@ -5,7 +5,7 @@ from frappe.custom.doctype.property_setter.property_setter import make_property_
 
 
 def after_install():
-	click.echo("Installing Klarna Kosma Customizations ...")
+	click.echo("Installing Banking Customizations ...")
 
 	create_custom_fields(frappe.get_hooks("kosma_custom_fields"))
 	make_property_setters()
