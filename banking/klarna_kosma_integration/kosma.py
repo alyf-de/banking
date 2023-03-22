@@ -4,11 +4,12 @@ from typing import Dict, Optional
 
 import frappe
 from frappe import _
-from klarna_kosma_integration.connectors.klarna_kosma_connector import KosmaError
-from klarna_kosma_integration.connectors.klarna_kosma_consent import KlarnaKosmaConsent
-from klarna_kosma_integration.connectors.klarna_kosma_flow import KlarnaKosmaFlow
-from klarna_kosma_integration.connectors.kosma_transaction import KosmaTransaction
-from klarna_kosma_integration.klarna_kosma_integration.utils import (
+
+from banking.connectors.klarna_kosma_connector import KosmaError
+from banking.connectors.klarna_kosma_consent import KlarnaKosmaConsent
+from banking.connectors.klarna_kosma_flow import KlarnaKosmaFlow
+from banking.connectors.kosma_transaction import KosmaTransaction
+from banking.klarna_kosma_integration.utils import (
 	account_last_sync_date,
 	add_bank,
 	create_bank_transactions,

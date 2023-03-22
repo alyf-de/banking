@@ -4,11 +4,11 @@ import json
 from typing import Dict, Optional
 
 import requests
-from klarna_kosma_integration.connectors.klarna_kosma_connector import (
+from banking.connectors.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
-from klarna_kosma_integration.connectors.kosma_transaction import KosmaTransaction
-from klarna_kosma_integration.klarna_kosma_integration.utils import to_json
+from banking.connectors.kosma_transaction import KosmaTransaction
+from banking.klarna_kosma_integration.utils import to_json
 
 
 class KlarnaKosmaConsent(KlarnaKosmaConnector):
