@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 
-from klarna_kosma_integration.klarna_kosma_integration.kosma import Kosma
+from banking.klarna_kosma_integration.kosma import Kosma
 
 
 class KlarnaKosmaSession(Document):

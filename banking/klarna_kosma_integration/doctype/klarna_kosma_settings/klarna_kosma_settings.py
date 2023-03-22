@@ -9,8 +9,9 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 )
 from frappe import _
 from frappe.model.document import Document
-from klarna_kosma_integration.klarna_kosma_integration.kosma import Kosma
-from klarna_kosma_integration.klarna_kosma_integration.utils import (
+
+from banking.klarna_kosma_integration.kosma import Kosma
+from banking.klarna_kosma_integration.utils import (
 	create_bank_account,
 	get_account_name,
 	needs_consent,
@@ -84,7 +85,7 @@ def sync_transactions(account: str, session_id_short: Optional[str] = None) -> N
 		)
 
 	frappe.enqueue(
-		"klarna_kosma_integration.klarna_kosma_integration.kosma.sync_kosma_transactions",
+		"banking.klarna_kosma_integration.kosma.sync_kosma_transactions",
 		account=account,
 		session_id_short=session_id_short,
 	)

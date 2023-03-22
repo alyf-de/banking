@@ -3,6 +3,6 @@
 *.egg-info
 *.swp
 tags
-klarna_kosma_integration/docs/current
+banking/docs/current
 node_modules/
 __pycache__
