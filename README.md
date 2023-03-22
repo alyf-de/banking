@@ -1,9 +1,15 @@
 <div align="center">
-	<img src="https://user-images.githubusercontent.com/25857446/208396676-9b9c83ed-50fd-4db8-8463-e1faf9884306.svg" height="128">
-	<h2>Klarna Kosma Integration</h2>
+	<img src="https://user-images.githubusercontent.com/25857446/226990542-3fcef2dc-b6d0-41df-817e-c1641fabbe0b.png" height="80">
+	<h2>ALYF Banking</h2>
 </div>
 
-This app integrates Klarna Kosma's Open Banking API with ERPNext.
+<div align="center">
+<p><b>ALYF Banking</b> is a seamless solution for connecting your bank accounts with ERPNext.</p>
+
+<p>This app is designed to simplify your financial management by effortlessly fetching transactions from thousands of banks and integrating them directly into your ERPNext system. Say goodbye to manual data entry and time-consuming reconciliations ✨</p>
+
+<p>Experience the ease of automation and gain better control over your finances with the ultimate banking integration app for ERPNext users.</p>
+</div>
 
 ## Table of Contents
 
@@ -21,8 +27,8 @@ This app integrates Klarna Kosma's Open Banking API with ERPNext.
 
 1. Install [Bench](https://github.com/frappe/bench)
 2. Install [ERPNext](https://github.com/frappe/erpnext)
-3. `bench get-app https://github.com/alyf-de/klarna_kosma_integration.git`
-4. `bench --site <sitename> install-app klarna_kosma_integration`
+3. `bench get-app https://github.com/alyf-de/banking.git`
+4. `bench --site <sitename> install-app banking`
 
 ## Getting Started
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.
@@ -77,8 +83,7 @@ By default a daily scheduled job will refresh Bank Accounts' data and fetch thei
 
 Once you finish syncing Bank and Bank Accounts by entering your bank credentials, you have essentially given the app consent (for a limited time) to access your bank accounts data.
 
-Consent is stored in the form of a token in the Bank record. The expiry of the consent is also visible
-<img width="75%" alt="Screenshot 2022-12-19 at 4 20 19 PM" src="https://user-images.githubusercontent.com/25857446/208409779-96192e5d-91f0-45df-b8cf-0df92a1e81dd.png">
+Consent is stored in the form of a 'Bank Consent' record. The expiry of the consent is also visible in the Bank Consent record.
 
 #### What data am I consenting to share?
 You will be consenting to share:
@@ -92,4 +97,4 @@ The consent expiry is set for 90 days from the day of creation (approximately 1 
 Once the consent expires, you will have to give explicit consent again by [resyncing bank and bank accounts](#fetching-a-bank-and-bank-accounts).
 
 #### Is this consent token safe ?
-It is safely encrypted and is also exchanged with Klarna Kosma after every request that uses it.
+It is safely encrypted and is also refreshed after every request that uses it.
