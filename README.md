@@ -3,7 +3,7 @@
 	<h2>Klarna Kosma Integration</h2>
 </div>
 
-This app integrates Klarna Kosma's Open Banking API with ERPNext. 
+This app integrates Klarna Kosma's Open Banking API with ERPNext.
 
 ## Table of Contents
 
@@ -81,7 +81,7 @@ Consent is stored in the form of a token in the Bank record. The expiry of the c
 <img width="75%" alt="Screenshot 2022-12-19 at 4 20 19 PM" src="https://user-images.githubusercontent.com/25857446/208409779-96192e5d-91f0-45df-b8cf-0df92a1e81dd.png">
 
 #### What data am I consenting to share?
-You will be consenting to share: 
+You will be consenting to share:
 - The list of accounts (and account data) under your bank customer ID (whose credentials you entered)
 - Bank Transactions and their data (reference number, account, amount, counter party, etc.) linked to the accounts above, from the start of the current fiscal year
 

@@ -6,10 +6,11 @@ from typing import Dict, Optional
 import requests
 from frappe import _
 from frappe.utils import add_days, get_datetime
-from klarna_kosma_integration.connectors.klarna_kosma_connector import (
+
+from banking.connectors.klarna_kosma_connector import (
 	KlarnaKosmaConnector,
 )
-from klarna_kosma_integration.klarna_kosma_integration.utils import to_json
+from banking.klarna_kosma_integration.utils import to_json
 
 
 class KlarnaKosmaFlow(KlarnaKosmaConnector):
