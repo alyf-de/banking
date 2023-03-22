@@ -27,10 +27,10 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
-bench get-app payments --branch develop
-bench get-app erpnext --branch develop
-bench get-app klarna_kosma_integration "${GITHUB_WORKSPACE}"
+bench get-app payments --branch version-13
+bench get-app erpnext --branch version-13
+bench get-app banking "${GITHUB_WORKSPACE}"
 
 bench new-site --db-root-password root --admin-password admin test_site --install-app erpnext
-bench --site test_site install-app klarna_kosma_integration
+bench --site test_site install-app banking
 bench setup requirements --dev
