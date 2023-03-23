@@ -1,7 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import frappe
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
@@ -47,8 +47,10 @@ def fetch_accounts_and_bank(session_id_short: str = None) -> Dict:
 
 
 @frappe.whitelist()
-def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
-	accounts = json.loads(accounts)
+def add_bank_accounts(accounts: Union[str, Dict], company: str, bank_name: str) -> None:
+	if isinstance(accounts, str):
+		accounts = json.loads(accounts)
+
 	accounts = accounts.get("accounts")
 
 	default_gl_account = get_default_bank_cash_account(company, "Bank")
@@ -105,6 +107,9 @@ def sync_all_accounts_and_transactions():
 	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
 	Called via hooks.
 	"""
+	if not frappe.db.get_single_value("Klarna Kosma Settings", "enabled"):
+		return
+
 	banks = frappe.get_all("Bank", filters={"consent_id": ["is", "set"]}, pluck="name")
 
 	# Update all bank accounts
