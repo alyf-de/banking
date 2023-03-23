@@ -46,6 +46,17 @@ bank_data_response = frappe._dict(
     }
 )
 
+consent_response = frappe._dict(
+    {
+        "consent_id": "4bn7guh6shbl2e",
+        "consent_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjNlYWRhNTA4LThlOTAtNDNhNS05NDE0LTk5ZWEwZDQxMTNmZSJ9.eyJ2ZXJzaW9",
+        "consents": {
+            "accounts": "https://api.openbanking.playground.klarna.com/xs2a/v1/consents/4bn7guh6shbl2e/accounts/get",
+            "transactions": "https://api.openbanking.playground.klarna.com/xs2a/v1/consents/4bn7guh6shbl2e/transactions/get"
+        }
+    }
+)
+
 accounts_response_1 = frappe._dict(
 	{
 		"result": {
