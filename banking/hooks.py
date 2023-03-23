@@ -123,7 +123,7 @@ scheduler_events = {
 # Testing
 # -------
 
-# before_tests = "banking.install.before_tests"
+before_tests = "banking.utils.before_tests"
 
 # Overriding Methods
 # ------------------------------
@@ -197,55 +197,6 @@ kosma_custom_fields = {
 			read_only=1,
 			translatable=0,
 		)
-	],
-	"Bank": [
-		dict(
-			owner="Administrator",
-			fieldname="consent_section",
-			label="Bank Consent Information",
-			fieldtype="Section Break",
-			insert_after="bank_transaction_mapping",
-		),
-		dict(
-			owner="Administrator",
-			fieldname="consent_id",
-			label="Consent ID",
-			fieldtype="Data",
-			insert_after="consent_section",
-			read_only=1,
-			translatable=0,
-		),
-		dict(
-			owner="Administrator",
-			fieldname="consent_start",
-			label="Consent Start Date",
-			fieldtype="Date",
-			insert_after="consent_id",
-			read_only=1,
-		),
-		dict(
-			owner="Administrator",
-			fieldname="consent_expiry",
-			label="Consent Expiry Date",
-			fieldtype="Datetime",
-			insert_after="consent_start",
-			read_only=1,
-		),
-		dict(
-			owner="Administrator",
-			fieldname="consent_cb",
-			fieldtype="Column Break",
-			insert_after="consent_expiry",
-		),
-		dict(
-			owner="Administrator",
-			fieldname="consent_token",
-			label="Consent Token",
-			fieldtype="Password",
-			length=2760,
-			insert_after="consent_cb",
-			read_only=1,
-		),
 	],
 }
 

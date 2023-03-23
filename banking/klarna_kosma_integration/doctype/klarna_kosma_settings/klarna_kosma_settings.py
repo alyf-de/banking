@@ -1,7 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import frappe
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
@@ -38,17 +38,19 @@ def get_client_token(
 
 
 @frappe.whitelist()
-def fetch_accounts_and_bank(session_id_short: str = None) -> Dict:
+def fetch_accounts_and_bank(session_id_short: str = None, company: str = None) -> Dict:
 	"""
 	Fetch Accounts via Flow API after XS2A App interaction.
 	"""
-	accounts_data = Kosma().flow_accounts(session_id_short)
+	accounts_data = Kosma().flow_accounts(session_id_short, company)
 	return accounts_data.get("result", {})
 
 
 @frappe.whitelist()
-def add_bank_accounts(accounts: str, company: str, bank_name: str) -> None:
-	accounts = json.loads(accounts)
+def add_bank_accounts(accounts: Union[str, Dict], company: str, bank_name: str) -> None:
+	if isinstance(accounts, str):
+		accounts = json.loads(accounts)
+
 	accounts = accounts.get("accounts")
 
 	default_gl_account = get_default_bank_cash_account(company, "Bank")
@@ -74,9 +76,9 @@ def sync_transactions(account: str, session_id_short: Optional[str] = None) -> N
 	"""
 	Enqueue transactions sync via the Consent API.
 	"""
-	bank = frappe.db.get_value("Bank Account", account, "bank")
+	bank, company = frappe.db.get_value("Bank Account", account, ["bank", "company"])
 
-	if not session_id_short and needs_consent(bank):  # UX
+	if not session_id_short and needs_consent(bank, company):  # UX
 		frappe.throw(
 			msg=_(
 				"The Consent Token has expired/is unavailable for Bank {0}. Please click on the {1} button"
@@ -105,16 +107,19 @@ def sync_all_accounts_and_transactions():
 	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
 	Called via hooks.
 	"""
-	banks = frappe.get_all("Bank", filters={"consent_id": ["is", "set"]}, pluck="name")
+	if not frappe.db.get_single_value("Klarna Kosma Settings", "enabled"):
+		return
+
+	bank_consents = frappe.get_all("Bank Consent", fields=["bank", "company"])
 
 	# Update all bank accounts
 	accounts_list = []
-	for bank in banks:
-		accounts = Kosma().consent_accounts(bank)
+	for entry in bank_consents:
+		accounts = Kosma().consent_accounts(entry.get("bank"), entry.get("company"))
 
 		for account in accounts:
 			account_name = get_account_name(account)
-			bank_account_name = "{} - {}".format(account_name, bank)
+			bank_account_name = "{} - {}".format(account_name, entry.get("bank"))
 
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
