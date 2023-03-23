@@ -3,12 +3,13 @@ import frappe
 
 from frappe.client import get_count
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_days, getdate, nowdate
+from frappe.utils import add_days, getdate, get_datetime, nowdate
 
 from banking.connectors.kosma_transaction import KosmaTransaction
 from banking.demo_responses.test_responses import (
 	accounts_response_1,
 	bank_data_response,
+	consent_response,
 	flow_response,
 	session_response,
 	transactions_consent_response
@@ -180,3 +181,39 @@ class TestKosma(FrappeTestCase):
 
 		# Test last sync date correctness
 		self.assertEqual(getdate(last_sync_date), actual_last_sync_date)
+
+	def test_bank_consent_set_get(self):
+		from banking.klarna_kosma_integration.utils import get_consent_data, get_consent_start_date
+		from erpnext.accounts.utils import get_fiscal_year
+
+		create_session_doc(session_response)
+		kosma = Kosma()
+		kosma.update_session_with_flow(session_response, flow_response)
+
+		bank_name = add_bank(bank_data_response)
+
+		consent_data = get_formatted_consent()
+		kosma.set_consent(
+			consent=consent_data,
+			bank_name=bank_name,
+			session_id_short=session_response.session_id_short,
+			company="Bolt Trades"
+		)
+
+		consent_id, consent_token = get_consent_data(bank_name, "Bolt Trades")
+		self.assertEqual(consent_id, consent_response.get("consent_id"))
+		self.assertEqual(consent_token, consent_response.get("consent_token"))
+
+		start_date = get_consent_start_date(session_response.session_id_short)
+		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
+
+		# check if consent start date is start of fiscal year
+		self.assertEqual(getdate(start_date), current_fiscal_year.year_start_date)
+
+
+def get_formatted_consent():
+	return {
+		"consent_id": consent_response.get("consent_id"),
+		"consent_token": consent_response.get("consent_token"),
+		"consent_expiry": add_days(get_datetime(), 90),
+	}
