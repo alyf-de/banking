@@ -219,19 +219,22 @@ class Kosma:
 			)
 			flow_obj.raise_for_status(flow_data)
 
-			# Update Flow info in Session Doc
-			session_id_short = session.get("session_id_short")
-			session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
-			session_doc.update(
-				{
-					"flow_id": flow_data.get("flow_id"),
-					"flow_state": flow_data.get("state"),
-				}
-			)
-			session_doc.save()
+			self.update_session_with_flow(session=session, flow_data=flow_data)
 			return flow_data
 		except Exception as exc:
 			self.handle_exception(exc, _("Failed to start Kosma Flow."))
+
+	def update_session_with_flow(self, session: Dict, flow_data: Dict):
+		"""Update Flow info in Session Doc"""
+		session_id_short = session.get("session_id_short")
+		session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
+		session_doc.update(
+			{
+				"flow_id": flow_data.get("flow_id"),
+				"flow_state": flow_data.get("state"),
+			}
+		)
+		session_doc.save()
 
 	def get_session_bank(self, flow_obj: "KlarnaKosmaFlow", session_id: str):
 		"""Get Bank name from session and create Bank record if absent."""

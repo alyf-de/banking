@@ -11,9 +11,9 @@ def before_tests():
 			{
 				"currency": "EUR",
 				"full_name": "Test User",
-				"company_name": "Wind Power LLC",
+				"company_name": "Bolt Trades",
 				"timezone": "Europe/Berlin",
-				"company_abbr": "WP",
+				"company_abbr": "BT",
 				"industry": "Manufacturing",
 				"country": "Germany",
 				"fy_start_date": f"{year}-01-01",
