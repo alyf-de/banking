@@ -118,6 +118,9 @@ scheduler_events = {
 	"daily": [
 		"banking.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_settings.sync_all_accounts_and_transactions"
 	],
+	"hourly": [
+		"banking.klarna_kosma_integration.doctype.banking_subscription.banking_subscription.update_subscription"
+	],
 }
 
 # Testing

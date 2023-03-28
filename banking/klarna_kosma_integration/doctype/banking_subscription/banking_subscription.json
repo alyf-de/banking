@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2023-03-28 18:45:41.305466",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer_id",
+  "active_until",
+  "max_transactions",
+  "payment_plans"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Customer ID"
+  },
+  {
+   "fieldname": "active_until",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Active Until"
+  },
+  {
+   "fieldname": "payment_plans",
+   "fieldtype": "HTML",
+   "label": "Payment Plans"
+  },
+  {
+   "fieldname": "max_transactions",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Max Transactions"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2023-03-28 19:31:17.625119",
+ "modified_by": "Administrator",
+ "module": "Klarna Kosma Integration",
+ "name": "Banking Subscription",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "role": "System Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
