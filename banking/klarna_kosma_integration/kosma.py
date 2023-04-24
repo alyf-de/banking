@@ -29,7 +29,7 @@ class Kosma:
 		self.ip_address = get_current_ip()
 		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
 
-		settings = frappe.get_single("Klarna Kosma Settings")
+		settings = frappe.get_single("Banking Settings")
 		self.api_token = settings.get_password("api_token")
 		self.env = settings.env
 

@@ -47,7 +47,7 @@
 					</b>
 				</p>
 				<p>
-					To continue with automated Bank Transactions & Bank Accounts sync, go to Klarna Kosma Settings and click on <b>Link Bank and Accounts</b>:
+					To continue with automated Bank Transactions & Bank Accounts sync, go to Banking Settings and click on <b>Link Bank and Accounts</b>:
 				</p>
 			</td>
 			<td width="30"></td>
@@ -61,7 +61,7 @@
 			<td width="30"></td>
 			<td>
 				<a
-					href="{{ frappe.utils.get_url_to_form('Klarna Kosma Settings', 'Klarna Kosma Settings') }}"
+					href="{{ frappe.utils.get_url_to_form('Banking Settings', 'Banking Settings') }}"
 					class="btn btn-primary btn-xs"
 					target="_blank"
 				>

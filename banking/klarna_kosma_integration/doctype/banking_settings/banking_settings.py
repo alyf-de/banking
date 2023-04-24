@@ -20,7 +20,7 @@ from banking.klarna_kosma_integration.utils import (
 )
 
 
-class KlarnaKosmaSettings(Document):
+class BankingSettings(Document):
 	pass
 
 
@@ -107,7 +107,7 @@ def sync_all_accounts_and_transactions():
 	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
 	Called via hooks.
 	"""
-	if not frappe.db.get_single_value("Klarna Kosma Settings", "enabled"):
+	if not frappe.db.get_single_value("Banking Settings", "enabled"):
 		return
 
 	bank_consents = frappe.get_all("Bank Consent", fields=["bank", "company"])

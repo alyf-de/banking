@@ -29,10 +29,8 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_ban
 class TestKosma(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
-		doc = frappe.get_single("Klarna Kosma Settings")
+		doc = frappe.get_single("Banking Settings")
 		doc.enabled = True
-		doc.client_id = "AB104056"
-		doc.env = "Playground"
 		doc.api_token = "xabsttcpQr5"
 		doc.save()
 
@@ -49,7 +47,7 @@ class TestKosma(FrappeTestCase):
 
 	@classmethod
 	def tearDownClass(cls):
-		doc = frappe.get_single("Klarna Kosma Settings")
+		doc = frappe.get_single("Banking Settings")
 		doc.enabled = False
 		doc.save()
 

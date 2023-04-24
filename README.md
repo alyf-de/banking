@@ -33,7 +33,7 @@
 ## Getting Started
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.
 
-Go to **Klarna Kosma Settings**:
+Go to **Banking Settings**:
 <img width="1309" alt="Screenshot 2022-12-19 at 3 39 06 PM" src="https://user-images.githubusercontent.com/25857446/208401464-5b508928-1098-4e57-9951-ad2467e6fab6.png">
 
 - Once **Enabled** is checked, the **Client ID** and **API Token** (given by your service provider) must be filled in.
