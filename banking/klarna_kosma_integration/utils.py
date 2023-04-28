@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_to_date, formatdate, get_datetime, getdate
+from frappe.utils import add_days, add_to_date, formatdate, get_datetime, getdate, nowdate
+
+from erpnext.accounts.utils import get_fiscal_year
 
 if TYPE_CHECKING:
 	from frappe.model.document import Document
@@ -252,6 +254,12 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 		new_transaction.insert()
 		new_transaction.submit()
 
+def get_from_to_date(from_date: Optional[str] = None, to_date: Optional[str] = None):
+	current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
+
+	from_date = from_date or current_fiscal_year.year_start_date
+	to_date = to_date or add_days(nowdate(), 90)
+	return formatdate(from_date, "YYYY-MM-dd"), formatdate(to_date, "YYYY-MM-dd")
 
 def to_json(response: requests.models.Response) -> Dict:
 	"""

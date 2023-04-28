@@ -33,7 +33,7 @@
   {
    "fieldname": "api_token",
    "fieldtype": "Password",
-   "label": "Playground API Token",
+   "label": "Portal API Token",
    "length": 619,
    "mandatory_depends_on": "enabled"
   },
@@ -54,7 +54,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-04-24 14:17:39.015437",
+ "modified": "2023-04-27 16:32:32.178469",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

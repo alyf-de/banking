@@ -10,7 +10,7 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 from frappe import _
 from frappe.model.document import Document
 
-from banking.klarna_kosma_integration.kosma import Kosma
+from banking.klarna_kosma_integration.admin import Admin
 from banking.klarna_kosma_integration.utils import (
 	create_bank_account,
 	get_account_name,
@@ -34,7 +34,7 @@ def get_client_token(
 	"""
 	Returns Client Token to render XS2A App & Short Session ID to track session
 	"""
-	return Kosma().get_client_token(current_flow, account, from_date, to_date)
+	return Admin().get_client_token(current_flow, account, from_date, to_date)
 
 
 @frappe.whitelist()
@@ -42,7 +42,7 @@ def fetch_accounts_and_bank(session_id_short: str = None, company: str = None) -
 	"""
 	Fetch Accounts via Flow API after XS2A App interaction.
 	"""
-	accounts_data = Kosma().flow_accounts(session_id_short, company)
+	accounts_data = Admin().flow_accounts(session_id_short, company)
 	return accounts_data.get("result", {})
 
 
@@ -115,7 +115,7 @@ def sync_all_accounts_and_transactions():
 	# Update all bank accounts
 	accounts_list = []
 	for entry in bank_consents:
-		accounts = Kosma().consent_accounts(entry.get("bank"), entry.get("company"))
+		accounts = Admin().consent_accounts(entry.get("bank"), entry.get("company"))
 
 		for account in accounts:
 			account_name = get_account_name(account)
