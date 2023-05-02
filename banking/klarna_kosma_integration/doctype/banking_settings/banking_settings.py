@@ -42,16 +42,13 @@ def fetch_accounts_and_bank(session_id_short: str = None, company: str = None) -
 	"""
 	Fetch Accounts via Flow API after XS2A App interaction.
 	"""
-	accounts_data = Admin().flow_accounts(session_id_short, company)
-	return accounts_data.get("result", {})
+	return Admin().flow_accounts(session_id_short, company)
 
 
 @frappe.whitelist()
-def add_bank_accounts(accounts: Union[str, Dict], company: str, bank_name: str) -> None:
+def add_bank_accounts(accounts: Union[str, list], company: str, bank_name: str) -> None:
 	if isinstance(accounts, str):
 		accounts = json.loads(accounts)
-
-	accounts = accounts.get("accounts")
 
 	default_gl_account = get_default_bank_cash_account(company, "Bank")
 	if not default_gl_account:

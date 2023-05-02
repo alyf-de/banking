@@ -55,3 +55,29 @@ class AdminRequest():
 			data=json.dumps(data)
 		)
 		return response
+
+	def flow_accounts(self, session_id: str, flow_id: str):
+		data = self.data
+		data.update({
+			"session_id": session_id,
+			"flow_id": flow_id
+		})
+
+		method = "banking_admin.api.fetch_accounts_and_bank"
+		response = requests.post(
+			url=self.url + method,
+			headers=self.headers,
+			data=json.dumps(data)
+		)
+		return response
+
+	def end_session(self, session_id: str):
+		data = self.data
+		data.update({"session_id": session_id})
+
+		method = "banking_admin.api.end_session"
+		requests.post(
+			url=self.url + method,
+			headers=self.headers,
+			data=json.dumps(data)
+		)

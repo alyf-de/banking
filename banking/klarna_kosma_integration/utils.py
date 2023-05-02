@@ -62,6 +62,9 @@ def exchange_consent_token(response: Dict, bank: str, company: str) -> str:
 
 
 def create_session_doc(session_data: Dict) -> "Document":
+	if not session_data:
+		return
+
 	session_doc = frappe.get_doc(
 		{
 			"doctype": "Klarna Kosma Session",

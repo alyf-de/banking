@@ -22,7 +22,7 @@ from banking.klarna_kosma_integration.utils import (
 
 
 class Admin:
-	"""A class that communicate with Banking Admin."""
+	"""A class that directly communicates with the Banking Admin App."""
 
 	def __init__(self) -> None:
 		self.ip_address = get_current_ip()
@@ -64,42 +64,58 @@ class Admin:
 				to_date=to_date
 			)
 
-			return session_flow_response
-			# TODO: error handling
+			session_flow_response.raise_for_status()
+			session_flow_response = session_flow_response.json().get("message", {})
 
-			# session_name = create_session_doc(session_details)
-			# self.update_session_with_flow(session=session, flow_data=flow_data)
+			session_details = session_flow_response.get("session_data", {})
+			flow_details = session_flow_response.get("flow_data", {})
 
-			# return {
-			# 	"session_id_short": session_details.get("session_id_short"),
-			# 	"client_token": flow_data.get("client_token"),
-			# }
+			create_session_doc(session_details)
+			self.update_session_with_flow(
+				session=session_details,
+				flow_data=flow_details
+			)
 
-# 	def flow_accounts(self, session_id_short: str, company: str) -> Dict:
-# 		try:
-# 			flow = self.get_flow()
-# 			session_id, flow_id = get_session_flow_ids(session_id_short)
+			return {
+				"session_id_short": session_details.get("session_id_short"),
+				"client_token": flow_details.get("client_token"),
+			}
 
-# 			accounts_data = flow.accounts(session_id, flow_id)  # Fetch Accounts
-# 			flow.raise_for_status(accounts_data)
+	def flow_accounts(self, session_id_short: str, company: str) -> Dict:
+		try:
+			session_id, flow_id = get_session_flow_ids(session_id_short)
 
-# 			bank_name = self.get_session_bank(flow, session_id)
-# 			accounts_data["result"]["bank_name"] = bank_name
+			accounts_response = self.request.flow_accounts(  # Fetch Accounts
+				session_id, flow_id
+			)
+			accounts_response.raise_for_status()
 
-# 			# Get and store Bank Consent in Bank record
-# 			consent = flow.get_consent(session_id)
-# 			self.set_consent(consent, bank_name, session_id_short, company)
+			accounts_response = accounts_response.json().get("message", {})
+			accounts_result = accounts_response.get("result", {})
 
-# 			return accounts_data
-# 		except Exception as exc:
-# 			self.handle_exception(exc, _("Failed to get Bank Accounts."))
-# 		finally:
-# 			flow_state = accounts_data.get("state", "EXCEPTION")
-# 			frappe.db.set_value(
-# 				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
-# 			)
+			bank_data = accounts_result.get("bank_data")
+			bank_name = self.get_session_bank(bank_data)
 
-# 			self.end_session(flow, session_id, session_id_short)
+			# Get and store Bank Consent in Bank record
+			consent = accounts_result.get("consent_data")
+			self.set_consent(consent, bank_name, session_id_short, company)
+
+			return {
+				"accounts": accounts_result.get("accounts", []),
+				"bank_data": bank_data
+			}
+		except Exception as exc:
+			self.handle_exception(exc, _("Failed to get Bank Accounts."))
+		finally:
+			frappe.db.set_value(
+				"Klarna Kosma Session",
+				session_id_short,
+				{
+					"flow_state": accounts_response.get("state", "EXCEPTION"),
+					"status": accounts_response.get("session_state") or "Running"
+				}
+			)
+
 
 # 	def flow_transactions(self, account: str, session_id_short: str):
 # 		next_page, url, offset = True, None, None
@@ -190,15 +206,13 @@ class Admin:
 # 		except Exception as exc:
 # 			self.handle_exception(exc, _("Failed to start Kosma Session."))
 
-# 	def end_session(
-# 		self, flow_obj: "KlarnaKosmaFlow", session_id: str, session_id_short: str
-# 	) -> None:
-# 		try:
-# 			flow_obj.end_session(session_id)
-# 			frappe.db.set_value("Klarna Kosma Session", session_id_short, "status", "Closed")
-# 			frappe.db.commit()
-# 		except Exception as exc:
-# 			self.handle_exception(exc, _("Failed to end Kosma session"))
+	def end_session(
+		self, session_id: str, session_id_short: str
+	) -> None:
+		self.request.end_session(session_id)
+		frappe.db.set_value("Klarna Kosma Session", session_id_short, "status", "Closed")
+		frappe.db.commit()
+
 
 # 	def start_flow(
 # 		self,
@@ -228,51 +242,45 @@ class Admin:
 # 		except Exception as exc:
 # 			self.handle_exception(exc, _("Failed to start Kosma Flow."))
 
-# 	def update_session_with_flow(self, session: Dict, flow_data: Dict):
-# 		"""Update Flow info in Session Doc"""
-# 		session_id_short = session.get("session_id_short")
-# 		session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
-# 		session_doc.update(
-# 			{
-# 				"flow_id": flow_data.get("flow_id"),
-# 				"flow_state": flow_data.get("state"),
-# 			}
-# 		)
-# 		session_doc.save()
+	def update_session_with_flow(self, session: Dict, flow_data: Dict):
+		"""Update Flow info in Session Doc"""
+		session_id_short = session.get("session_id_short")
+		session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
+		session_doc.update(
+			{
+				"flow_id": flow_data.get("flow_id"),
+				"flow_state": flow_data.get("state"),
+			}
+		)
+		session_doc.save()
 
-# 	def get_session_bank(self, flow_obj: "KlarnaKosmaFlow", session_id: str):
-# 		"""Get Bank name from session and create Bank record if absent."""
-# 		try:
-# 			session = flow_obj.get_session(session_id)
-# 			flow_obj.raise_for_status(session)
+	def get_session_bank(self, bank_data: dict):
+		"""Get Bank name from session and create Bank record if absent."""
+		bank_name = add_bank(bank_data)
+		return bank_name
 
-# 			bank_data = session.get("bank", {})
-# 			bank_name = add_bank(bank_data)
-# 			return bank_name
-# 		except Exception as exc:
-# 			self.handle_exception(exc, _("Failed to get Kosma Session"))
 
-# 	def set_consent(
-# 		self, consent: Dict, bank_name: str, session_id_short: str, company: str
-# 	) -> None:
-# 		consent["consent_start"] = get_consent_start_date(session_id_short)
-# 		consent["session_id"] = session_id_short
+	def set_consent(
+		self, consent: Dict, bank_name: str, session_id_short: str, company: str
+	) -> None:
+		consent["consent_start"] = get_consent_start_date(session_id_short)
+		consent["session_id"] = session_id_short
 
-# 		if frappe.db.exists("Bank Consent", {"bank": bank_name, "company": company}):
-# 			bank_consent = frappe.get_doc(
-# 				"Bank Consent", {"bank": bank_name, "company": company}
-# 			)
-# 		else:
-# 			bank_consent = frappe.get_doc(
-# 				{
-# 					"doctype": "Bank Consent",
-# 					"bank": bank_name,
-# 					"company": company,
-# 				}
-# 			)
+		if frappe.db.exists("Bank Consent", {"bank": bank_name, "company": company}):
+			bank_consent = frappe.get_doc(
+				"Bank Consent", {"bank": bank_name, "company": company}
+			)
+		else:
+			bank_consent = frappe.get_doc(
+				{
+					"doctype": "Bank Consent",
+					"bank": bank_name,
+					"company": company,
+				}
+			)
 
-# 		bank_consent.update(consent)
-# 		bank_consent.save()
+		bank_consent.update(consent)
+		bank_consent.save()
 
 
 # @frappe.whitelist()

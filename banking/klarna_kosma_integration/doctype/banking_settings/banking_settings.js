@@ -225,9 +225,10 @@ class KlarnaKosmaConnect {
 
 	async complete_accounts_flow() {
 			let flow_data = await this.fetch_accounts_data();
-			let bank_name = flow_data["message"]["bank_name"];
+			flow_data = flow_data["message"];
 
-			this.add_bank_accounts(flow_data, bank_name);
+			if (!flow_data["bank_data"] || !flow_data["accounts"]) return;
+			this.add_bank_accounts(flow_data);
 	}
 
 	async complete_transactions_flow()  {
@@ -265,25 +266,23 @@ class KlarnaKosmaConnect {
 		}
 	}
 
-	async add_bank_accounts(flow_data, bank_name) {
+	async add_bank_accounts(flow_data) {
 		let me = this;
 		try {
-			if (flow_data.message) {
-				this.frm.call({
-					method: "add_bank_accounts",
-					args: {
-						accounts: flow_data.message,
-						company: me.company,
-						bank_name: bank_name,
-					},
-					freeze: true,
-					freeze_message: __("Adding Bank Acounts ...")
-				}).then((r) => {
-					if (!r.exc) {
-						frappe.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
-					}
-				});
-			}
+			this.frm.call({
+				method: "add_bank_accounts",
+				args: {
+					accounts: flow_data["accounts"],
+					company: me.company,
+					bank_name: flow_data["bank_data"]["bank_name"],
+				},
+				freeze: true,
+				freeze_message: __("Adding Bank Acounts ...")
+			}).then((r) => {
+				if (!r.exc) {
+					frappe.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
+				}
+			});
 		} catch(e) {
 			console.log(e);
 		}

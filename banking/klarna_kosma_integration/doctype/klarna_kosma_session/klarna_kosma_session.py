@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 
-from banking.klarna_kosma_integration.kosma import Kosma
+from banking.klarna_kosma_integration.admin import Admin
 
 
 class KlarnaKosmaSession(Document):
@@ -13,5 +13,4 @@ class KlarnaKosmaSession(Document):
 	@frappe.whitelist()
 	def end_kosma_session(self):
 		session_id = self.get_password("session_id")
-		kosma = Kosma()
-		kosma.end_session(kosma.get_flow(), session_id, self.session_id_short)
+		Admin().end_session(session_id, self.session_id_short)
