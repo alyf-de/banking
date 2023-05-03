@@ -120,34 +120,37 @@ class Admin:
 			)
 
 
-# 	def flow_transactions(self, account: str, session_id_short: str):
-# 		next_page, url, offset = True, None, None
+	def flow_transactions(self, account: str, session_id_short: str):
+		next_page, url, offset = True, None, None
+		try:
+			session_id, flow_id = get_session_flow_ids(session_id_short)
+			while next_page:
+				response = self.request.flow_transactions(
+					session_id, flow_id, url, offset
+				)
+				response.raise_for_status()
 
-# 		try:
-# 			flow = self.get_flow()
-# 			session_id, flow_id = get_session_flow_ids(session_id_short)
+				transactions_value = response.json().get("message", {})
 
-# 			while next_page:
-# 				transactions = flow.transactions(session_id, flow_id, url, offset)
-# 				flow.raise_for_status(transactions)
+				# Process Request Response
+				transaction = AdminTransaction(transactions_value)
+				next_page = transaction.is_next_page()
+				if next_page:
+					url, offset = transaction.next_page_request()
 
-# 				# Process Request Response
-# 				transaction = AdminTransaction(transactions)
-# 				next_page = transaction.is_next_page()
-# 				if next_page:
-# 					url, offset = transaction.next_page_request()
-
-# 				if transaction.transaction_list:
-# 					create_bank_transactions(account, transaction.transaction_list, via_flow_api=True)
-# 		except Exception as exc:
-# 			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
-# 		finally:
-# 			flow_state = transactions.get("state", "EXCEPTION")
-# 			frappe.db.set_value(
-# 				"Klarna Kosma Session", session_id_short, "flow_state", flow_state
-# 			)
-
-# 			self.end_session(flow, session_id, session_id_short)
+				if transaction.transaction_list:
+					create_bank_transactions(account, transaction.transaction_list, via_flow_api=True)
+		except Exception as exc:
+			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
+		finally:
+			frappe.db.set_value(
+				"Klarna Kosma Session",
+				session_id_short,
+				{
+					"flow_state": transactions_value.get("state", "EXCEPTION"),
+					"status": transactions_value.get("session_state", "Running")
+				}
+			)
 
 
 	def consent_accounts(self, bank: str, company: str):
