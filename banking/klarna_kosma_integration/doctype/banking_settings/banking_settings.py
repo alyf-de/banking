@@ -84,7 +84,7 @@ def sync_transactions(account: str, session_id_short: Optional[str] = None) -> N
 		)
 
 	frappe.enqueue(
-		"banking.klarna_kosma_integration.kosma.sync_kosma_transactions",
+		"banking.klarna_kosma_integration.admin.sync_kosma_transactions",
 		account=account,
 		session_id_short=session_id_short,
 	)
