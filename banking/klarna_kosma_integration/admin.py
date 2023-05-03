@@ -26,6 +26,7 @@ class Admin:
 
 	def __init__(self) -> None:
 		self.ip_address = get_current_ip()
+		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
 
 		settings = frappe.get_single("Banking Settings")
 		self.api_token = settings.get_password("api_token")
@@ -37,6 +38,7 @@ class Admin:
 	def request(self):
 		return AdminRequest(
 			ip_address=self.ip_address,
+			user_agent=self.user_agent,
 			api_token=self.api_token,
 			url=self.url,
 			customer_id=self.customer_id,
