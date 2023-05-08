@@ -33,11 +33,11 @@
 ## Getting Started
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.
 
-Go to **Klarna Kosma Settings**:
-<img width="1309" alt="Screenshot 2022-12-19 at 3 39 06 PM" src="https://user-images.githubusercontent.com/25857446/208401464-5b508928-1098-4e57-9951-ad2467e6fab6.png">
+Go to **Banking Settings**:
+<img width="1287" alt="Screenshot 2023-05-08 at 5 49 41 PM" src="https://user-images.githubusercontent.com/25857446/236859872-e4faa7e7-af6a-47eb-89b1-e21a38f6404e.png">
 
-- Once **Enabled** is checked, the **Client ID** and **API Token** (given by your service provider) must be filled in.
-- If you are testing the APIs in a sandboxed environment, select `Playground` for the field **Klarna Kosma Environment**.
+
+- Once **Enabled** is checked, the **Customer ID** and **API Token** (given by your service provider) must be filled in.
 - **Save** and you are good to go.
 
 ## Fetching a Bank and Bank Accounts
