@@ -5,17 +5,16 @@ from frappe.client import get_count
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate, get_datetime, nowdate
 
-from banking.connectors.kosma_transaction import KosmaTransaction
+from banking.connectors.admin_transaction import AdminTransaction
 from banking.demo_responses.test_responses import (
 	accounts_response_1,
 	bank_data_response,
 	consent_response,
-	flow_response,
 	session_response,
 	transactions_consent_response
 )
-from banking.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_settings import add_bank_accounts
-from banking.klarna_kosma_integration.kosma import Kosma
+from banking.klarna_kosma_integration.doctype.banking_settings.banking_settings import add_bank_accounts
+from banking.klarna_kosma_integration.admin import Admin
 from banking.klarna_kosma_integration.utils import (
 	add_bank,
 	create_bank_transactions,
@@ -32,6 +31,8 @@ class TestKosma(FrappeTestCase):
 		doc = frappe.get_single("Banking Settings")
 		doc.enabled = True
 		doc.api_token = "xabsttcpQr5"
+		doc.customer_id = "ADCB8A"
+		doc.admin_endpoint = "http://banking-admin:8000/api/method/"
 		doc.save()
 
 		default_bank_account = frappe.db.get_value("Company", "Bolt Trades", "default_bank_account")
@@ -58,51 +59,31 @@ class TestKosma(FrappeTestCase):
 
 	def test_kosma_obj(self):
 		"""Test if Kosma objects are initialised correctly"""
-		flow_obj = Kosma().get_flow(
-			from_date=add_days(nowdate(), -60)
-		)
-		self.assertEqual(flow_obj.api_token, "xabsttcpQr5")
-		self.assertEqual(
-			flow_obj.base_url,
-			"https://api.openbanking.playground.klarna.com/xs2a/v1/sessions/"
-		)
-
-		consent_obj = Kosma().get_consent()
-		self.assertEqual(consent_obj.api_token, "xabsttcpQr5")
-		self.assertEqual(
-			consent_obj.base_consent_url,
-			"https://api.openbanking.playground.klarna.com/xs2a/v1/consents/"
-		)
-
-		headers = consent_obj.get_headers()
-		self.assertEqual(
-			headers.get("Authorization"), "Token xabsttcpQr5"
-		)
+		admin = Admin()
+		self.assertEqual(admin.api_token, "xabsttcpQr5")
+		self.assertEqual(admin.customer_id, "ADCB8A")
 
 	def test_kosma_session(self):
 		"""Test creation of Kosma session and updation via flow"""
-		create_session_doc(session_response)
+		session_data = session_response.session_data
+		create_session_doc(session_data, session_response.flow_data)
 
 		# Test if session was created within the app
 		self.assertTrue(
-			frappe.db.exists("Klarna Kosma Session", session_response.session_id_short)
+			frappe.db.exists("Klarna Kosma Session", session_data.get("session_id_short"))
 		)
-		session_doc = frappe.get_doc("Klarna Kosma Session", session_response.session_id_short)
+		session_doc = frappe.get_doc("Klarna Kosma Session", session_data.get("session_id_short"))
 		self.assertEqual(session_doc.status, "Running")
 		self.assertEqual(session_doc.get_password("session_id"), "xyz123")
 		self.assertTrue(json.loads(session_doc.consent_scope))
 
-		Kosma().update_session_with_flow(session_response, flow_response)
-
 		# Test if flow is updated in session doc
-		session_doc.reload()
 		self.assertEqual(session_doc.get_password("flow_id"), "e9fon1j1f03pq329svvrjqid1h2ikutf")
 		self.assertEqual(session_doc.flow_state, "CONSUMER_INPUT_NEEDED")
 
 	def test_bank_and_accounts_creation(self):
 		"""Test if bank and accounts response is parsed and mapped correctly"""
-		create_session_doc(session_response)
-		Kosma().update_session_with_flow(session_response, flow_response)
+		create_session_doc(session_response.session_data, session_response.flow_data)
 
 		bank_name = add_bank(bank_data_response)
 		bank_doc = frappe.get_doc("Bank", bank_name)
@@ -110,7 +91,7 @@ class TestKosma(FrappeTestCase):
 		self.assertEqual(bank_doc.name, "Testbank")
 
 		add_bank_accounts(
-			accounts=accounts_response_1.result,
+			accounts=accounts_response_1.result["accounts"],
 			company="Bolt Trades",
 			bank_name="Testbank"
 		)
@@ -137,17 +118,17 @@ class TestKosma(FrappeTestCase):
 		"""Test if transactions response is parsed and mapped correctly"""
 		# Create Bank and accounts before inserting transaction
 		# closest to real flow
-		create_session_doc(session_response)
-		Kosma().update_session_with_flow(session_response, flow_response)
+		create_session_doc(session_response.session_data, session_response.flow_data)
+
 		bank_name = add_bank(bank_data_response)
 		add_bank_accounts(
-			accounts=accounts_response_1.result,
+			accounts=accounts_response_1.result["accounts"],
 			company="Bolt Trades",
 			bank_name="Testbank"
 		)
 
 		# Process trasaction response
-		transaction = KosmaTransaction(transactions_consent_response)
+		transaction = AdminTransaction(transactions_consent_response)
 		self.assertFalse(transaction.is_next_page())
 
 		create_bank_transactions(
@@ -184,17 +165,15 @@ class TestKosma(FrappeTestCase):
 		from banking.klarna_kosma_integration.utils import get_consent_data, get_consent_start_date
 		from erpnext.accounts.utils import get_fiscal_year
 
-		create_session_doc(session_response)
-		kosma = Kosma()
-		kosma.update_session_with_flow(session_response, flow_response)
-
+		session_data = session_response.session_data
+		create_session_doc(session_data, session_response.flow_data)
 		bank_name = add_bank(bank_data_response)
 
 		consent_data = get_formatted_consent()
-		kosma.set_consent(
+		Admin().set_consent(
 			consent=consent_data,
 			bank_name=bank_name,
-			session_id_short=session_response.session_id_short,
+			session_id_short=session_data.get("session_id_short"),
 			company="Bolt Trades"
 		)
 
@@ -202,7 +181,7 @@ class TestKosma(FrappeTestCase):
 		self.assertEqual(consent_id, consent_response.get("consent_id"))
 		self.assertEqual(consent_token, consent_response.get("consent_token"))
 
-		start_date = get_consent_start_date(session_response.session_id_short)
+		start_date = get_consent_start_date(session_data.get("session_id_short"))
 		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
 
 		# check if consent start date is start of fiscal year
