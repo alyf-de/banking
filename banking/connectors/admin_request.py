@@ -4,8 +4,6 @@ import json
 from typing import Dict, Optional
 import requests
 
-from banking.klarna_kosma_integration.utils import to_json
-
 
 class AdminRequest():
 	def __init__(

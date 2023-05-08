@@ -107,10 +107,10 @@ def sync_all_accounts_and_transactions():
 	if not frappe.db.get_single_value("Banking Settings", "enabled"):
 		return
 
+	accounts_list = []
 	bank_consents = frappe.get_all("Bank Consent", fields=["bank", "company"])
 
 	# Update all bank accounts
-	accounts_list = []
 	for entry in bank_consents:
 		accounts = Admin().consent_accounts(entry.get("bank"), entry.get("company"))
 
@@ -121,7 +121,7 @@ def sync_all_accounts_and_transactions():
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
 
-			update_account(account, bank_account_name)
+			update_account(account, bank_account_name) # update account kosma id
 
 			# list of legitimate bank account names
 			accounts_list.append(bank_account_name)

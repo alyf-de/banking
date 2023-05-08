@@ -209,13 +209,18 @@ class KlarnaKosmaConnect {
 							me.complete_transactions_flow();
 					},
 					onError: error => {
-						console.error('onError: something bad happened.', error);
-						// TODO: Log Error and End session
+						console.error('Something bad happened.', error);
+						if (!error) {
+							error = {"message": __("Something bad happened.")}
+						}
+						me.handle_failed_xs2a_flow(error);
 					},
-					onAbort: () => {
-						console.log("Kosma Authentication Aborted");
-						// TODO: Log Error and End session
-					},
+					onAbort: error => {
+						console.error("Kosma Authentication Aborted", error);
+						if (!error) {
+							error = {"message": __("Kosma Authentication Aborted")}
+						}
+						me.handle_failed_xs2a_flow(error);					},
 				}
 			)
 		} catch (e) {
@@ -225,6 +230,8 @@ class KlarnaKosmaConnect {
 
 	async complete_accounts_flow() {
 			let flow_data = await this.fetch_accounts_data();
+			if (!flow_data) return;
+
 			flow_data = flow_data["message"];
 
 			if (!flow_data["bank_data"] || !flow_data["accounts"]) return;
@@ -259,8 +266,9 @@ class KlarnaKosmaConnect {
 
 			if (!data.message || data.exc) {
 				frappe.throw(__("Failed to fetch Bank Accounts."));
+			} else {
+				return data;
 			}
-			return data;
 		} catch(e) {
 			console.log(e);
 		}
@@ -288,4 +296,21 @@ class KlarnaKosmaConnect {
 		}
 	}
 
+	handle_failed_xs2a_flow(error) {
+		try {
+			frappe.call({
+				method: "banking.klarna_kosma_integration.exception_handler.handle_ui_error",
+				args: {
+					error: error,
+					session_id_short: this.session.session_id_short
+				}
+			}).then((r) => {
+				if (!r.exc) {
+					frappe.show_alert({ message: __("Session Ended"), indicator: "red" });
+				}
+			});
+		} catch(e) {
+			console.log(e);
+		}
+	}
 }

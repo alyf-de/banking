@@ -1,4 +1,4 @@
-# Copyright (c) 2022, ALYF GmbH and contributors
+# Copyright (c) 2023, ALYF GmbH and contributors
 # For license information, please see license.txt
 from typing import Dict, Optional
 
@@ -7,17 +7,21 @@ from frappe import _
 
 from banking.connectors.admin_request import AdminRequest
 from banking.connectors.admin_transaction import AdminTransaction
+from banking.klarna_kosma_integration.exception_handler import ExceptionHandler
 from banking.klarna_kosma_integration.utils import (
 	account_last_sync_date,
 	add_bank,
 	create_bank_transactions,
 	create_session_doc,
 	exchange_consent_token,
+	get_account_data_for_request,
 	get_consent_data,
 	get_consent_start_date,
 	get_current_ip,
 	get_from_to_date,
 	get_session_flow_ids,
+	set_session_state,
+	to_json
 )
 
 
@@ -52,54 +56,43 @@ class Admin:
 		from_date: Optional[str] = None,
 		to_date: Optional[str] = None,
 	) -> Dict:
-			account_data = {}
-			if account:
-				iban, account_id = frappe.db.get_value(
-					"Bank Account", account, ["iban", "kosma_account_id"]
+			try:
+				account_data = get_account_data_for_request(account)
+				from_date, to_date = get_from_to_date(from_date, to_date)
+
+				session_flow_response = self.request.get_client_token(
+					current_flow=current_flow,
+					account=account_data,
+					from_date=from_date,
+					to_date=to_date
 				)
-				account_data = {"iban": iban, "account_id": account_id}
 
-			from_date, to_date = get_from_to_date(from_date, to_date)
+				session_flow_response.raise_for_status()
+				session_flow_response = session_flow_response.json().get("message", {})
 
-			session_flow_response = self.request.get_client_token(
-				current_flow=current_flow,
-				account=account_data,
-				from_date=from_date,
-				to_date=to_date
-			)
+				session_details = session_flow_response.get("session_data", {})
+				flow_details = session_flow_response.get("flow_data", {})
+				create_session_doc(session_details, flow_details)
 
-			session_flow_response.raise_for_status()
-			session_flow_response = session_flow_response.json().get("message", {})
-
-			session_details = session_flow_response.get("session_data", {})
-			flow_details = session_flow_response.get("flow_data", {})
-
-			create_session_doc(session_details)
-			self.update_session_with_flow(
-				session=session_details,
-				flow_data=flow_details
-			)
-
-			return {
-				"session_id_short": session_details.get("session_id_short"),
-				"client_token": flow_details.get("client_token"),
-			}
+				return {
+					"session_id_short": session_details.get("session_id_short"),
+					"client_token": flow_details.get("client_token"),
+				}
+			except Exception as exc:
+				ExceptionHandler(exc)
 
 
 	def flow_accounts(self, session_id_short: str, company: str) -> Dict:
+		accounts_response = None
 		try:
 			session_id, flow_id = get_session_flow_ids(session_id_short)
+			response = self.request.flow_accounts(session_id, flow_id)
 
-			accounts_response = self.request.flow_accounts(  # Fetch Accounts
-				session_id, flow_id
-			)
-			accounts_response.raise_for_status()
-
-			accounts_response = accounts_response.json().get("message", {})
+			response.raise_for_status()
+			accounts_response = response.json().get("message", {})
 			accounts_result = accounts_response.get("result", {})
 
-			bank_data = accounts_result.get("bank_data")
-			bank_name = self.get_session_bank(bank_data)
+			bank_name = add_bank(accounts_result.get("bank_data", {}))
 
 			# Get and store Bank Consent in Bank record
 			consent = accounts_result.get("consent_data")
@@ -107,23 +100,16 @@ class Admin:
 
 			return {
 				"accounts": accounts_result.get("accounts", []),
-				"bank_data": bank_data
+				"bank_data": accounts_result.get("bank_data", {})
 			}
 		except Exception as exc:
-			self.handle_exception(exc, _("Failed to get Bank Accounts."))
+			ExceptionHandler(exc)
 		finally:
-			frappe.db.set_value(
-				"Klarna Kosma Session",
-				session_id_short,
-				{
-					"flow_state": accounts_response.get("state", "EXCEPTION"),
-					"status": accounts_response.get("session_state") or "Running"
-				}
-			)
+			set_session_state(session_id_short, accounts_response)
 
 
 	def flow_transactions(self, account: str, session_id_short: str):
-		next_page, url, offset = True, None, None
+		next_page, url, offset, transactions_value = True, None, None, None
 		try:
 			session_id, flow_id = get_session_flow_ids(session_id_short)
 			while next_page:
@@ -131,7 +117,6 @@ class Admin:
 					session_id, flow_id, url, offset
 				)
 				response.raise_for_status()
-
 				transactions_value = response.json().get("message", {})
 
 				# Process Request Response
@@ -143,16 +128,9 @@ class Admin:
 				if transaction.transaction_list:
 					create_bank_transactions(account, transaction.transaction_list, via_flow_api=True)
 		except Exception as exc:
-			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
+			ExceptionHandler(exc)
 		finally:
-			frappe.db.set_value(
-				"Klarna Kosma Session",
-				session_id_short,
-				{
-					"flow_state": transactions_value.get("state", "EXCEPTION"),
-					"status": transactions_value.get("session_state", "Running")
-				}
-			)
+			set_session_state(session_id_short, transactions_value)
 
 
 	def consent_accounts(self, bank: str, company: str):
@@ -160,30 +138,28 @@ class Admin:
 			consent_id, consent_token = get_consent_data(bank, company)
 
 			accounts_response = self.request.consent_accounts(consent_id, consent_token)
-			accounts_response_value = accounts_response.json().get("message", {})
+			accounts_response_value = to_json(accounts_response).get("message", {})
 
 			exchange_consent_token(accounts_response_value, bank, company)
 			accounts_response.raise_for_status()
 
-			accounts = accounts_response_value.get("result", {}).get("accounts")
-			return accounts
+			return accounts_response_value.get("result", {}).get("accounts", [])
 		except Exception as exc:
-			self.handle_exception(exc, _("Failed to get Bank Accounts."))
+			ExceptionHandler(exc)
 
 
 	def consent_transactions(self, account: str, start_date: str):
-		account_id, bank, company = frappe.db.get_value(
-			"Bank Account", account, ["kosma_account_id", "bank", "company"]
-		)
-		consent_id, consent_token = get_consent_data(bank, company)
-
 		next_page, url, offset = True, None, None
 		try:
+			account_id, bank, company = frappe.db.get_value(
+				"Bank Account", account, ["kosma_account_id", "bank", "company"]
+			)
+			consent_id, consent_token = get_consent_data(bank, company)
 			while next_page:
 				response = self.request.consent_transactions(
 					account_id, start_date, consent_id, consent_token, url, offset
 				)
-				transactions_value = response.json().get("message", {})
+				transactions_value = to_json(response).get("message", {})
 
 				new_consent_token = exchange_consent_token(transactions_value, bank, company)
 				response.raise_for_status()
@@ -198,7 +174,7 @@ class Admin:
 				if transaction.transaction_list:
 					create_bank_transactions(account, transaction.transaction_list)
 		except Exception as exc:
-			self.handle_exception(exc, _("Failed to get Kosma Transactions."))
+			ExceptionHandler(exc)
 
 
 	def end_session(
@@ -207,24 +183,6 @@ class Admin:
 		self.request.end_session(session_id)
 		frappe.db.set_value("Klarna Kosma Session", session_id_short, "status", "Closed")
 		frappe.db.commit()
-
-
-	def update_session_with_flow(self, session: Dict, flow_data: Dict):
-		"""Update Flow info in Session Doc"""
-		session_id_short = session.get("session_id_short")
-		session_doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
-		session_doc.update(
-			{
-				"flow_id": flow_data.get("flow_id"),
-				"flow_state": flow_data.get("state"),
-			}
-		)
-		session_doc.save()
-
-	def get_session_bank(self, bank_data: dict):
-		"""Get Bank name from session and create Bank record if absent."""
-		bank_name = add_bank(bank_data)
-		return bank_name
 
 
 	def set_consent(
