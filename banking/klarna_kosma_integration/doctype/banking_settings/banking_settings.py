@@ -10,7 +10,7 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 from frappe import _
 from frappe.model.document import Document
 
-from banking.klarna_kosma_integration.kosma import Kosma
+from banking.klarna_kosma_integration.admin import Admin
 from banking.klarna_kosma_integration.utils import (
 	create_bank_account,
 	get_account_name,
@@ -20,7 +20,7 @@ from banking.klarna_kosma_integration.utils import (
 )
 
 
-class KlarnaKosmaSettings(Document):
+class BankingSettings(Document):
 	pass
 
 
@@ -34,7 +34,7 @@ def get_client_token(
 	"""
 	Returns Client Token to render XS2A App & Short Session ID to track session
 	"""
-	return Kosma().get_client_token(current_flow, account, from_date, to_date)
+	return Admin().get_client_token(current_flow, account, from_date, to_date)
 
 
 @frappe.whitelist()
@@ -42,16 +42,13 @@ def fetch_accounts_and_bank(session_id_short: str = None, company: str = None) -
 	"""
 	Fetch Accounts via Flow API after XS2A App interaction.
 	"""
-	accounts_data = Kosma().flow_accounts(session_id_short, company)
-	return accounts_data.get("result", {})
+	return Admin().flow_accounts(session_id_short, company)
 
 
 @frappe.whitelist()
-def add_bank_accounts(accounts: Union[str, Dict], company: str, bank_name: str) -> None:
+def add_bank_accounts(accounts: Union[str, list], company: str, bank_name: str) -> None:
 	if isinstance(accounts, str):
 		accounts = json.loads(accounts)
-
-	accounts = accounts.get("accounts")
 
 	default_gl_account = get_default_bank_cash_account(company, "Bank")
 	if not default_gl_account:
@@ -87,7 +84,7 @@ def sync_transactions(account: str, session_id_short: Optional[str] = None) -> N
 		)
 
 	frappe.enqueue(
-		"banking.klarna_kosma_integration.kosma.sync_kosma_transactions",
+		"banking.klarna_kosma_integration.admin.sync_kosma_transactions",
 		account=account,
 		session_id_short=session_id_short,
 	)
@@ -107,15 +104,15 @@ def sync_all_accounts_and_transactions():
 	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
 	Called via hooks.
 	"""
-	if not frappe.db.get_single_value("Klarna Kosma Settings", "enabled"):
+	if not frappe.db.get_single_value("Banking Settings", "enabled"):
 		return
 
+	accounts_list = []
 	bank_consents = frappe.get_all("Bank Consent", fields=["bank", "company"])
 
 	# Update all bank accounts
-	accounts_list = []
 	for entry in bank_consents:
-		accounts = Kosma().consent_accounts(entry.get("bank"), entry.get("company"))
+		accounts = Admin().consent_accounts(entry.get("bank"), entry.get("company"))
 
 		for account in accounts:
 			account_name = get_account_name(account)
@@ -124,7 +121,7 @@ def sync_all_accounts_and_transactions():
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
 
-			update_account(account, bank_account_name)
+			update_account(account, bank_account_name) # update account kosma id
 
 			# list of legitimate bank account names
 			accounts_list.append(bank_account_name)

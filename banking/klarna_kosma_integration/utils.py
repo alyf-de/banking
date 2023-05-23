@@ -2,11 +2,14 @@
 # For license information, please see license.txt
 import json
 from typing import TYPE_CHECKING, Dict, List, Optional
+from banking.klarna_kosma_integration.exception_handler import ExceptionHandler
 
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_to_date, formatdate, get_datetime, getdate
+from frappe.utils import add_days, add_to_date, formatdate, get_datetime, getdate, nowdate
+
+from erpnext.accounts.utils import get_fiscal_year
 
 if TYPE_CHECKING:
 	from frappe.model.document import Document
@@ -59,7 +62,10 @@ def exchange_consent_token(response: Dict, bank: str, company: str) -> str:
 	return new_consent_token
 
 
-def create_session_doc(session_data: Dict) -> "Document":
+def create_session_doc(session_data: Dict, flow_data: Dict) -> "Document":
+	if not (session_data and flow_data):
+		return
+
 	session_doc = frappe.get_doc(
 		{
 			"doctype": "Klarna Kosma Session",
@@ -67,6 +73,8 @@ def create_session_doc(session_data: Dict) -> "Document":
 			"session_id": session_data.get("session_id"),
 			"consent_scope": json.dumps(session_data.get("consent_scope")),
 			"status": "Running",
+			"flow_id": flow_data.get("flow_id"),
+			"flow_state": flow_data.get("state"),
 		}
 	)
 	return session_doc.insert()
@@ -217,8 +225,7 @@ def create_bank_transactions(
 
 def new_bank_transaction(account: str, transaction: Dict) -> None:
 	amount_data = transaction.get("amount", {})
-	# https://docs.openbanking.klarna.com/xs2a/objects/amount.html
-	amount = amount_data.get("amount", 0) / 100
+	amount = amount_data.get("amount", 0) / 100  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
 
 	is_credit = transaction.get("type") == "CREDIT"
 	debit = 0 if is_credit else float(amount)
@@ -252,6 +259,12 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 		new_transaction.insert()
 		new_transaction.submit()
 
+def get_from_to_date(from_date: Optional[str] = None, to_date: Optional[str] = None):
+	current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
+
+	from_date = from_date or current_fiscal_year.year_start_date
+	to_date = to_date or add_days(nowdate(), 90)
+	return formatdate(from_date, "YYYY-MM-dd"), formatdate(to_date, "YYYY-MM-dd")
 
 def to_json(response: requests.models.Response) -> Dict:
 	"""
@@ -297,6 +310,32 @@ def get_current_ip() -> Optional[str]:
 
 	ip_address = frappe.local.request_ip
 	if ip_address == "127.0.0.1":
-		ip_address = requests.get("https://checkip.amazonaws.com", timeout=3).text.strip()
+		try:
+			ip_address = requests.get("https://checkip.amazonaws.com", timeout=3).text.strip()
+		except Exception as exc:
+			ExceptionHandler(exc)
 
 	return ip_address
+
+
+def get_account_data_for_request(account: str):
+	if not account:
+		return {}
+
+	iban, account_id = frappe.db.get_value(
+		"Bank Account", account, ["iban", "kosma_account_id"]
+	)
+	return {"iban": iban, "account_id": account_id}
+
+
+def set_session_state(session_id_short: str, result: str = None):
+	result = result or {}
+
+	frappe.db.set_value(
+		"Klarna Kosma Session",
+		session_id_short,
+		{
+			"flow_state": result.get("state", "EXCEPTION"),
+			"status": result.get("session_state", "Running")
+		}
+	)

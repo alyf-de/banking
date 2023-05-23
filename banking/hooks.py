@@ -116,7 +116,7 @@ after_install = "banking.install.after_install"
 
 scheduler_events = {
 	"daily": [
-		"banking.klarna_kosma_integration.doctype.klarna_kosma_settings.klarna_kosma_settings.sync_all_accounts_and_transactions"
+		"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions"
 	],
 }
 

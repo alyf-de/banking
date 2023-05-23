@@ -9,9 +9,9 @@
  "field_order": [
   "enabled",
   "section_break_2",
-  "client_id",
+  "admin_endpoint",
+  "customer_id",
   "column_break_4",
-  "env",
   "api_token"
  ],
  "fields": [
@@ -27,37 +27,37 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "client_id",
-   "fieldtype": "Data",
-   "label": "Client ID",
-   "mandatory_depends_on": "enabled"
-  },
-  {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "api_token",
    "fieldtype": "Password",
-   "label": "API Token",
+   "label": "Portal API Token",
    "length": 619,
    "mandatory_depends_on": "enabled"
   },
   {
-   "fieldname": "env",
-   "fieldtype": "Select",
-   "label": "Klarna Kosma Environment",
-   "mandatory_depends_on": "enabled",
-   "options": "Playground\nProduction"
+   "fieldname": "customer_id",
+   "fieldtype": "Data",
+   "label": "Customer ID",
+   "mandatory_depends_on": "enabled"
+  },
+  {
+   "fieldname": "admin_endpoint",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Admin Endpoint",
+   "mandatory_depends_on": "enabled"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-12-19 14:08:54.068709",
+ "modified": "2023-04-27 16:32:32.178469",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
- "name": "Klarna Kosma Settings",
+ "name": "Banking Settings",
  "owner": "Administrator",
  "permissions": [
   {

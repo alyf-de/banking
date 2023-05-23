@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestKlarnaKosmaSettings(FrappeTestCase):
+class TestBankingSettings(FrappeTestCase):
 	pass

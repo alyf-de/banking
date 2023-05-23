@@ -5,7 +5,7 @@ from typing import Dict
 from frappe.utils import formatdate, today
 
 
-class KosmaTransaction:
+class AdminTransaction:
 	def __init__(self, response_value) -> None:
 		self.result = response_value.get("result", {})
 		self.pagination = self.result.get("pagination", {})
