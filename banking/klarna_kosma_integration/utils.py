@@ -240,7 +240,9 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 	status = state_map[transaction.get("state")]
 
 	transaction_id = transaction.get("transaction_id")
-	if not frappe.db.exists("Bank Transaction", {"transaction_id": transaction_id}):
+	transaction_exists = frappe.db.exists("Bank Transaction", {"transaction_id": transaction_id})
+
+	if not transaction_id or not transaction_exists:
 		new_transaction = frappe.get_doc(
 			{
 				"doctype": "Bank Transaction",
@@ -253,7 +255,9 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 				"transaction_id": transaction_id,
 				"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
 				"description": transaction.get("reference"),
-				"kosma_party_name": transaction.get("counter_party", {}).get("holder_name"),
+				"bank_party_name": transaction.get("counter_party", {}).get("holder_name"),
+				"bank_party_iban": transaction.get("counter_party", {}).get("iban"),
+				"bank_party_account_number": transaction.get("counter_party", {}).get("account_number"),
 			}
 		)
 		new_transaction.insert()

@@ -147,7 +147,9 @@ class TestKosma(FrappeTestCase):
 		self.assertEqual(test_transn_doc.deposit, 0.0)
 		self.assertEqual(test_transn_doc.status, "Settled")
 		self.assertEqual(test_transn_doc.date, getdate("2022-12-03"))
-		self.assertEqual(test_transn_doc.kosma_party_name, "Hans Mustermann")
+		self.assertEqual(test_transn_doc.bank_party_name, "Hans Mustermann")
+		self.assertEqual(test_transn_doc.bank_party_iban, "DE18000000006636981175")
+		self.assertEqual(test_transn_doc.bank_party_account_number, "000000006636981175")
 
 		last_sync_date = max(
 			row.get("value_date") or row.get("date") for row in transaction.transaction_list
