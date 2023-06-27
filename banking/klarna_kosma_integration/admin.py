@@ -185,6 +185,22 @@ class Admin:
 		frappe.db.commit()
 
 
+	def fetch_subscription(self):
+		try:
+			subscription = self.request.fetch_subscription()
+			subscription.raise_for_status()
+			return subscription.json().get("message", {})
+		except Exception as exc:
+			ExceptionHandler(exc)
+
+	def get_customer_portal_url(self):
+		try:
+			url = self.request.get_customer_portal()
+			url.raise_for_status()
+			return url.json().get("message")
+		except Exception as exc:
+			ExceptionHandler(exc)
+
 	def set_consent(
 		self, consent: Dict, bank_name: str, session_id_short: str, company: str
 	) -> None:

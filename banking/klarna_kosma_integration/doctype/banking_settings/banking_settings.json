@@ -12,7 +12,9 @@
   "admin_endpoint",
   "customer_id",
   "column_break_4",
-  "api_token"
+  "api_token",
+  "section_break_aiyw3",
+  "subscription"
  ],
  "fields": [
   {
@@ -49,12 +51,22 @@
    "in_list_view": 1,
    "label": "Admin Endpoint",
    "mandatory_depends_on": "enabled"
+  },
+  {
+   "fieldname": "section_break_aiyw3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "subscription",
+   "fieldname": "subscription",
+   "fieldtype": "HTML",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-04-27 16:32:32.178469",
+ "modified": "2023-06-28 00:32:38.574642",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

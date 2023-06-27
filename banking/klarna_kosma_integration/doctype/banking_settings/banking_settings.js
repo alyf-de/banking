@@ -15,6 +15,23 @@ frappe.ui.form.on('Banking Settings', {
 			frm.add_custom_button(__("Older Transactions"), () => {
 				frm.events.sync_transactions(frm, true);
 			}, __("Sync"));
+
+			frm.add_custom_button(__("View Subscription"), () => {
+				frm.events.get_subscription(frm);
+			}, __("Actions"));
+
+			frm.add_custom_button(__("Handle Subscription"), async () => {
+				const url = await frm.call({
+					method: "get_customer_portal_url",
+					freeze: true,
+					freeze_message: __("Redirecting to Customer Portal ...")
+				});
+				if (url.message) {
+					window.open(url.message, "_blank");
+				}
+			}, __("Actions"));
+
+
 		}
 
 	},
@@ -132,6 +149,40 @@ frappe.ui.form.on('Banking Settings', {
 			);
 		}
 		dialog.show();
+	},
+
+	get_subscription: async (frm) => {
+		const data = await frm.call({
+			method: "fetch_subscription_data",
+			freeze: true,
+			freeze_message: __("Please wait. Fetching Subscription Details ...")
+		});
+
+		if (data.message) {
+			let subscription = data.message[0];
+
+			frm.get_field("subscription").$wrapper.empty();
+			frm.doc.subscription = "subscription";
+			frm.get_field("subscription").$wrapper.html(`
+				<div
+					style="border: 1px solid var(--gray-300);
+					border-radius: 4px;
+					padding: 1rem;
+					width: calc(50% - 15px);
+					margin-bottom: 0.5rem;
+				">
+					<p style="font-weight: 700; font-size: 16px;">
+						${ __("Subscription Details") }
+					</p>
+					<p>Subscriber: <u>${subscription.full_name}</u></p>
+					<p>Status: <u>${subscription.subscription_status}</u></p>
+					<p>Transaction Limit: <u>${subscription.transaction_limit}</u></p>
+					<p>Valid Till: <u>${subscription.plan_end_date}</u></p>
+					<p>Last Renewed On: <u>${subscription.last_paid_on}</u></p>
+				</div>
+			`);
+			frm.refresh_field("subscription");
+		}
 	}
 });
 

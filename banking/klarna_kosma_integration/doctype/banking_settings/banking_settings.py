@@ -128,3 +128,19 @@ def sync_all_accounts_and_transactions():
 
 	for bank_account in accounts_list:
 		sync_transactions(account=bank_account)
+
+
+@frappe.whitelist()
+def fetch_subscription_data() -> Dict:
+	"""
+	Fetch Accounts via Flow API after XS2A App interaction.
+	"""
+	return Admin().fetch_subscription()
+
+
+@frappe.whitelist()
+def get_customer_portal_url() -> str:
+	"""
+	Returns the customer portal URL.
+	"""
+	return Admin().get_customer_portal_url()
