@@ -46,10 +46,11 @@
    "mandatory_depends_on": "enabled"
   },
   {
+   "description": "Eg: https://mysite.com",
    "fieldname": "admin_endpoint",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Admin Endpoint",
+   "label": "Admin URL",
    "mandatory_depends_on": "enabled"
   },
   {
@@ -66,7 +67,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-28 00:32:38.574642",
+ "modified": "2023-06-28 12:09:36.514678",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

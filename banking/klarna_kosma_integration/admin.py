@@ -35,7 +35,7 @@ class Admin:
 		settings = frappe.get_single("Banking Settings")
 		self.api_token = settings.get_password("api_token")
 		self.customer_id = settings.customer_id
-		self.url = settings.admin_endpoint
+		self.url = settings.admin_endpoint + "/api/method/"
 
 
 	@property

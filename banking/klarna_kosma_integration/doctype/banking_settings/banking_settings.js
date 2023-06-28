@@ -30,8 +30,13 @@ frappe.ui.form.on('Banking Settings', {
 					window.open(url.message, "_blank");
 				}
 			}, __("Actions"));
-
-
+		} else {
+			frm.page.add_inner_button(__("Signup for Banking"), () => {
+				frappe.db.get_value("Banking Settings", "Banking Settings", "admin_endpoint", (r) => {
+					window.open(r.admin_endpoint + "/banking-pricing", "_blank");
+				});
+			},
+			null, "primary");
 		}
 
 	},
