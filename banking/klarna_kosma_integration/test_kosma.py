@@ -32,7 +32,7 @@ class TestKosma(FrappeTestCase):
 		doc.enabled = True
 		doc.api_token = "xabsttcpQr5"
 		doc.customer_id = "ADCB8A"
-		doc.admin_endpoint = "http://banking-admin:8000/api/method/"
+		doc.admin_endpoint = "http://banking-admin:8000"
 		doc.save()
 
 		default_bank_account = frappe.db.get_value("Company", "Bolt Trades", "default_bank_account")
