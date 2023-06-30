@@ -142,3 +142,16 @@ class AdminRequest():
 			headers=self.headers,
 			data=json.dumps(data)
 		)
+
+	def fetch_subscription(self):
+		method = "banking_admin.api.fetch_subscription_details"
+		result =  requests.post(
+			url=self.url + method,
+			headers=self.headers,
+			data=json.dumps(self.data)
+		)
+		return result
+
+	def get_customer_portal(self):
+		method = "banking_admin.api.get_customer_portal"
+		return requests.get(url=self.url + method)
