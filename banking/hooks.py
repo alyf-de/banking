@@ -187,41 +187,6 @@ kosma_custom_fields = {
 			translatable=0,
 		)
 	],
-	"Bank Transaction": [
-		dict(
-			owner="Administrator",
-			fieldname="bank_party_cb",
-			fieldtype="Column Break",
-			insert_after="party",
-		),
-		dict(
-			owner="Administrator",
-			fieldname="bank_party_name",
-			label="Party Name/Account Holder (Bank Statement)",
-			fieldtype="Data",
-			insert_after="bank_party_cb",
-			read_only=1,
-			translatable=0,
-		),
-		dict(
-			owner="Administrator",
-			fieldname="bank_party_iban",
-			fieldtype="Data",
-			label="Party IBAN (Bank Statement)",
-			insert_after="bank_party_name",
-			read_only=1,
-			translatable=0,
-		),
-		dict(
-			owner="Administrator",
-			fieldname="bank_party_account_number",
-			fieldtype="Data",
-			label="Party Account No. (Bank Statement)",
-			insert_after="bank_party_iban",
-			read_only=1,
-			translatable=0,
-		),
-	],
 }
 
 kosma_property_setters = {
