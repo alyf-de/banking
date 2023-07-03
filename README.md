@@ -34,8 +34,7 @@
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.
 
 Go to **Banking Settings**:
-<img width="1287" alt="Screenshot 2023-05-08 at 5 49 41 PM" src="https://user-images.githubusercontent.com/25857446/236859872-e4faa7e7-af6a-47eb-89b1-e21a38f6404e.png">
-
+<img width="1295" alt="Screenshot 2023-07-03 at 7 47 25 PM" src="https://github.com/alyf-de/banking/assets/25857446/67977dc6-e875-4693-8dc8-bd162c769e5b">
 
 - Once **Enabled** is checked, the **Customer ID** and **API Token** (given by your service provider) must be filled in.
 - **Save** and you are good to go.
