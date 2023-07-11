@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [App Setup](#app-setup)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Fetching a Bank and Bank Accounts](#fetching-a-bank-and-bank-accounts)
@@ -22,6 +23,9 @@
 	- [Automatic Transaction fetch/sync](#automatic-transaction-fetchsync)
 - [Bank Consent (Important)](#bank-consent)
 
+## App Setup
+
+1. Set the appropriate Admin URL in **hooks.py** > `admin_endpoint`
 
 ## Installation
 
