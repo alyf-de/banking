@@ -8,6 +8,8 @@ app_email = "hallo@alyf.de"
 app_license = "MIT"
 app_logo_url = "/assets/banking/images/alyf-logo.png"
 
+admin_endpoint = "https://banking.alyf.de"
+
 # Includes in <head>
 # ------------------
 

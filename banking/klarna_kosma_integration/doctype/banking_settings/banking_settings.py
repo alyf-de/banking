@@ -21,7 +21,10 @@ from banking.klarna_kosma_integration.utils import (
 
 
 class BankingSettings(Document):
-	pass
+	def onload(self):
+		if not self.admin_endpoint:
+			admin_url = frappe.get_hooks("admin_endpoint")[0]
+			self.admin_endpoint = admin_url
 
 
 @frappe.whitelist()

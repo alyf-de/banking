@@ -8,8 +8,9 @@
  "engine": "InnoDB",
  "field_order": [
   "enabled",
-  "section_break_2",
+  "column_break_xqaod",
   "admin_endpoint",
+  "section_break_2",
   "customer_id",
   "column_break_4",
   "api_token",
@@ -51,7 +52,8 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Admin URL",
-   "mandatory_depends_on": "enabled"
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "section_break_aiyw3",
@@ -62,12 +64,16 @@
    "fieldname": "subscription",
    "fieldtype": "HTML",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_xqaod",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-28 12:09:36.514678",
+ "modified": "2023-07-11 14:57:03.540262",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",
