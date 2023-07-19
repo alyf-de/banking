@@ -12,11 +12,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			this.$actions_container.empty();
 		} else {
 			this.$actions_container = this.$wrapper.append(`
-				<div class="actions-panel" style="
-					width: 55%; height: 70vh; border: 1px solid var(--gray-200);
-					height: auto; overflow-y: scroll;
-				">
-				</div>
+				<div class="actions-panel"></div>
 			`).find(".actions-panel");
 		}
 
@@ -38,7 +34,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				</ul>
 			</div>
 
-			<div class="tab-content" style="padding: 10px;">
+			<div class="tab-content p-10">
 			</div>
 		`).find(".tab-content");
 
@@ -52,6 +48,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			$tab_link.on("click", () => {
 				if (tab == "Details") {
 					this.details_section();
+				} else if (tab == "Match Voucher") {
+					this.match_section();
 				}
 			});
 		});
@@ -60,15 +58,12 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 	add_tab(tab_name, tab) {
 		this.tabs_list_ul.append(`
 			<li class="nav-item">
-				<a class="nav-actions-link" id="${tab_name}-tab"
-					data-toggle="tab" href="#" role="tab" aria-controls="${tab}"
-					style="
-						display: block;
-						color: var(--text-muted);
-						padding: var(--padding-md) 0;
-						margin: 0 var(--margin-md);
-						text-decoration: none;
-					"
+				<a class="nav-actions-link"
+					id="${tab_name}-tab"
+					data-toggle="tab"
+					href="#"
+					role="tab"
+					aria-controls="${tab}"
 				>
 					${__(tab)}
 				</a>
@@ -78,7 +73,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	details_section() {
 		this.$tab_content.empty();
-		this.field_group = new frappe.ui.FieldGroup({
+		this.details_field_group = new frappe.ui.FieldGroup({
 			fields: [
 				{
 					label: __("Date"),
@@ -166,10 +161,317 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 					options: "party_type",
 					default: this.transaction.party,
 				},
+				{
+					fieldtype: "Section Break"
+				},
+				{
+					label: __("Hidden field for alignment"),
+					fieldname: "hidden_field",
+					fieldtype: "Data",
+					hidden: 1
+				},
+				{
+					fieldtype: "Column Break"
+				},
+				{
+					label: __("Submit"),
+					fieldtype: "Button",
+					primary: true,
+					click: () => {
+						const reference_number = this.details_field_group.get_value("reference_number");
+						const party = this.details_field_group.get_value("party");
+						const party_type = this.details_field_group.get_value("party_type");
+
+						if (!reference_number || !party || !party_type) return;
+
+						frappe.call({
+							method:
+								"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
+							args: {
+								bank_transaction_name: this.transaction.name,
+								reference_number: reference_number,
+								party_type: party_type,
+								party: party,
+							},
+							freeze: true,
+							freeze_message: __("Updating ..."),
+							callback: (response) => {
+								if (response.exc) {
+									frappe.show_alert(__("Failed to update {0}", [this.bank_transaction.name]));
+									return;
+								}
+
+								this.transaction = {
+									...this.transaction,
+									reference_number: reference_number,
+									party_type: party_type,
+									party: party,
+								}
+								const alert_string = __("Bank Transaction {0} updated", [this.bank_transaction.name]);
+								frappe.show_alert(alert_string);
+							},
+						});
+					}
+				}
 			],
 			body: this.$tab_content,
 			card_layout: true,
 		});
-		this.field_group.make();
+		this.details_field_group.make();
+	}
+
+	async match_section() {
+		this.$tab_content.empty();
+		this.match_field_group = new frappe.ui.FieldGroup({
+			fields: [
+				{
+					label: __("Payment Entry"),
+					fieldname: "payment_entry",
+					fieldtype: "Check",
+					default: 1,
+				},
+				{
+					label: __("Journal Entry"),
+					fieldname: "journal_entry",
+					fieldtype: "Check",
+					default: 1,
+				},
+				{
+					fieldtype: "Column Break"
+				},
+				{
+					label: __("Purchase Invoice"),
+					fieldname: "purchase_invoice",
+					fieldtype: "Check",
+				},
+				{
+					label: __("Sales Invoice"),
+					fieldname: "sales_invoice",
+					fieldtype: "Check",
+				},
+				{
+					fieldtype: "Column Break"
+				},
+				{
+					label: __("Loan Repayment"),
+					fieldname: "loan_repayment",
+					fieldtype: "Check",
+				},
+				{
+					label: __("Loan Disbursement"),
+					fieldname: "loan_disbursement",
+					fieldtype: "Check",
+				},
+				{
+					fieldtype: "Column Break"
+				},
+				{
+					label: __("Expense Claim"),
+					fieldname: "expense_claim",
+					fieldtype: "Check",
+				},
+				{
+					label: __("Bank Transaction"),
+					fieldname: "bank_transaction",
+					fieldtype: "Check",
+				},
+				{
+					fieldtype: "Section Break"
+				},
+				{
+					label: __("Show Only Exact Amount"),
+					fieldname: "exact_match",
+					fieldtype: "Check",
+				},
+				{
+					fieldtype: "Section Break"
+				},
+				{
+					fieldname: "transaction_amount_summary",
+					fieldtype: "HTML",
+				},
+				{
+					label: __("Select Vouchers to Match"),
+					fieldname: "matched_vouchers",
+					fieldtype: "Table",
+					data: this.data,
+					in_place_edit: false,
+					cannot_delete_rows: true,
+					cannot_add_rows: true,
+					fields: [
+						{
+							label: __("Document Type"),
+							fieldtype: "Data",
+							fieldname: "document_type",
+							in_list_view: 1,
+							read_only: 1,
+						},
+						{
+							label: __("Document Name"),
+							fieldtype: "Data",
+							fieldname: "document_name",
+							in_list_view: 1,
+							read_only: 1,
+						},
+						{
+							label: __("Reference Date"),
+							fieldtype: "Data",
+							fieldname: "reference_date",
+							in_list_view: 1,
+							read_only: 1,
+						},
+						{
+							label: __("Remaining"),
+							fieldtype: "Data",
+							fieldname: "remaining_amount",
+							in_list_view: 1,
+							read_only: 1,
+						},
+						{
+							label: __("Reference Number"),
+							fieldtype: "Data",
+							fieldname: "reference_number",
+							in_list_view: 1,
+							read_only: 1,
+						},
+						{
+							label: __("Party"),
+							fieldtype: "Data",
+							fieldname: "party",
+							in_list_view: 1,
+							read_only: 1,
+						},
+					]
+				},
+				{
+					fieldtype: "Section Break",
+					hide_border: 1,
+				},
+				{
+					label: __("Hidden field for alignment"),
+					fieldname: "hidden_field_2",
+					fieldtype: "Data",
+					hidden: 1
+				},
+				{
+					fieldtype: "Column Break"
+				},
+				{
+					label: __("Reconcile"),
+					fieldtype: "Button",
+					primary: true,
+					click: () => {
+						console.log("Reconcile");
+					}
+				}
+			],
+			body: this.$tab_content,
+			card_layout: true,
+		});
+		this.match_field_group.make();
+
+		await this.populate_matching_vouchers();
+	}
+
+	async populate_matching_vouchers() {
+		let filter_fields = this.match_field_group.get_values();
+		let document_types = Object.keys(filter_fields).filter(field => {
+			if (field !== "matched_vouchers" && filter_fields[field] === 1) {
+				return field;
+			}
+		});
+
+		let vouchers = await this.get_matching_vouchers(document_types);
+
+		let table_element = this.match_field_group.get_field("matched_vouchers").grid;
+		if (vouchers && vouchers.length) {
+			let table_data = vouchers.map((row, index) => {
+				const reference_date = row[5] ? row[5] : row[8];
+				return {
+					idx: index + 1,
+					name: "row-" + (index + 1),
+					document_type: row[1],
+					document_name: row[2],
+					reference_date: reference_date,
+					remaining_amount: format_currency(row[3], row[9]),
+					reference_number: row[4],
+					party: row[6],
+				}
+			});
+
+			table_element.df.data = table_data;
+			table_element.refresh();
+			table_element.grid_rows[0].row.addClass("best-match");
+
+			let transaction_amount = this.transaction.withdrawal || this.transaction.deposit;
+
+			this.render_transaction_amount_summary(
+				flt(transaction_amount),
+				flt(this.transaction.unallocated_amount),
+				this.transaction.currency,
+			)
+		} else {
+			table_element.df.data = [];
+			table_element.refresh();
+		}
+	}
+
+	render_transaction_amount_summary(total_amount, unallocated_amount, currency) {
+		let summary_field = this.match_field_group.get_field("transaction_amount_summary").$wrapper;
+		summary_field.empty();
+
+		let $summary_container = summary_field.append(
+			`<div class="reconciliation-summary"></div>`
+		).find(".reconciliation-summary");
+
+		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
+
+		var summary_data = [
+			{
+				value: total_amount,
+				label: __("Amount"),
+				datatype: "Currency",
+				currency: currency,
+			},
+			{
+				value: allocated_amount,
+				label: __("Allocated Amount"),
+				datatype: "Currency",
+				currency: currency,
+			},
+			{
+				value: flt(total_amount) - flt(allocated_amount),
+				label: __("To Allocate"),
+				datatype: "Currency",
+				currency: currency,
+			},
+		];
+
+		summary_data.map((summary, index) => {
+			let number_card = frappe.utils.build_summary_item(summary);
+			$summary_container.append(number_card);
+
+			if (index === 2) {
+				let $text = number_card.find(".summary-value");
+				$text.addClass("text-blue");
+			}
+		});
+	}
+
+	async get_matching_vouchers(document_types) {
+		let vouchers = await frappe.call({
+			method:
+				"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_linked_payments",
+			args: {
+				bank_transaction_name: this.transaction.name,
+				document_types: document_types,
+				from_date: this.doc.bank_statement_from_date,
+				to_date: this.doc.bank_statement_to_date,
+				filter_by_reference_date: this.doc.filter_by_reference_date,
+				from_reference_date: this.doc.from_reference_date,
+				to_reference_date: this.doc.to_reference_date
+			},
+		}).then(result => result.message);
+		return vouchers;
 	}
 }

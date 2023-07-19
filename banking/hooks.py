@@ -12,7 +12,7 @@ app_logo_url = "/assets/banking/images/alyf-logo.png"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/banking/css/banking.css"
+app_include_css = "bank_reconciliation_beta.bundle.css"
 # app_include_js = "/assets/banking/js/banking.js"
 
 # include js, css files in header of web template

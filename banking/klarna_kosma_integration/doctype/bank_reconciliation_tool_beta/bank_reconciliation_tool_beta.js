@@ -13,6 +13,13 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		});
 	},
 
+	onload: function (frm) {
+		// Set default filter dates
+		let today = frappe.datetime.get_today()
+		frm.doc.bank_statement_from_date = frappe.datetime.add_months(today, -1);
+		frm.doc.bank_statement_to_date = today;
+	},
+
 	refresh: function(frm) {
 		frm.disable_save();
 		frm.fields_dict["filters_section"].collapse(false);

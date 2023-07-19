@@ -15,7 +15,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 		this.$wrapper.empty();
 		this.$panel_wrapper = this.$wrapper.append(`
-			<div class="panel-container" style="display: flex"></div>
+			<div class="panel-container d-flex"></div>
 		`).find(".panel-container");
 
 		this.render_panels()
@@ -49,12 +49,9 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 	render_list_panel() {
 		this.$panel_wrapper.append(`
-			<div class="list-panel" style="width: 45%; border: 1px solid var(--gray-200)">
-				<div class="sort-by" style="display:flex; border-bottom: 1px solid var(--gray-200); cursor: pointer; justify-content: flex-end;align-items: center;">
-				</div>
-
-				<div class="list-container" style="height: 70vh; overflow-y: scroll;">
-				</div>
+			<div class="list-panel">
+				<div class="sort-by"></div>
+				<div class="list-container"></div>
 			</div>
 		`);
 
@@ -63,7 +60,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_actions_panel() {
-		new erpnext.accounts.bank_reconciliation.ActionsPanel({
+		this.actions_panel =  new erpnext.accounts.bank_reconciliation.ActionsPanel({
 			$wrapper: this.$panel_wrapper,
 			transaction: this.active_transaction,
 			doc: this.doc
@@ -73,10 +70,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	render_sort_area() {
 		this.$sort_area = this.$panel_wrapper.find(".sort-by");
 		this.$sort_area.append(`
-			<div style="padding: 10px 0 10px 10px; color: var(--text-muted);">
-				${__("Sort By")}
-			</div>
-			<div class="sort-by-selector" style="padding: 10px;"></div>
+			<div class="sort-by-title"> ${__("Sort By")} </div>
+			<div class="sort-by-selector p-10"></div>
 		`);
 
 		new frappe.ui.SortSelector({
@@ -101,15 +96,54 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.$list_container = this.$panel_wrapper.find(".list-container");
 
 		this.transactions.map(transaction => {
+			let amount = transaction.deposit || transaction.withdrawal;
+			let symbol = transaction.withdrawal ? "-" : "+";
+
 			let $row = this.$list_container.append(`
-				<div id="${transaction.name}" class="transaction-row" style="padding: 10px; cursor: pointer;">
-					${transaction.date}
-					${transaction.description}
-					${transaction.withdrawal || transaction.deposit}
+				<div id="${transaction.name}" class="transaction-row p-10">
+					<div>
+						<span class="bt-label"> ${__("Date: ")} </span>
+						<span><b>${transaction.date}</b></span>
+					</div>
+
+					<div class="d-flex">
+						<div class="w-50">
+							<span class="bt-label"> ${__("To Allocate: ")} </span>
+							<span class="text-blue">
+								${format_currency(transaction.unallocated_amount, transaction.currency)}
+							</span>
+						</div>
+						<div class="w-50 bt-amount-contianer">
+							<span class="bt-amount ${transaction.withdrawal ? 'text-danger' : 'text-success'}">
+								<b>${symbol} ${format_currency(amount, transaction.currency)}</b>
+							</span>
+						</div>
+					</div>
+
+					<div class="${transaction.description ? '' : 'hide'}">
+						<span class="bt-label"> ${__("Description: ")} </span>
+						<span>${transaction.description}</span>
+					</div>
+
+					<div class="${transaction.reference_number ? '' : 'hide'}">
+						<span class="bt-label"> ${__("Reference: ")} </span>
+						<span><b>${transaction.reference_number || "--"}</b></span>
+					</div>
+
+					<div class="${(transaction.party || transaction.party_type) ? '' : 'hide'}">
+						<span class="bt-label"> ${__(transaction.party_type || "") + ": "} </span>
+						<span><b>${transaction.party || "--"}</b></span>
+					</div>
+
+					<div>
+						<span class="bt-label"> ${__("ID: ")} </span>
+						<span>${transaction.name}</span>
+					</div>
 				</div>
 			`).find("#" + transaction.name);
 
 			$row.on("click", () => {
+				$row.addClass("active").siblings().removeClass("active");
 				this.active_transaction = transaction;
 				this.render_actions_panel();
 			})
