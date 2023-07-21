@@ -10,6 +10,7 @@
   "company",
   "bank_account",
   "account_currency",
+  "column_break_mhqn3",
   "account_opening_balance",
   "bank_statement_closing_balance",
   "column_break_1",
@@ -131,13 +132,17 @@
   {
    "fieldname": "reconciliation_action_area",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "column_break_mhqn3",
+   "fieldtype": "Column Break"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-07-19 20:11:25.322342",
+ "modified": "2023-07-21 16:01:27.248071",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Tool Beta",

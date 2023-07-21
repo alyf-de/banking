@@ -8,7 +8,7 @@
 
 	> .sort-by {
 		display:flex;
-		justify-content: flex-end;
+		justify-content: flex-start;
 		align-items: center;
 		border-bottom: 1px solid var(--gray-200);
 		cursor: pointer;
@@ -28,7 +28,7 @@
 			border-bottom: 1px solid var(--gray-200);
 
 			&.active {
-				border-left: 4px solid var(--blue-500);
+				border-left: 6px solid var(--blue-500);
 			}
 
 			> div {
@@ -81,17 +81,12 @@
 	}
 }
 
+.report-summary {
+	margin: 1rem 0 calc(var(--margin-sm) + 1rem) 0 !important;
+}
+
 .reconciliation-summary {
-	background-color: var(--bg-color);
-    border-radius: var(--border-radius-md, 8px);
-    border-bottom: 1px solid var(--border-color);
-    margin: 1rem 0;
-    padding: 20px 15px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-evenly;
-    gap: 20px;
+	gap: 0 !important;
 
 	> .summary-item  {
 		> .summary-label {
@@ -107,5 +102,37 @@
 }
 
 .text-blue {
-	color: var(--blue-500);
+	color: var(--blue-500) !important;
+}
+
+.bank-reco-beta-empty-state {
+	display: flex;
+    flex-direction: column;
+    min-height: 30vh;
+	align-items: center;
+    justify-content: center;
+    padding: 2rem;
+	font-size: 14px;
+	color: var(--gray-600);
+
+	> .btn-primary {
+		padding: 0.5rem 1rem !important;
+	}
+}
+
+.no-transactions {
+	display: flex;
+    flex-direction: column;
+    min-height: 30vh;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    font-size: 14px;
+    width: 100%;
+    color: var(--gray-600);
+
+	> img {
+		margin-bottom: var(--margin-md);
+		max-height: 70px;
+	}
 }

@@ -182,13 +182,14 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 						const party = this.details_field_group.get_value("party");
 						const party_type = this.details_field_group.get_value("party_type");
 
-						if (!reference_number || !party || !party_type) return;
+						if (!reference_number && !party && !party_type) return;
 
+						var me = this;
 						frappe.call({
 							method:
 								"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
 							args: {
-								bank_transaction_name: this.transaction.name,
+								bank_transaction_name: me.transaction.name,
 								reference_number: reference_number,
 								party_type: party_type,
 								party: party,
@@ -197,18 +198,20 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 							freeze_message: __("Updating ..."),
 							callback: (response) => {
 								if (response.exc) {
-									frappe.show_alert(__("Failed to update {0}", [this.bank_transaction.name]));
+									frappe.show_alert(__("Failed to update {0}", [me.transaction.name]));
 									return;
 								}
 
-								this.transaction = {
+								this.transaction = {  // Update the transaction in memory
 									...this.transaction,
 									reference_number: reference_number,
 									party_type: party_type,
 									party: party,
 								}
-								const alert_string = __("Bank Transaction {0} updated", [this.bank_transaction.name]);
-								frappe.show_alert(alert_string);
+
+								frappe.show_alert(
+									__("Bank Transaction {0} updated", [me.transaction.name])
+								);
 							},
 						});
 					}
@@ -418,43 +421,17 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	render_transaction_amount_summary(total_amount, unallocated_amount, currency) {
 		let summary_field = this.match_field_group.get_field("transaction_amount_summary").$wrapper;
-		summary_field.empty();
-
-		let $summary_container = summary_field.append(
-			`<div class="reconciliation-summary"></div>`
-		).find(".reconciliation-summary");
-
 		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
 
-		var summary_data = [
-			{
-				value: total_amount,
-				label: __("Amount"),
-				datatype: "Currency",
-				currency: currency,
+		new erpnext.accounts.bank_reconciliation.SummaryCard({
+			$wrapper: summary_field,
+			values: {
+				"Amount": [total_amount],
+				"Allocated Amount": [allocated_amount],
+				"To Allocate": [unallocated_amount, "text-blue"]
 			},
-			{
-				value: allocated_amount,
-				label: __("Allocated Amount"),
-				datatype: "Currency",
-				currency: currency,
-			},
-			{
-				value: flt(total_amount) - flt(allocated_amount),
-				label: __("To Allocate"),
-				datatype: "Currency",
-				currency: currency,
-			},
-		];
-
-		summary_data.map((summary, index) => {
-			let number_card = frappe.utils.build_summary_item(summary);
-			$summary_container.append(number_card);
-
-			if (index === 2) {
-				let $text = number_card.find(".summary-value");
-				$text.addClass("text-blue");
-			}
+			currency: currency,
+			wrapper_class: "reconciliation-summary"
 		});
 	}
 

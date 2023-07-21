@@ -22,19 +22,14 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	async get_bank_transactions() {
-		if (!this.doc.bank_account) {
-			frappe.throw(__("Please select a Bank Account"));
-		}
-		// let page_length = 20;
-		// let start = (page - 1) * page_length;
-
 		let transactions = await frappe.call({
 			method:
-				"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_bank_transactions",
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
 			args: {
 				bank_account: this.doc.bank_account,
 				from_date: this.doc.bank_statement_from_date,
-				to_date: this.doc.bank_statement_to_date
+				to_date: this.doc.bank_statement_to_date,
+				order_by: this.order || "date asc",
 			},
 			freeze: true,
 			freeze_message: __("Fetching Bank Transactions"),
@@ -43,8 +38,23 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_panels() {
-		this.render_list_panel();
-		this.render_actions_panel();
+		if (!this.transactions || !this.transactions.length) {
+			this.render_no_transactions();
+		} else {
+			this.render_list_panel();
+
+			let first_transaction = this.transactions[0];
+			this.$list_container.find("#" + first_transaction.name).click();
+		}
+	}
+
+	render_no_transactions() {
+		this.$panel_wrapper.append(`
+			<div class="no-transactions">
+				<img src="/assets/frappe/images/ui-states/list-empty-state.svg" alt="Empty State">
+				<p>${__("No Transactions found for the current filters.")}</p>
+			</div>
+		`);
 	}
 
 	render_list_panel() {
@@ -74,20 +84,27 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			<div class="sort-by-selector p-10"></div>
 		`);
 
+		var me = this;
 		new frappe.ui.SortSelector({
-			parent: this.$sort_area.find(".sort-by-selector"),
+			parent: me.$sort_area.find(".sort-by-selector"),
 			args: {
-				sort_by: 'date',
-				sort_order: 'desc',
+				sort_by: me.order_by || "date",
+				sort_order: me.order_direction || "asc",
 				options: [
-					{fieldname: 'date', label: __('Date')},
-					{fieldname: 'amount', label: __('Amount')},
-					{fieldname: 'unallocated', label: __('Unallocated Amount')}
+					{fieldname: "date", label: __("Date")},
+					{fieldname: "withdrawal", label: __("Withdrawal")},
+					{fieldname: "deposit", label: __("Deposit")},
+					{fieldname: "unallocated_amount", label: __("Unallocated Amount")}
 				]
 			},
 			change: function(sort_by, sort_order) {
-				// TODO: trigger re-render of list
-				console.log(sort_by, sort_order);
+				// Globally set the order used in the re-rendering of the list
+				me.order_by = (sort_by || me.order_by || "date");
+				me.order_direction = (sort_order || me.order_direction || "asc");
+				me.order =  me.order_by + " " + me.order_direction;
+
+				// Re-render the list
+				me.init_panels();
 			}
 		});
 	}
