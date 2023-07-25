@@ -118,18 +118,13 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 			let $row = this.$list_container.append(`
 				<div id="${transaction.name}" class="transaction-row p-10">
-					<div>
-						<span class="bt-label"> ${__("Date: ")} </span>
-						<span><b>${transaction.date}</b></span>
-					</div>
-
+					<!-- Date & Amount -->
 					<div class="d-flex">
 						<div class="w-50">
-							<span class="bt-label"> ${__("To Allocate: ")} </span>
-							<span class="text-blue">
-								${format_currency(transaction.unallocated_amount, transaction.currency)}
-							</span>
+							<span class="bt-label"> ${__("Date: ")} </span>
+							<span><b>${transaction.date}</b></span>
 						</div>
+
 						<div class="w-50 bt-amount-contianer">
 							<span class="bt-amount ${transaction.withdrawal ? 'text-danger' : 'text-success'}">
 								<b>${symbol} ${format_currency(amount, transaction.currency)}</b>
@@ -137,6 +132,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 						</div>
 					</div>
 
+
+					<!-- Description, Reference, Party -->
 					<div class="${transaction.description ? '' : 'hide'}">
 						<span class="bt-label"> ${__("Description: ")} </span>
 						<span>${transaction.description}</span>
@@ -150,11 +147,6 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 					<div class="${(transaction.party || transaction.party_type) ? '' : 'hide'}">
 						<span class="bt-label"> ${__(transaction.party_type || "") + ": "} </span>
 						<span><b>${transaction.party || "--"}</b></span>
-					</div>
-
-					<div>
-						<span class="bt-label"> ${__("ID: ")} </span>
-						<span>${transaction.name}</span>
 					</div>
 				</div>
 			`).find("#" + transaction.name);

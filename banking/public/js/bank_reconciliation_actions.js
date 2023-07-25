@@ -76,6 +76,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		this.details_field_group = new frappe.ui.FieldGroup({
 			fields: [
 				{
+					label: __("ID"),
+					fieldname: "name",
+					fieldtype: "Data",
+					default: this.transaction.name,
+					read_only: 1,
+				},
+				{
 					label: __("Date"),
 					fieldname: "date",
 					fieldtype: "Date",
@@ -107,7 +114,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 					read_only: 1,
 				},
 				{
-					label: __("Unallocated Amount"),
+					label: __("To Allocate"),
 					fieldname: "unallocated_amount",
 					fieldtype: "Currency",
 					options: "account_currency",
