@@ -103,7 +103,6 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 						frm.doc.account_currency = r.account_currency;
 						frm.trigger("bank_statement_from_date");
 						frm.trigger("bank_statement_to_date");
-						frm.trigger("render_summary");
 					}
 				);
 			}

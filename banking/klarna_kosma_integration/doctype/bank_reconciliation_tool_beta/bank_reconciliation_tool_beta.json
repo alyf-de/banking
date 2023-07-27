@@ -99,6 +99,7 @@
   },
   {
    "default": "0",
+   "depends_on": "bank_account",
    "fieldname": "filter_by_reference_date",
    "fieldtype": "Check",
    "label": "Filter by Reference Date"
@@ -142,7 +143,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-07-21 16:01:27.248071",
+ "modified": "2023-07-24 20:02:20.998849",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Tool Beta",
