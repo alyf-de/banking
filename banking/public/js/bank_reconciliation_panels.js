@@ -141,12 +141,12 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 					<div class="${transaction.reference_number ? '' : 'hide'}">
 						<span class="bt-label"> ${__("Reference: ")} </span>
-						<span><b>${transaction.reference_number || "--"}</b></span>
+						<span><b>${transaction.reference_number}</b></span>
 					</div>
 
-					<div class="${(transaction.party || transaction.party_type) ? '' : 'hide'}">
-						<span class="bt-label"> ${__(transaction.party_type || "") + ": "} </span>
-						<span><b>${transaction.party || "--"}</b></span>
+					<div class="${transaction.bank_party_name ? '' : 'hide'}">
+						<span class="bt-label"> ${__("Account Holder: ")} </span>
+						<span><b>${transaction.bank_party_name}</b></span>
 					</div>
 				</div>
 			`).find("#" + transaction.name);

@@ -4,12 +4,15 @@
 import frappe
 from frappe.model.document import Document
 
+
 class BankReconciliationToolBeta(Document):
 	pass
 
 
 @frappe.whitelist()
-def get_bank_transactions(bank_account, from_date=None, to_date=None, order_by="date asc"):
+def get_bank_transactions(
+	bank_account, from_date=None, to_date=None, order_by="date asc"
+):
 	# returns bank transactions for a bank account
 	filters = []
 	filters.append(["bank_account", "=", bank_account])
@@ -34,6 +37,9 @@ def get_bank_transactions(bank_account, from_date=None, to_date=None, order_by="
 			"reference_number",
 			"party_type",
 			"party",
+			"bank_party_name",
+			"bank_party_account_number",
+			"bank_party_iban",
 		],
 		filters=filters,
 		order_by=order_by,
