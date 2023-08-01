@@ -49,6 +49,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_no_transactions() {
+		this.$panel_wrapper.empty();
 		this.$panel_wrapper.append(`
 			<div class="no-transactions">
 				<img src="/assets/frappe/images/ui-states/list-empty-state.svg" alt="Empty State">
@@ -73,8 +74,9 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.actions_panel =  new erpnext.accounts.bank_reconciliation.ActionsPanel({
 			$wrapper: this.$panel_wrapper,
 			transaction: this.active_transaction,
-			doc: this.doc
-		})
+			doc: this.doc,
+			panel_manager: this
+		});
 	}
 
 	render_sort_area() {
@@ -157,5 +159,43 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				this.render_actions_panel();
 			})
 		})
+	}
+
+	refresh_transaction(updated_amount) {
+		let id = this.active_transaction.name;
+		let current_index = this.transactions.findIndex(({name}) => name === id);
+
+		this.transactions[current_index]["unallocated_amount"] = updated_amount;
+
+		let $current_transaction = this.$list_container.find("#" + id);
+		$current_transaction.click();
+	}
+
+	move_to_next_transaction() {
+		let id = this.active_transaction.name;
+		let $current_transaction = this.$list_container.find("#" + id);
+		let current_index = this.transactions.findIndex(({name}) => name === id);
+
+		let next_transaction = this.transactions[current_index + 1];
+		let previous_transaction = this.transactions[current_index - 1];
+
+		if (next_transaction) {
+			this.active_transaction = next_transaction;
+			let $next_transaction = $current_transaction.next();
+			$next_transaction.click();
+		} else if (previous_transaction) {
+			this.active_transaction = previous_transaction;
+			let $previous_transaction = $current_transaction.prev();
+			$previous_transaction.click();
+		}
+
+		this.transactions.splice(current_index, 1);
+		$current_transaction.remove();
+
+		if (!next_transaction && !previous_transaction) {
+			this.active_transaction = null;
+			this.render_no_transactions();
+		}
+
 	}
 }

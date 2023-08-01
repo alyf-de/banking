@@ -3,7 +3,10 @@
 }
 
 .list-panel {
+	display: flex;
+	flex-direction: column;
 	width: 40%;
+	height: 100vh;
 	border: 1px solid var(--gray-200);
 
 	> .sort-by {
@@ -20,7 +23,7 @@
 	}
 
 	> .list-container {
-		height: 70vh;
+		height: -webkit-fill-available;
 		overflow-y: scroll;
 
 		> .transaction-row {
@@ -52,10 +55,29 @@
 }
 
 .actions-panel {
+	display: flex;
+	flex-direction: column;
 	width: 60%;
-	height: auto;
+	height: 100vh;
 	border: 1px solid var(--gray-200);
 	overflow-y: scroll;
+
+	> .tab-content {
+		height: -webkit-fill-available;
+	}
+}
+
+.frappe-control[data-fieldname="submit"],
+.btn-primary[data-fieldname="reconcile"] {
+	float: right;
+}
+
+.dt-scrollable {
+	max-height: calc(100vh - 550px) !important;
+}
+
+.dt-toast {
+	display: none !important;
 }
 
 .nav-actions-link {
@@ -82,7 +104,7 @@
 }
 
 .report-summary {
-	margin: 1rem 0 calc(var(--margin-sm) + 1rem) 0 !important;
+	margin: .5rem 0 calc(var(--margin-sm) + 1rem) 0 !important;
 }
 
 .reconciliation-summary {

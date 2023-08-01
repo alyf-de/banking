@@ -18,9 +18,16 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 
 	make() {
 		this.$wrapper.empty();
-		let $container = this.$wrapper.append(
-			`<div class="report-summary ${this.wrapper_class || ""}"></div>`
-		).find(".report-summary");
+		let $container = null;
+
+		if (this.$wrapper.find(".report-summary").length > 0) {
+			$container = this.$wrapper.find(".report-summary");
+			$container.empty();
+		} else {
+			$container = this.$wrapper.append(
+				`<div class="report-summary ${this.wrapper_class || ""}"></div>`
+			).find(".report-summary");
+		}
 
 		Object.keys(this.values).map((key) => {
 			let values = this.values[key];
