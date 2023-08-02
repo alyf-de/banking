@@ -141,6 +141,11 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			this.match_field_group.get_field("vouchers").$wrapper[0],
 			datatable_options
 		);
+
+		// Highlight first row
+		this.actions_table.style.setStyle(
+			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
+		);
 	}
 
 	check_data_table_row(row) {
