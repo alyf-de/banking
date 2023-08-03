@@ -9,6 +9,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 	make() {
 		this.init_actions_container();
 		this.render_tabs();
+
+		// Default to Match Vouchers Tab
 		this.$actions_container.find("#match_voucher-tab").trigger("click");
 	}
 
@@ -45,7 +47,9 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				if (tab == "Details") {
 					this.details_section();
 				} else if (tab == "Match Voucher") {
-					this.match_section();
+					this.render_match_section();
+				} else {
+					this.create_section();
 				}
 			});
 		});
@@ -66,23 +70,32 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	details_section() {
 		this.$tab_content.empty();
-		this.set_detail_tab_fields();
 		this.details_field_group = new frappe.ui.FieldGroup({
-			fields: this.details_fields,
+			fields: this.get_detail_tab_fields(),
 			body: this.$tab_content,
 			card_layout: true,
 		});
 		this.details_field_group.make();
 	}
 
-	async match_section() {
+	create_section() {
 		this.$tab_content.empty();
-		this.match_field_group = new frappe.ui.FieldGroup({
-			fields: this.get_actions_panel_fields(),
+		this.create_field_group = new frappe.ui.FieldGroup({
+			fields: this.get_create_tab_fields(),
 			body: this.$tab_content,
 			card_layout: true,
 		});
-		this.match_field_group.make();
+		this.create_field_group.make();
+	}
+
+	async render_match_section() {
+		this.$tab_content.empty();
+		this.match_field_group = new frappe.ui.FieldGroup({
+			fields: this.get_match_tab_fields(),
+			body: this.$tab_content,
+			card_layout: true,
+		});
+		this.match_field_group.make()
 
 		this.summary_empty_state();
 		await this.populate_matching_vouchers();
@@ -253,10 +266,11 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 	}
 
 	reconcile_selected_vouchers() {
+		var me = this;
+		let selected_vouchers = [];
 		let selected_map = this.actions_table.rowmanager.checkMap;
 		let voucher_rows = this.actions_table.getRows();
 
-		let selected_vouchers = [];
 		selected_map.forEach((value, idx) => {
 			if (value === 1) {
 				let row = voucher_rows[idx];
@@ -294,24 +308,104 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 					return;
 				}
 
-				let doc = response.message;
-				let unallocated_amount = flt(doc.unallocated_amount);
-				if (unallocated_amount > 0) {
-					// if partial update this.transaction, re-click on list row
-					frappe.show_alert({
-						message: __("Bank Transaction {0} Partially Matched", [this.transaction.name]),
-						indicator: "blue"
-					});
-					this.panel_manager.refresh_transaction(unallocated_amount);
-				} else {
-					frappe.show_alert({
-						message: __("Bank Transaction {0} Matched", [this.transaction.name]),
-						indicator: "green"
-					});
-					this.panel_manager.move_to_next_transaction();
-				}
+				me.after_transaction_reconcile(response.message, false);
 			},
 		});
+	}
+
+	create_voucher() {
+		var me = this;
+		let values = this.create_field_group.get_values();
+		let document_type = values.document_type;
+
+		// Create new voucher and delete or refresh current BT row depending on reconciliation
+		this.create_voucher_bts(
+			null,
+			(message) => me.after_transaction_reconcile(message, true, document_type)
+		)
+	}
+
+	edit_in_full_page() {
+		this.create_voucher_bts(true, (message) => {
+			const doc = frappe.model.sync(message);
+			frappe.open_in_new_tab = true;
+			frappe.set_route("Form", doc[0].doctype, doc[0].name);
+		});
+	}
+
+	create_voucher_bts(allow_edit=false, success_callback) {
+		// Create PE or JV and run `success_callback`
+		let values = this.create_field_group.get_values();
+		let document_type = values.document_type;
+		let method = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
+		let args = {
+			bank_transaction_name: this.transaction.name,
+			reference_number: values.reference_number,
+			reference_date: values.reference_date,
+			party_type: values.party_type,
+			party: values.party,
+			posting_date: values.posting_date,
+			mode_of_payment: values.mode_of_payment,
+			allow_edit: allow_edit
+		};
+
+		if (document_type === "Payment Entry") {
+			method = method + ".create_payment_entry_bts";
+			args = {
+				...args,
+				project: values.project,
+				cost_center: values.cost_center
+			}
+		} else {
+			method =  method + ".create_journal_entry_bts";
+			args = {
+				...args,
+				entry_type: values.journal_entry_type,
+				second_account: values.second_account,
+			}
+		}
+
+		frappe.call({
+			method: method,
+			args: args,
+			callback: (response) => {
+				if (response.exc) {
+					frappe.show_alert({
+						message: __("Failed to create {0} against {1}", [document_type, this.transaction.name]),
+						indicator: "red"
+					});
+					return;
+				} else if (response.message) {
+					success_callback(response.message);
+				}
+			}
+		})
+
+	}
+
+	after_transaction_reconcile(message, with_new_voucher=false, document_type) {
+		// Actions after a transaction is matched with a voucher
+		// `with_new_voucher`: If a new voucher was created and reconciled with the transaction
+		let doc = message;
+		let unallocated_amount = flt(doc.unallocated_amount);
+		if (unallocated_amount > 0) {
+			// if partial update this.transaction, re-click on list row
+			frappe.show_alert({
+				message: __(
+					"Bank Transaction {0} Partially {1}",
+					[this.transaction.name, with_new_voucher ? "Reconciled" : "Matched"]
+				),
+				indicator: "blue"
+			});
+			this.panel_manager.refresh_transaction(unallocated_amount);
+		} else {
+			let alert_string = __("Bank Transaction {0} Matched", [this.transaction.name])
+			if (with_new_voucher) {
+				alert_string = __("Bank Transaction {0} reconciled with a new {1}", [this.transaction.name, document_type]);
+			}
+			frappe.show_alert({message: alert_string, indicator: "green"});
+			this.panel_manager.move_to_next_transaction();
+		}
 	}
 
 	get_amount_from_row(row) {
@@ -319,7 +413,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		return flt(value.split(" ") ? value.split(" ")[1] : 0);
 	}
 
-	get_actions_panel_fields() {
+	get_match_tab_fields() {
 		return [
 			{
 				label: __("Payment Entry"),
@@ -444,8 +538,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		];
 	}
 
-	set_detail_tab_fields() {
-		this.details_fields =  [
+	get_detail_tab_fields() {
+		return  [
 			{
 				label: __("ID"),
 				fieldname: "name",
@@ -564,6 +658,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Party"),
 				fieldname: "party",
 				fieldtype: "Link",
+				default: this.transaction.party,
 				options: this.transaction.party_type || null,
 			},
 			{
@@ -583,6 +678,160 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				fieldtype: "Button",
 				primary: true,
 				click: () => this.update_bank_transaction(),
+			}
+		];
+	}
+
+	get_create_tab_fields() {
+		let party_type = this.transaction.party_type || (flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
+		return [
+			{
+				label: __("Document Type"),
+				fieldname: "document_type",
+				fieldtype: "Select",
+				options: `Payment Entry\nJournal Entry`,
+				default: "Payment Entry",
+				onchange: () => {
+					let value = this.create_field_group.get_value("document_type");
+					let fields = this.create_field_group;
+
+					fields.get_field("project").df.hidden = value === "Journal Entry";
+					fields.get_field("cost_center").df.hidden = value === "Journal Entry";
+
+					fields.get_field("journal_entry_type").df.hidden = value === "Payment Entry";
+					fields.get_field("journal_entry_type").df.reqd = value === "Journal Entry";
+					fields.get_field("second_account").df.hidden = value === "Payment Entry";
+					fields.get_field("second_account").df.reqd = value === "Journal Entry";
+
+					this.create_field_group.refresh();
+				}
+			},
+			{
+				fieldtype: "Section Break",
+				fieldname: "details",
+				label: "Details",
+			},
+			{
+				fieldname: "reference_number",
+				fieldtype: "Data",
+				label: __("Reference Number"),
+				default: this.transaction.reference_number || this.transaction.description,
+			},
+			{
+				fieldname: "posting_date",
+				fieldtype: "Date",
+				label: __("Posting Date"),
+				reqd: 1,
+				default: this.transaction.date,
+			},
+			{
+				fieldname: "reference_date",
+				fieldtype: "Date",
+				label: __("Cheque/Reference Date"),
+				reqd: 1,
+				default: this.transaction.date,
+			},
+			{
+				fieldname: "mode_of_payment",
+				fieldtype: "Link",
+				label: __("Mode of Payment"),
+				options: "Mode of Payment",
+			},
+			{
+				fieldname: "edit_in_full_page",
+				fieldtype: "Button",
+				label: __("Edit in Full Page"),
+				click: () => {
+					this.edit_in_full_page();
+				},
+			},
+			{
+				fieldname: "column_break_7",
+				fieldtype: "Column Break",
+			},
+			{
+				label: __("Journal Entry Type"),
+				fieldname: "journal_entry_type",
+				fieldtype: "Select",
+				options:
+				`Bank Entry\nJournal Entry\nInter Company Journal Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation\nDeferred Revenue\nDeferred Expense`,
+				default: "Bank Entry",
+				hidden: 1,
+			},
+			{
+				fieldname: "second_account",
+				fieldtype: "Link",
+				label: "Account",
+				options: "Account",
+				get_query: () => {
+					return {
+						filters: {
+							is_group: 0,
+							company: this.doc.company,
+						},
+					};
+				},
+				hidden: 1,
+			},
+			{
+				fieldname: "party_type",
+				fieldtype: "Link",
+				label: "Party Type",
+				options: "DocType",
+				reqd: 1,
+				default: party_type,
+				get_query: function () {
+					return {
+						filters: {
+							name: [
+								"in",
+								Object.keys(frappe.boot.party_account_types),
+							],
+						},
+					};
+				},
+				onchange: () => {
+					let value = this.create_field_group.get_value("party_type");
+					this.create_field_group.get_field("party").df.options = value;
+				}
+			},
+			{
+				fieldname: "party",
+				fieldtype: "Link",
+				label: "Party",
+				default: this.transaction.party,
+				options: party_type,
+				reqd: 1,
+			},
+			{
+				fieldname: "project",
+				fieldtype: "Link",
+				label: "Project",
+				options: "Project",
+			},
+			{
+				fieldname: "cost_center",
+				fieldtype: "Link",
+				label: "Cost Center",
+				options: "Cost Center",
+			},
+			{
+				fieldtype: "Section Break"
+			},
+			{
+				label: __("Hidden field for alignment"),
+				fieldname: "hidden_field",
+				fieldtype: "Data",
+				hidden: 1
+			},
+			{
+				fieldtype: "Column Break"
+			},
+			{
+				label: __("Create"),
+				fieldtype: "Button",
+				primary: true,
+				click: () => this.create_voucher(),
 			}
 		];
 	}

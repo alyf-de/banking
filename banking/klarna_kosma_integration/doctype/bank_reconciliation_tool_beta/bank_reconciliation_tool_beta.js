@@ -71,9 +71,17 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 	},
 
 	route_to_bank_statement_import(frm) {
+		frappe.open_in_new_tab = true;
+
+		if (!frm.doc.bank_account || !frm.doc.company) {
+			frappe.new_doc("Bank Statement Import");
+			return;
+		}
+
+		// Route to saved Import Record in new tab
 		frappe.call({
 			method:
-				"erpnext.accounts.doctype.bank_statement_import.bank_statement_import.upload_bank_statement",
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.upload_bank_statement",
 			args: {
 				dt: frm.doc.doctype,
 				dn: frm.doc.name,
@@ -83,6 +91,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 			callback: function (r) {
 				if (!r.exc) {
 					var doc = frappe.model.sync(r.message);
+					frappe.open_in_new_tab = true;
 					frappe.set_route("Form", doc[0].doctype, doc[0].name);
 				}
 			},
