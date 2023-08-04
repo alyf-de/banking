@@ -29,24 +29,28 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 				frappe.throw(
 					{
 						message: __("Please set the 'Bank Account' filter"),
-						indicator: "red",
 						title: __("Filter Required")
 					}
 				);
 			}
 
-			frm.remove_custom_button(__("Upload a Bank Statement"));
-			frm.add_custom_button(
-				__("Upload a Bank Statement"),
-				() => frm.events.route_to_bank_statement_import(frm),
-			);
-
+			frm.events.add_upload_statement_button(frm);
 			frm.events.build_reconciliation_area(frm);
 		});
 		frm.change_custom_button_type("Get Bank Transactions", null, "primary");
 
 		frm.$reconciliation_area = frm.get_field("reconciliation_action_area").$wrapper;
 		frm.events.setup_empty_state(frm);
+
+		frm.events.build_reconciliation_area(frm);
+	},
+
+	add_upload_statement_button: function(frm) {
+		frm.remove_custom_button(__("Upload a Bank Statement"));
+		frm.add_custom_button(
+			__("Upload a Bank Statement"),
+			() => frm.events.route_to_bank_statement_import(frm),
+		);
 	},
 
 	setup_empty_state: function(frm) {
@@ -184,6 +188,8 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 	},
 
 	build_reconciliation_area: function(frm) {
+		if (!frm.doc.bank_account) return;
+
 		frappe.require("bank_reconciliation_beta.bundle.js", () =>
 			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager({
 				doc: frm.doc,

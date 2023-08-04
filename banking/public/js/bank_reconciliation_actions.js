@@ -159,6 +159,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		this.actions_table.style.setStyle(
 			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
 		);
+
 	}
 
 	check_data_table_row(row) {
@@ -528,7 +529,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			},
 			{
 				label: __("Reconcile"),
-				fieldname: "reconcile",
+				fieldname: "bt_reconcile",
 				fieldtype: "Button",
 				primary: true,
 				click: () => {
@@ -675,6 +676,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			},
 			{
 				label: __("Submit"),
+				fieldname: "submit_transaction",
 				fieldtype: "Button",
 				primary: true,
 				click: () => this.update_bank_transaction(),

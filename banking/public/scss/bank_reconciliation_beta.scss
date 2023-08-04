@@ -64,21 +64,21 @@
 
 	> .tab-content {
 		height: -webkit-fill-available;
+
+		* .frappe-control[data-fieldname="submit_transaction"],
+		* .btn-primary[data-fieldname="bt_reconcile"],
+		* .btn-primary[data-fieldname="create"] {
+			float: right;
+		}
+
+		* .dt-scrollable {
+			max-height: calc(100vh - 550px) !important;
+		}
+
+		* .dt-toast {
+			display: none !important;
+		}
 	}
-}
-
-.frappe-control[data-fieldname="submit"],
-.btn-primary[data-fieldname="reconcile"],
-.btn-primary[data-fieldname="create"] {
-	float: right;
-}
-
-.dt-scrollable {
-	max-height: calc(100vh - 550px) !important;
-}
-
-.dt-toast {
-	display: none !important;
 }
 
 .nav-actions-link {
