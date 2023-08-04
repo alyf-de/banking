@@ -5,10 +5,12 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
 
 from erpnext import get_default_cost_center
 from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
 	reconcile_vouchers,
+	get_linked_payments,
 )
 
 
@@ -236,3 +238,74 @@ def upload_bank_statement(**args):
 
 	bsi.save()
 	return bsi  # Return saved document
+
+
+@frappe.whitelist()
+def auto_reconcile_vouchers(
+	bank_account,
+	from_date=None,
+	to_date=None,
+	filter_by_reference_date=None,
+	from_reference_date=None,
+	to_reference_date=None,
+):
+	# Auto reconcile vouchers with matching reference numbers
+	frappe.flags.auto_reconcile_vouchers = True
+	reconciled, partially_reconciled = set(), set()
+
+	bank_transactions = get_bank_transactions(bank_account, from_date, to_date)
+	for transaction in bank_transactions:
+		linked_payments = get_linked_payments(
+			transaction.name,
+			["payment_entry", "journal_entry"],
+			from_date,
+			to_date,
+			filter_by_reference_date,
+			from_reference_date,
+			to_reference_date,
+		)
+
+		if not linked_payments:
+			continue
+
+		vouchers = list(
+			map(
+				lambda entry: {
+					"payment_doctype": entry[1],
+					"payment_name": entry[2],
+					"amount": entry[4],
+				},
+				linked_payments,
+			)
+		)
+
+		unallocated_before = transaction.unallocated_amount
+		transaction = reconcile_vouchers(transaction.name, json.dumps(vouchers))
+
+		if transaction.status == "Reconciled":
+			reconciled.add(transaction.name)
+		elif flt(unallocated_before) != flt(transaction.unallocated_amount):
+			partially_reconciled.add(transaction.name)  # Partially reconciled
+
+	alert_message, indicator = "", "blue"
+	if not partially_reconciled and not reconciled:
+		alert_message = _("No matches occurred via auto reconciliation")
+
+	if reconciled:
+		alert_message += _("{0} {1} Reconciled").format(
+			len(reconciled), _("Transactions") if len(reconciled) > 1 else _("Transaction")
+		)
+		alert_message += "<br>"
+		indicator = "green"
+
+	if partially_reconciled:
+		alert_message += _("{0} {1} Partially Reconciled").format(
+			len(partially_reconciled),
+			_("Transactions") if len(partially_reconciled) > 1 else _("Transaction"),
+		)
+		indicator = "green"
+
+	frappe.msgprint(title=_("Auto Reconciliation"), msg=alert_message, indicator=indicator)
+
+	frappe.flags.auto_reconcile_vouchers = False
+	return reconciled, partially_reconciled
