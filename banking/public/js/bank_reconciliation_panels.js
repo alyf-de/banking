@@ -136,38 +136,56 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 
 					<!-- Description, Reference, Party -->
-					<div class="${transaction.description ? '' : 'hide'}">
+					<div class="description ${transaction.description ? '' : 'hide'}">
 						<span class="bt-label"> ${__("Description: ")} </span>
-						<span>${transaction.description}</span>
+						<span class="description-value">${transaction.description}</span>
 					</div>
 
-					<div class="${transaction.reference_number ? '' : 'hide'}">
+					<div class="reference ${transaction.reference_number ? '' : 'hide'}">
 						<span class="bt-label"> ${__("Reference: ")} </span>
-						<span><b>${transaction.reference_number}</b></span>
+						<span class="reference-value">${transaction.reference_number}</span>
 					</div>
 
-					<div class="${transaction.bank_party_name ? '' : 'hide'}">
+					<div class="account-holder ${transaction.bank_party_name ? '' : 'hide'}">
 						<span class="bt-label"> ${__("Account Holder: ")} </span>
-						<span><b>${transaction.bank_party_name}</b></span>
+						<span class="account-holder-value">${transaction.bank_party_name}</span>
 					</div>
 				</div>
 			`).find("#" + transaction.name);
 
 			$row.on("click", () => {
 				$row.addClass("active").siblings().removeClass("active");
-				this.active_transaction = transaction;
+
+				// this.transaction's objects get updated, we want the latest values
+				this.active_transaction = this.transactions.find(({name}) => name === transaction.name);
 				this.render_actions_panel();
 			})
 		})
 	}
 
-	refresh_transaction(updated_amount) {
+	refresh_transaction(updated_amount=null, reference_number=null, party_type=null, party=null) {
+		// Update the transaction object's unallocated_amount **OR** other details
 		let id = this.active_transaction.name;
 		let current_index = this.transactions.findIndex(({name}) => name === id);
 
-		this.transactions[current_index]["unallocated_amount"] = updated_amount;
-
 		let $current_transaction = this.$list_container.find("#" + id);
+		let transaction = this.transactions[current_index];
+
+		if (updated_amount) {
+			// update amount is > 0 always [src: `after_transaction_reconcile()`]
+			this.transactions[current_index]["unallocated_amount"] = updated_amount;
+		} else {
+			this.transactions[current_index] = {
+				...transaction,
+				reference_number: reference_number,
+				party_type: party_type,
+				party: party
+			};
+			// Update Reference Number in List
+			$current_transaction.find(".reference").removeClass("hide");
+			$current_transaction.find(".reference-value").text(reference_number || "--");
+		}
+
 		$current_transaction.click();
 	}
 

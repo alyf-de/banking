@@ -234,7 +234,14 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		const party = this.details_field_group.get_value("party");
 		const party_type = this.details_field_group.get_value("party_type");
 
-		if (!reference_number && !party && !party_type) return;
+		let diff = ["reference_number", "party", "party_type"].some(field => {
+			return me.details_field_group.get_value(field) !== me.transaction[field];
+		});
+		if (!diff) {
+			frappe.show_alert({message: __("No changes to update"), indicator: "yellow"});
+			return;
+		}
+
 		frappe.call({
 			method:
 				"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
@@ -252,12 +259,10 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 					return;
 				}
 
-				this.transaction = {  // Update the transaction in memory
-					...this.transaction,
-					reference_number: reference_number,
-					party_type: party_type,
-					party: party,
-				}
+				// Update transaction
+				me.panel_manager.refresh_transaction(
+					null, reference_number, party_type, party
+				);
 
 				frappe.show_alert(
 					__("Bank Transaction {0} updated", [me.transaction.name])
