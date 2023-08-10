@@ -205,3 +205,5 @@ kosma_property_setters = {
 		),
 	]
 }
+
+get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"

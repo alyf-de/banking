@@ -127,14 +127,22 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	render_data_table(vouchers) {
 		this.summary_data = {};
+		this.match_params = {};
 		let table_data = vouchers.map((row) => {
+			this.match_params[row.name] = {
+				"Reference No": row.reference_number_match || 0,
+				"Party": row.party_match || 0,
+				"Transaction Amount": row.amount_match || 0,
+				"Unallocated Amount": row.unallocated_amount_match || 0,
+			}
 			return [
-				row[1],
-				row[2],
-				row[5] || row[8], // Reference Date
-				format_currency(row[3], row[9]),
-				row[4] || '',
-				row[6] || '',
+				row.doctype,
+				row.name,
+				row.reference_date || row.posting_date, // Reference Date
+				format_currency(row.paid_amount, row.currency),
+				row.reference_no || '',
+				row.party || '',
+				this.help_button(row.name)
 			];
 		});
 
@@ -159,6 +167,53 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		this.actions_table.style.setStyle(
 			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
 		);
+
+		this.bind_help_button();
+	}
+
+	help_button(voucher_name) {
+		return `
+		<div class="w-100" style="text-align: center;">
+			<button class="btn btn-default btn-xs match-reasons-btn"  data-name=${voucher_name} >
+				<svg class="icon icon-sm">
+					<use href="#icon-help"></use>
+				</svg>
+			</button>
+		</div>
+		`;
+	}
+
+	bind_help_button() {
+		let help_buttons = $(this.actions_table.bodyScrollable).find(".match-reasons-btn");
+		help_buttons.map((idx) => {
+			let $btn = $(help_buttons[idx]);
+			let voucher_name = $btn.data().name;
+
+			$btn.popover({
+				trigger: "hover",
+				placement: "top",
+				html: true,
+				content: () => {
+					return `
+						<div>
+							<div class="match-popover-header">${__("Match Reasons")}</div>
+							${this.get_match_reasons(voucher_name)}
+						</div>
+					`;
+
+				}
+			})
+		});
+	}
+
+	get_match_reasons(voucher_name) {
+		let reasons = this.match_params[voucher_name], html = "";
+		for (let key in reasons) {
+			if (reasons[key]) {
+				html += `<div class="muted">${__(key)}</div>`;
+			}
+		}
+		return html || __("No Specific Match Reasons");
 
 	}
 
@@ -214,7 +269,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 	async get_matching_vouchers(document_types) {
 		let vouchers = await frappe.call({
 			method:
-				"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_linked_payments",
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_linked_payments",
 			args: {
 				bank_transaction_name: this.transaction.name,
 				document_types: document_types,
@@ -875,6 +930,12 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				editable: false,
 				width: 100,
 			},
+			{
+				name: __("Reason"),
+				editable: false,
+				width: 100,
+			},
+
 		];
 	}
 }
