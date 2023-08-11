@@ -7,6 +7,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.utils import cint, flt
+from pypika.terms import Parameter, PseudoColumn
 
 from erpnext import get_default_cost_center
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
@@ -14,7 +15,6 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 )
 from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
 	reconcile_vouchers,
-	get_linked_payments,
 	subtract_allocations,
 )
 
@@ -374,7 +374,6 @@ def check_matching(
 	from_reference_date,
 	to_reference_date,
 ):
-	exact_match = True if "exact_match" in document_types else False
 	# combine all types of vouchers
 	subquery = get_queries(
 		bank_account,
@@ -386,7 +385,6 @@ def check_matching(
 		filter_by_reference_date,
 		from_reference_date,
 		to_reference_date,
-		exact_match,
 	)
 	filters = {
 		"amount": transaction.unallocated_amount,
@@ -399,7 +397,7 @@ def check_matching(
 
 	matching_vouchers = []
 	matching_vouchers.extend(
-		get_loan_vouchers(bank_account, transaction, document_types, filters, exact_match)
+		get_loan_vouchers(bank_account, transaction, document_types, filters)
 	)
 
 	for query in subquery:
@@ -427,10 +425,10 @@ def get_queries(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
-	exact_match,
 ):
 	# get queries to get matching vouchers
 	account_from_to = "paid_to" if transaction.deposit > 0.0 else "paid_from"
+	exact_match = "exact_match" in document_types
 	queries = []
 
 	# get matching queries from all the apps (except erpnext, to override)
@@ -469,6 +467,8 @@ def get_matching_queries(
 	to_reference_date,
 ):
 	queries = []
+	exact_party_match = "exact_party_match" in document_types
+
 	if "payment_entry" in document_types:
 		query = get_pe_matching_query(
 			exact_match,
@@ -479,6 +479,7 @@ def get_matching_queries(
 			filter_by_reference_date,
 			from_reference_date,
 			to_reference_date,
+			exact_party_match,
 		)
 		queries.append(query)
 
@@ -495,23 +496,31 @@ def get_matching_queries(
 		queries.append(query)
 
 	if transaction.deposit > 0.0 and "sales_invoice" in document_types:
-		query = get_si_matching_query(exact_match)
-		queries.append(query)
+		if "unpaid_invoices" in document_types:
+			query = get_unpaid_si_matching_query(exact_match, exact_party_match)
+			queries.append(query)
+		else:
+			query = get_si_matching_query(exact_match, exact_party_match)
+			queries.append(query)
 
-	if transaction.withdrawal > 0.0:
-		if "purchase_invoice" in document_types:
-			query = get_pi_matching_query(exact_match)
+	if transaction.withdrawal > 0.0 and "purchase_invoice" in document_types:
+		if "unpaid_invoices" in document_types:
+			query = get_unpaid_pi_matching_query(exact_match, exact_party_match)
+			queries.append(query)
+		else:
+			query = get_pi_matching_query(exact_match, exact_party_match)
 			queries.append(query)
 
 	if "bank_transaction" in document_types:
-		query = get_bt_matching_query(exact_match, transaction)
+		query = get_bt_matching_query(exact_match, transaction, exact_party_match)
 		queries.append(query)
 
 	return queries
 
 
-def get_loan_vouchers(bank_account, transaction, document_types, filters, exact_match):
+def get_loan_vouchers(bank_account, transaction, document_types, filters):
 	vouchers = []
+	exact_match = "exact_match" in document_types
 
 	if transaction.withdrawal > 0.0 and "loan_disbursement" in document_types:
 		vouchers.extend(get_ld_matching_query(bank_account, exact_match, filters))
@@ -522,20 +531,24 @@ def get_loan_vouchers(bank_account, transaction, document_types, filters, exact_
 	return vouchers
 
 
-def get_bt_matching_query(exact_match, transaction):
+def get_bt_matching_query(exact_match, transaction, exact_party_match):
 	# get matching bank transaction query
 	# find bank transactions in the same bank account with opposite sign
 	# same bank account must have same company and currency
 	field = "deposit" if transaction.withdrawal > 0.0 else "withdrawal"
+	filter_by_party = (
+		"AND party_type = %(party_type)s AND party = %(party)s" if exact_party_match else ""
+	)
 
 	return f"""
-
 		SELECT
-			(CASE WHEN reference_number = %(reference_no)s THEN 1 ELSE 0 END
-			+ CASE WHEN {field} = %(amount)s THEN 1 ELSE 0 END
-			+ CASE WHEN ( party_type = %(party_type)s AND party = %(party)s ) THEN 1 ELSE 0 END
-			+ CASE WHEN unallocated_amount = %(amount)s THEN 1 ELSE 0 END
-			+ 1) AS rank,
+			(
+				CASE WHEN reference_number = %(reference_no)s THEN 1 ELSE 0 END
+				+ CASE WHEN {field} = %(amount)s THEN 1 ELSE 0 END
+				+ CASE WHEN ( party_type = %(party_type)s AND party = %(party)s ) THEN 1 ELSE 0 END
+				+ CASE WHEN unallocated_amount = %(amount)s THEN 1 ELSE 0 END
+				+ 1
+			) AS rank,
 			'Bank Transaction' AS doctype,
 			name,
 			unallocated_amount AS paid_amount,
@@ -545,10 +558,18 @@ def get_bt_matching_query(exact_match, transaction):
 			party_type,
 			date AS posting_date,
 			currency,
-			(CASE WHEN reference_number = %(reference_no)s THEN 1 ELSE 0 END) as reference_number_match,
-			(CASE WHEN {field} = %(amount)s THEN 1 ELSE 0 END) as amount_match,
-			(CASE WHEN ( party_type = %(party_type)s AND party = %(party)s ) THEN 1 ELSE 0 END) as party_match,
-			(CASE WHEN unallocated_amount = %(amount)s THEN 1 ELSE 0 END) as unallocated_amount_match,
+			(
+				CASE WHEN reference_number = %(reference_no)s THEN 1 ELSE 0 END
+			) as reference_number_match,
+			(
+				CASE WHEN {field} = %(amount)s THEN 1 ELSE 0 END
+			) as amount_match,
+			(
+				CASE WHEN ( party_type = %(party_type)s AND party = %(party)s ) THEN 1 ELSE 0 END
+			) as party_match,
+			(
+				CASE WHEN unallocated_amount = %(amount)s THEN 1 ELSE 0 END
+			) as unallocated_amount_match
 		FROM
 			`tabBank Transaction`
 		WHERE
@@ -556,6 +577,7 @@ def get_bt_matching_query(exact_match, transaction):
 			AND name != '{transaction.name}'
 			AND bank_account = '{transaction.bank_account}'
 			AND {field} {'= %(amount)s' if exact_match else '> 0.0'}
+			{filter_by_party}
 	"""
 
 
@@ -657,22 +679,30 @@ def get_pe_matching_query(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
+	exact_party_match,
 ):
 	# get matching payment entries query
-	if transaction.deposit > 0.0:
-		currency_field = "paid_to_account_currency as currency"
-	else:
-		currency_field = "paid_from_account_currency as currency"
+	to_from = "to" if transaction.deposit > 0.0 else "from"
+	currency_field = f"paid_{to_from}_account_currency as currency"
 	filter_by_date = f"AND posting_date between '{from_date}' and '{to_date}'"
 	order_by = " posting_date"
 	filter_by_reference_no = ""
+
 	if cint(filter_by_reference_date):
 		filter_by_date = (
 			f"AND reference_date between '{from_reference_date}' and '{to_reference_date}'"
 		)
 		order_by = " reference_date"
+
 	if frappe.flags.auto_reconcile_vouchers == True:
 		filter_by_reference_no = f"AND reference_no = '{transaction.reference_number}'"
+
+	filter_by_party = (
+		"AND (party_type = %(party_type)s AND party = %(party)s )"
+		if exact_party_match
+		else ""
+	)
+
 	return f"""
 		SELECT
 			(CASE WHEN reference_no=%(reference_no)s THEN 1 ELSE 0 END
@@ -701,6 +731,7 @@ def get_pe_matching_query(
 			AND paid_amount {'= %(amount)s' if exact_match else '> 0.0'}
 			{filter_by_date}
 			{filter_by_reference_no}
+			{filter_by_party}
 		order by{order_by}
 	"""
 
@@ -764,8 +795,10 @@ def get_je_matching_query(
 	"""
 
 
-def get_si_matching_query(exact_match):
-	# get matching sales invoice query
+def get_si_matching_query(exact_match, exact_party_match):
+	# get matching paid sales invoice query
+	filter_by_party = " AND si.customer = %(party)s" if exact_party_match else ""
+
 	return f"""
 		SELECT
 			( CASE WHEN si.customer = %(party)s  THEN 1 ELSE 0 END
@@ -793,11 +826,59 @@ def get_si_matching_query(exact_match):
 			AND (sip.clearance_date is null or sip.clearance_date='0000-00-00')
 			AND sip.account = %(bank_account)s
 			AND sip.amount {'= %(amount)s' if exact_match else '> 0.0'}
+			{filter_by_party}
 	"""
 
 
-def get_pi_matching_query(exact_match):
+def get_unpaid_si_matching_query(exact_match, exact_party_match):
+	sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+	party_match = (
+		frappe.qb.terms.Case()
+		.when(sales_invoice.customer == Parameter("%(party)s"), 1)
+		.else_(0)
+	)
+	amount_match = (
+		frappe.qb.terms.Case()
+		.when(sales_invoice.grand_total == Parameter("%(amount)s"), 1)
+		.else_(0)
+	)
+
+	query = (
+		frappe.qb.from_(sales_invoice)
+		.select(
+			(party_match + amount_match + 1).as_("rank"),
+			PseudoColumn("'Sales Invoice' as doctype"),
+			sales_invoice.name.as_("name"),
+			sales_invoice.outstanding_amount.as_("paid_amount"),
+			PseudoColumn("'' as reference_no"),
+			PseudoColumn("'' as reference_date"),
+			sales_invoice.customer.as_("party"),
+			PseudoColumn("'Customer' as party_type"),
+			sales_invoice.posting_date,
+			sales_invoice.currency,
+			party_match.as_("party_match"),
+			amount_match.as_("amount_match"),
+		)
+		.where(sales_invoice.docstatus == 1)
+		.where(sales_invoice.is_return == 0)
+	)
+	query = query.where(
+		sales_invoice.grand_total == Parameter("%(amount)s")
+		if exact_match
+		else sales_invoice.outstanding_amount > 0.0
+	)
+
+	if exact_party_match:
+		query = query.where(sales_invoice.customer == Parameter("%(party)s"))
+
+	return str(query)
+
+
+def get_pi_matching_query(exact_match, exact_party_match):
 	# get matching purchase invoice query when they are also used as payment entries (is_paid)
+	filter_by_party = "AND supplier = %(party)s" if exact_party_match else ""
+
 	return f"""
 		SELECT
 			( CASE WHEN supplier = %(party)s THEN 1 ELSE 0 END
@@ -822,4 +903,50 @@ def get_pi_matching_query(exact_match):
 			AND ifnull(clearance_date, '') = ""
 			AND cash_bank_account = %(bank_account)s
 			AND paid_amount {'= %(amount)s' if exact_match else '> 0.0'}
+			{filter_by_party}
 	"""
+
+
+def get_unpaid_pi_matching_query(exact_match, exact_party_match):
+	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+
+	party_match = (
+		frappe.qb.terms.Case()
+		.when(purchase_invoice.supplier == Parameter("%(party)s"), 1)
+		.else_(0)
+	)
+	amount_match = (
+		frappe.qb.terms.Case()
+		.when(purchase_invoice.grand_total == Parameter("%(amount)s"), 1)
+		.else_(0)
+	)
+
+	query = (
+		frappe.qb.from_(purchase_invoice)
+		.select(
+			(party_match + amount_match + 1).as_("rank"),
+			PseudoColumn("'Purchase Invoice' as doctype"),
+			purchase_invoice.name.as_("name"),
+			purchase_invoice.outstanding_amount.as_("paid_amount"),
+			PseudoColumn("'' as reference_no"),
+			PseudoColumn("'' as reference_date"),
+			purchase_invoice.supplier.as_("party"),
+			PseudoColumn("'Supplier' as party_type"),
+			purchase_invoice.posting_date,
+			purchase_invoice.currency,
+			party_match.as_("party_match"),
+			amount_match.as_("amount_match"),
+		)
+		.where(purchase_invoice.docstatus == 1)
+		.where(purchase_invoice.is_return == 0)
+	)
+	query = query.where(
+		purchase_invoice.grand_total == Parameter("%(amount)s")
+		if exact_match
+		else purchase_invoice.outstanding_amount > 0.0
+	)
+
+	if exact_party_match:
+		query = query.where(purchase_invoice.supplier == Parameter("%(party)s"))
+
+	return str(query)

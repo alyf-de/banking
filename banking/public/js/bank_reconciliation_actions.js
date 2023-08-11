@@ -502,6 +502,10 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				fieldname: "purchase_invoice",
 				fieldtype: "Check",
 				onchange: () => {
+					let value = this.match_field_group.get_value("purchase_invoice");
+					this.match_field_group.get_field("unpaid_invoices").df.hidden = !value;
+					this.match_field_group.refresh();
+
 					this.populate_matching_vouchers();
 				}
 			},
@@ -510,6 +514,10 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				fieldname: "sales_invoice",
 				fieldtype: "Check",
 				onchange: () => {
+					let value = this.match_field_group.get_value("sales_invoice");
+					this.match_field_group.get_field("unpaid_invoices").df.hidden = !value;
+					this.match_field_group.refresh();
+
 					this.populate_matching_vouchers();
 				}
 			},
@@ -555,12 +563,39 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				fieldtype: "Section Break"
 			},
 			{
-				label: __("Show Only Exact Amount"),
+				label: __("Show Exact Amount"),
 				fieldname: "exact_match",
 				fieldtype: "Check",
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
+			},
+			{
+				fieldtype: "Column Break"
+			},
+			{
+				label: __("Show Exact Party"),
+				fieldname: "exact_party_match",
+				fieldtype: "Check",
+				onchange: () => {
+					this.populate_matching_vouchers();
+				},
+				read_only: !Boolean(this.transaction.party_type && this.transaction.party)
+			},
+			{
+				fieldtype: "Column Break"
+			},
+			{
+				label: __("Unpaid Invoices"),
+				fieldname: "unpaid_invoices",
+				fieldtype: "Check",
+				onchange: () => {
+					this.populate_matching_vouchers();
+				},
+				hidden: 1
+			},
+			{
+				fieldtype: "Column Break"
 			},
 			{
 				fieldtype: "Section Break"
