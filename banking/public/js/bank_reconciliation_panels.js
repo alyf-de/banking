@@ -123,12 +123,14 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 					<!-- Date & Amount -->
 					<div class="d-flex">
 						<div class="w-50">
-							<span class="bt-label"> ${__("Date: ")} </span>
-							<span><b>${transaction.date}</b></span>
+							<span title="${__("Date")}">${frappe.format(transaction.date, {fieldtype: "Date"})}</span>
 						</div>
 
 						<div class="w-50 bt-amount-contianer">
-							<span class="bt-amount ${transaction.withdrawal ? 'text-danger' : 'text-success'}">
+							<span
+								title="${__("Amount")}"
+								class="bt-amount ${transaction.withdrawal ? 'text-danger' : 'text-success'}"
+							>
 								<b>${symbol} ${format_currency(amount, transaction.currency)}</b>
 							</span>
 						</div>
@@ -136,19 +138,25 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 
 					<!-- Description, Reference, Party -->
-					<div class="description ${transaction.description ? '' : 'hide'}">
-						<span class="bt-label"> ${__("Description: ")} </span>
+					<div
+						title="${__("Account Holder")}"
+						class="account-holder ${transaction.bank_party_name ? '' : 'hide'}"
+					>
+						<span class="account-holder-value">${transaction.bank_party_name}</span>
+					</div>
+
+					<div
+						title="${__("Description")}"
+						class="description ${transaction.description ? '' : 'hide'}"
+					>
 						<span class="description-value">${transaction.description}</span>
 					</div>
 
-					<div class="reference ${transaction.reference_number ? '' : 'hide'}">
-						<span class="bt-label"> ${__("Reference: ")} </span>
+					<div
+						title="${__("Reference")}"
+						class="reference ${transaction.reference_number ? '' : 'hide'}"
+					>
 						<span class="reference-value">${transaction.reference_number}</span>
-					</div>
-
-					<div class="account-holder ${transaction.bank_party_name ? '' : 'hide'}">
-						<span class="bt-label"> ${__("Account Holder: ")} </span>
-						<span class="account-holder-value">${transaction.bank_party_name}</span>
 					</div>
 				</div>
 			`).find("#" + transaction.name);
