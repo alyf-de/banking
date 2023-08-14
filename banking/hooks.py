@@ -95,9 +95,9 @@ after_install = "banking.install.after_install"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Bank Transaction": "banking.overrides.bank_transaction.CustomBankTransaction"
+}
 
 # Document Events
 # ---------------

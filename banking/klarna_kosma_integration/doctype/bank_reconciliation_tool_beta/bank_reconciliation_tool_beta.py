@@ -862,12 +862,11 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match):
 		)
 		.where(sales_invoice.docstatus == 1)
 		.where(sales_invoice.is_return == 0)
+		.where(sales_invoice.outstanding_amount > 0.0)
 	)
-	query = query.where(
-		sales_invoice.grand_total == Parameter("%(amount)s")
-		if exact_match
-		else sales_invoice.outstanding_amount > 0.0
-	)
+
+	if exact_match:
+		query = query.where(sales_invoice.grand_total == Parameter("%(amount)s"))
 
 	if exact_party_match:
 		query = query.where(sales_invoice.customer == Parameter("%(party)s"))
@@ -939,12 +938,11 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match):
 		)
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.is_return == 0)
+		.where(purchase_invoice.outstanding_amount > 0.0)
 	)
-	query = query.where(
-		purchase_invoice.grand_total == Parameter("%(amount)s")
-		if exact_match
-		else purchase_invoice.outstanding_amount > 0.0
-	)
+
+	if exact_match:
+		query = query.where(purchase_invoice.grand_total == Parameter("%(amount)s"))
 
 	if exact_party_match:
 		query = query.where(purchase_invoice.supplier == Parameter("%(party)s"))
