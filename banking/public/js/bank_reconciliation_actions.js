@@ -136,13 +136,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				"Unallocated Amount": row.unallocated_amount_match || 0,
 			}
 			return [
+				this.help_button(row.name),
 				row.doctype,
-				row.name,
 				row.reference_date || row.posting_date, // Reference Date
 				format_currency(row.paid_amount, row.currency),
 				row.reference_no || '',
 				row.party || '',
-				this.help_button(row.name)
+				row.name
 			];
 		});
 
@@ -936,14 +936,14 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 	get_data_table_columns() {
 		return [
 			{
-				name: __("Document Type"),
+				name: __("Reason"),
 				editable: false,
-				width: 125,
+				width: 50,
 			},
 			{
-				name: __("Document Name"),
+				name: __("Document Type"),
 				editable: false,
-				width: 1,
+				width: 100,
 			},
 			{
 				name: __("Reference Date"),
@@ -966,11 +966,10 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				width: 100,
 			},
 			{
-				name: __("Reason"),
+				name: __("Document Name"),
 				editable: false,
 				width: 100,
 			},
-
 		];
 	}
 }
