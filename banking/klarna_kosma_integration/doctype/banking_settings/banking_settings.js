@@ -31,14 +31,15 @@ frappe.ui.form.on('Banking Settings', {
 				}
 			}, __("Actions"));
 		} else {
-			frm.page.add_inner_button(__("Signup for Banking"), () => {
-				frappe.db.get_value("Banking Settings", "Banking Settings", "admin_endpoint", (r) => {
-					window.open(r.admin_endpoint + "/banking-pricing", "_blank");
-				});
-			},
-			null, "primary");
+			frm.page.add_inner_button(
+				__("Signup for Banking"),
+				() => {
+					window.open(`${frm.doc.admin_endpoint}/banking-pricing`, "_blank");
+				},
+				null,
+				"primary"
+			);
 		}
-
 	},
 
 	refresh_banks: (frm) => {

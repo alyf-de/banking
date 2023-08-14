@@ -5,8 +5,8 @@ app_title = "ALYF Banking"
 app_publisher = "ALYF GmbH"
 app_description = "Banking Integration by ALYF GmbH"
 app_email = "hallo@alyf.de"
-app_license = "MIT"
-app_logo_url = "/assets/banking/images/alyf-logo.png"
+app_license = "GPLv3"
+notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
 # Includes in <head>
 # ------------------
