@@ -187,36 +187,41 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	help_button(voucher_name) {
 		return `
-		<div class="w-100" style="text-align: center;">
-			<button class="btn btn-default btn-xs match-reasons-btn"  data-name=${voucher_name} >
-				<svg class="icon icon-sm">
-					<use href="#icon-help"></use>
-				</svg>
-			</button>
-		</div>
+			<div class="w-100" style="text-align: center;">
+				<button class="btn btn-default btn-xs match-reasons-btn" data-name=${voucher_name}>
+					<svg class="icon icon-sm">
+						<use href="#icon-help"></use>
+					</svg>
+				</button>
+			</div>
 		`;
 	}
 
 	bind_help_button() {
-		let help_buttons = $(this.actions_table.bodyScrollable).find(".match-reasons-btn");
-		help_buttons.map((idx) => {
-			let $btn = $(help_buttons[idx]);
+		var me = this;
+		$(this.actions_table.bodyScrollable).on("mouseenter", ".match-reasons-btn", (e) => {
+			let $btn = $(e.currentTarget);
 			let voucher_name = $btn.data().name;
-
 			$btn.popover({
-				trigger: "hover",
+				trigger: "manual",
 				placement: "top",
 				html: true,
 				content: () => {
 					return `
 						<div>
 							<div class="match-popover-header">${__("Match Reasons")}</div>
-							${this.get_match_reasons(voucher_name)}
+							${me.get_match_reasons(voucher_name)}
 						</div>
 					`;
 
 				}
-			})
+			});
+			$btn.popover("toggle");
+		});
+
+		$(this.actions_table.bodyScrollable).on("mouseleave", ".match-reasons-btn", (e) => {
+			let $btn = $(e.currentTarget);
+			$btn.popover("toggle");
 		});
 	}
 
