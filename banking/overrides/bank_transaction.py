@@ -29,8 +29,8 @@ class CustomBankTransaction(BankTransaction):
 
 				if self.is_unpaid_invoice(payment_doctype, payment_name):
 					# Make Payment Entry against the unpaid invoice, link PE to Bank Transaction
-					payment_doctype = "Payment Entry"
 					payment_name = self.make_pe_against_invoice(payment_doctype, payment_name)
+					payment_doctype = "Payment Entry"  # Change doctype to PE
 
 				pe = {
 					"payment_document": payment_doctype,

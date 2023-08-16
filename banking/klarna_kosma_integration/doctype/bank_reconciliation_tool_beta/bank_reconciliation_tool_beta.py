@@ -17,6 +17,7 @@ from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool 
 	reconcile_vouchers,
 	subtract_allocations,
 )
+from erpnext.accounts.utils import get_account_currency
 
 
 class BankReconciliationToolBeta(Document):
@@ -468,6 +469,7 @@ def get_matching_queries(
 ):
 	queries = []
 	exact_party_match = "exact_party_match" in document_types
+	currency = get_account_currency(bank_account)
 
 	if "payment_entry" in document_types:
 		query = get_pe_matching_query(
@@ -497,7 +499,7 @@ def get_matching_queries(
 
 	if transaction.deposit > 0.0 and "sales_invoice" in document_types:
 		if "unpaid_invoices" in document_types:
-			query = get_unpaid_si_matching_query(exact_match, exact_party_match)
+			query = get_unpaid_si_matching_query(exact_match, exact_party_match, currency)
 			queries.append(query)
 		else:
 			query = get_si_matching_query(exact_match, exact_party_match)
@@ -505,7 +507,7 @@ def get_matching_queries(
 
 	if transaction.withdrawal > 0.0 and "purchase_invoice" in document_types:
 		if "unpaid_invoices" in document_types:
-			query = get_unpaid_pi_matching_query(exact_match, exact_party_match)
+			query = get_unpaid_pi_matching_query(exact_match, exact_party_match, currency)
 			queries.append(query)
 		else:
 			query = get_pi_matching_query(exact_match, exact_party_match)
@@ -830,7 +832,7 @@ def get_si_matching_query(exact_match, exact_party_match):
 	"""
 
 
-def get_unpaid_si_matching_query(exact_match, exact_party_match):
+def get_unpaid_si_matching_query(exact_match, exact_party_match, currency):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
 	party_match = (
@@ -863,6 +865,7 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match):
 		.where(sales_invoice.docstatus == 1)
 		.where(sales_invoice.is_return == 0)
 		.where(sales_invoice.outstanding_amount > 0.0)
+		.where(sales_invoice.currency == currency)
 	)
 
 	if exact_match:
@@ -906,7 +909,7 @@ def get_pi_matching_query(exact_match, exact_party_match):
 	"""
 
 
-def get_unpaid_pi_matching_query(exact_match, exact_party_match):
+def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
 	party_match = (
@@ -939,6 +942,7 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match):
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.is_return == 0)
 		.where(purchase_invoice.outstanding_amount > 0.0)
+		.where(purchase_invoice.currency == currency)
 	)
 
 	if exact_match:

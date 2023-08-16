@@ -336,8 +336,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			if (value === 1) {
 				let row = voucher_rows[idx];
 				selected_vouchers.push({
-					payment_doctype: row[2].content,
-					payment_name: row[3].content,
+					payment_doctype: row[3].content,
+					payment_name: row[8].content,
 					amount: this.get_amount_from_row(row),
 				});
 			}
