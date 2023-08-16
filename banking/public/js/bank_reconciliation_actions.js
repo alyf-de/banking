@@ -166,9 +166,6 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			dynamicRowHeight: true,
 			checkboxColumn: true,
 			inlineFilters: true,
-			events: {
-				onCheckRow: (row) => this.check_data_table_row(row)
-			}
 		};
 
 
@@ -182,6 +179,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
 		);
 
+		this.bind_row_check_event();
 		this.bind_help_button();
 	}
 
@@ -195,6 +193,16 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				</button>
 			</div>
 		`;
+	}
+
+	bind_row_check_event() {
+		// Resistant to row removal on being out of view in datatable
+		$(this.actions_table.bodyScrollable).on("click", ".dt-cell__content input", (e) => {
+			let idx = $(e.currentTarget).closest(".dt-cell").data().rowIndex;
+			let voucher_row = this.actions_table.getRows()[idx];
+
+			this.check_data_table_row(voucher_row)
+		})
 	}
 
 	bind_help_button() {
