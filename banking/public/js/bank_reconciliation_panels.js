@@ -38,6 +38,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_panels() {
+		this.set_actions_panel_default_states();
+
 		if (!this.transactions || !this.transactions.length) {
 			this.render_no_transactions();
 		} else {
@@ -45,6 +47,24 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 			let first_transaction = this.transactions[0];
 			this.$list_container.find("#" + first_transaction.name).click();
+		}
+	}
+
+	set_actions_panel_default_states() {
+		// Init actions panel states to store for persistent views
+		this.actions_tab = "match_voucher-tab";
+		this.actions_filters = {
+			payment_entry: 1,
+			journal_entry: 1,
+			purchase_invoice: 0,
+			sales_invoice: 0,
+			loan_repayment: 0,
+			loan_disbursement: 0,
+			expense_claim: 0,
+			bank_transaction: 0,
+			exact_match: 0,
+			exact_party_match: 0,
+			unpaid_invoices: 0
 		}
 	}
 

@@ -10,8 +10,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		this.init_actions_container();
 		this.render_tabs();
 
-		// Default to Match Vouchers Tab
-		this.$actions_container.find("#match_voucher-tab").trigger("click");
+		// Default to last selected tab
+		this.$actions_container.find("#" + this.panel_manager.actions_tab).trigger("click");
 	}
 
 	init_actions_container() {
@@ -70,6 +70,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	details_section() {
 		this.$tab_content.empty();
+		this.panel_manager.actions_tab = "details-tab";
+
 		this.details_field_group = new frappe.ui.FieldGroup({
 			fields: this.get_detail_tab_fields(),
 			body: this.$tab_content,
@@ -80,6 +82,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	create_section() {
 		this.$tab_content.empty();
+		this.panel_manager.actions_tab = "create_voucher-tab";
+
 		this.create_field_group = new frappe.ui.FieldGroup({
 			fields: this.get_create_tab_fields(),
 			body: this.$tab_content,
@@ -90,6 +94,8 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 
 	async render_match_section() {
 		this.$tab_content.empty();
+		this.panel_manager.actions_tab = "match_voucher-tab";
+
 		this.match_field_group = new frappe.ui.FieldGroup({
 			fields: this.get_match_tab_fields(),
 			body: this.$tab_content,
@@ -109,10 +115,11 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 		);
 	}
 
-
 	async populate_matching_vouchers() {
 		let filter_fields = this.match_field_group.get_values();
 		let document_types = Object.keys(filter_fields).filter(field => filter_fields[field] === 1);
+
+		this.update_filters_in_state(document_types);
 
 		let vouchers = await this.get_matching_vouchers(document_types);
 		this.render_data_table(vouchers);
@@ -123,6 +130,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 			flt(this.transaction.unallocated_amount),
 			this.transaction.currency,
 		);
+	}
+
+	update_filters_in_state(document_types) {
+		Object.keys(this.panel_manager.actions_filters).map((key) => {
+			let value = document_types.includes(key) ? 1 : 0;
+			this.panel_manager.actions_filters[key] = value;
+		})
 	}
 
 	render_data_table(vouchers) {
@@ -475,12 +489,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 	}
 
 	get_match_tab_fields() {
+		const filters_state = this.panel_manager.actions_filters;
 		return [
 			{
 				label: __("Payment Entry"),
 				fieldname: "payment_entry",
 				fieldtype: "Check",
-				default: 1,
+				default: filters_state.payment_entry,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -489,7 +504,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Journal Entry"),
 				fieldname: "journal_entry",
 				fieldtype: "Check",
-				default: 1,
+				default: filters_state.journal_entry,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -501,6 +516,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Purchase Invoice"),
 				fieldname: "purchase_invoice",
 				fieldtype: "Check",
+				default: filters_state.purchase_invoice,
 				onchange: () => {
 					let value = this.match_field_group.get_value("purchase_invoice");
 					this.match_field_group.get_field("unpaid_invoices").df.hidden = !value;
@@ -513,6 +529,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Sales Invoice"),
 				fieldname: "sales_invoice",
 				fieldtype: "Check",
+				default: filters_state.sales_invoice,
 				onchange: () => {
 					let value = this.match_field_group.get_value("sales_invoice");
 					this.match_field_group.get_field("unpaid_invoices").df.hidden = !value;
@@ -528,6 +545,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Loan Repayment"),
 				fieldname: "loan_repayment",
 				fieldtype: "Check",
+				default: filters_state.loan_repayment,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -536,6 +554,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Loan Disbursement"),
 				fieldname: "loan_disbursement",
 				fieldtype: "Check",
+				default: filters_state.loan_disbursement,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -547,6 +566,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Expense Claim"),
 				fieldname: "expense_claim",
 				fieldtype: "Check",
+				default: filters_state.expense_claim,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -555,6 +575,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Bank Transaction"),
 				fieldname: "bank_transaction",
 				fieldtype: "Check",
+				default: filters_state.bank_transaction,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -566,6 +587,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Show Exact Amount"),
 				fieldname: "exact_match",
 				fieldtype: "Check",
+				default: filters_state.exact_match,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				}
@@ -577,6 +599,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Show Exact Party"),
 				fieldname: "exact_party_match",
 				fieldtype: "Check",
+				default: filters_state.exact_party_match,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				},
@@ -589,10 +612,11 @@ erpnext.accounts.bank_reconciliation.ActionsPanel = class ActionsPanel {
 				label: __("Unpaid Invoices"),
 				fieldname: "unpaid_invoices",
 				fieldtype: "Check",
+				default: filters_state.unpaid_invoices,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				},
-				hidden: 1
+				hidden: (filters_state.sales_invoice || filters_state.purchase_invoice) ? 0 : 1
 			},
 			{
 				fieldtype: "Column Break"
