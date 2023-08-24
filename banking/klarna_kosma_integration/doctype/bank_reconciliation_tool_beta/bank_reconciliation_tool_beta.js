@@ -31,6 +31,16 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		frm.doc.bank_statement_to_date = today;
 	},
 
+	filter_by_reference_date: function (frm) {
+		if (frm.doc.filter_by_reference_date) {
+			frm.set_value("bank_statement_from_date", "");
+			frm.set_value("bank_statement_to_date", "");
+		} else {
+			frm.set_value("from_reference_date", "");
+			frm.set_value("to_reference_date", "");
+		}
+	},
+
 	refresh: function(frm) {
 		frm.disable_save();
 		frm.fields_dict["filters_section"].collapse(false);
