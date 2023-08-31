@@ -276,9 +276,9 @@ def auto_reconcile_vouchers(
 		vouchers = list(
 			map(
 				lambda entry: {
-					"payment_doctype": entry[1],
-					"payment_name": entry[2],
-					"amount": entry[4],
+					"payment_doctype": entry.get("doctype"),
+					"payment_name": entry.get("name"),
+					"amount": entry.get("paid_amount"),
 				},
 				linked_payments,
 			)

@@ -1,13 +1,13 @@
 frappe.provide("erpnext.accounts.bank_reconciliation");
 
 erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
-    constructor(opts) {
-        $.extend(this, opts);
-        this.make();
-    }
+	constructor(opts) {
+		$.extend(this, opts);
+		this.make();
+	}
 
-    make() {
-        this.panel_manager.actions_tab = "details-tab";
+	make() {
+		this.panel_manager.actions_tab = "details-tab";
 
 		this.details_field_group = new frappe.ui.FieldGroup({
 			fields: this.get_detail_tab_fields(),
@@ -15,9 +15,9 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 			card_layout: true,
 		});
 		this.details_field_group.make();
-    }
+	}
 
-    update_bank_transaction() {
+	update_bank_transaction() {
 		var me = this;
 		const reference_number = this.details_field_group.get_value("reference_number");
 		const party = this.details_field_group.get_value("party");
@@ -60,7 +60,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 		});
 	}
 
-    get_detail_tab_fields() {
+	get_detail_tab_fields() {
 		return  [
 			{
 				label: __("ID"),
