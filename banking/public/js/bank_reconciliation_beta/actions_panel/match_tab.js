@@ -374,7 +374,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				label: __("Show Exact Party"),
 				fieldname: "exact_party_match",
 				fieldtype: "Check",
-				default: filters_state.exact_party_match,
+				default: this.transaction.party_type && this.transaction.party ? 1 : 0,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				},
