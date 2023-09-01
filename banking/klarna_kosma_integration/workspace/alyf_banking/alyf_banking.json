@@ -31,7 +31,7 @@
    "type": "Link"
   }
  ],
- "modified": "2023-09-01 19:07:29.484433",
+ "modified": "2023-09-01 19:26:06.857011",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "ALYF Banking",
@@ -40,7 +40,17 @@
  "parent_page": "Accounting",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Auditor"
+  }
+ ],
  "sequence_id": 4.0,
  "shortcuts": [
   {
