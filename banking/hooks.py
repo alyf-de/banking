@@ -12,7 +12,7 @@ notification_email_logo = "/assets/banking/images/alyf-logo.png"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/banking/css/banking.css"
+app_include_css = "bank_reconciliation_beta.bundle.css"
 # app_include_js = "/assets/banking/js/banking.js"
 
 # include js, css files in header of web template
@@ -95,9 +95,9 @@ after_install = "banking.install.after_install"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Bank Transaction": "banking.overrides.bank_transaction.CustomBankTransaction"
+}
 
 # Document Events
 # ---------------
@@ -205,3 +205,5 @@ kosma_property_setters = {
 		),
 	]
 }
+
+get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"
