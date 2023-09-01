@@ -13,7 +13,6 @@
 
 ## Table of Contents
 
-- [App Setup](#app-setup)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Fetching a Bank and Bank Accounts](#fetching-a-bank-and-bank-accounts)
@@ -24,16 +23,14 @@
 - [Bank Consent (Important)](#bank-consent)
 
 
-## App Setup
-
-1. Set the appropriate Admin URL in **banking_settings.json** > fieldname: `admin_endpoint` > default: "https://yoursitename.com"
-
 ## Installation
 
-1. Install [Bench](https://github.com/frappe/bench)
-2. Install [ERPNext](https://github.com/frappe/erpnext)
-3. `bench get-app https://github.com/alyf-de/banking.git`
-4. `bench --site <sitename> install-app banking`
+Install [via Frappe Cloud](https://frappecloud.com/marketplace/apps/banking) or on your local bench:
+
+```bash
+bench get-app https://github.com/alyf-de/banking.git
+bench --site <sitename> install-app banking
+```
 
 ## Getting Started
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.
