@@ -1,0 +1,64 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"rY4kqSgqjV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Banking</span>\",\"col\":12}},{\"id\":\"ik6keY0zOR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation\",\"col\":6}},{\"id\":\"-xJNZCe4fr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transactions\",\"col\":6}},{\"id\":\"zve0DHAzCk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MRvsFZVnBb\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "creation": "2023-09-01 18:57:28.811898",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "income",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "ALYF Banking",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Banking Settings",
+   "link_count": 0,
+   "link_to": "Banking Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2023-09-01 19:07:29.484433",
+ "modified_by": "Administrator",
+ "module": "Klarna Kosma Integration",
+ "name": "ALYF Banking",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Accounting",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 4.0,
+ "shortcuts": [
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Unreconciled",
+   "label": "Bank Transactions",
+   "link_to": "Bank Transaction",
+   "stats_filter": "{\"unallocated_amount\":[\">=\",0.01]}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Bank Reconciliation",
+   "link_to": "Bank Reconciliation Tool Beta",
+   "type": "DocType"
+  }
+ ],
+ "title": "ALYF Banking"
+}
