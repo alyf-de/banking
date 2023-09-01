@@ -411,7 +411,7 @@ def check_matching(
 
 	for voucher in matching_vouchers:
 		# higher rank if voucher name is in bank transaction
-		if voucher["name"] in transaction.description:
+		if voucher["reference_no"] in transaction.description:
 			voucher["rank"] += 1
 			voucher["name_in_desc_match"] = 1
 
