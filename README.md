@@ -80,8 +80,6 @@ The creation of a Bank and it's Bank Accounts are handled by the integration.
 
 Click on the **Sync Bank and Accounts** button in the settings page, and follow the prompts.
 
-<img width="75%" src="https://user-images.githubusercontent.com/25857446/208404531-6a292b38-385c-4eff-984c-b288f35b7d88.gif"/>
-
 ### Test values
 - Select country as `Deutschland`
 - Select `Demo Bank`
