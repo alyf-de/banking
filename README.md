@@ -69,7 +69,6 @@ bench --site <sitename> install-app banking
 > As an end user, you must get in touch with an authorized service provider who can provide you with the neccessary API Token to get started.
 
 Go to **Banking Settings**:
-<img width="1295" alt="Screenshot 2023-07-03 at 7 47 25 PM" src="https://github.com/alyf-de/banking/assets/25857446/67977dc6-e875-4693-8dc8-bd162c769e5b">
 
 - Once **Enabled** is checked, the **Customer ID** and **API Token** (given by your service provider) must be filled in.
 - **Save** and you are good to go.
@@ -79,6 +78,8 @@ Go to **Banking Settings**:
 The creation of a Bank and it's Bank Accounts are handled by the integration.
 
 Click on the **Sync Bank and Accounts** button in the settings page, and follow the prompts.
+
+<img width="75%" src="https://user-images.githubusercontent.com/25857446/208404531-6a292b38-385c-4eff-984c-b288f35b7d88.gif"/>
 
 ### Test values
 - Select country as `Deutschland`
