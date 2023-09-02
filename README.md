@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [Country and Bank Coverage](#country-and-bank-coverage)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Fetching a Bank and Bank Accounts](#fetching-a-bank-and-bank-accounts)
@@ -22,6 +23,36 @@
 	- [Automatic Transaction fetch/sync](#automatic-transaction-fetchsync)
 - [Bank Consent (Important)](#bank-consent)
 
+## Country and Bank Coverage
+
+Currently, we [support more than 15.000 banks from the following countries](https://portal.openbanking.klarna.com/bank-matrix).
+
+- 🇦🇹 Austria
+- 🇧🇪 Belgium
+- 🇭🇷 Croatia
+- 🇨🇿 Czech Republic
+- 🇩🇰 Denmark
+- 🇪🇪 Estonia
+- 🇫🇮 Finland
+- 🇫🇷 France
+- 🇩🇪 Germany
+- 🇭🇺 Hungary
+- 🇮🇪 Ireland
+- 🇮🇹 Italy
+- 🇱🇻 Latvia
+- 🇱🇹 Lithuania
+- 🇱🇺 Luxembourg
+- 🇲🇹 Malta
+- 🇳🇱 Netherlands
+- 🇳🇴 Norway
+- 🇵🇱 Poland
+- 🇵🇹 Portugal
+- 🇷🇴 Romania
+- 🇸🇰 Slovakia
+- 🇪🇸 Spain
+- 🇸🇪 Sweden
+- 🇨🇭 Switzerland
+- 🇬🇧 United Kingdom
 
 ## Installation
 
