@@ -11,6 +11,8 @@
 <p>Experience the ease of automation and gain better control over your finances with the ultimate banking integration app for ERPNext users.</p>
 </div>
 
+**Note**: To productively use this app, you'll need a paid subscription. Visit [banking.alyf.de](https://banking.alyf.de/banking-pricing) to check out the pricing and sign up.
+
 ## Table of Contents
 
 - [Country and Bank Coverage](#country-and-bank-coverage)
