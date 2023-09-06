@@ -74,11 +74,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.match_params = {};
 		let table_data = vouchers.map((row) => {
 			this.match_params[row.name] = {
-				"Reference No": row.reference_number_match || 0,
 				"Party": row.party_match || 0,
 				"Transaction Amount": row.amount_match || 0,
 				"Unallocated Amount": row.unallocated_amount_match || 0,
-				"Reference Number": row.name_in_desc_match || 0,
+				"Reference Number": row.reference_number_match || row.name_in_desc_match || 0,
 			}
 			return [
 				this.help_button(row.name),
