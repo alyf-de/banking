@@ -11,7 +11,7 @@
 <p>Experience the ease of automation and gain better control over your finances with the ultimate banking integration app for ERPNext users.</p>
 </div>
 
-**Note**: Our improved Bank Reconciliation Tool is free to use and compatible with other bank integrations. For connecting your bank account, you'll need a paid subscription. Visit [banking.alyf.de](https://banking.alyf.de/banking-pricing) to check out the pricing and sign up.
+**Note**: Our improved Bank Reconciliation Tool is free to use and compatible with other bank integrations. To connect your bank account, you'll need a paid subscription. Visit [banking.alyf.de](https://banking.alyf.de/banking-pricing) to check out the pricing and sign up.
 
 ## Table of Contents
 
@@ -75,16 +75,16 @@ Go to **Banking Settings**:
 
 ## Fetching a Bank and Bank Accounts
 
-The creation of a Bank and it's Bank Accounts are handled by the integration.
+The creation of a Bank and its Bank Accounts are handled by the integration.
 
-Click on the **Sync Bank and Accounts** button in the settings page, and follow the prompts.
+Click on the **Sync Bank and Accounts** button on the settings page, and follow the prompts.
 
 <img width="75%" src="https://user-images.githubusercontent.com/25857446/208404531-6a292b38-385c-4eff-984c-b288f35b7d88.gif"/>
 
 ### Test values
-- Select country as `Deutschland`
+- Select the country as `Deutschland`
 - Select `Demo Bank`
-- Select Online Banking method as `Demo Bank PSD2`
+- Select the Online Banking method as `Demo Bank PSD2`
 - Username: `embedded`, Password: `12345`
 - OTP: `12345`
 
@@ -100,13 +100,13 @@ Bank Transactions can be manually or automatically fetched/synced.
 ### Manually fetching/syncing transactions
 Manually fetching transactions is currently only supported for one account at a time.
 
-- Click on **Sync Transactions** in the settings page.
+- Click on **Sync Transactions** on the settings page.
 - Select the Bank Account whose transactions must be synced. Click on **Continue**
 
-The transactions are enqueued to be fetched in the background. This job could be time consuming depending on the amount of transactions
+The transactions are enqueued to be fetched in the background. This job could be time-consuming depending on the amount of transactions
 
 ### Automatic Transaction fetch/sync
-By default a daily scheduled job will refresh Bank Accounts' data and fetch their transactions. This does not require any user intervention
+By default, a daily scheduled job will refresh Bank Accounts' data and fetch their transactions. This does not require any user intervention
 
 **The transactions can be checked in the Bank Transactions List.**
 
@@ -114,22 +114,22 @@ By default a daily scheduled job will refresh Bank Accounts' data and fetch thei
 
 ## Bank Consent
 
-Once you finish syncing Bank and Bank Accounts by entering your bank credentials, you have essentially given the app consent (for a limited time) to access your bank accounts data.
+Once you finish syncing Bank and Bank Accounts by entering your bank credentials, you have essentially given the app consent (for a limited time) to access your bank account's data.
 
 Consent is stored in the form of a 'Bank Consent' record. The expiry of the consent is also visible in the Bank Consent record.
 
 #### What data am I consenting to share?
 You will be consenting to share:
 - The list of accounts (and account data) under your bank customer ID (whose credentials you entered)
-- Bank Transactions and their data (reference number, account, amount, counter party, etc.) linked to the accounts above, from the start of the current fiscal year
+- Bank Transactions and their data (reference number, account, amount, counterparty, etc.) linked to the accounts above, from the start of the current fiscal year
 
-#### How long is the consent active for?
+#### How long is the consent active?
 The consent expiry is set for 90 days from the day of creation (approximately 1 quarter). Until it expires, no user intervention is required to fetch data.
 
 #### What do I do once the consent expires?
 Once the consent expires, you will have to give explicit consent again by [resyncing bank and bank accounts](#fetching-a-bank-and-bank-accounts).
 
-#### Is this consent token safe ?
+#### Is this consent token safe?
 It is safely encrypted and is also refreshed after every request that uses it.
 
 ## Bank Reconciliation Tool
@@ -159,7 +159,7 @@ The Transactions can be sorted based on various parameters. To proceed click on 
 
 You can update the Reference Number, Party and Party Type of a Bank Transaction or refer to it from the **Details** tab.
 
-Simply fill the fields in the 'Update' section and click on **Submit** at the bottom of the panel.
+Simply fill in the fields in the 'Update' section and click on **Submit** at the bottom of the panel.
 
 <img src="https://raw.githubusercontent.com/alyf-de/banking/version-14/banking/public/images/update_transaction.gif" height="300">
 
@@ -176,17 +176,17 @@ In the filters:
 - **Show Exact Party**: Is enabled and visible only if the Bank Transaction has a Party & Party Type set.
 - **Unpaid Invoices**: Is visible only if 'Purchase Invoice' or 'Sales Invoice' is enabled. It fetches unpaid invoices for reconciliation.
 
-The rest of the filters are self explanatory.
+The rest of the filters are self-explanatory.
 
-The vouchers will be ranked on the basis of the number of fields matched. The match is reason is visible on hovering over the '?' button.
+The vouchers will be ranked on the basis of the number of fields matched. The match reason is visible on hovering over the '?' button.
 
 You can match one or multiple vouchers against the same Bank Transaction using the checkboxes.
 
 **On checking a voucher row**: The summary in the **Match Voucher** tab is updated. The checked rows sum up to the **Allocated Amount** and **To Allocate** shows how much in the Bank Transaction is left to reconcile.
 
 Finally, after checking the desired rows, click on the **Reconcile** at the bottom of the panel.
-- If the transaction is fully reconciled, it will be removed and the next transaction will be auto-focused on.
-- If the transaction is partially reconciled, the view stays the same except the the **Allocated Amount** will be permanently updated. Now you can continue to finish reconciling this transaction or move on to another one.
+- If the transaction is fully reconciled, it will be removed and the next transaction will be auto-focused.
+- If the transaction is partially reconciled, the view stays the same except the **Allocated Amount** will be permanently updated. Now you can continue to finish reconciling this transaction or move on to another one.
 
 > The tool helps you reconcile with **unpaid invoices** by automatically creating a payment against the invoice and reconciling said payment against the Bank Transaction.
 
@@ -208,4 +208,4 @@ If you want to edit more details in the voucher to be created, you can click on 
 
 The **Auto Reconcile** button at the very top of the tool automatically reconciles Bank Transactions and vouchers that have matching reference numbers.
 
-The reconciliation will occurr within the limits of the account and date filters that are set.
+The reconciliation will occur within the limits of the account and date filters that are set.
