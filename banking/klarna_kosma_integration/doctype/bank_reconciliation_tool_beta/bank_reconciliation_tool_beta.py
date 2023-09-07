@@ -294,21 +294,28 @@ def auto_reconcile_vouchers(
 
 	alert_message, indicator = "", "blue"
 	if not partially_reconciled and not reconciled:
-		alert_message = _("No matches occurred via auto reconciliation")
+		alert_message = _("No matches occurred via Auto Reconciliation")
 
 	if reconciled:
-		alert_message += _("{0} Transaction(s) Reconciled").format(len(reconciled))
+		alert_message += _("{0} {1} {2}").format(
+			len(reconciled),
+			_("Transactions") if len(reconciled) > 1 else _("Transaction"),
+			frappe.bold(_("Reconciled")),
+		)
 		alert_message += "<br>"
 		indicator = "green"
 
 	if partially_reconciled:
-		alert_message += _("{0} {1} Partially Reconciled").format(
+		alert_message += _("{0} {1} {2}").format(
 			len(partially_reconciled),
 			_("Transactions") if len(partially_reconciled) > 1 else _("Transaction"),
+			frappe.bold(_("Partially Reconciled")),
 		)
 		indicator = "green"
 
-	frappe.msgprint(title=_("Auto Reconciliation"), msg=alert_message, indicator=indicator)
+	frappe.msgprint(
+		title=_("Auto Reconciliation Complete"), msg=alert_message, indicator=indicator
+	)
 	frappe.flags.auto_reconcile_vouchers = False
 	return reconciled, partially_reconciled
 
@@ -501,7 +508,9 @@ def get_matching_queries(
 
 	if transaction.deposit > 0.0 and "sales_invoice" in document_types:
 		if "unpaid_invoices" in document_types:
-			query = get_unpaid_si_matching_query(exact_match, exact_party_match, currency)
+			query = get_unpaid_si_matching_query(
+				exact_match, exact_party_match, currency, company
+			)
 			queries.append(query)
 		else:
 			query = get_si_matching_query(exact_match, exact_party_match, currency)
@@ -509,7 +518,9 @@ def get_matching_queries(
 
 	if transaction.withdrawal > 0.0 and "purchase_invoice" in document_types:
 		if "unpaid_invoices" in document_types:
-			query = get_unpaid_pi_matching_query(exact_match, exact_party_match, currency)
+			query = get_unpaid_pi_matching_query(
+				exact_match, exact_party_match, currency, company
+			)
 			queries.append(query)
 		else:
 			query = get_pi_matching_query(exact_match, exact_party_match, currency)
@@ -857,7 +868,7 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 	return str(query)
 
 
-def get_unpaid_si_matching_query(exact_match, exact_party_match, currency):
+def get_unpaid_si_matching_query(exact_match, exact_party_match, currency, company):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
 	party_condition = sales_invoice.customer == Parameter("%(party)s")
@@ -883,6 +894,7 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match, currency):
 			amount_match.as_("amount_match"),
 		)
 		.where(sales_invoice.docstatus == 1)
+		.where(sales_invoice.company == company)
 		.where(sales_invoice.is_return == 0)
 		.where(sales_invoice.outstanding_amount > 0.0)
 		.where(sales_invoice.currency == currency)
@@ -940,7 +952,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 	return str(query)
 
 
-def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency):
+def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, company):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
 	party_condition = purchase_invoice.supplier == Parameter("%(party)s")
@@ -966,6 +978,7 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency):
 			amount_match.as_("amount_match"),
 		)
 		.where(purchase_invoice.docstatus == 1)
+		.where(purchase_invoice.company == company)
 		.where(purchase_invoice.is_return == 0)
 		.where(purchase_invoice.outstanding_amount > 0.0)
 		.where(purchase_invoice.currency == currency)
