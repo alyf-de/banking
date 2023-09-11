@@ -141,17 +141,9 @@ def create_journal_entry_bts(
 	else:
 		paid_amount = bank_transaction.withdrawal
 
-	vouchers = json.dumps(
-		[
-			{
-				"payment_doctype": "Journal Entry",
-				"payment_name": journal_entry.name,
-				"amount": paid_amount,
-			}
-		]
+	return reconcile_entry(
+		bank_transaction_name, paid_amount, "Journal Entry", journal_entry.name
 	)
-
-	return reconcile_vouchers(bank_transaction_name, vouchers)
 
 
 @frappe.whitelist()
@@ -214,16 +206,33 @@ def create_payment_entry_bts(
 		return payment_entry  # Return saved document
 
 	payment_entry.submit()
+
+	return reconcile_entry(
+		bank_transaction_name, paid_amount, "Payment Entry", payment_entry.name
+	)
+
+
+@frappe.whitelist()
+def reconcile_entry(transaction_name, amount, voucher_type, voucher_name):
+	"""Reconcile a entry with a bank transaction."""
+
+	# Voucher checks to secure those made via UI
+	if not frappe.db.exists(voucher_type, voucher_name):
+		return {"deleted": 1}
+
+	if not frappe.db.get_value(voucher_type, voucher_name, "docstatus") == 1:
+		return
+
 	vouchers = json.dumps(
 		[
 			{
-				"payment_doctype": "Payment Entry",
-				"payment_name": payment_entry.name,
-				"amount": paid_amount,
+				"payment_doctype": voucher_type,
+				"payment_name": voucher_name,
+				"amount": amount,
 			}
 		]
 	)
-	return reconcile_vouchers(bank_transaction_name, vouchers)
+	return reconcile_vouchers(transaction_name, vouchers)
 
 
 @frappe.whitelist()

@@ -38,6 +38,9 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		this.tabs_list_ul = this.$actions_container.find(".form-tabs");
 		this.$tab_content = this.$actions_container.find(".tab-content");
 
+		// Remove any listeners from previous tabs
+		frappe.realtime.off("doc_update");
+
 		["Details", "Match Voucher", "Create Voucher"].forEach(tab => {
 			let tab_name = frappe.scrub(tab);
 			this.add_tab(tab_name, tab);
