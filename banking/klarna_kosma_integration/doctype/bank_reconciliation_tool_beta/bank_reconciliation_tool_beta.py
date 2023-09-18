@@ -418,7 +418,8 @@ def check_matching(
 
 	for voucher in matching_vouchers:
 		# higher rank if voucher name is in bank transaction
-		if voucher["reference_no"] and (voucher["reference_no"] in transaction.description):
+		reference_no = voucher["reference_no"]
+		if reference_no and (reference_no.strip() in transaction.description):
 			voucher["rank"] += 1
 			voucher["name_in_desc_match"] = 1
 
@@ -631,7 +632,7 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 			loan_disbursement.applicant.as_("party"),
 			loan_disbursement.applicant_type.as_("party_type"),
 			loan_disbursement.disbursement_date.as_("posting_date"),
-			"".as_("currency"),
+			ConstantColumn("").as_("currency"),
 			rank.as_("reference_number_match"),
 			rank1.as_("party_match"),
 		)
@@ -673,7 +674,7 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 			loan_repayment.applicant.as_("party"),
 			loan_repayment.applicant_type.as_("party_type"),
 			loan_repayment.posting_date,
-			"".as_("currency"),
+			ConstantColumn("").as_("currency"),
 			rank.as_("reference_number_match"),
 			rank1.as_("party_match"),
 		)
