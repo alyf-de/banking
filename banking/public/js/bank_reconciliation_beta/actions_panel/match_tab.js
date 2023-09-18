@@ -468,6 +468,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				name: __("Document Name"),
 				editable: false,
 				width: 100,
+				format: (value, row, column, data) => {
+					return frappe.format(value, {fieldtype: "Link", options: data[1]});
+				},
 			},
 		];
 	}
