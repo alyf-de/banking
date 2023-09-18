@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"rY4kqSgqjV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Banking</span>\",\"col\":12}},{\"id\":\"ik6keY0zOR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation\",\"col\":6}},{\"id\":\"-xJNZCe4fr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transactions\",\"col\":6}},{\"id\":\"zve0DHAzCk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MRvsFZVnBb\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "content": "[{\"id\":\"rY4kqSgqjV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Banking</span>\",\"col\":12}},{\"id\":\"ik6keY0zOR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation\",\"col\":3}},{\"id\":\"-xJNZCe4fr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transactions\",\"col\":4}},{\"id\":\"SEV0AHQjWg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Consent\",\"col\":3}},{\"id\":\"zve0DHAzCk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MRvsFZVnBb\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
  "creation": "2023-09-01 18:57:28.811898",
  "custom_blocks": [],
  "docstatus": 0,
@@ -31,7 +31,7 @@
    "type": "Link"
   }
  ],
- "modified": "2023-09-01 19:26:06.857011",
+ "modified": "2023-09-18 19:49:39.472163",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "ALYF Banking",
@@ -54,12 +54,21 @@
  "sequence_id": 4.0,
  "shortcuts": [
   {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Available",
+   "label": "Bank Consent",
+   "link_to": "Bank Consent",
+   "stats_filter": "{\"consent_expiry\":[\"is\",\"set\"]}",
+   "type": "DocType"
+  },
+  {
    "color": "Yellow",
    "doc_view": "List",
    "format": "{} Unreconciled",
    "label": "Bank Transactions",
    "link_to": "Bank Transaction",
-   "stats_filter": "{\"unallocated_amount\":[\">=\",0.01]}",
+   "stats_filter": "{\"unallocated_amount\":[\">=\",0.01], \"docstatus\": 1}",
    "type": "DocType"
   },
   {
