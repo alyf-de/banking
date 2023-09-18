@@ -7,9 +7,15 @@ from banking.klarna_kosma_integration.exception_handler import ExceptionHandler
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_days, add_to_date, formatdate, get_datetime, getdate, nowdate
-
-from erpnext.accounts.utils import get_fiscal_year
+from frappe.utils import (
+	add_days,
+	add_to_date,
+	formatdate,
+	get_datetime,
+	get_first_day,
+	getdate,
+	nowdate,
+)
 
 if TYPE_CHECKING:
 	from frappe.model.document import Document
@@ -187,9 +193,9 @@ def get_account_name(account: Dict) -> str:
 
 	Here we can consider alias + holder name to make a distinct account name
 	E.g. of Aliases:
-	        - Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
-	        - Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
-	        - (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
+	- Accounts: [{alias: "Girokonto"}, {alias: "Girokonto"}, {alias: "Girokonto"}]
+	- Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
+	- (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
 	"""
 	is_account_alias_distinct = "(" in account.get("alias")
 	if is_account_alias_distinct:
@@ -225,7 +231,9 @@ def create_bank_transactions(
 
 def new_bank_transaction(account: str, transaction: Dict) -> None:
 	amount_data = transaction.get("amount", {})
-	amount = amount_data.get("amount", 0) / 100  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
+	amount = (
+		amount_data.get("amount", 0) / 100
+	)  # https://docs.openbanking.klarna.com/xs2a/objects/amount.html
 
 	is_credit = transaction.get("type") == "CREDIT"
 	debit = 0 if is_credit else float(amount)
@@ -240,7 +248,9 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 	status = state_map[transaction.get("state")]
 
 	transaction_id = transaction.get("transaction_id")
-	transaction_exists = frappe.db.exists("Bank Transaction", {"transaction_id": transaction_id})
+	transaction_exists = frappe.db.exists(
+		"Bank Transaction", {"transaction_id": transaction_id}
+	)
 
 	if not transaction_id or not transaction_exists:
 		new_transaction = frappe.get_doc(
@@ -257,18 +267,26 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 				"description": transaction.get("reference"),
 				"bank_party_name": transaction.get("counter_party", {}).get("holder_name"),
 				"bank_party_iban": transaction.get("counter_party", {}).get("iban"),
-				"bank_party_account_number": transaction.get("counter_party", {}).get("account_number"),
+				"bank_party_account_number": transaction.get("counter_party", {}).get(
+					"account_number"
+				),
 			}
 		)
 		new_transaction.insert()
 		new_transaction.submit()
 
-def get_from_to_date(from_date: Optional[str] = None, to_date: Optional[str] = None):
-	current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
 
-	from_date = from_date or current_fiscal_year.year_start_date
+def get_from_to_date(from_date: Optional[str] = None, to_date: Optional[str] = None):
+	"""
+	Get from and to date for session and consent creation.
+	Default to start of the month and 90 days from now.
+	"""
+	month_start = get_first_day(nowdate())
+
+	from_date = from_date or month_start
 	to_date = to_date or add_days(nowdate(), 90)
 	return formatdate(from_date, "YYYY-MM-dd"), formatdate(to_date, "YYYY-MM-dd")
+
 
 def to_json(response: requests.models.Response) -> Dict:
 	"""
@@ -340,6 +358,6 @@ def set_session_state(session_id_short: str, result: str = None):
 		session_id_short,
 		{
 			"flow_state": result.get("state", "EXCEPTION"),
-			"status": result.get("session_state", "Running")
-		}
+			"status": result.get("session_state", "Running"),
+		},
 	)
