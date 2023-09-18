@@ -623,7 +623,7 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 	query = (
 		frappe.qb.from_(loan_disbursement)
 		.select(
-			rank + rank1 + 1,
+			(rank + rank1 + 1).as_("rank"),
 			ConstantColumn("Loan Disbursement").as_("doctype"),
 			loan_disbursement.name,
 			loan_disbursement.disbursed_amount.as_("paid_amount"),
@@ -646,7 +646,7 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 	else:
 		query.where(loan_disbursement.disbursed_amount > 0.0)
 
-	vouchers = query.run(as_list=True)
+	vouchers = query.run(as_dict=True)
 
 	return vouchers
 
@@ -665,7 +665,7 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 	query = (
 		frappe.qb.from_(loan_repayment)
 		.select(
-			rank + rank1 + 1,
+			(rank + rank1 + 1).as_("rank"),
 			ConstantColumn("Loan Repayment").as_("doctype"),
 			loan_repayment.name,
 			loan_repayment.amount_paid.as_("paid_amount"),
@@ -691,7 +691,7 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 	else:
 		query.where(loan_repayment.amount_paid > 0.0)
 
-	vouchers = query.run()
+	vouchers = query.run(as_dict=True)
 
 	return vouchers
 
