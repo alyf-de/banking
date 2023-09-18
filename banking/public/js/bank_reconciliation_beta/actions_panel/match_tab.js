@@ -74,6 +74,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.match_params = {};
 		let table_data = vouchers.map((row) => {
 			this.match_params[row.name] = {
+				"Date": row.date_match || 0,
 				"Party": row.party_match || 0,
 				"Transaction Amount": row.amount_match || 0,
 				"Unallocated Amount": row.unallocated_amount_match || 0,
