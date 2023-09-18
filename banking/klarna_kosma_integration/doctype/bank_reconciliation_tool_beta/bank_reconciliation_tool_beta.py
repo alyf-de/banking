@@ -623,13 +623,13 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 	) == Parameter("%(date)s")
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
-	rank1 = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
+	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
 	query = (
 		frappe.qb.from_(loan_disbursement)
 		.select(
-			(rank + rank1 + date_rank + 1).as_("rank"),
+			(reference_rank + party_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Loan Disbursement").as_("doctype"),
 			loan_disbursement.name,
 			loan_disbursement.disbursed_amount.as_("paid_amount"),
@@ -639,8 +639,8 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 			loan_disbursement.applicant_type.as_("party_type"),
 			loan_disbursement.disbursement_date.as_("posting_date"),
 			ConstantColumn("").as_("currency"),
-			rank.as_("reference_number_match"),
-			rank1.as_("party_match"),
+			reference_rank.as_("reference_number_match"),
+			party_rank.as_("party_match"),
 			date_rank.as_("date_match"),
 		)
 		.where(loan_disbursement.docstatus == 1)
@@ -670,13 +670,13 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 	) == Parameter("%(date)s")
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
-	rank1 = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
+	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
 	query = (
 		frappe.qb.from_(loan_repayment)
 		.select(
-			(rank + rank1 + date_rank + 1).as_("rank"),
+			(reference_rank + party_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Loan Repayment").as_("doctype"),
 			loan_repayment.name,
 			loan_repayment.amount_paid.as_("paid_amount"),
@@ -686,8 +686,8 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 			loan_repayment.applicant_type.as_("party_type"),
 			loan_repayment.posting_date,
 			ConstantColumn("").as_("currency"),
-			rank.as_("reference_number_match"),
-			rank1.as_("party_match"),
+			reference_rank.as_("reference_number_match"),
+			party_rank.as_("party_match"),
 			date_rank.as_("date_match"),
 		)
 		.where(loan_repayment.docstatus == 1)
