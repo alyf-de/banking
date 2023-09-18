@@ -449,6 +449,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				name: __("Reference Date"),
 				editable: false,
 				width: 120,
+				format: (value) => {
+					return frappe.format(value, {fieldtype: "Date"});
+				},
 			},
 			{
 				name: __("Remaining"),
