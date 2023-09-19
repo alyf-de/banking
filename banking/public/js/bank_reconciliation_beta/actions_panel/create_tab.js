@@ -150,6 +150,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 					let value = this.create_field_group.get_value("document_type");
 					let fields = this.create_field_group;
 
+					fields.get_field("party").df.reqd = value === "Payment Entry";
+					fields.get_field("party_type").df.reqd = value === "Payment Entry";
 					fields.get_field("journal_entry_type").df.reqd = value === "Journal Entry";
 					fields.get_field("second_account").df.reqd = value === "Journal Entry";
 

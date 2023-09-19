@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
+from frappe.query_builder.functions import Coalesce
 from frappe.utils import cint, flt
 from pypika.terms import Parameter
 
@@ -406,6 +407,7 @@ def check_matching(
 		"party_type": transaction.party_type,
 		"party": transaction.party,
 		"bank_account": bank_account,
+		"date": transaction.date,
 	}
 
 	matching_vouchers = []
@@ -427,7 +429,8 @@ def check_matching(
 
 	for voucher in matching_vouchers:
 		# higher rank if voucher name is in bank transaction
-		if voucher["reference_no"] in transaction.description:
+		reference_no = voucher["reference_no"]
+		if reference_no and (reference_no.strip() in transaction.description):
 			voucher["rank"] += 1
 			voucher["name_in_desc_match"] = 1
 
@@ -624,14 +627,18 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 		"party_type"
 	) and loan_disbursement.applicant == filters.get("party")
 
-	rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	date_condition = Coalesce(
+		loan_disbursement.reference_date, loan_disbursement.disbursement_date
+	) == Parameter("%(date)s")
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank1 = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
+	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
 	query = (
 		frappe.qb.from_(loan_disbursement)
 		.select(
-			rank + rank1 + 1,
+			(reference_rank + party_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Loan Disbursement").as_("doctype"),
 			loan_disbursement.name,
 			loan_disbursement.disbursed_amount.as_("paid_amount"),
@@ -640,9 +647,10 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 			loan_disbursement.applicant.as_("party"),
 			loan_disbursement.applicant_type.as_("party_type"),
 			loan_disbursement.disbursement_date.as_("posting_date"),
-			"".as_("currency"),
-			rank.as_("reference_number_match"),
-			rank1.as_("party_match"),
+			ConstantColumn("").as_("currency"),
+			reference_rank.as_("reference_number_match"),
+			party_rank.as_("party_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(loan_disbursement.docstatus == 1)
 		.where(loan_disbursement.clearance_date.isnull())
@@ -654,7 +662,7 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 	else:
 		query.where(loan_disbursement.disbursed_amount > 0.0)
 
-	vouchers = query.run(as_list=True)
+	vouchers = query.run(as_dict=True)
 
 	return vouchers
 
@@ -666,14 +674,18 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 		"party_type"
 	) and loan_repayment.applicant == filters.get("party")
 
-	rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	date_condition = Coalesce(
+		loan_repayment.reference_date, loan_repayment.posting_date
+	) == Parameter("%(date)s")
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank1 = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
+	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
 	query = (
 		frappe.qb.from_(loan_repayment)
 		.select(
-			rank + rank1 + 1,
+			(reference_rank + party_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Loan Repayment").as_("doctype"),
 			loan_repayment.name,
 			loan_repayment.amount_paid.as_("paid_amount"),
@@ -682,9 +694,10 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 			loan_repayment.applicant.as_("party"),
 			loan_repayment.applicant_type.as_("party_type"),
 			loan_repayment.posting_date,
-			"".as_("currency"),
-			rank.as_("reference_number_match"),
-			rank1.as_("party_match"),
+			ConstantColumn("").as_("currency"),
+			reference_rank.as_("reference_number_match"),
+			party_rank.as_("party_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(loan_repayment.docstatus == 1)
 		.where(loan_repayment.clearance_date.isnull())
@@ -699,7 +712,7 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 	else:
 		query.where(loan_repayment.amount_paid > 0.0)
 
-	vouchers = query.run()
+	vouchers = query.run(as_dict=True)
 
 	return vouchers
 
@@ -738,10 +751,13 @@ def get_pe_matching_query(
 	if cint(filter_by_reference_date):
 		filter_by_date = pe.reference_date.between(from_reference_date, to_reference_date)
 
+	date_condition = Coalesce(pe.reference_date, pe.posting_date) == transaction.date
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
 	query = (
 		frappe.qb.from_(pe)
 		.select(
-			(ref_rank + amount_rank + party_rank + 1).as_("rank"),
+			(ref_rank + amount_rank + party_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Payment Entry").as_("doctype"),
 			pe.name,
 			pe.paid_amount,
@@ -754,6 +770,7 @@ def get_pe_matching_query(
 			ref_rank.as_("reference_number_match"),
 			amount_rank.as_("amount_match"),
 			party_rank.as_("party_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(pe.docstatus == 1)
 		.where(pe.payment_type.isin([payment_type, "Internal Transfer"]))
@@ -800,12 +817,15 @@ def get_je_matching_query(
 	if cint(filter_by_reference_date):
 		filter_by_date = je.cheque_date.between(from_reference_date, to_reference_date)
 
+	date_condition = Coalesce(je.cheque_date, je.posting_date) == transaction.date
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
 	query = (
 		frappe.qb.from_(jea)
 		.join(je)
 		.on(jea.parent == je.name)
 		.select(
-			(ref_rank + amount_rank + 1).as_("rank"),
+			(ref_rank + amount_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Journal Entry").as_("doctype"),
 			je.name,
 			getattr(jea, amount_field).as_("paid_amount"),
@@ -817,6 +837,7 @@ def get_je_matching_query(
 			jea.account_currency.as_("currency"),
 			ref_rank.as_("reference_number_match"),
 			amount_rank.as_("amount_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(je.docstatus == 1)
 		.where(je.voucher_type != "Opening Entry")
@@ -846,12 +867,15 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 	party_condition = si.customer == Parameter("%(party)s")
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
+	date_condition = si.posting_date == Parameter("%(date)s")
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
 	query = (
 		frappe.qb.from_(sip)
 		.join(si)
 		.on(sip.parent == si.name)
 		.select(
-			(party_rank + amount_rank + 1).as_("rank"),
+			(party_rank + amount_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			si.name,
 			sip.amount.as_("paid_amount"),
@@ -863,6 +887,7 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 			si.currency,
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(si.docstatus == 1)
 		.where(sip.clearance_date.isnull())
@@ -931,10 +956,15 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 	party_condition = purchase_invoice.supplier == Parameter("%(party)s")
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
+	date_condition = Coalesce(
+		purchase_invoice.bill_date, purchase_invoice.posting_date
+	) == Parameter("%(date)s")
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(
-			(party_rank + amount_rank + 1).as_("rank"),
+			(party_rank + amount_rank + date_rank + 1).as_("rank"),
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name,
 			purchase_invoice.paid_amount,
@@ -946,6 +976,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 			purchase_invoice.currency,
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.is_paid == 1)
