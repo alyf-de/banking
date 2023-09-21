@@ -197,11 +197,14 @@ def get_account_name(account: Dict) -> str:
 	- Accounts: [{alias: "My checking account"}, {alias: "My salary account"}, {alias: "My restricted account"}]
 	- (distinct) Accounts: [{alias: "Girokonto (Max Mustermann)"}, {alias: "Girokonto (Hans Mustermann)"}]
 	"""
-	is_account_alias_distinct = "(" in account.get("alias")
-	if is_account_alias_distinct:
-		account_name = account.get("alias")
+	alias = account.get("alias")
+	if alias:
+		is_alias_distinct = "(" in alias
+		alias_with_acc_holder = f"{alias} ({account.get('holder_name', '')})"
+
+		account_name = alias if is_alias_distinct else alias_with_acc_holder
 	else:
-		account_name = f"{account.get('alias')} ({account.get('holder_name')})"
+		account_name = account.get("iban") or account.get("account_number")
 
 	return account_name
 
