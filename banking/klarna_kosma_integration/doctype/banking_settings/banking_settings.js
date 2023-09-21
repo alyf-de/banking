@@ -180,11 +180,11 @@ frappe.ui.form.on('Banking Settings', {
 					<p style="font-weight: 700; font-size: 16px;">
 						${ __("Subscription Details") }
 					</p>
-					<p>Subscriber: <u>${subscription.full_name}</u></p>
-					<p>Status: <u>${subscription.subscription_status}</u></p>
-					<p>Transaction Limit: <u>${subscription.transaction_limit}</u></p>
-					<p>Valid Till: <u>${subscription.plan_end_date}</u></p>
-					<p>Last Renewed On: <u>${subscription.last_paid_on}</u></p>
+					<p>${ __("Subscriber") }: <u>${subscription.full_name}</u></p>
+					<p>${ __("Status") }: <u>${subscription.subscription_status}</u></p>
+					<p>${ __("Transaction Limit") }: <u>${subscription.transaction_limit}</u></p>
+					<p>${ __("Valid Till") }: <u>${subscription.plan_end_date}</u></p>
+					<p>${ __("Last Renewed On") }: <u>${subscription.last_paid_on}</u></p>
 				</div>
 			`);
 			frm.refresh_field("subscription");
