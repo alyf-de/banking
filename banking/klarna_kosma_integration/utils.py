@@ -200,7 +200,7 @@ def get_account_name(account: Dict) -> str:
 	alias = account.get("alias")
 	if alias:
 		is_alias_distinct = "(" in alias
-		alias_with_acc_holder = f"{alias} ({account.get('holder_name')})"
+		alias_with_acc_holder = f"{alias} ({account.get('holder_name', '')})"
 
 		account_name = alias if is_alias_distinct else alias_with_acc_holder
 	else:
