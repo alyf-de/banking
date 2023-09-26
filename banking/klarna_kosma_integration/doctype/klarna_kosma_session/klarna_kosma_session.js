@@ -12,7 +12,7 @@ frappe.ui.form.on('Klarna Kosma Session', {
 					freeze_message: __("Ending Session ..."),
 				}).then(() => {
 					frm.reload_doc();
-					frappe.show_alert({message: __("Session Ended"), indicator: "green"})
+					frappe.show_alert({message: __("Banking Session Ended"), indicator: "green"})
 				});
 			})
 		}
