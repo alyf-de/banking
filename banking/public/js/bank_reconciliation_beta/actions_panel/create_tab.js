@@ -32,7 +32,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	}
 
 	edit_in_full_page() {
-		var me = this;
 		this.create_voucher_bts(true, (message) => {
 			const doc = frappe.model.sync(message);
 			let doctype = doc[0].doctype, docname = doc[0].name;
@@ -43,7 +42,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			frappe.realtime.off("doc_update");
 			frappe.realtime.on("doc_update", (data) => {
 				if (data.doctype === doctype && data.name === docname) {
-					me.reconcile_new_voucher(doctype, docname);
+					this.reconcile_new_voucher(doctype, docname);
 				}
 			});
 
@@ -108,7 +107,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		// If doc object in response, newly created doc is submitted (can be reconciled)
 		var me = this;
 		frappe.call({
-			method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_entry",
+			method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
 			args: {
 				transaction_name: this.transaction.name,
 				amount: this.transaction.unallocated_amount,
@@ -122,7 +121,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 						indicator: "red"
 					});
 					return;
-				} else if (response.message) {
+				} else if (response.message && Object.keys(response.message).length > 0) {
 					if (response.message.deleted) {
 						frappe.realtime.off("doc_update");
 						return;
@@ -133,7 +132,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 					);
 				}
 			}
-		})
+		});
 	}
 
 

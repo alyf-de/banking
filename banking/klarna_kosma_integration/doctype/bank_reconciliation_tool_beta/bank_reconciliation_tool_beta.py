@@ -1,6 +1,7 @@
 # Copyright (c) 2023, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from typing import Union
 
 import frappe
 from frappe import _
@@ -12,6 +13,7 @@ from pypika.terms import Parameter
 
 from erpnext import get_default_cost_center
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
+	BankTransaction,
 	get_total_allocated_amount,
 )
 from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
@@ -26,7 +28,10 @@ class BankReconciliationToolBeta(Document):
 
 @frappe.whitelist()
 def get_bank_transactions(
-	bank_account, from_date=None, to_date=None, order_by="date asc"
+	bank_account: str,
+	from_date: str = None,
+	to_date: str = None,
+	order_by: str = "date asc",
 ):
 	# returns bank transactions for a bank account
 	filters = []
@@ -64,16 +69,16 @@ def get_bank_transactions(
 
 @frappe.whitelist()
 def create_journal_entry_bts(
-	bank_transaction_name,
-	reference_number=None,
-	reference_date=None,
-	posting_date=None,
-	entry_type=None,
-	second_account=None,
-	mode_of_payment=None,
-	party_type=None,
-	party=None,
-	allow_edit=None,
+	bank_transaction_name: str,
+	reference_number: str = None,
+	reference_date: str = None,
+	posting_date: str = None,
+	entry_type: str = None,
+	second_account: str = None,
+	mode_of_payment: str = None,
+	party_type: str = None,
+	party: str = None,
+	allow_edit: bool = False,
 ):
 	# Create a new journal entry based on the bank transaction
 	bank_transaction = frappe.db.get_values(
@@ -142,23 +147,23 @@ def create_journal_entry_bts(
 	else:
 		paid_amount = bank_transaction.withdrawal
 
-	return reconcile_entry(
+	return reconcile_voucher(
 		bank_transaction_name, paid_amount, "Journal Entry", journal_entry.name
 	)
 
 
 @frappe.whitelist()
 def create_payment_entry_bts(
-	bank_transaction_name,
-	reference_number=None,
-	reference_date=None,
-	party_type=None,
-	party=None,
-	posting_date=None,
-	mode_of_payment=None,
-	project=None,
-	cost_center=None,
-	allow_edit=None,
+	bank_transaction_name: str,
+	reference_number: str = None,
+	reference_date: str = None,
+	party_type: str = None,
+	party: str = None,
+	posting_date: str = None,
+	mode_of_payment: str = None,
+	project: str = None,
+	cost_center: str = None,
+	allow_edit: bool = False,
 ):
 	# Create a new payment entry based on the bank transaction
 	bank_transaction = frappe.db.get_values(
@@ -208,21 +213,24 @@ def create_payment_entry_bts(
 
 	payment_entry.submit()
 
-	return reconcile_entry(
+	return reconcile_voucher(
 		bank_transaction_name, paid_amount, "Payment Entry", payment_entry.name
 	)
 
 
 @frappe.whitelist()
-def reconcile_entry(transaction_name, amount, voucher_type, voucher_name):
-	"""Reconcile a entry with a bank transaction."""
+def reconcile_voucher(
+	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
+) -> Union[dict, "BankTransaction"]:
+	"""Reconcile a entry with a bank transaction. Called on `doc_update` websocket event."""
 
-	# Voucher checks to secure those made via UI
+	# Newly created voucher was deleted
 	if not frappe.db.exists(voucher_type, voucher_name):
 		return {"deleted": 1}
 
+	# Newly created voucher was not submitted (saved)
 	if not frappe.db.get_value(voucher_type, voucher_name, "docstatus") == 1:
-		return
+		return {}
 
 	vouchers = json.dumps(
 		[
@@ -257,12 +265,12 @@ def upload_bank_statement(**args):
 
 @frappe.whitelist()
 def auto_reconcile_vouchers(
-	bank_account,
-	from_date=None,
-	to_date=None,
-	filter_by_reference_date=None,
-	from_reference_date=None,
-	to_reference_date=None,
+	bank_account: str,
+	from_date: str = None,
+	to_date: str = None,
+	filter_by_reference_date: str = None,
+	from_reference_date: str = None,
+	to_reference_date: str = None,
 ):
 	# Auto reconcile vouchers with matching reference numbers
 	frappe.flags.auto_reconcile_vouchers = True
@@ -332,13 +340,13 @@ def auto_reconcile_vouchers(
 
 @frappe.whitelist()
 def get_linked_payments(
-	bank_transaction_name,
-	document_types=None,
-	from_date=None,
-	to_date=None,
-	filter_by_reference_date=None,
-	from_reference_date=None,
-	to_reference_date=None,
+	bank_transaction_name: str,
+	document_types: list = None,
+	from_date: str = None,
+	to_date: str = None,
+	filter_by_reference_date: str = None,
+	from_reference_date: str = None,
+	to_reference_date: str = None,
 ):
 	# get all matching payments for a bank transaction
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
