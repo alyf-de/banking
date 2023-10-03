@@ -58,7 +58,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 			frm.events.add_upload_statement_button(frm);
 			frm.events.build_reconciliation_area(frm);
 		});
-		frm.change_custom_button_type("Get Bank Transactions", null, "primary");
+		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
 
 		frm.add_custom_button(__("Auto Reconcile"), function() {
 			frappe.call({
