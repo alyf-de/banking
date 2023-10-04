@@ -150,7 +150,7 @@ frappe.ui.form.on('Banking Settings', {
 				>
 					<span>${frappe.utils.icon("solid-info", "md")}</span>
 					<span class="small" style="padding-left: 5px">
-						Requires Bank Authentication
+						${ __("Requires Bank Authentication") }
 					</span>
 				</div>`
 			);
@@ -355,7 +355,7 @@ class KlarnaKosmaConnect {
 					bank_name: flow_data["bank_data"]["bank_name"],
 				},
 				freeze: true,
-				freeze_message: __("Adding Bank Acounts ...")
+				freeze_message: __("Adding bank accounts ...")
 			}).then((r) => {
 				if (!r.exc) {
 					frappe.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
@@ -376,7 +376,7 @@ class KlarnaKosmaConnect {
 				}
 			}).then((r) => {
 				if (!r.exc) {
-					frappe.show_alert({ message: __("Session Ended"), indicator: "red" });
+					frappe.show_alert({ message: __("Banking Session Ended"), indicator: "red" });
 				}
 			});
 		} catch(e) {
