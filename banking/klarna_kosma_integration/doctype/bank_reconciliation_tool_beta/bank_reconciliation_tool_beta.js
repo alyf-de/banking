@@ -66,21 +66,31 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		});
 		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
 
-		frm.add_custom_button(__("Auto Reconcile"), function() {
-			frappe.call({
-				method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
-				args: {
-					bank_account: frm.doc.bank_account,
-					from_date: frm.doc.bank_statement_from_date,
-					to_date: frm.doc.bank_statement_to_date,
-					filter_by_reference_date: frm.doc.filter_by_reference_date,
-					from_reference_date: frm.doc.from_reference_date,
-					to_reference_date: frm.doc.to_reference_date,
-				},
-				callback: function(r) {
-					if (!r.exc) frm.refresh();
+		frm.page.add_menu_item(__("Auto Reconcile"), function () {
+			frappe.confirm(
+				__(
+					"Auto reconcile bank transactions based on matching reference numbers?"
+				),
+				() => {
+					frappe.call({
+						method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
+						args: {
+							bank_account: frm.doc.bank_account,
+							from_date: frm.doc.bank_statement_from_date,
+							to_date: frm.doc.bank_statement_to_date,
+							filter_by_reference_date:
+								frm.doc.filter_by_reference_date,
+							from_reference_date: frm.doc.from_reference_date,
+							to_reference_date: frm.doc.to_reference_date,
+						},
+						callback: (r) => {
+							if (!r.exc) {
+								frm.refresh();
+							}
+						},
+					});
 				}
-			});
+			);
 		});
 
 		frm.page.add_menu_item(
