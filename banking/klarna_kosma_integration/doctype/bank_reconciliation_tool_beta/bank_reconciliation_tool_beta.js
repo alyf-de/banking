@@ -136,24 +136,29 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 	},
 
 	bank_account: function (frm) {
-		frappe.db.get_value(
-			"Bank Account",
-			frm.doc.bank_account,
-			"account",
-			(r) => {
-				frappe.db.get_value(
-					"Account",
-					r.account,
-					"account_currency",
-					(r) => {
-						frm.doc.account_currency = r.account_currency;
-						frm.trigger("bank_statement_from_date");
-						frm.trigger("bank_statement_to_date");
-					}
-				);
-			}
-		);
+		if (frm.doc.bank_account) {
+			frappe.db.get_value(
+				"Bank Account",
+				frm.doc.bank_account,
+				"account",
+				(r) => {
+					frappe.db.get_value(
+						"Account",
+						r.account,
+						"account_currency",
+						(r) => {
+							frm.doc.account_currency = r.account_currency;
+							frm.trigger("bank_statement_from_date");
+							frm.trigger("bank_statement_to_date");
+						}
+					);
+				}
+			);
 
+			frm.events.get_bank_transactions(frm);
+		} else {
+			frm.events.setup_empty_state(frm);
+		}
 	},
 
 	bank_statement_from_date: function (frm) {
