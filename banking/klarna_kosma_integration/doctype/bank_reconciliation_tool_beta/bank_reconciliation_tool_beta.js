@@ -83,6 +83,11 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 			});
 		});
 
+		frm.page.add_menu_item(
+			__("Upload a Bank Statement"),
+			() => frm.events.route_to_bank_statement_import(frm),
+		);
+
 		frm.$reconciliation_area = frm.get_field("reconciliation_action_area").$wrapper;
 		frm.events.setup_empty_state(frm);
 
@@ -207,9 +212,9 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 			() => frm.events.route_to_bank_statement_import(frm),
 			"",
 			__("Upload a Bank Statement"),
-			"btn-primary",
+			"btn-secondary",
 			$(empty_area),
-		)
+		);
 	},
 
 	render_summary: function(frm) {
