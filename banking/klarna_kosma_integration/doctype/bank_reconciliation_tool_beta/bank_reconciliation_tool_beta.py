@@ -419,10 +419,6 @@ def check_matching(
 	}
 
 	matching_vouchers = []
-	matching_vouchers.extend(
-		get_loan_vouchers(bank_account, transaction, document_types, filters)
-	)
-
 	for query in subquery:
 		matching_vouchers.extend(
 			frappe.db.sql(
@@ -546,24 +542,17 @@ def get_matching_queries(
 			query = get_pi_matching_query(exact_match, exact_party_match, currency)
 			queries.append(query)
 
+	if "loan_disbursement" in document_types and transaction.withdrawal > 0.0:
+		queries.append(get_ld_matching_query(bank_account, exact_match, transaction))
+
+	if "loan_repayment" in document_types and transaction.deposit > 0.0:
+		queries.append(get_lr_matching_query(bank_account, exact_match, transaction))
+
 	if "bank_transaction" in document_types:
 		query = get_bt_matching_query(exact_match, transaction, exact_party_match)
 		queries.append(query)
 
 	return queries
-
-
-def get_loan_vouchers(bank_account, transaction, document_types, filters):
-	vouchers = []
-	exact_match = "exact_match" in document_types
-
-	if transaction.withdrawal > 0.0 and "loan_disbursement" in document_types:
-		vouchers.extend(get_ld_matching_query(bank_account, exact_match, filters))
-
-	if transaction.deposit > 0.0 and "loan_repayment" in document_types:
-		vouchers.extend(get_lr_matching_query(bank_account, exact_match, filters))
-
-	return vouchers
 
 
 def get_bt_matching_query(exact_match, transaction, exact_party_match):
@@ -626,18 +615,19 @@ def get_bt_matching_query(exact_match, transaction, exact_party_match):
 	return str(query)
 
 
-def get_ld_matching_query(bank_account, exact_match, filters):
+def get_ld_matching_query(bank_account, exact_match, transaction):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
-	matching_reference = loan_disbursement.reference_number == filters.get(
+	matching_reference = loan_disbursement.reference_number == transaction.get(
 		"reference_number"
 	)
-	matching_party = loan_disbursement.applicant_type == filters.get(
+	matching_party = loan_disbursement.applicant_type == transaction.get(
 		"party_type"
-	) and loan_disbursement.applicant == filters.get("party")
+	) and loan_disbursement.applicant == transaction.get("party")
 
-	date_condition = Coalesce(
-		loan_disbursement.reference_date, loan_disbursement.disbursement_date
-	) == Parameter("%(date)s")
+	date_condition = (
+		Coalesce(loan_disbursement.reference_date, loan_disbursement.disbursement_date)
+		== transaction.date
+	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
@@ -666,25 +656,26 @@ def get_ld_matching_query(bank_account, exact_match, filters):
 	)
 
 	if exact_match:
-		query.where(loan_disbursement.disbursed_amount == filters.get("amount"))
+		query.where(loan_disbursement.disbursed_amount == transaction.unallocated_amount)
 	else:
 		query.where(loan_disbursement.disbursed_amount > 0.0)
 
-	vouchers = query.run(as_dict=True)
-
-	return vouchers
+	return query
 
 
-def get_lr_matching_query(bank_account, exact_match, filters):
+def get_lr_matching_query(bank_account, exact_match, transaction):
 	loan_repayment = frappe.qb.DocType("Loan Repayment")
-	matching_reference = loan_repayment.reference_number == filters.get("reference_number")
-	matching_party = loan_repayment.applicant_type == filters.get(
+	matching_reference = loan_repayment.reference_number == transaction.get(
+		"reference_number"
+	)
+	matching_party = loan_repayment.applicant_type == transaction.get(
 		"party_type"
-	) and loan_repayment.applicant == filters.get("party")
+	) and loan_repayment.applicant == transaction.get("party")
 
-	date_condition = Coalesce(
-		loan_repayment.reference_date, loan_repayment.posting_date
-	) == Parameter("%(date)s")
+	date_condition = (
+		Coalesce(loan_repayment.reference_date, loan_repayment.posting_date)
+		== transaction.date
+	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
@@ -716,13 +707,11 @@ def get_lr_matching_query(bank_account, exact_match, filters):
 		query = query.where((loan_repayment.repay_from_salary == 0))
 
 	if exact_match:
-		query.where(loan_repayment.amount_paid == filters.get("amount"))
+		query.where(loan_repayment.amount_paid == transaction.unallocated_amount)
 	else:
 		query.where(loan_repayment.amount_paid > 0.0)
 
-	vouchers = query.run(as_dict=True)
-
-	return vouchers
+	return query
 
 
 def get_pe_matching_query(
