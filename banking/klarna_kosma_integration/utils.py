@@ -215,11 +215,11 @@ def create_bank_transactions(
 	last_sync_date = None
 	try:
 		for transaction in reversed(transactions):
-			new_bank_transaction(account, transaction)
+			transaction_created = new_bank_transaction(account, transaction)
 
-			if via_flow_api:
-				# Don't set last integration date if via Flow API
-				# (one time action with arbitrary time period)
+			if not transaction_created or via_flow_api:
+				# Don't set last integration date if via Flow API (one time action with arbitrary time period)
+				# or if transaction was not inserted
 				continue
 
 			last_sync_date = transaction.get("value_date") or transaction.get("date")
@@ -232,7 +232,7 @@ def create_bank_transactions(
 			frappe.db.set_value("Bank Account", account, "last_integration_date", last_sync_date)
 
 
-def new_bank_transaction(account: str, transaction: Dict) -> None:
+def new_bank_transaction(account: str, transaction: Dict) -> bool:
 	amount_data = transaction.get("amount", {})
 	amount = (
 		amount_data.get("amount", 0) / 100
@@ -249,34 +249,38 @@ def new_bank_transaction(account: str, transaction: Dict) -> None:
 		"FAILED": "Settled",
 	}
 	status = state_map[transaction.get("state")]
-
 	transaction_id = transaction.get("transaction_id")
-	transaction_exists = frappe.db.exists(
-		"Bank Transaction", {"transaction_id": transaction_id}
-	)
 
-	if not transaction_id or not transaction_exists:
-		new_transaction = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"date": getdate(transaction.get("value_date") or transaction.get("date")),
-				"status": status,
-				"bank_account": account,
-				"deposit": credit,
-				"withdrawal": debit,
-				"currency": amount_data.get("currency"),
-				"transaction_id": transaction_id,
-				"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
-				"description": transaction.get("reference"),
-				"bank_party_name": transaction.get("counter_party", {}).get("holder_name"),
-				"bank_party_iban": transaction.get("counter_party", {}).get("iban"),
-				"bank_party_account_number": transaction.get("counter_party", {}).get(
-					"account_number"
-				),
-			}
-		)
-		new_transaction.insert()
-		new_transaction.submit()
+	if not transaction_id and transaction.get("state") == "PENDING":
+		# Dont insert pending transactions. transaction_id is absent only for Pending state
+		# Ref: https://docs.openbanking.klarna.com/xs2a/objects/transaction.html
+		return False
+
+	if frappe.db.exists("Bank Transaction", {"transaction_id": transaction_id}):
+		return False
+
+	new_transaction = frappe.get_doc(
+		{
+			"doctype": "Bank Transaction",
+			"date": getdate(transaction.get("value_date") or transaction.get("date")),
+			"status": status,
+			"bank_account": account,
+			"deposit": credit,
+			"withdrawal": debit,
+			"currency": amount_data.get("currency"),
+			"transaction_id": transaction_id,
+			"reference_number": transaction.get("bank_references", {}).get("end_to_end"),
+			"description": transaction.get("reference"),
+			"bank_party_name": transaction.get("counter_party", {}).get("holder_name"),
+			"bank_party_iban": transaction.get("counter_party", {}).get("iban"),
+			"bank_party_account_number": transaction.get("counter_party", {}).get(
+				"account_number"
+			),
+		}
+	)
+	new_transaction.insert()
+	new_transaction.submit()
+	return True
 
 
 def get_from_to_date(from_date: Optional[str] = None, to_date: Optional[str] = None):
