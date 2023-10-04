@@ -51,18 +51,8 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		frm.disable_save();
 		frm.fields_dict["filters_section"].collapse(false);
 
-		frm.add_custom_button(__("Get Bank Transactions"), function() {
-			if (!frm.doc.bank_account) {
-				frappe.throw(
-					{
-						message: __("Please set the 'Bank Account' filter"),
-						title: __("Filter Required")
-					}
-				);
-			}
-
-			frm.events.add_upload_statement_button(frm);
-			frm.events.build_reconciliation_area(frm);
+		frm.add_custom_button(__("Get Bank Transactions"), () => {
+			frm.events.get_bank_transactions(frm);
 		});
 		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
 
@@ -104,12 +94,17 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		frm.events.build_reconciliation_area(frm);
 	},
 
-	add_upload_statement_button: function(frm) {
-		frm.remove_custom_button(__("Upload a Bank Statement"));
-		frm.add_custom_button(
-			__("Upload a Bank Statement"),
-			() => frm.events.route_to_bank_statement_import(frm),
-		);
+	get_bank_transactions: function(frm) {
+		if (!frm.doc.bank_account) {
+			frappe.throw(
+				{
+					message: __("Please set the 'Bank Account' filter"),
+					title: __("Filter Required")
+				}
+			);
+		}
+
+		frm.events.build_reconciliation_area(frm);
 	},
 
 	route_to_bank_statement_import(frm) {
