@@ -34,8 +34,20 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	edit_in_full_page() {
 		this.create_voucher_bts(true, (message) => {
 			const doc = frappe.model.sync(message);
+			let doctype = doc[0].doctype, docname = doc[0].name;
+
+			// Reconcile and update the view
+			// when the voucher is submitted in another tab
+			frappe.socketio.doc_subscribe(doctype, docname);
+			frappe.realtime.off("doc_update");
+			frappe.realtime.on("doc_update", (data) => {
+				if (data.doctype === doctype && data.name === docname) {
+					this.reconcile_new_voucher(doctype, docname);
+				}
+			});
+
 			frappe.open_in_new_tab = true;
-			frappe.set_route("Form", doc[0].doctype, doc[0].name);
+			frappe.set_route("Form", doctype, docname);
 		});
 	}
 
@@ -88,6 +100,41 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		})
 
 	}
+
+	reconcile_new_voucher(doctype, docname) {
+		// If no response, newly created doc is in draft state
+		// If deleted in response, newly created doc is deleted
+		// If doc object in response, newly created doc is submitted (can be reconciled)
+		var me = this;
+		frappe.call({
+			method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
+			args: {
+				transaction_name: this.transaction.name,
+				amount: this.transaction.unallocated_amount,
+				voucher_type: doctype,
+				voucher_name: docname,
+			},
+			callback: (response) => {
+				if (response.exc) {
+					frappe.show_alert({
+						message: __("Failed to reconcile new {0} against {1}", [doctype, me.transaction.name]),
+						indicator: "red"
+					});
+					return;
+				} else if (response.message && Object.keys(response.message).length > 0) {
+					if (response.message.deleted) {
+						frappe.realtime.off("doc_update");
+						return;
+					}
+
+					me.actions_panel.after_transaction_reconcile(
+						response.message, true, doctype
+					);
+				}
+			}
+		});
+	}
+
 
 	get_create_tab_fields() {
 		let party_type = this.transaction.party_type || (flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
