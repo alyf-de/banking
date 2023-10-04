@@ -21,14 +21,20 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 				},
 			};
 		});
-
 	},
 
 	onload: function (frm) {
-		// Set default filter dates
-		let today = frappe.datetime.get_today();
-		frm.doc.bank_statement_from_date = frappe.datetime.add_months(today, -1);
-		frm.doc.bank_statement_to_date = today;
+		if (!frm.doc.bank_statement_from_date && !frm.doc.bank_statement_to_date) {
+			// Set default filter dates
+			let today = frappe.datetime.get_today();
+			frm.doc.bank_statement_from_date = frappe.datetime.add_months(today, -1);
+			frm.doc.bank_statement_to_date = today;
+		}
+
+		if (!frm.doc.company) {
+			// set default company
+			frm.doc.company = frappe.user_defaults.company;
+		}
 	},
 
 	filter_by_reference_date: function (frm) {
