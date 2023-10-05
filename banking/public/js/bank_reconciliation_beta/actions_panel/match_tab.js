@@ -188,9 +188,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		}
 
 		// Total of selected row amounts in summary_data
+		// Cap total_allocated to unallocated amount
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, b) => a + b, 0
 		);
+		total_allocated = Math.min(total_allocated, this.transaction.unallocated_amount);
 
 		// Deduct allocated amount from transaction's unallocated amount
 		// to show the final effect on reconciling
