@@ -57,7 +57,10 @@ class CustomBankTransaction(BankTransaction):
 	def make_pe_against_invoice(self, payment_doctype, payment_name):
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
 		payment_entry = get_payment_entry(
-			payment_doctype, payment_name, bank_account=bank_account
+			payment_doctype,
+			payment_name,
+			party_amount=self.unallocated_amount,
+			bank_account=bank_account,
 		)
 		payment_entry.reference_no = self.reference_number or payment_name
 		payment_entry.submit()
