@@ -435,12 +435,13 @@ def check_matching(
 	if not matching_vouchers:
 		return []
 
-	for voucher in matching_vouchers:
-		# higher rank if voucher name is in bank transaction
-		reference_no = voucher["reference_no"]
-		if reference_no and (reference_no.strip() in transaction.description):
-			voucher["rank"] += 1
-			voucher["name_in_desc_match"] = 1
+	if transaction.description:
+		for voucher in matching_vouchers:
+			# higher rank if voucher name is in bank transaction
+			reference_no = voucher["reference_no"]
+			if reference_no and (reference_no.strip() in transaction.description):
+				voucher["rank"] += 1
+				voucher["name_in_desc_match"] = 1
 
 	return sorted(matching_vouchers, key=lambda x: x["rank"], reverse=True)
 
