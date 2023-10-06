@@ -906,8 +906,8 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match, currency, compa
 	party_condition = sales_invoice.customer == Parameter("%(party)s")
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	grand_total_condition = sales_invoice.grand_total == Parameter("%(amount)s")
-	amount_match = frappe.qb.terms.Case().when(grand_total_condition, 1).else_(0)
+	outstanding_amount_condition = sales_invoice.outstanding_amount == Parameter("%(amount)s")
+	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	query = (
 		frappe.qb.from_(sales_invoice)
@@ -933,7 +933,7 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match, currency, compa
 	)
 
 	if exact_match:
-		query = query.where(grand_total_condition)
+		query = query.where(outstanding_amount_condition)
 
 	if exact_party_match:
 		query = query.where(party_condition)
@@ -996,8 +996,8 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, compa
 	party_condition = purchase_invoice.supplier == Parameter("%(party)s")
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	grand_total_condition = purchase_invoice.grand_total == Parameter("%(amount)s")
-	amount_match = frappe.qb.terms.Case().when(grand_total_condition, 1).else_(0)
+	outstanding_amount_condition = purchase_invoice.outstanding_amount == Parameter("%(amount)s")
+	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	query = (
 		frappe.qb.from_(purchase_invoice)
@@ -1023,7 +1023,7 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, compa
 	)
 
 	if exact_match:
-		query = query.where(grand_total_condition)
+		query = query.where(outstanding_amount_condition)
 	if exact_party_match:
 		query = query.where(party_condition)
 
