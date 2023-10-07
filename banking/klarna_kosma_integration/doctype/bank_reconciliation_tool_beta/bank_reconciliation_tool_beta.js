@@ -11,16 +11,6 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 				},
 			};
 		});
-
-		frm.set_query("party_type", function () {
-			return {
-				filters: {
-					name: [
-						"in", Object.keys(frappe.boot.party_account_types),
-					],
-				},
-			};
-		});
 	},
 
 	onload: function (frm) {
