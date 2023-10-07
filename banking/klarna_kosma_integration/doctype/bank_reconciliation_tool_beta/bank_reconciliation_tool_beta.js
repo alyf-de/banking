@@ -201,23 +201,13 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 
 	setup_empty_state: function(frm) {
 		frm.$reconciliation_area.empty();
-		let empty_area = frm.$reconciliation_area.append(`
+		frm.$reconciliation_area.append(`
 			<div class="bank-reco-beta-empty-state">
 				<p>
-					${__("Set Filters and Get Bank Transactions")}
+					${__("Please select a Bank Account to start reconciling.")}
 				</p>
-				<p>${__("Or")}</p>
 			</div>
-		`).find(".bank-reco-beta-empty-state");
-
-		frappe.utils.add_custom_button(
-			__("Upload a Bank Statement"),
-			() => frm.events.route_to_bank_statement_import(frm),
-			"",
-			__("Upload a Bank Statement"),
-			"btn-secondary",
-			$(empty_area),
-		);
+		`);
 	},
 
 	render_summary: function(frm) {
