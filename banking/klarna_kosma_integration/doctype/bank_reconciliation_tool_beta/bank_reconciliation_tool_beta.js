@@ -41,7 +41,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		frm.disable_save();
 		frm.fields_dict["filters_section"].collapse(false);
 
-		frm.add_custom_button(__("Get Bank Transactions"), () => {
+		frm.page.add_action_icon("refresh", () => {
 			frm.events.get_bank_transactions(frm);
 		});
 		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
