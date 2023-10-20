@@ -26,10 +26,11 @@ class CustomBankTransaction(BankTransaction):
 
 			if not found:
 				payment_doctype, payment_name = voucher["payment_doctype"], voucher["payment_name"]
+				outstanding_amount = self.get_outstanding_amount(payment_doctype, payment_name)
 
-				if self.is_unpaid_invoice(payment_doctype, payment_name):
+				if outstanding_amount > 0:
 					# Make Payment Entry against the unpaid invoice, link PE to Bank Transaction
-					payment_name = self.make_pe_against_invoice(payment_doctype, payment_name)
+					payment_name = self.make_pe_against_invoice(payment_doctype, payment_name, outstanding_amount)
 					payment_doctype = "Payment Entry"  # Change doctype to PE
 
 				pe = {
@@ -44,22 +45,19 @@ class CustomBankTransaction(BankTransaction):
 		if added:
 			self.save()
 
-	def is_unpaid_invoice(self, payment_doctype, payment_name):
-		is_invoice = payment_doctype in ("Sales Invoice", "Purchase Invoice")
-		if not is_invoice:
-			return False
+	def get_outstanding_amount(self, payment_doctype, payment_name):
+		if payment_doctype not in ("Sales Invoice", "Purchase Invoice"):
+			return 0
 
 		# Check if the invoice is unpaid
-		return (
-			flt(frappe.db.get_value(payment_doctype, payment_name, "outstanding_amount")) > 0
-		)
+		return flt(frappe.db.get_value(payment_doctype, payment_name, "outstanding_amount"))
 
-	def make_pe_against_invoice(self, payment_doctype, payment_name):
+	def make_pe_against_invoice(self, payment_doctype, payment_name, outstanding_amount):
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
 		payment_entry = get_payment_entry(
 			payment_doctype,
 			payment_name,
-			party_amount=self.unallocated_amount,
+			party_amount=min(self.unallocated_amount, outstanding_amount),
 			bank_account=bank_account,
 		)
 		payment_entry.reference_no = self.reference_number or payment_name
