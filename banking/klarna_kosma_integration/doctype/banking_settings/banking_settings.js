@@ -189,7 +189,7 @@ frappe.ui.form.on('Banking Settings', {
 						${subscription.subscription_status}</p>
 					<p>
 						<b>${ __("Transaction Limit") }</b>:
-						${subscription.transaction_limit}</p>
+						${subscription.usage} (${__("Usage")}) / ${subscription.transaction_limit} (${__("Limit")})</p>
 					<p>
 						<b>${ __("Valid Till") }</b>:
 						${frappe.format(subscription.plan_end_date, {"fieldtype": "Date"})}
