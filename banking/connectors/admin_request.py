@@ -145,12 +145,11 @@ class AdminRequest():
 
 	def fetch_subscription(self):
 		method = "banking_admin.api.fetch_subscription_details"
-		result =  requests.post(
+		return requests.post(
 			url=self.url + method,
 			headers=self.headers,
 			data=json.dumps(self.data)
 		)
-		return result
 
 	def get_customer_portal(self):
 		method = "banking_admin.api.get_customer_portal"
