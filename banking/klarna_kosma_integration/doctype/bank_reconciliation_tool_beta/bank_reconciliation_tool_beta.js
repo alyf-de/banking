@@ -139,7 +139,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 						(r) => {
 							frm.doc.account_currency = r.account_currency;
 							frm.trigger("get_account_opening_balance");
-							rm.trigger("get_account_closing_balance");
+							frm.trigger("get_account_closing_balance");
 							frm.trigger("render_summary");
 						}
 					);
