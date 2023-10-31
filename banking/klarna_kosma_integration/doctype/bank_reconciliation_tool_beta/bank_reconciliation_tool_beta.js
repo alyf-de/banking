@@ -3,10 +3,10 @@
 
 frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 	setup: function (frm) {
-		frm.set_query("bank_account", function () {
+		frm.set_query("bank_account", function (doc) {
 			return {
 				filters: {
-					company: frm.doc.company,
+					company: doc.company,
 					'is_company_account': 1
 				},
 			};
@@ -41,37 +41,42 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		frm.disable_save();
 		frm.fields_dict["filters_section"].collapse(false);
 
-		frm.add_custom_button(__("Get Bank Transactions"), function() {
-			if (!frm.doc.bank_account) {
-				frappe.throw(
-					{
-						message: __("Please set the 'Bank Account' filter"),
-						title: __("Filter Required")
-					}
-				);
-			}
-
-			frm.events.add_upload_statement_button(frm);
-			frm.events.build_reconciliation_area(frm);
+		frm.page.add_action_icon("refresh", () => {
+			frm.events.get_bank_transactions(frm);
 		});
 		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
 
-		frm.add_custom_button(__("Auto Reconcile"), function() {
-			frappe.call({
-				method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
-				args: {
-					bank_account: frm.doc.bank_account,
-					from_date: frm.doc.bank_statement_from_date,
-					to_date: frm.doc.bank_statement_to_date,
-					filter_by_reference_date: frm.doc.filter_by_reference_date,
-					from_reference_date: frm.doc.from_reference_date,
-					to_reference_date: frm.doc.to_reference_date,
-				},
-				callback: function(r) {
-					if (!r.exc) frm.refresh();
+		frm.page.add_menu_item(__("Auto Reconcile"), function () {
+			frappe.confirm(
+				__(
+					"Auto reconcile bank transactions based on matching reference numbers?"
+				),
+				() => {
+					frappe.call({
+						method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
+						args: {
+							bank_account: frm.doc.bank_account,
+							from_date: frm.doc.bank_statement_from_date,
+							to_date: frm.doc.bank_statement_to_date,
+							filter_by_reference_date:
+								frm.doc.filter_by_reference_date,
+							from_reference_date: frm.doc.from_reference_date,
+							to_reference_date: frm.doc.to_reference_date,
+						},
+						callback: (r) => {
+							if (!r.exc) {
+								frm.refresh();
+							}
+						},
+					});
 				}
-			});
+			);
 		});
+
+		frm.page.add_menu_item(
+			__("Upload a Bank Statement"),
+			() => frm.events.route_to_bank_statement_import(frm),
+		);
 
 		frm.$reconciliation_area = frm.get_field("reconciliation_action_area").$wrapper;
 		frm.events.setup_empty_state(frm);
@@ -79,12 +84,17 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		frm.events.build_reconciliation_area(frm);
 	},
 
-	add_upload_statement_button: function(frm) {
-		frm.remove_custom_button(__("Upload a Bank Statement"));
-		frm.add_custom_button(
-			__("Upload a Bank Statement"),
-			() => frm.events.route_to_bank_statement_import(frm),
-		);
+	get_bank_transactions: function(frm) {
+		if (!frm.doc.bank_account) {
+			frappe.throw(
+				{
+					message: __("Please set the 'Bank Account' filter"),
+					title: __("Filter Required")
+				}
+			);
+		}
+
+		frm.events.build_reconciliation_area(frm);
 	},
 
 	route_to_bank_statement_import(frm) {
@@ -116,33 +126,41 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 	},
 
 	bank_account: function (frm) {
-		frappe.db.get_value(
-			"Bank Account",
-			frm.doc.bank_account,
-			"account",
-			(r) => {
-				frappe.db.get_value(
-					"Account",
-					r.account,
-					"account_currency",
-					(r) => {
-						frm.doc.account_currency = r.account_currency;
-						frm.trigger("bank_statement_from_date");
-						frm.trigger("bank_statement_to_date");
-					}
-				);
-			}
-		);
+		if (frm.doc.bank_account) {
+			frappe.db.get_value(
+				"Bank Account",
+				frm.doc.bank_account,
+				"account",
+				(r) => {
+					frappe.db.get_value(
+						"Account",
+						r.account,
+						"account_currency",
+						(r) => {
+							frm.doc.account_currency = r.account_currency;
+							frm.trigger("get_account_opening_balance");
+							frm.trigger("get_account_closing_balance");
+							frm.trigger("render_summary");
+						}
+					);
+				}
+			);
 
+			frm.events.get_bank_transactions(frm);
+		} else {
+			frm.events.setup_empty_state(frm);
+		}
 	},
 
 	bank_statement_from_date: function (frm) {
 		frm.trigger("get_account_opening_balance");
+		frm.trigger("get_bank_transactions");
 	},
 
 	bank_statement_to_date: function (frm) {
 		frm.trigger("get_account_closing_balance");
 		frm.trigger("render_summary");
+		frm.trigger("get_bank_transactions");
 	},
 
 	bank_statement_closing_balance: function (frm) {
@@ -183,23 +201,13 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 
 	setup_empty_state: function(frm) {
 		frm.$reconciliation_area.empty();
-		let empty_area = frm.$reconciliation_area.append(`
+		frm.$reconciliation_area.append(`
 			<div class="bank-reco-beta-empty-state">
 				<p>
-					${__("Set Filters and Get Bank Transactions")}
+					${__("Please select a Bank Account to start reconciling.")}
 				</p>
-				<p>${__("Or")}</p>
 			</div>
-		`).find(".bank-reco-beta-empty-state");
-
-		frappe.utils.add_custom_button(
-			__("Upload a Bank Statement"),
-			() => frm.events.route_to_bank_statement_import(frm),
-			"",
-			__("Upload a Bank Statement"),
-			"btn-primary",
-			$(empty_area),
-		)
+		`);
 	},
 
 	render_summary: function(frm) {
