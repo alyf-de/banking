@@ -197,8 +197,23 @@ frappe.ui.form.on('Banking Settings', {
 						<b>${ __("Last Renewed On") }</b>:
 						${frappe.format(subscription.last_paid_on, {"fieldtype": "Date"})}
 					</p>
+					<p>
+						<a
+							href="${subscription.billing_portal}"
+							target="_blank"
+							class="${subscription.billing_portal ? "" : "hidden"}"
+						>
+							<b>${__("Open Billing Portal")}</b> 
+							${frappe.utils.icon("link-url", "sm")}
+						</a>
+					</p>
 				</div>
 			`);
+
+			if (subscription.billing_portal) {
+				frm.remove_custom_button(__("Open Billing Portal"));
+			}
+
 			frm.refresh_field("subscription");
 		}
 	}
