@@ -20,7 +20,7 @@ frappe.ui.form.on('Banking Settings', {
 				frm.trigger("get_subscription");
 			}
 
-			frm.add_custom_button(__("Handle Subscription"), async () => {
+			frm.add_custom_button(__("Open Billing Portal"), async () => {
 				const url = await frm.call({
 					method: "get_customer_portal_url",
 					freeze: true,
@@ -29,7 +29,7 @@ frappe.ui.form.on('Banking Settings', {
 				if (url.message) {
 					window.open(url.message, "_blank");
 				}
-			}, __("Actions"));
+			});
 		} else {
 			frm.page.add_inner_button(
 				__("Signup for Banking"),
