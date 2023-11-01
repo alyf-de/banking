@@ -16,9 +16,9 @@ frappe.ui.form.on('Banking Settings', {
 				frm.events.sync_transactions(frm, true);
 			}, __("Sync"));
 
-			frm.add_custom_button(__("View Subscription"), () => {
-				frm.events.get_subscription(frm);
-			}, __("Actions"));
+			if (frm.doc.customer_id && frm.doc.admin_endpoint && frm.doc.api_token) {
+				frm.trigger("get_subscription");
+			}
 
 			frm.add_custom_button(__("Handle Subscription"), async () => {
 				const url = await frm.call({
@@ -162,8 +162,6 @@ frappe.ui.form.on('Banking Settings', {
 	get_subscription: async (frm) => {
 		const data = await frm.call({
 			method: "fetch_subscription_data",
-			freeze: true,
-			freeze_message: __("Please wait. Fetching Subscription Details ...")
 		});
 
 		if (data.message) {
