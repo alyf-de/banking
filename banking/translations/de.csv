@@ -40,5 +40,6 @@ Please wait. Fetching Bank Acounts ...,Bitte warten. Bankkonten werden abgerufen
 Failed to fetch Bank Accounts.,Bankkonten konnten nicht abgerufen werden.,
 Please wait. Syncing Bank Transactions ...,Bitte warten. Banktransaktionen werden synchronisiert ...,
 Redirecting to Customer Portal ...,Weiterleitung zum Kundenportal ...,
-Requires Bank Authentication,Erfordert Bankauthentifizierung,
+Requires Bank Authentication.,Erfordert Bankauthentifizierung.,
 Please select a Bank Account to start reconciling.,"Bitte wählen Sie ein Bankkonto aus, um mit dem Abgleich zu beginnen.",
+Fetching older transactions will count against your limit in the current billing period.,Das Abrufen älterer Transaktionen zählt gegen Ihr Limit im aktuellen Abrechnungszeitraum.,

@@ -58,6 +58,13 @@ frappe.ui.form.on('Banking Settings', {
 				description: __("Access and Sync bank records from this date."),
 				default: frappe.datetime.month_start(),
 				reqd: 1
+			},
+			{
+				fieldtype: "HTML",
+				fieldname: "info",
+				options: get_info_html(
+					__("Fetching older transactions will count against your limit in the current billing period.")
+				)
 			}
 		];
 
@@ -142,18 +149,11 @@ frappe.ui.form.on('Banking Settings', {
 
 		if (is_older) {
 			dialog.get_field("info").$wrapper.html(
-				`<div
-					class="form-message blue"
-					style="
-						padding: var(--padding-sm) var(--padding-sm);
-						background-color: var(--alert-bg-info);
-					"
-				>
-					<span>${frappe.utils.icon("solid-info", "md")}</span>
-					<span class="small" style="padding-left: 5px">
-						${ __("Requires Bank Authentication") }
-					</span>
-				</div>`
+				get_info_html(
+					__("Requires Bank Authentication.") +
+					" " +
+					__("Fetching older transactions will count against your limit in the current billing period.")
+				)
 			);
 		}
 		dialog.show();
@@ -384,4 +384,20 @@ class KlarnaKosmaConnect {
 			console.log(e);
 		}
 	}
+}
+
+
+function get_info_html(message) {
+	return `<div
+		class="form-message blue"
+		style="
+			padding: var(--padding-sm) var(--padding-sm);
+			background-color: var(--alert-bg-info);
+		"
+	>
+		<span>${frappe.utils.icon("solid-info", "md")}</span>
+		<span class="small" style="padding-left: var(--padding-xs)">
+			${ message }
+		</span>
+	</div>`;
 }

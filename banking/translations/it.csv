@@ -40,5 +40,6 @@ Please wait. Fetching Bank Acounts ...,Attendere. Recupero dei conti bancari in 
 Failed to fetch Bank Accounts.,Impossibile recuperare i conti bancari.,
 Please wait. Syncing Bank Transactions ...,Attendere. Sincronizzazione delle transazioni bancarie in corso ...,
 Redirecting to Customer Portal ...,Reindirizzamento al portale del cliente ...,
-Requires Bank Authentication,È richiesta l'autenticazione bancaria,
+Requires Bank Authentication.,È richiesta l'autenticazione bancaria.,
 Please select a Bank Account to start reconciling.,Selezionare un conto bancario per iniziare la conciliazione.,
+Fetching older transactions will count against your limit in the current billing period.,Il recupero di transazioni più vecchie verrà conteggiato nel limite del periodo di fatturazione corrente.,
