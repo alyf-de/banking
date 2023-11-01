@@ -53,10 +53,11 @@ frappe.ui.form.on('Banking Settings', {
 			},
 			{
 				fieldtype: "Date",
-				label: __("Start Date (Optional)"),
+				label: __("Start Date"),
 				fieldname: "start_date",
 				description: __("Access and Sync bank records from this date."),
-				default: frappe.datetime.month_start()
+				default: frappe.datetime.month_start(),
+				reqd: 1
 			}
 		];
 
