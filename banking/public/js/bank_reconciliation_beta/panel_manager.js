@@ -54,17 +54,17 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		// Init actions panel states to store for persistent views
 		this.actions_tab = "match_voucher-tab";
 		this.actions_filters = {
-			payment_entry: 1,
-			journal_entry: 1,
-			purchase_invoice: 0,
-			sales_invoice: 0,
+			payment_entry: 0,
+			journal_entry: 0,
+			purchase_invoice: 1,
+			sales_invoice: 1,
 			loan_repayment: 0,
 			loan_disbursement: 0,
 			expense_claim: 0,
 			bank_transaction: 0,
 			exact_match: 0,
 			exact_party_match: 0,
-			unpaid_invoices: 0
+			unpaid_invoices: 1
 		}
 	}
 
