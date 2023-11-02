@@ -121,7 +121,7 @@ def sync_all_accounts_and_transactions():
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
 
-			update_account(account, bank_account_name) # update account kosma id
+			update_account(account, bank_account_name)  # update account kosma id
 
 			# list of legitimate bank account names
 			accounts_list.append(bank_account_name)
@@ -144,3 +144,28 @@ def get_customer_portal_url() -> str:
 	Returns the customer portal URL.
 	"""
 	return Admin().get_customer_portal_url()
+
+
+@frappe.whitelist()
+def get_app_health() -> Dict:
+	"""
+	Returns the app health.
+	"""
+	from frappe.utils.change_log import check_release_on_github
+	from frappe.utils.scheduler import is_scheduler_inactive
+
+	messages = {}
+	current_app_version = frappe.get_attr("banking.__version__")
+
+	latest_app_version = str(check_release_on_github("banking")[0])
+	if latest_app_version != current_app_version:
+		messages["info"] = _(
+			"A new version of the app is available ({0}). Please update your instance."
+		).format(latest_app_version)
+
+	if is_scheduler_inactive():
+		messages["warning"] = _(
+			"The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
+		)
+
+	return messages or None

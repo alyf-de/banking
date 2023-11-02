@@ -4,6 +4,8 @@
 frappe.ui.form.on('Banking Settings', {
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
+			frm.trigger("get_app_health");
+
 			frm.add_custom_button(__('Link Bank and Accounts'), () => {
 				frm.events.refresh_banks(frm);
 			});
@@ -203,7 +205,7 @@ frappe.ui.form.on('Banking Settings', {
 							target="_blank"
 							class="${subscription.billing_portal ? "" : "hidden"}"
 						>
-							<b>${__("Open Billing Portal")}</b> 
+							<b>${__("Open Billing Portal")}</b>
 							${frappe.utils.icon("link-url", "sm")}
 						</a>
 					</p>
@@ -216,7 +218,28 @@ frappe.ui.form.on('Banking Settings', {
 
 			frm.refresh_field("subscription");
 		}
-	}
+	},
+
+	get_app_health: async (frm) => {
+		const data = await frm.call({
+			method: "get_app_health",
+		});
+
+		let messages = data.message;
+		if (messages) {
+			if(messages["info"]) {
+				frm.set_intro(messages["info"], "blue");
+			}
+
+			if (messages["warning"]) {
+				$(frm.$wrapper.find(".form-layout")[0]).prepend(`
+					<div class='form-message yellow'>
+						${messages["warning"]}
+					</div>
+				`);
+			}
+		}
+	},
 });
 
 class KlarnaKosmaConnect {
