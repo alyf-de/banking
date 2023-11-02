@@ -11,7 +11,7 @@ from frappe.query_builder.functions import Coalesce
 from frappe.utils import cint, flt
 from pypika.terms import Parameter
 
-from erpnext import get_default_cost_center
+from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	BankTransaction,
 	get_total_allocated_amount,
@@ -544,6 +544,17 @@ def get_matching_queries(
 			query = get_pi_matching_query(exact_match, exact_party_match, currency)
 			queries.append(query)
 
+	if (
+		transaction.withdrawal > 0.0 and
+		"expense_claim" in document_types and
+		"unpaid_invoices" in document_types
+	):
+		query = get_unpaid_ec_matching_query(
+			exact_match, exact_party_match, currency, company
+		)
+		if query:
+			queries.append(query)
+
 	if "loan_disbursement" in document_types and transaction.withdrawal > 0.0:
 		queries.append(get_ld_matching_query(bank_account, exact_match, transaction))
 
@@ -1021,6 +1032,55 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, compa
 		.where(purchase_invoice.is_return == 0)
 		.where(purchase_invoice.outstanding_amount > 0.0)
 		.where(purchase_invoice.currency == currency)
+	)
+
+	if exact_match:
+		query = query.where(outstanding_amount_condition)
+	if exact_party_match:
+		query = query.where(party_condition)
+
+	return str(query)
+
+
+def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, company):
+	if currency != get_company_currency(company):
+		# Expense claims are always in company currency
+		return ""
+
+	expense_claim = frappe.qb.DocType("Expense Claim")
+
+	party_condition = expense_claim.employee == Parameter("%(party)s")
+	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
+
+	outstanding_amount = (
+		expense_claim.total_sanctioned_amount +
+		expense_claim.total_taxes_and_charges -
+		expense_claim.total_amount_reimbursed -
+		expense_claim.total_advance_amount
+	)
+	outstanding_amount_condition = outstanding_amount == Parameter("%(amount)s")
+	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
+
+	query = (
+		frappe.qb.from_(expense_claim)
+		.select(
+			(party_match + amount_match + 1).as_("rank"),
+			ConstantColumn("Expense Claim").as_("doctype"),
+			expense_claim.name.as_("name"),
+			outstanding_amount.as_("paid_amount"),
+			expense_claim.name.as_("reference_no"),
+			expense_claim.posting_date.as_("reference_date"),
+			expense_claim.employee.as_("party"),
+			ConstantColumn("Employee").as_("party_type"),
+			expense_claim.posting_date,
+			ConstantColumn(currency).as_("currency"),
+			party_match.as_("party_match"),
+			amount_match.as_("amount_match"),
+		)
+		.where(expense_claim.docstatus == 1)
+		.where(expense_claim.company == company)
+		.where(outstanding_amount > 0.0)
+		.where(expense_claim.status == "Unpaid")
 	)
 
 	if exact_match:

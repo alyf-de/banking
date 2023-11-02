@@ -386,14 +386,14 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldtype: "Column Break"
 			},
 			{
-				label: __("Unpaid Invoices"),
+				label: __("Unpaid Vouchers"),
 				fieldname: "unpaid_invoices",
 				fieldtype: "Check",
 				default: filters_state.unpaid_invoices,
 				onchange: () => {
 					this.populate_matching_vouchers();
 				},
-				depends_on: "eval: doc.sales_invoice || doc.purchase_invoice",
+				depends_on: "eval: doc.sales_invoice || doc.purchase_invoice || doc.expense_claim",
 			},
 			{
 				fieldtype: "Column Break"

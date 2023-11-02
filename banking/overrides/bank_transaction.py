@@ -26,11 +26,11 @@ class CustomBankTransaction(BankTransaction):
 
 			if not found:
 				payment_doctype, payment_name = voucher["payment_doctype"], voucher["payment_name"]
-				outstanding_amount = self.get_outstanding_amount(payment_doctype, payment_name)
+				outstanding_amount = get_outstanding_amount(payment_doctype, payment_name)
 
 				if outstanding_amount > 0:
 					# Make Payment Entry against the unpaid invoice, link PE to Bank Transaction
-					payment_name = self.make_pe_against_invoice(payment_doctype, payment_name, outstanding_amount)
+					payment_name = self.make_payment_entry(payment_doctype, payment_name, outstanding_amount)
 					payment_doctype = "Payment Entry"  # Change doctype to PE
 
 				pe = {
@@ -45,21 +45,40 @@ class CustomBankTransaction(BankTransaction):
 		if added:
 			self.save()
 
-	def get_outstanding_amount(self, payment_doctype, payment_name):
-		if payment_doctype not in ("Sales Invoice", "Purchase Invoice"):
-			return 0
-
-		# Check if the invoice is unpaid
-		return flt(frappe.db.get_value(payment_doctype, payment_name, "outstanding_amount"))
-
-	def make_pe_against_invoice(self, payment_doctype, payment_name, outstanding_amount):
+	def make_payment_entry(self, payment_doctype, payment_name, outstanding_amount):
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		payment_entry = get_payment_entry(
-			payment_doctype,
-			payment_name,
-			party_amount=min(self.unallocated_amount, outstanding_amount),
-			bank_account=bank_account,
-		)
+		party_amount = min(self.unallocated_amount, outstanding_amount)
+		if payment_doctype == "Expense Claim":
+			from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee
+
+			payment_entry = get_payment_entry_for_employee(
+				payment_doctype,
+				payment_name,
+				party_amount=party_amount,
+				bank_account=bank_account,
+			)
+		else:
+			payment_entry = get_payment_entry(
+				payment_doctype,
+				payment_name,
+				party_amount=party_amount,
+				bank_account=bank_account,
+			)
+
 		payment_entry.reference_no = self.reference_number or payment_name
+		payment_entry.reference_date = self.date
 		payment_entry.submit()
+
 		return payment_entry.name
+
+
+def get_outstanding_amount(payment_doctype, payment_name):
+	if payment_doctype not in ("Sales Invoice", "Purchase Invoice", "Expense Claim"):
+		return 0
+
+	if payment_doctype == "Expense Claim":
+		ec = frappe.get_doc(payment_doctype, payment_name)
+		return flt(ec.total_sanctioned_amount - ec.total_amount_reimbursed, ec.precision("total_sanctioned_amount"))
+
+	invoice = frappe.get_doc(payment_doctype, payment_name)
+	return flt(invoice.outstanding_amount, invoice.precision("outstanding_amount"))
