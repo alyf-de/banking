@@ -368,3 +368,17 @@ def set_session_state(session_id_short: str, result: str = None):
 			"status": result.get("session_state", "Running"),
 		},
 	)
+
+
+def get_country_code(company: Optional[str] = None):
+	"""
+	Get Country Code from Company or Bank Account.
+	"""
+	if not company:
+		return None
+
+	country = frappe.db.get_value("Company", company, "country")
+	if country == "Malta":
+		return "ML"
+
+	return frappe.db.get_value("Country", country, "code").upper()
