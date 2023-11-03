@@ -82,12 +82,12 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			}
 			return [
 				this.help_button(row.name),
-				row.doctype,
 				row.reference_date || row.posting_date, // Reference Date
 				format_currency(row.paid_amount, row.currency),
 				row.reference_no || '',
 				row.party || '',
-				row.name
+				row.name,
+				row.doctype,
 			];
 		});
 
@@ -440,12 +440,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				name: __("Reason"),
 				editable: false,
-				width: 50,
-			},
-			{
-				name: __("Document Type"),
-				editable: false,
-				width: 100,
+				width: 80,
 			},
 			{
 				name: __("Reference Date"),
@@ -463,7 +458,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				name: __("Reference Number"),
 				editable: false,
-				width: 200,
+				width: 115,
 			},
 			{
 				name: __("Party"),
@@ -473,10 +468,15 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				name: __("Document Name"),
 				editable: false,
-				width: 100,
+				width: 150,
 				format: (value, row, column, data) => {
-					return frappe.format(value, {fieldtype: "Link", options: data[1]});
+					return frappe.format(value, {fieldtype: "Link", options: data[6]});
 				},
+			},
+			{
+				name: __("Document Type"),
+				editable: false,
+				width: 50,
 			},
 		];
 	}
