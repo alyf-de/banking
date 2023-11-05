@@ -483,6 +483,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	get_amount_from_row(row) {
 		let value = row[5].content;
-		return flt(value.split(" ") ? value.split(" ")[1] : 0);
+		return flt(value.split(" ") ? value.split(" ").slice(1).join("") : 0);
 	}
 }
