@@ -96,6 +96,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			dynamicRowHeight: true,
 			checkboxColumn: true,
 			inlineFilters: true,
+			layout: "fluid",
 		};
 
 
@@ -439,12 +440,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				name: __("Reason"),
 				editable: false,
-				width: 80,
 			},
 			{
-				name: __("Reference Date"),
+				name: __("Date"),
 				editable: false,
-				width: 120,
 				format: (value) => {
 					return frappe.format(value, {fieldtype: "Date"});
 				},
@@ -452,28 +451,24 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				name: __("Remaining"),
 				editable: false,
-				width: 100,
 				format: (value, row, column, data) => {
 					return format_currency(row[4].amount, row[4].currency)
 				},
 			},
 			{
-				name: __("Reference Number"),
+				name: __("Reference"),
 				editable: false,
-				width: 115,
 			},
 			{
 				name: __("Party"),
 				editable: false,
-				width: 100,
 				format: (value, row, column, data) => {
 					return frappe.format(row[6].party, {fieldtype: "Link", options: row[6].party_type});
 				},
 			},
 			{
-				name: __("Document Name"),
+				name: __("Voucher"),
 				editable: false,
-				width: 150,
 				format: (value, row, column, data) => {
 					return frappe.format(row[7].docname, {fieldtype: "Link", options: row[7].doctype});
 				},
