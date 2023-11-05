@@ -84,7 +84,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				this.help_button(row.name),
 				row.doctype,
 				row.reference_date || row.posting_date, // Reference Date
-				format_currency(row.paid_amount, row.currency),
+				{amount: row.paid_amount, currency: row.currency},
 				row.reference_no || '',
 				row.party || '',
 				row.name
@@ -459,6 +459,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				name: __("Remaining"),
 				editable: false,
 				width: 100,
+				format: (value, row, column, data) => {
+					return format_currency(row[5].amount, row[5].currency)
+				},
 			},
 			{
 				name: __("Reference Number"),
@@ -482,7 +485,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	}
 
 	get_amount_from_row(row) {
-		let value = row[5].content;
-		return flt(value.split(" ") ? value.split(" ")[1] : 0);
+		return row[5].amount;
 	}
 }
