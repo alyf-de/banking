@@ -86,8 +86,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				{amount: row.paid_amount, currency: row.currency},
 				row.reference_no || '',
 				row.party || '',
-				row.name,
-				row.doctype,
+				{docname: row.name, doctype: row.doctype},
 			];
 		});
 
@@ -235,8 +234,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			if (value === 1) {
 				let row = voucher_rows[idx];
 				selected_vouchers.push({
-					payment_doctype: row[3].content,
-					payment_name: row[8].content,
+					payment_doctype: row[7].doctype,
+					payment_name: row[7].docname,
 					amount: this.get_amount_from_row(row),
 				});
 			}
@@ -473,13 +472,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				editable: false,
 				width: 150,
 				format: (value, row, column, data) => {
-					return frappe.format(value, {fieldtype: "Link", options: data[6]});
+					return frappe.format(row[7].docname, {fieldtype: "Link", options: row[7].doctype});
 				},
-			},
-			{
-				name: __("Document Type"),
-				editable: false,
-				width: 50,
 			},
 		];
 	}
