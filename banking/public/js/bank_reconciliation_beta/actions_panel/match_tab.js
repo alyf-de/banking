@@ -85,7 +85,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				row.reference_date || row.posting_date, // Reference Date
 				{amount: row.paid_amount, currency: row.currency},
 				row.reference_no || '',
-				row.party || '',
+				{party: row.party, party_type: row.party_type},
 				{docname: row.name, doctype: row.doctype},
 			];
 		});
@@ -466,6 +466,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				name: __("Party"),
 				editable: false,
 				width: 100,
+				format: (value, row, column, data) => {
+					return frappe.format(row[6].party, {fieldtype: "Link", options: row[6].party_type});
+				},
 			},
 			{
 				name: __("Document Name"),
