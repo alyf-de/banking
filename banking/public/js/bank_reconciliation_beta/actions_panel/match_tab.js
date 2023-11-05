@@ -97,6 +97,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			checkboxColumn: true,
 			inlineFilters: true,
 			layout: "fluid",
+			serialNoColumn: false,
 		};
 
 
@@ -177,7 +178,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	check_data_table_row(row) {
 		if (!row) return;
 
-		let id = row[1].content;
+		let id = row[6].docname;
 		let value = this.get_amount_from_row(row);
 
 		// If `id` in summary_data, remove it (row was unchecked), else add it
@@ -235,8 +236,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			if (value === 1) {
 				let row = voucher_rows[idx];
 				selected_vouchers.push({
-					payment_doctype: row[7].doctype,
-					payment_name: row[7].docname,
+					payment_doctype: row[6].doctype,
+					payment_name: row[6].docname,
 					amount: this.get_amount_from_row(row),
 				});
 			}
@@ -452,7 +453,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				name: __("Remaining"),
 				editable: false,
 				format: (value, row, column, data) => {
-					return format_currency(row[4].amount, row[4].currency)
+					return format_currency(row[3].amount, row[3].currency)
 				},
 			},
 			{
@@ -463,20 +464,20 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				name: __("Party"),
 				editable: false,
 				format: (value, row, column, data) => {
-					return frappe.format(row[6].party, {fieldtype: "Link", options: row[6].party_type});
+					return frappe.format(row[5].party, {fieldtype: "Link", options: row[5].party_type});
 				},
 			},
 			{
 				name: __("Voucher"),
 				editable: false,
 				format: (value, row, column, data) => {
-					return frappe.format(row[7].docname, {fieldtype: "Link", options: row[7].doctype});
+					return frappe.format(row[6].docname, {fieldtype: "Link", options: row[6].doctype});
 				},
 			},
 		];
 	}
 
 	get_amount_from_row(row) {
-		return row[4].amount;
+		return row[3].amount;
 	}
 }
