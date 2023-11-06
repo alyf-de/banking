@@ -20,6 +20,38 @@ from frappe.utils import (
 if TYPE_CHECKING:
 	from frappe.model.document import Document
 
+# Ref: https://docs.openbanking.klarna.com/countries.html
+# Some countries are modified to match the country names in ERPNext (eg. GB -> UK)
+SUPPORTED_COUNTRIES = [
+	"Austria",
+	"Belgium",
+	"Switzerland",
+	"Czech Republic",
+	"Germany",
+	"Denmark",
+	"Estonia",
+	"Spain",
+	"Finland",
+	"France",
+	"United Kingdom",
+	"Croatia",
+	"Hungary",
+	"Ireland",
+	"Italy",
+	"Lithuania",
+	"Luxembourg",
+	"Latvia",
+	"Malta",
+	"Mexico",
+	"Netherlands",
+	"Norway",
+	"Portugal",
+	"Poland",
+	"Sweden",
+	"Slovakia",
+	"United States",
+]
+
 
 def needs_consent(bank: str, company: str) -> bool:
 	"""Returns False if there is atleast 1 hour before consent expires."""
@@ -368,3 +400,21 @@ def set_session_state(session_id_short: str, result: str = None):
 			"status": result.get("session_state", "Running"),
 		},
 	)
+
+
+def get_country_code(company: Optional[str] = None):
+	"""
+	Get Country Code from Company or Bank Account.
+	"""
+	if not company:
+		return None
+
+	country = frappe.db.get_value("Company", company, "country")
+
+	if country not in SUPPORTED_COUNTRIES:
+		return None
+
+	if country == "Malta":
+		return "ML"  # Kosma uses ML for Malta, ERPNext uses MT
+
+	return frappe.db.get_value("Country", country, "code").upper()
