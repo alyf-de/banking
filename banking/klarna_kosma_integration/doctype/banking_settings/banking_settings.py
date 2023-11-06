@@ -1,6 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from semantic_version import Version
 from typing import Dict, Optional, Union
 
 import frappe
@@ -152,17 +153,19 @@ def get_app_health() -> Dict:
 	"""
 	Returns the app health.
 	"""
-	from frappe.utils.change_log import check_release_on_github
 	from frappe.utils.scheduler import is_scheduler_inactive
 
 	messages = {}
 	current_app_version = frappe.get_attr("banking.__version__")
 
-	latest_app_version = str(check_release_on_github("banking")[0])
-	if latest_app_version != current_app_version:
+	latest_release = get_latest_release_for_branch("alyf-de", "banking")
+	if not latest_release:
+		return None
+
+	if Version(current_app_version) < Version(latest_release):
 		messages["info"] = _(
-			"A new version of the app is available ({0}). Please update your instance."
-		).format(latest_app_version)
+			"A new version of the Banking app is available ({0}). Please update your instance."
+		).format(str(latest_release))
 
 	if is_scheduler_inactive():
 		messages["warning"] = _(
@@ -170,3 +173,25 @@ def get_app_health() -> Dict:
 		)
 
 	return messages or None
+
+
+def get_latest_release_for_branch(owner: str, repo: str):
+	"""
+	Returns the latest release for the current branch.
+	"""
+	import requests
+	from frappe.utils.change_log import get_app_branch
+
+	branch = get_app_branch("banking")
+	try:
+		releases = requests.get(
+			f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=10"
+		)
+		releases.raise_for_status()
+
+		for release in releases.json():
+			if release.get("target_commitish") == branch:
+				return release.get("name")[1:]  # remove v prefix
+	except Exception:
+		frappe.log_error(title=_("Banking Error"), message=_("Error while fetching releases"))
+		return None
