@@ -269,6 +269,7 @@ class KlarnaKosmaConnect {
 				account: this.account || null,
 				from_date: this.flow === "accounts" ? this.start_date : this.from_date,
 				to_date: this.to_date,
+				company: this.company || null,
 			},
 			freeze: true,
 			freeze_message: __("Please wait. Redirecting to Bank...")
