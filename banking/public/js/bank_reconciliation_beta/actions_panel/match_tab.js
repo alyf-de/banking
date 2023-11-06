@@ -71,22 +71,42 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	render_data_table(vouchers) {
 		this.summary_data = {};
-		this.match_params = {};
 		let table_data = vouchers.map((row) => {
-			this.match_params[row.name] = {
-				"Date": row.date_match || 0,
-				"Party": row.party_match || 0,
-				"Transaction Amount": row.amount_match || 0,
-				"Unallocated Amount": row.unallocated_amount_match || 0,
-				"Reference Number": row.reference_number_match || row.name_in_desc_match || 0,
-			}
 			return [
-				this.help_button(row.name),
-				row.reference_date || row.posting_date, // Reference Date
-				{amount: row.paid_amount, currency: row.currency},
-				row.reference_no || '',
-				{party: row.party, party_type: row.party_type},
-				{docname: row.name, doctype: row.doctype},
+				{
+					content: row.reference_date || row.posting_date, // Reference Date
+					format: (value) => {
+						return row.date_match ? value.bold() : value;
+					}
+				},
+				{
+					content: row.paid_amount,
+					format: (value) => {
+						let formatted_value = format_currency(value, row.currency);
+						let match_condition =  row.amount_match || row.unallocated_amount_match;
+						return match_condition ? formatted_value.bold() : formatted_value;
+					}
+				},
+				{
+					content: row.reference_no || '',
+					format: (value) => {
+						let reference_match = row.reference_number_match || row.name_in_desc_match;
+						return reference_match ? value.bold() : value;
+					}
+				},
+				{
+					content: row.party,
+					format: (value) => {
+						let formatted_value =  frappe.format(row.party, {fieldtype: "Link", options: row.party_type});
+						return row.party_match ? formatted_value.bold() : formatted_value;
+					}
+				},
+				{
+					content: row.name,
+					format: (value) => {
+						return frappe.format(row.name, {fieldtype: "Link", options: row.doctype});
+					}
+				},
 			];
 		});
 
@@ -112,19 +132,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		);
 
 		this.bind_row_check_event();
-		this.bind_help_button();
-	}
-
-	help_button(voucher_name) {
-		return `
-			<div class="w-100" style="text-align: center;">
-				<button class="btn btn-default btn-xs match-reasons-btn" data-name=${voucher_name}>
-					<svg class="icon icon-sm">
-						<use href="#icon-help"></use>
-					</svg>
-				</button>
-			</div>
-		`;
 	}
 
 	bind_row_check_event() {
@@ -135,44 +142,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 			this.check_data_table_row(voucher_row)
 		})
-	}
-
-	bind_help_button() {
-		var me = this;
-		$(this.actions_table.bodyScrollable).on("mouseenter", ".match-reasons-btn", (e) => {
-			let $btn = $(e.currentTarget);
-			let voucher_name = $btn.data().name;
-			$btn.popover({
-				trigger: "manual",
-				placement: "top",
-				html: true,
-				content: () => {
-					return `
-						<div>
-							<div class="match-popover-header">${__("Match Reasons")}</div>
-							${me.get_match_reasons(voucher_name)}
-						</div>
-					`;
-
-				}
-			});
-			$btn.popover("toggle");
-		});
-
-		$(this.actions_table.bodyScrollable).on("mouseleave", ".match-reasons-btn", (e) => {
-			let $btn = $(e.currentTarget);
-			$btn.popover("toggle");
-		});
-	}
-
-	get_match_reasons(voucher_name) {
-		let reasons = this.match_params[voucher_name], html = "";
-		for (let key in reasons) {
-			if (reasons[key]) {
-				html += `<div class="muted">${__(key)}</div>`;
-			}
-		}
-		return html || __("No Specific Match Reasons");
 	}
 
 	check_data_table_row(row) {
@@ -439,10 +408,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	get_data_table_columns() {
 		return [
 			{
-				name: __("Reason"),
-				editable: false,
-			},
-			{
 				name: __("Date"),
 				editable: false,
 				format: (value) => {
@@ -452,27 +417,19 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				name: __("Remaining"),
 				editable: false,
-				format: (value, row, column, data) => {
-					return format_currency(row[3].amount, row[3].currency)
-				},
 			},
 			{
 				name: __("Reference"),
 				editable: false,
+				align: "left",
 			},
 			{
 				name: __("Party"),
 				editable: false,
-				format: (value, row, column, data) => {
-					return frappe.format(row[5].party, {fieldtype: "Link", options: row[5].party_type});
-				},
 			},
 			{
 				name: __("Voucher"),
 				editable: false,
-				format: (value, row, column, data) => {
-					return frappe.format(row[6].docname, {fieldtype: "Link", options: row[6].doctype});
-				},
 			},
 		];
 	}
