@@ -203,7 +203,7 @@ frappe.ui.form.on('Banking Settings', {
 							target="_blank"
 							class="${subscription.billing_portal ? "" : "hidden"}"
 						>
-							<b>${__("Open Billing Portal")}</b> 
+							<b>${__("Open Billing Portal")}</b>
 							${frappe.utils.icon("link-url", "sm")}
 						</a>
 					</p>
@@ -246,6 +246,7 @@ class KlarnaKosmaConnect {
 				account: this.account || null,
 				from_date: this.flow === "accounts" ? this.start_date : this.from_date,
 				to_date: this.to_date,
+				company: this.company || null,
 			},
 			freeze: true,
 			freeze_message: __("Please wait. Redirecting to Bank...")

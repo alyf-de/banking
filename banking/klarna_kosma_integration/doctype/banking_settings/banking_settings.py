@@ -30,11 +30,12 @@ def get_client_token(
 	account: Optional[str] = None,
 	from_date: Optional[str] = None,
 	to_date: Optional[str] = None,
+	company: Optional[str] = None,
 ) -> Dict:
 	"""
 	Returns Client Token to render XS2A App & Short Session ID to track session
 	"""
-	return Admin().get_client_token(current_flow, account, from_date, to_date)
+	return Admin().get_client_token(current_flow, account, from_date, to_date, company)
 
 
 @frappe.whitelist()
@@ -121,7 +122,7 @@ def sync_all_accounts_and_transactions():
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
 
-			update_account(account, bank_account_name) # update account kosma id
+			update_account(account, bank_account_name)  # update account kosma id
 
 			# list of legitimate bank account names
 			accounts_list.append(bank_account_name)
