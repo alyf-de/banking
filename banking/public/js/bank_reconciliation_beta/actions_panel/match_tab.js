@@ -105,7 +105,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 					content: row.name,
 					format: (value) => {
 						return frappe.format(row.name, {fieldtype: "Link", options: row.doctype});
-					}
+					},
+					doctype: row.doctype,
 				},
 			];
 		});
@@ -147,7 +148,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	check_data_table_row(row) {
 		if (!row) return;
 
-		let id = row[6].docname;
+		let id = row[5].content;  // Voucher name
 		let value = this.get_amount_from_row(row);
 
 		// If `id` in summary_data, remove it (row was unchecked), else add it
@@ -205,8 +206,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			if (value === 1) {
 				let row = voucher_rows[idx];
 				selected_vouchers.push({
-					payment_doctype: row[6].doctype,
-					payment_name: row[6].docname,
+					payment_doctype: row[5].doctype,
+					payment_name: row[5].content,  // Voucher name
 					amount: this.get_amount_from_row(row),
 				});
 			}
@@ -435,6 +436,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	}
 
 	get_amount_from_row(row) {
-		return row[3].amount;
+		return row[2].content;  // Amount
 	}
 }
