@@ -84,18 +84,28 @@ def create_journal_entry_bts(
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	if bank_transaction.deposit and bank_transaction.withdrawal:
 		frappe.throw(
-			_("Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal")
+			_(
+				"Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
+			)
 		)
 
-	bank_debit_amount = bank_transaction.unallocated_amount if bank_transaction.deposit > 0.0 else 0.0
-	bank_credit_amount = bank_transaction.unallocated_amount if bank_transaction.withdrawal > 0.0 else 0.0
+	bank_debit_amount = (
+		bank_transaction.unallocated_amount if bank_transaction.deposit > 0.0 else 0.0
+	)
+	bank_credit_amount = (
+		bank_transaction.unallocated_amount if bank_transaction.withdrawal > 0.0 else 0.0
+	)
 
 	company_account = frappe.get_value(
 		"Bank Account", bank_transaction.bank_account, "account"
 	)
-	company, company_currency = frappe.get_value("Account", company_account, ["company", "account_currency"])
+	company, company_currency = frappe.get_value(
+		"Account", company_account, ["company", "account_currency"]
+	)
 
-	second_account_type, second_account_currency = frappe.db.get_value("Account", second_account, ["account_type", "account_currency"])
+	second_account_type, second_account_currency = frappe.db.get_value(
+		"Account", second_account, ["account_type", "account_currency"]
+	)
 	if second_account_type in ["Receivable", "Payable"] and not (party_type and party):
 		frappe.throw(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(
@@ -105,37 +115,42 @@ def create_journal_entry_bts(
 
 	if second_account_currency != company_currency:
 		frappe.throw(
-			_("The currency of the second account ({0}) must be the same as of the bank account ({1})").format(
-				second_account, company_currency
-			)
+			_(
+				"The currency of the second account ({0}) must be the same as of the bank account ({1})"
+			).format(second_account, company_currency)
 		)
 
 	journal_entry = frappe.new_doc("Journal Entry")
-	journal_entry.update({
-		"voucher_type": entry_type,
-		"company": company,
-		"posting_date": posting_date,
-		"cheque_date": reference_date,
-		"cheque_no": reference_number,
-		"mode_of_payment": mode_of_payment,
-	})
-	journal_entry.set("accounts", [
+	journal_entry.update(
 		{
-			"account": second_account,
-			"credit_in_account_currency": bank_debit_amount,
-			"debit_in_account_currency": bank_credit_amount,
-			"party_type": party_type,
-			"party": party,
-			"cost_center": get_default_cost_center(company),
-		},
-		{
-			"account": company_account,
-			"bank_account": bank_transaction.bank_account,
-			"credit_in_account_currency": bank_credit_amount,
-			"debit_in_account_currency": bank_debit_amount,
-			"cost_center": get_default_cost_center(company),
+			"voucher_type": entry_type,
+			"company": company,
+			"posting_date": posting_date,
+			"cheque_date": reference_date,
+			"cheque_no": reference_number,
+			"mode_of_payment": mode_of_payment,
 		}
-	])
+	)
+	journal_entry.set(
+		"accounts",
+		[
+			{
+				"account": second_account,
+				"credit_in_account_currency": bank_debit_amount,
+				"debit_in_account_currency": bank_credit_amount,
+				"party_type": party_type,
+				"party": party,
+				"cost_center": get_default_cost_center(company),
+			},
+			{
+				"account": company_account,
+				"bank_account": bank_transaction.bank_account,
+				"credit_in_account_currency": bank_credit_amount,
+				"debit_in_account_currency": bank_debit_amount,
+				"cost_center": get_default_cost_center(company),
+			},
+		],
+	)
 	journal_entry.insert()
 
 	if allow_edit:
@@ -144,7 +159,10 @@ def create_journal_entry_bts(
 	journal_entry.submit()
 
 	return reconcile_voucher(
-		bank_transaction_name, bank_transaction.unallocated_amount, "Journal Entry", journal_entry.name
+		bank_transaction_name,
+		bank_transaction.unallocated_amount,
+		"Journal Entry",
+		journal_entry.name,
 	)
 
 
@@ -541,9 +559,9 @@ def get_matching_queries(
 			queries.append(query)
 
 	if (
-		transaction.withdrawal > 0.0 and
-		"expense_claim" in document_types and
-		"unpaid_invoices" in document_types
+		transaction.withdrawal > 0.0
+		and "expense_claim" in document_types
+		and "unpaid_invoices" in document_types
 	):
 		query = get_unpaid_ec_matching_query(
 			exact_match, exact_party_match, currency, company
@@ -914,7 +932,9 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match, currency, compa
 	party_condition = sales_invoice.customer == Parameter("%(party)s")
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	outstanding_amount_condition = sales_invoice.outstanding_amount == Parameter("%(amount)s")
+	outstanding_amount_condition = sales_invoice.outstanding_amount == Parameter(
+		"%(amount)s"
+	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	query = (
@@ -1004,7 +1024,9 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, compa
 	party_condition = purchase_invoice.supplier == Parameter("%(party)s")
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	outstanding_amount_condition = purchase_invoice.outstanding_amount == Parameter("%(amount)s")
+	outstanding_amount_condition = purchase_invoice.outstanding_amount == Parameter(
+		"%(amount)s"
+	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	query = (
@@ -1049,10 +1071,10 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
 	outstanding_amount = (
-		expense_claim.total_sanctioned_amount +
-		expense_claim.total_taxes_and_charges -
-		expense_claim.total_amount_reimbursed -
-		expense_claim.total_advance_amount
+		expense_claim.total_sanctioned_amount
+		+ expense_claim.total_taxes_and_charges
+		- expense_claim.total_amount_reimbursed
+		- expense_claim.total_advance_amount
 	)
 	outstanding_amount_condition = outstanding_amount == Parameter("%(amount)s")
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
