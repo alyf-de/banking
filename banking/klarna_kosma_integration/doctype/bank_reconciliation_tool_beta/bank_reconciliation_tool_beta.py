@@ -84,26 +84,32 @@ def create_journal_entry_bts(
 	bank_transaction = frappe.db.get_values(
 		"Bank Transaction",
 		bank_transaction_name,
-		fieldname=["name", "deposit", "withdrawal", "bank_account"],
+		fieldname=["deposit", "withdrawal", "bank_account"],
 		as_dict=True,
 	)[0]
 	company_account = frappe.get_value(
 		"Bank Account", bank_transaction.bank_account, "account"
 	)
-	account_type = frappe.db.get_value("Account", second_account, "account_type")
-	if account_type in ["Receivable", "Payable"]:
-		if not (party_type and party):
-			frappe.throw(
-				_("Party Type and Party is required for Receivable / Payable account {0}").format(
-					second_account
-				)
+	second_account_type = frappe.db.get_value("Account", second_account, "account_type")
+	if second_account_type in ["Receivable", "Payable"] and not (party_type and party):
+		frappe.throw(
+			_("Party Type and Party is required for Receivable / Payable account {0}").format(
+				second_account
 			)
+		)
 
 	company = frappe.get_value("Account", company_account, "company")
 
-	accounts = []
-	# Multi Currency?
-	accounts.append(
+	journal_entry = frappe.new_doc("Journal Entry")
+	journal_entry.update({
+		"voucher_type": entry_type,
+		"company": company,
+		"posting_date": posting_date,
+		"cheque_date": reference_date,
+		"cheque_no": reference_number,
+		"mode_of_payment": mode_of_payment,
+	})
+	journal_entry.set("accounts", [
 		{
 			"account": second_account,
 			"credit_in_account_currency": bank_transaction.deposit,
@@ -111,10 +117,7 @@ def create_journal_entry_bts(
 			"party_type": party_type,
 			"party": party,
 			"cost_center": get_default_cost_center(company),
-		}
-	)
-
-	accounts.append(
+		},
 		{
 			"account": company_account,
 			"bank_account": bank_transaction.bank_account,
@@ -122,19 +125,7 @@ def create_journal_entry_bts(
 			"debit_in_account_currency": bank_transaction.deposit,
 			"cost_center": get_default_cost_center(company),
 		}
-	)
-
-	journal_entry_dict = {
-		"voucher_type": entry_type,
-		"company": company,
-		"posting_date": posting_date,
-		"cheque_date": reference_date,
-		"cheque_no": reference_number,
-		"mode_of_payment": mode_of_payment,
-	}
-	journal_entry = frappe.new_doc("Journal Entry")
-	journal_entry.update(journal_entry_dict)
-	journal_entry.set("accounts", accounts)
+	])
 	journal_entry.insert()
 
 	if allow_edit:
