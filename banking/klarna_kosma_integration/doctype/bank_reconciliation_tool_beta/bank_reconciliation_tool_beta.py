@@ -80,17 +80,22 @@ def create_journal_entry_bts(
 	party: str = None,
 	allow_edit: bool = False,
 ):
-	# Create a new journal entry based on the bank transaction
-	bank_transaction = frappe.db.get_values(
-		"Bank Transaction",
-		bank_transaction_name,
-		fieldname=["deposit", "withdrawal", "bank_account"],
-		as_dict=True,
-	)[0]
+	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
+	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	if bank_transaction.deposit and bank_transaction.withdrawal:
+		frappe.throw(
+			_("Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal")
+		)
+
+	bank_debit_amount = bank_transaction.unallocated_amount if bank_transaction.deposit > 0.0 else 0.0
+	bank_credit_amount = bank_transaction.unallocated_amount if bank_transaction.withdrawal > 0.0 else 0.0
+
 	company_account = frappe.get_value(
 		"Bank Account", bank_transaction.bank_account, "account"
 	)
-	second_account_type = frappe.db.get_value("Account", second_account, "account_type")
+	company, company_currency = frappe.get_value("Account", company_account, ["company", "account_currency"])
+
+	second_account_type, second_account_currency = frappe.db.get_value("Account", second_account, ["account_type", "account_currency"])
 	if second_account_type in ["Receivable", "Payable"] and not (party_type and party):
 		frappe.throw(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(
@@ -98,7 +103,12 @@ def create_journal_entry_bts(
 			)
 		)
 
-	company = frappe.get_value("Account", company_account, "company")
+	if second_account_currency != company_currency:
+		frappe.throw(
+			_("The currency of the second account ({0}) must be the same as of the bank account ({1})").format(
+				second_account, company_currency
+			)
+		)
 
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.update({
@@ -112,8 +122,8 @@ def create_journal_entry_bts(
 	journal_entry.set("accounts", [
 		{
 			"account": second_account,
-			"credit_in_account_currency": bank_transaction.deposit,
-			"debit_in_account_currency": bank_transaction.withdrawal,
+			"credit_in_account_currency": bank_debit_amount,
+			"debit_in_account_currency": bank_credit_amount,
 			"party_type": party_type,
 			"party": party,
 			"cost_center": get_default_cost_center(company),
@@ -121,8 +131,8 @@ def create_journal_entry_bts(
 		{
 			"account": company_account,
 			"bank_account": bank_transaction.bank_account,
-			"credit_in_account_currency": bank_transaction.withdrawal,
-			"debit_in_account_currency": bank_transaction.deposit,
+			"credit_in_account_currency": bank_credit_amount,
+			"debit_in_account_currency": bank_debit_amount,
 			"cost_center": get_default_cost_center(company),
 		}
 	])
@@ -133,13 +143,8 @@ def create_journal_entry_bts(
 
 	journal_entry.submit()
 
-	if bank_transaction.deposit > 0.0:
-		paid_amount = bank_transaction.deposit
-	else:
-		paid_amount = bank_transaction.withdrawal
-
 	return reconcile_voucher(
-		bank_transaction_name, paid_amount, "Journal Entry", journal_entry.name
+		bank_transaction_name, bank_transaction.unallocated_amount, "Journal Entry", journal_entry.name
 	)
 
 
