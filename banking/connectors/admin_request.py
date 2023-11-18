@@ -17,7 +17,7 @@ class AdminRequest:
 
 	@property
 	def headers(self):
-		return {"Authorization": f"Token {self.api_token}"}
+		return {"Alyf-Banking-Authorization": f"Token {self.api_token}"}
 
 	@property
 	def data(self):
