@@ -14,6 +14,9 @@ class CustomBankTransaction(BankTransaction):
 			)
 
 		added = False
+		# avoid mutating self.unallocated_amount (is set by erpnext on submit/update after submit)
+		unallocated_amount = flt(self.unallocated_amount)
+
 		for voucher in vouchers:
 			# Can't add same voucher twice
 			found = False
@@ -27,10 +30,13 @@ class CustomBankTransaction(BankTransaction):
 			if not found:
 				payment_doctype, payment_name = voucher["payment_doctype"], voucher["payment_name"]
 				outstanding_amount = get_outstanding_amount(payment_doctype, payment_name)
+				allocated_by_voucher = min(unallocated_amount, outstanding_amount)
 
 				if outstanding_amount > 0:
 					# Make Payment Entry against the unpaid invoice, link PE to Bank Transaction
-					payment_name = self.make_payment_entry(payment_doctype, payment_name, outstanding_amount)
+					payment_name = self.make_payment_entry(
+						payment_doctype, payment_name, allocated_by_voucher
+					)
 					payment_doctype = "Payment Entry"  # Change doctype to PE
 
 				pe = {
@@ -41,27 +47,33 @@ class CustomBankTransaction(BankTransaction):
 				self.append("payment_entries", pe)
 				added = True
 
+				# Reduce unallocated amount
+				unallocated_amount = flt(
+					unallocated_amount - allocated_by_voucher, self.precision("unallocated_amount")
+				)
+
 		# runs on_update_after_submit
 		if added:
 			self.save()
 
-	def make_payment_entry(self, payment_doctype, payment_name, outstanding_amount):
+	def make_payment_entry(
+		self, payment_doctype: str, payment_name: str, to_allocate: float
+	):
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		party_amount = min(self.unallocated_amount, outstanding_amount)
 		if payment_doctype == "Expense Claim":
 			from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee
 
 			payment_entry = get_payment_entry_for_employee(
 				payment_doctype,
 				payment_name,
-				party_amount=party_amount,
+				party_amount=to_allocate,
 				bank_account=bank_account,
 			)
 		else:
 			payment_entry = get_payment_entry(
 				payment_doctype,
 				payment_name,
-				party_amount=party_amount,
+				party_amount=to_allocate,
 				bank_account=bank_account,
 			)
 
@@ -78,7 +90,10 @@ def get_outstanding_amount(payment_doctype, payment_name):
 
 	if payment_doctype == "Expense Claim":
 		ec = frappe.get_doc(payment_doctype, payment_name)
-		return flt(ec.total_sanctioned_amount - ec.total_amount_reimbursed, ec.precision("total_sanctioned_amount"))
+		return flt(
+			ec.total_sanctioned_amount - ec.total_amount_reimbursed,
+			ec.precision("total_sanctioned_amount"),
+		)
 
 	invoice = frappe.get_doc(payment_doctype, payment_name)
 	return flt(invoice.outstanding_amount, invoice.precision("outstanding_amount"))
