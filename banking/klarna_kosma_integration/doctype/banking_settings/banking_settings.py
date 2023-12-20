@@ -114,7 +114,7 @@ def sync_all_accounts_and_transactions():
 
 	# Update all bank accounts
 	for entry in bank_consents:
-		accounts = Admin().consent_accounts(entry.get("bank"), entry.get("company"))
+		accounts = get_bank_accounts_to_sync(bank_consent=entry)
 
 		for account in accounts:
 			account_name = get_account_name(account)
@@ -123,13 +123,38 @@ def sync_all_accounts_and_transactions():
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
 
-			update_account(account, bank_account_name)  # update account kosma id
+			if account.get("id"):
+				# update account kosma id (id is fetched from consent api)
+				update_account(account, bank_account_name)
 
 			# list of legitimate bank account names
 			accounts_list.append(bank_account_name)
 
 	for bank_account in accounts_list:
 		sync_transactions(account=bank_account)
+
+
+def get_bank_accounts_to_sync(bank_consent: dict) -> list:
+	"""
+	Gets bank accounts from Kosma via the consent API.
+	Falls back on DB if consent API fails.
+	"""
+	try:
+		accounts = Admin().consent_accounts(
+			bank_consent.get("bank"), bank_consent.get("company")
+		)
+	except Exception:
+		accounts = frappe.get_all(
+			"Bank Account",
+			filters={
+				"bank": bank_consent.get("bank"),
+				"company": bank_consent.get("company"),
+				"kosma_account_id": ["is", "set"],
+			},
+			fields=["account_name as alias"],
+		)
+
+	return accounts or []
 
 
 @frappe.whitelist()
