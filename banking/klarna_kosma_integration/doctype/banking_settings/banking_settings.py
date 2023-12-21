@@ -12,6 +12,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from banking.klarna_kosma_integration.admin import Admin
+from banking.klarna_kosma_integration.exception_handler import BankingError
 from banking.klarna_kosma_integration.utils import (
 	create_bank_account,
 	get_account_name,
@@ -110,51 +111,46 @@ def sync_all_accounts_and_transactions():
 		return
 
 	accounts_list = []
-	bank_consents = frappe.get_all("Bank Consent", fields=["bank", "company"])
 
-	# Update all bank accounts
-	for entry in bank_consents:
-		accounts = get_bank_accounts_to_sync(bank_consent=entry)
-
+	for bank, company in frappe.get_all(
+		"Bank Consent", fields=["bank", "company"], as_list=True
+	):
+		accounts = get_bank_accounts_to_sync(bank, company)
 		for account in accounts:
 			account_name = get_account_name(account)
-			bank_account_name = "{} - {}".format(account_name, entry.get("bank"))
+			bank_account_name = "{} - {}".format(account_name, bank)
 
 			if not frappe.db.exists("Bank Account", bank_account_name):
 				continue
 
-			if account.get("id"):
-				# update account kosma id (id is fetched from consent api)
-				update_account(account, bank_account_name)
-
-			# list of legitimate bank account names
+			update_account(account, bank_account_name)
 			accounts_list.append(bank_account_name)
+
+		if not accounts:
+			accounts_list.extend(
+				frappe.get_all(
+					"Bank Account",
+					filters={
+						"bank": bank,
+						"company": company,
+						"kosma_account_id": ["is", "set"],
+					},
+					pluck="name",
+				)
+			)
 
 	for bank_account in accounts_list:
 		sync_transactions(account=bank_account)
 
 
-def get_bank_accounts_to_sync(bank_consent: dict) -> list:
+def get_bank_accounts_to_sync(bank: str, company: str) -> list:
 	"""
-	Gets bank accounts from Kosma via the consent API.
-	Falls back on DB if consent API fails.
+	Get bank accounts from Kosma via the consent API.
 	"""
 	try:
-		accounts = Admin().consent_accounts(
-			bank_consent.get("bank"), bank_consent.get("company")
-		)
-	except Exception:
-		accounts = frappe.get_all(
-			"Bank Account",
-			filters={
-				"bank": bank_consent.get("bank"),
-				"company": bank_consent.get("company"),
-				"kosma_account_id": ["is", "set"],
-			},
-			fields=["account_name as alias"],
-		)
-
-	return accounts or []
+		return Admin().consent_accounts(bank, company)
+	except BankingError:
+		return []
 
 
 @frappe.whitelist()
