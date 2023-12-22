@@ -5,6 +5,10 @@ import frappe
 from frappe import _
 
 
+class BankingError(Exception):
+	pass
+
+
 class ExceptionHandler:
 	"""
 	Log and throw error as received from Admin app.
@@ -34,7 +38,9 @@ class ExceptionHandler:
 
 		frappe.log_error(title=_("Banking Error"), message=response.content)
 		frappe.throw(
-			title=_("Banking Error"), msg=_("Authentication error due to invalid credentials.")
+			title=_("Banking Error"),
+			msg=_("Authentication error due to invalid credentials."),
+			exc=BankingError,
 		)
 
 	def handle_authorization_error(self, response):
@@ -47,7 +53,7 @@ class ExceptionHandler:
 		message = (
 			content if isinstance(content, str) else "Authorization error due to invalid access."
 		)
-		frappe.throw(title=_("Banking Error"), msg=_(message))
+		frappe.throw(title=_("Banking Error"), msg=_(message), exc=BankingError)
 
 	def handle_txt_html_error(self, response):
 		"""
@@ -58,7 +64,9 @@ class ExceptionHandler:
 
 		frappe.log_error(title=_("Banking Error"), message=response.content)
 		frappe.throw(
-			title=_("Banking Error"), msg=_("Something went wrong. Please retry in a while.")
+			title=_("Banking Error"),
+			msg=_("Something went wrong. Please retry in a while."),
+			exc=BankingError,
 		)
 
 	def handle_frappe_server_error(self, content, response):
@@ -70,7 +78,7 @@ class ExceptionHandler:
 			message = response_data.get("exception") or _(
 				"The server has errored. Please retry in some time."
 			)
-			frappe.throw(title=_("Banking Error"), msg=message)
+			frappe.throw(title=_("Banking Error"), msg=message, exc=BankingError)
 
 	def handle_admin_error(self, content):
 		frappe.log_error(title=_("Banking Error"), message=json.dumps(content))
@@ -82,9 +90,11 @@ class ExceptionHandler:
 			message = _("Banking Action has failed due to the following error(s):")
 			message += "<br><ul><li>" + "</li><li>".join(error_list) + "</li></ul>"
 
-			frappe.throw(title=_("Banking Error"), msg=message)
+			frappe.throw(title=_("Banking Error"), msg=message, exc=BankingError)
 		elif error_data.get("message"):
-			frappe.throw(title=_("Banking Error"), msg=self.get_msg(error_data))
+			frappe.throw(
+				title=_("Banking Error"), msg=self.get_msg(error_data), exc=BankingError
+			)
 
 	def get_msg(self, error: dict):
 		"""Add instructions to Kosma error messages."""
