@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 
 
-class BankingError(Exception):
+class BankingError(frappe.ValidationError):
 	pass
 
 
@@ -81,10 +81,13 @@ class ExceptionHandler:
 			frappe.throw(title=_("Banking Error"), msg=message, exc=BankingError)
 
 	def handle_admin_error(self, content):
-		frappe.log_error(title=_("Banking Error"), message=json.dumps(content))
 		error_data = content.get("error", {}) or content.get("data", {})
-		errors = error_data.get("errors")  # multiple errors
 
+		# log only loggable errors (not sensitive data)
+		frappe.log_error(title=_("Banking Error"), message=json.dumps(error_data))
+
+		# multiple errors
+		errors = error_data.get("errors")
 		if errors:
 			error_list = [f"{err.get('location')} - {self.get_msg(err)}" for err in errors]
 			message = _("Banking Action has failed due to the following error(s):")
