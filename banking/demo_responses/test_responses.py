@@ -17,7 +17,7 @@ session_response = frappe._dict(
 			"consent_scope": {
 				"lifetime": 90,
 				"accounts": {},
-				"transactions": {"from_date": "2023-01-01", "to_date": "2023-03-23"},
+				"transactions": {"from_date": "2024-01-01", "to_date": "2024-03-23"},
 			},
 		},
 		"flow_data": {
