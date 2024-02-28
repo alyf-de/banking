@@ -24,11 +24,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
 		this.create_voucher_bts(
-			null,
+			false,
 			(message) => me.actions_panel.after_transaction_reconcile(
 				message, true, document_type
 			)
-		)
+		);
 	}
 
 	edit_in_full_page() {
