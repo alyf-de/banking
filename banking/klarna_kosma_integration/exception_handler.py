@@ -116,8 +116,9 @@ class ExceptionHandler:
 def handle_ui_error(error: str, session_id_short: str):
 	from banking.klarna_kosma_integration.admin import Admin
 
-	error = json.loads(error)
-	frappe.log_error(title=_("Banking Error"), message=error.get("message"))
+	if error:  # might be empty
+		error = json.loads(error)
+		frappe.log_error(title=_("Banking Error"), message=error.get("message"))
 
 	doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
 	session_id = doc.get_password("session_id")
