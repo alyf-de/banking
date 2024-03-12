@@ -154,59 +154,47 @@ def update_bank(bank_data: Dict, bank_name: str) -> None:
 
 
 def create_bank_account(
-	account: Dict, bank_name: str, company: str, default_gl_account: Dict
+	account: Dict, bank_name: str, company: str, gl_account: str
 ) -> None:
-	account_name = get_account_name(account)
-	bank_account_name = "{} - {}".format(account_name, bank_name)
-
-	if not frappe.db.exists("Bank Account", bank_account_name):
-		try:
-			new_account = frappe.get_doc(
-				{
-					"doctype": "Bank Account",
-					"bank": bank_name,
-					"account": default_gl_account.account,
-					"account_name": account_name,
-					# TODO: add custom field for account holder name ?
-					"kosma_account_id": account.get("id"),
-					"account_type": account.get("account_type", ""),
-					"bank_account_no": account.get("account_number"),
-					"iban": account.get("iban"),
-					"branch_code": account.get("national_branch_code"),
-					"is_company_account": 1,
-					"company": company,
-				}
-			)
-			new_account.insert()
-		except frappe.UniqueValidationError:
-			frappe.msgprint(
-				_("Bank account {0} already exists and could not be created again").format(
-					new_account.name
-				)
-			)
-		except Exception:
-			frappe.log_error(
-				title=_("Bank Account creation has failed"),
-				message=frappe.get_traceback(),
-			)
-			frappe.throw(
-				_("There was an error creating a Bank Account while linking with Kosma."),
-				title=_("Kosma Link Error"),
-			)
-	else:
-		update_account(account, bank_account_name)
-
-
-def update_account(account_data: str, bank_account_name: str) -> None:
 	try:
-		account = frappe.get_doc("Bank Account", bank_account_name)
-		account.update(
+		new_account = frappe.get_doc(
 			{
-				"account_type": account_data.get("account_type", ""),
-				"kosma_account_id": account_data.get("id"),
+				"doctype": "Bank Account",
+				"bank": bank_name,
+				"account": gl_account,
+				"account_name": get_account_name(account),
+				# TODO: add custom field for account holder name ?
+				"kosma_account_id": account.get("id"),
+				"bank_account_no": account.get("account_number"),
+				"iban": account.get("iban"),
+				"branch_code": account.get("national_branch_code"),
+				"is_company_account": 1,
+				"company": company,
 			}
 		)
-		account.save()
+		new_account.insert()
+	except frappe.UniqueValidationError:
+		frappe.msgprint(
+			_("Bank account {0} already exists and could not be created again").format(
+				new_account.name
+			)
+		)
+	except Exception:
+		frappe.log_error(
+			title=_("Bank Account creation has failed"),
+			message=frappe.get_traceback(),
+		)
+		frappe.throw(
+			_("There was an error creating a Bank Account while linking with Kosma."),
+			title=_("Kosma Link Error"),
+		)
+
+
+def update_bank_account(account_data: dict, bank_account_name: str) -> None:
+	try:
+		frappe.db.set_value(
+			"Bank Account", bank_account_name, "kosma_account_id", account_data.get("id")
+		)
 	except Exception:
 		frappe.log_error(
 			title=_("Kosma Error - Bank Account Update"), message=frappe.get_traceback()

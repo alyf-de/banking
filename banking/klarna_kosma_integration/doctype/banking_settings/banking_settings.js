@@ -311,6 +311,8 @@ class KlarnaKosmaConnect {
 				{
 					unfoldConsentDetails: true,
 					onFinished: () => {
+						window.XS2A.close();
+
 						if (me.flow === "accounts")
 							me.complete_accounts_flow();
 						else
@@ -342,8 +344,16 @@ class KlarnaKosmaConnect {
 
 			flow_data = flow_data["message"];
 
-			if (!flow_data["bank_data"] || !flow_data["accounts"]) return;
-			this.add_bank_accounts(flow_data);
+			if (!flow_data["bank_data"] || !flow_data["accounts"]) {
+				return;
+			}
+
+			const import_mapping = await this.select_iban_and_gl_account(flow_data.accounts.map((acc) => acc.iban));
+			this.add_bank_accounts(
+				flow_data["accounts"].find((acc) => acc.iban === import_mapping.iban),
+				import_mapping.gl_account,
+				flow_data["bank_data"]["bank_name"]
+			);
 	}
 
 	async complete_transactions_flow()  {
@@ -382,15 +392,15 @@ class KlarnaKosmaConnect {
 		}
 	}
 
-	async add_bank_accounts(flow_data) {
-		let me = this;
+	add_bank_accounts(bank_account, gl_account, bank_name) {
 		try {
 			this.frm.call({
 				method: "add_bank_accounts",
 				args: {
-					accounts: flow_data["accounts"],
-					company: me.company,
-					bank_name: flow_data["bank_data"]["bank_name"],
+					account_data: bank_account,
+					gl_account: gl_account,
+					company: this.company,
+					bank_name: bank_name,
 				},
 				freeze: true,
 				freeze_message: __("Adding bank accounts ...")
@@ -420,6 +430,44 @@ class KlarnaKosmaConnect {
 		} catch(e) {
 			console.log(e);
 		}
+	}
+
+	/*
+	 * Prompt the user to select an IBAN and the corresponding ERPNext GL Account.
+	 */
+	select_iban_and_gl_account(available_ibans) {
+		return new Promise((resolve, reject) => {
+			const dialog = frappe.prompt(
+				[
+					{
+						fieldtype: "Select",
+						label: __("IBAN"),
+						fieldname: "iban",
+						options: available_ibans,
+						reqd: 1,
+					},
+					{
+						fieldtype: "Link",
+						label: __("Account"),
+						fieldname: "gl_account",
+						options: "Account",
+						reqd: 1,
+						get_query: () => {
+							return {
+								filters: {
+									"company": this.company,
+									"account_type": "Bank"
+								}
+							};
+						}
+					}
+				],
+				(data) => {
+					resolve(data);
+				},
+				__("Select IBAN and corresponding ERPNext Account"),
+			);
+		});
 	}
 }
 

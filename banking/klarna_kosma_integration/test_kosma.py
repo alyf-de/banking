@@ -102,7 +102,7 @@ class TestKosma(FrappeTestCase):
 		self.assertEqual(bank_doc.name, "Testbank")
 
 		add_bank_accounts(
-			accounts=accounts_response_1.result["accounts"],
+			account_data=accounts_response_1.result["accounts"],
 			company="Bolt Trades",
 			bank_name="Testbank",
 		)
@@ -138,7 +138,7 @@ class TestKosma(FrappeTestCase):
 		self.assertEqual(bank_doc.name, "Testbank")
 
 		add_bank_accounts(
-			accounts=accounts_response_2.result["accounts"],
+			account_data=accounts_response_2.result["accounts"],
 			company="Bolt Trades",
 			bank_name="Testbank",
 		)
@@ -158,7 +158,7 @@ class TestKosma(FrappeTestCase):
 
 		bank_name = add_bank(bank_data_response)
 		add_bank_accounts(
-			accounts=accounts_response_1.result["accounts"],
+			account_data=accounts_response_1.result["accounts"],
 			company="Bolt Trades",
 			bank_name="Testbank",
 		)

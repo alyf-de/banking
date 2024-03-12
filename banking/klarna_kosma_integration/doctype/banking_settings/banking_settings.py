@@ -5,9 +5,6 @@ from semantic_version import Version
 from typing import Dict, Optional, Union
 
 import frappe
-from erpnext.accounts.doctype.journal_entry.journal_entry import (
-	get_default_bank_cash_account,
-)
 from frappe import _
 from frappe.model.document import Document
 
@@ -15,9 +12,8 @@ from banking.klarna_kosma_integration.admin import Admin
 from banking.klarna_kosma_integration.exception_handler import BankingError
 from banking.klarna_kosma_integration.utils import (
 	create_bank_account,
-	get_account_name,
 	needs_consent,
-	update_account,
+	update_bank_account,
 	update_bank,
 )
 
@@ -49,26 +45,19 @@ def fetch_accounts_and_bank(session_id_short: str = None, company: str = None) -
 
 
 @frappe.whitelist()
-def add_bank_accounts(accounts: Union[str, list], company: str, bank_name: str) -> None:
-	if isinstance(accounts, str):
-		accounts = json.loads(accounts)
+def add_bank_accounts(
+	account_data: Union[str, dict], gl_account: str, company: str, bank_name: str
+) -> None:
+	if isinstance(account_data, str):
+		account_data = json.loads(account_data)
 
-	default_gl_account = get_default_bank_cash_account(company, "Bank")
-	if not default_gl_account:
-		frappe.throw(_("Please setup a default bank account for company {0}").format(company))
+	update_bank(account_data, bank_name)
 
-	for account in accounts:
-		update_bank(account, bank_name)
-
-		if not frappe.db.exists("Bank Account Type", account.get("account_type")):
-			frappe.get_doc(
-				{
-					"doctype": "Bank Account Type",
-					"account_type": account.get("account_type"),
-				}
-			).insert()
-
-		create_bank_account(account, bank_name, company, default_gl_account)
+	existing_bank_account = frappe.db.exists("Bank Account", {"account": gl_account})
+	if existing_bank_account:
+		update_bank_account(account_data, existing_bank_account)
+	else:
+		create_bank_account(account_data, bank_name, company, gl_account)
 
 
 @frappe.whitelist()
@@ -90,6 +79,7 @@ def sync_transactions(account: str, session_id_short: Optional[str] = None) -> N
 		"banking.klarna_kosma_integration.admin.sync_kosma_transactions",
 		account=account,
 		session_id_short=session_id_short,
+		now=frappe.conf.developer_mode,
 	)
 
 	frappe.msgprint(
@@ -117,14 +107,12 @@ def sync_all_accounts_and_transactions():
 	):
 		accounts = get_bank_accounts_to_sync(bank, company)
 		for account in accounts:
-			account_name = get_account_name(account)
-			bank_account_name = "{} - {}".format(account_name, bank)
-
-			if not frappe.db.exists("Bank Account", bank_account_name):
+			bank_account = frappe.db.exists("Bank Account", {"iban": account.get("iban")})
+			if not bank_account:
 				continue
 
-			update_account(account, bank_account_name)
-			accounts_list.append(bank_account_name)
+			update_bank_account(account, bank_account)
+			accounts_list.append(bank_account)
 
 		if not accounts:
 			accounts_list.extend(
