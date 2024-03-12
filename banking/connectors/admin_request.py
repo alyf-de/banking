@@ -7,13 +7,20 @@ import requests
 
 class AdminRequest:
 	def __init__(
-		self, ip_address: str, user_agent: str, api_token: str, url: str, customer_id: str
+		self,
+		ip_address: str,
+		user_agent: str,
+		api_token: str,
+		url: str,
+		customer_id: str,
+		use_test_environment: bool,
 	) -> None:
 		self.ip_address = ip_address
 		self.user_agent = user_agent
 		self.api_token = api_token
 		self.url = url
 		self.customer_id = customer_id
+		self.use_test_environment = use_test_environment
 
 	@property
 	def headers(self):
@@ -25,6 +32,7 @@ class AdminRequest:
 			"ip_address": self.ip_address,
 			"user_agent": self.user_agent,
 			"customer_id": self.customer_id,
+			"use_test_environment": self.use_test_environment,
 		}
 
 	def get_client_token(

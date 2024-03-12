@@ -3,7 +3,6 @@
 from typing import Dict, Optional
 
 import frappe
-from frappe import _
 
 from banking.connectors.admin_request import AdminRequest
 from banking.connectors.admin_transaction import AdminTransaction
@@ -34,6 +33,7 @@ class Admin:
 		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
 
 		settings = frappe.get_single("Banking Settings")
+		self.use_test_environment = settings.use_test_environment
 		self.api_token = settings.get_password("api_token")
 		self.customer_id = settings.customer_id
 		self.url = settings.admin_endpoint + "/api/method/"
@@ -46,6 +46,7 @@ class Admin:
 			api_token=self.api_token,
 			url=self.url,
 			customer_id=self.customer_id,
+			use_test_environment=self.use_test_environment,
 		)
 
 	def get_client_token(
