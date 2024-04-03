@@ -78,9 +78,12 @@ def create_journal_entry_bts(
 	mode_of_payment: str = None,
 	party_type: str = None,
 	party: str = None,
-	allow_edit: bool = False,
+	allow_edit: int = 0,
 ):
 	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
+	if isinstance(allow_edit, str):
+		allow_edit = cint(allow_edit)
+
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	if bank_transaction.deposit and bank_transaction.withdrawal:
 		frappe.throw(
