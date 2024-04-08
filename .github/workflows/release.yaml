@@ -1,0 +1,30 @@
+name: Generate Semantic Release
+on:
+  push:
+    branches:
+      - version-14
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Entire Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false # https://github.com/semantic-release/semantic-release/blob/master/docs/recipes/ci-configurations/github-actions.md#pushing-packagejson-changes-to-a-master-branch
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "lts/*"
+      - name: Setup dependencies
+        run: |
+          npm install @semantic-release/git @semantic-release/exec --no-save
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GIT_AUTHOR_NAME: "alyf-linus"
+          GIT_AUTHOR_EMAIL: "136631072+alyf-linus@users.noreply.github.com"
+          GIT_COMMITTER_NAME: "alyf-linus"
+          GIT_COMMITTER_EMAIL: "136631072+alyf-linus@users.noreply.github.com"
+        run: npx semantic-release

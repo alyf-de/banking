@@ -17,6 +17,8 @@ class CustomBankTransaction(BankTransaction):
 				frappe._("Bank Transaction {0} is already fully reconciled").format(self.name)
 			)
 
+		# avoid mutating self.unallocated_amount (is set by erpnext on submit/update after submit)
+		unallocated_amount = flt(self.unallocated_amount)
 		pe_length_before = len(self.payment_entries)
 		invoices_to_bill = []
 
@@ -30,10 +32,11 @@ class CustomBankTransaction(BankTransaction):
 
 			payment_doctype, payment_name = voucher["payment_doctype"], voucher["payment_name"]
 			outstanding_amount = self.get_outstanding_amount(payment_doctype, payment_name)
+			allocated_by_voucher = min(unallocated_amount, outstanding_amount)
 
 			if outstanding_amount > 0:
 				# Make Payment Entry against the unpaid invoice, link PE to Bank Transaction
-				invoices_to_bill.append((payment_doctype, payment_name, outstanding_amount))
+				invoices_to_bill.append((payment_doctype, payment_name, allocated_by_voucher))
 			else:
 				self.add_to_payment_entry(payment_doctype, payment_name)
 
@@ -42,6 +45,11 @@ class CustomBankTransaction(BankTransaction):
 			payment_name = self.make_pe_against_invoices(invoices_to_bill)
 			payment_doctype = "Payment Entry"  # Change doctype to PE
 			self.add_to_payment_entry(payment_doctype, payment_name)
+
+			# Reduce unallocated amount
+			unallocated_amount = flt(
+				unallocated_amount - allocated_by_voucher, self.precision("unallocated_amount")
+			)
 
 		# runs on_update_after_submit
 		if len(self.payment_entries) != pe_length_before:
@@ -63,16 +71,29 @@ class CustomBankTransaction(BankTransaction):
 		# Check if the invoice is unpaid
 		return flt(frappe.db.get_value(payment_doctype, payment_name, "outstanding_amount"))
 
-	def make_pe_against_invoice(self, payment_doctype, payment_name, outstanding_amount):
+	def make_pe_against_invoice(self, payment_doctype, payment_name, to_allocate):
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		payment_entry = get_payment_entry(
-			payment_doctype,
-			payment_name,
-			party_amount=min(self.unallocated_amount, outstanding_amount),
-			bank_account=bank_account,
-		)
+		if payment_doctype == "Expense Claim":
+			from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee
+
+			payment_entry = get_payment_entry_for_employee(
+				payment_doctype,
+				payment_name,
+				party_amount=to_allocate,
+				bank_account=bank_account,
+			)
+		else:
+			payment_entry = get_payment_entry(
+				payment_doctype,
+				payment_name,
+				party_amount=to_allocate,
+				bank_account=bank_account,
+			)
+
 		payment_entry.reference_no = self.reference_number or payment_name
+		payment_entry.reference_date = self.date
 		payment_entry.submit()
+
 		return payment_entry.name
 
 	def make_pe_against_invoices(self, invoices_to_bill):
@@ -137,5 +158,20 @@ class CustomBankTransaction(BankTransaction):
 			if to_allocate <= 0:
 				break
 
-		payment_entry.submit()
+		payment_entry.save()
 		return payment_entry.name
+
+
+def get_outstanding_amount(payment_doctype, payment_name):
+	if payment_doctype not in ("Sales Invoice", "Purchase Invoice", "Expense Claim"):
+		return 0
+
+	if payment_doctype == "Expense Claim":
+		ec = frappe.get_doc(payment_doctype, payment_name)
+		return flt(
+			ec.total_sanctioned_amount - ec.total_amount_reimbursed,
+			ec.precision("total_sanctioned_amount"),
+		)
+
+	invoice = frappe.get_doc(payment_doctype, payment_name)
+	return flt(invoice.outstanding_amount, invoice.precision("outstanding_amount"))

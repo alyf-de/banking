@@ -24,11 +24,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
 		this.create_voucher_bts(
-			null,
+			false,
 			(message) => me.actions_panel.after_transaction_reconcile(
 				message, true, document_type
 			)
-		)
+		);
 	}
 
 	edit_in_full_page() {
@@ -51,7 +51,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
-	create_voucher_bts(allow_edit=false, success_callback) {
+	create_voucher_bts(allow_edit, success_callback) {
 		// Create PE or JV and run `success_callback`
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
@@ -64,7 +64,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			party: values.party,
 			posting_date: values.posting_date,
 			mode_of_payment: values.mode_of_payment,
-			allow_edit: allow_edit
+			allow_edit: allow_edit || 0,
 		};
 
 		if (document_type === "Payment Entry") {

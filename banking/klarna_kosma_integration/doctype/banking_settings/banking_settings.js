@@ -4,6 +4,8 @@
 frappe.ui.form.on('Banking Settings', {
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
+			frm.trigger("get_app_health");
+
 			frm.add_custom_button(__('Link Bank and Accounts'), () => {
 				frm.events.refresh_banks(frm);
 			});
@@ -16,11 +18,11 @@ frappe.ui.form.on('Banking Settings', {
 				frm.events.sync_transactions(frm, true);
 			}, __("Sync"));
 
-			frm.add_custom_button(__("View Subscription"), () => {
-				frm.events.get_subscription(frm);
-			}, __("Actions"));
+			if (frm.doc.customer_id && frm.doc.admin_endpoint && frm.doc.api_token) {
+				frm.trigger("get_subscription");
+			}
 
-			frm.add_custom_button(__("Handle Subscription"), async () => {
+			frm.add_custom_button(__("Open Billing Portal"), async () => {
 				const url = await frm.call({
 					method: "get_customer_portal_url",
 					freeze: true,
@@ -29,7 +31,7 @@ frappe.ui.form.on('Banking Settings', {
 				if (url.message) {
 					window.open(url.message, "_blank");
 				}
-			}, __("Actions"));
+			});
 		} else {
 			frm.page.add_inner_button(
 				__("Signup for Banking"),
@@ -53,10 +55,18 @@ frappe.ui.form.on('Banking Settings', {
 			},
 			{
 				fieldtype: "Date",
-				label: __("Start Date (Optional)"),
+				label: __("Start Date"),
 				fieldname: "start_date",
 				description: __("Access and Sync bank records from this date."),
-				default: frappe.datetime.month_start()
+				default: frappe.datetime.month_start(),
+				reqd: 1
+			},
+			{
+				fieldtype: "HTML",
+				fieldname: "info",
+				options: get_info_html(
+					__("Fetching older transactions will count against your limit in the current billing period.")
+				)
 			}
 		];
 
@@ -141,18 +151,11 @@ frappe.ui.form.on('Banking Settings', {
 
 		if (is_older) {
 			dialog.get_field("info").$wrapper.html(
-				`<div
-					class="form-message blue"
-					style="
-						padding: var(--padding-sm) var(--padding-sm);
-						background-color: var(--alert-bg-info);
-					"
-				>
-					<span>${frappe.utils.icon("solid-info", "md")}</span>
-					<span class="small" style="padding-left: 5px">
-						${ __("Requires Bank Authentication") }
-					</span>
-				</div>`
+				get_info_html(
+					__("Requires Bank Authentication.") +
+					" " +
+					__("Fetching older transactions will count against your limit in the current billing period.")
+				)
 			);
 		}
 		dialog.show();
@@ -161,8 +164,6 @@ frappe.ui.form.on('Banking Settings', {
 	get_subscription: async (frm) => {
 		const data = await frm.call({
 			method: "fetch_subscription_data",
-			freeze: true,
-			freeze_message: __("Please wait. Fetching Subscription Details ...")
 		});
 
 		if (data.message) {
@@ -198,11 +199,47 @@ frappe.ui.form.on('Banking Settings', {
 						<b>${ __("Last Renewed On") }</b>:
 						${frappe.format(subscription.last_paid_on, {"fieldtype": "Date"})}
 					</p>
+					<p>
+						<a
+							href="${subscription.billing_portal}"
+							target="_blank"
+							class="${subscription.billing_portal ? "" : "hidden"}"
+						>
+							<b>${__("Open Billing Portal")}</b>
+							${frappe.utils.icon("link-url", "sm")}
+						</a>
+					</p>
 				</div>
 			`);
+
+			if (subscription.billing_portal) {
+				frm.remove_custom_button(__("Open Billing Portal"));
+			}
+
 			frm.refresh_field("subscription");
 		}
-	}
+	},
+
+	get_app_health: async (frm) => {
+		const data = await frm.call({
+			method: "get_app_health",
+		});
+
+		let messages = data.message;
+		if (messages) {
+			if(messages["info"]) {
+				frm.set_intro(messages["info"], "blue");
+			}
+
+			if (messages["warning"]) {
+				$(frm.$wrapper.find(".form-layout")[0]).prepend(`
+					<div class='form-message yellow'>
+						${messages["warning"]}
+					</div>
+				`);
+			}
+		}
+	},
 });
 
 class KlarnaKosmaConnect {
@@ -232,6 +269,7 @@ class KlarnaKosmaConnect {
 				account: this.account || null,
 				from_date: this.flow === "accounts" ? this.start_date : this.from_date,
 				to_date: this.to_date,
+				company: this.company || null,
 			},
 			freeze: true,
 			freeze_message: __("Please wait. Redirecting to Bank...")
@@ -273,6 +311,8 @@ class KlarnaKosmaConnect {
 				{
 					unfoldConsentDetails: true,
 					onFinished: () => {
+						window.XS2A.close();
+
 						if (me.flow === "accounts")
 							me.complete_accounts_flow();
 						else
@@ -304,8 +344,16 @@ class KlarnaKosmaConnect {
 
 			flow_data = flow_data["message"];
 
-			if (!flow_data["bank_data"] || !flow_data["accounts"]) return;
-			this.add_bank_accounts(flow_data);
+			if (!flow_data["bank_data"] || !flow_data["accounts"]) {
+				return;
+			}
+
+			const import_mapping = await this.select_iban_and_gl_account(flow_data.accounts.map((acc) => acc.iban));
+			this.add_bank_accounts(
+				flow_data["accounts"].find((acc) => acc.iban === import_mapping.iban),
+				import_mapping.gl_account,
+				flow_data["bank_data"]["bank_name"]
+			);
 	}
 
 	async complete_transactions_flow()  {
@@ -344,15 +392,15 @@ class KlarnaKosmaConnect {
 		}
 	}
 
-	async add_bank_accounts(flow_data) {
-		let me = this;
+	add_bank_accounts(bank_account, gl_account, bank_name) {
 		try {
 			this.frm.call({
 				method: "add_bank_accounts",
 				args: {
-					accounts: flow_data["accounts"],
-					company: me.company,
-					bank_name: flow_data["bank_data"]["bank_name"],
+					account_data: bank_account,
+					gl_account: gl_account,
+					company: this.company,
+					bank_name: bank_name,
 				},
 				freeze: true,
 				freeze_message: __("Adding bank accounts ...")
@@ -383,4 +431,58 @@ class KlarnaKosmaConnect {
 			console.log(e);
 		}
 	}
+
+	/*
+	 * Prompt the user to select an IBAN and the corresponding ERPNext GL Account.
+	 */
+	select_iban_and_gl_account(available_ibans) {
+		return new Promise((resolve, reject) => {
+			const dialog = frappe.prompt(
+				[
+					{
+						fieldtype: "Select",
+						label: __("IBAN"),
+						fieldname: "iban",
+						options: available_ibans,
+						reqd: 1,
+					},
+					{
+						fieldtype: "Link",
+						label: __("Account"),
+						fieldname: "gl_account",
+						options: "Account",
+						reqd: 1,
+						get_query: () => {
+							return {
+								filters: {
+									"company": this.company,
+									"account_type": "Bank"
+								}
+							};
+						}
+					}
+				],
+				(data) => {
+					resolve(data);
+				},
+				__("Select IBAN and corresponding ERPNext Account"),
+			);
+		});
+	}
+}
+
+
+function get_info_html(message) {
+	return `<div
+		class="form-message blue"
+		style="
+			padding: var(--padding-sm) var(--padding-sm);
+			background-color: var(--alert-bg-info);
+		"
+	>
+		<span>${frappe.utils.icon("solid-info", "md")}</span>
+		<span class="small" style="padding-left: var(--padding-xs)">
+			${ message }
+		</span>
+	</div>`;
 }
