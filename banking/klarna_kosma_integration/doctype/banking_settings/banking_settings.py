@@ -45,7 +45,7 @@ def fetch_accounts_and_bank(session_id_short: str = None, company: str = None) -
 
 
 @frappe.whitelist()
-def add_bank_accounts(
+def add_bank_account(
 	account_data: Union[str, dict], gl_account: str, company: str, bank_name: str
 ) -> None:
 	if isinstance(account_data, str):

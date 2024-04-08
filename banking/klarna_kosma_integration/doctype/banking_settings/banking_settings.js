@@ -349,7 +349,7 @@ class KlarnaKosmaConnect {
 			}
 
 			const import_mapping = await this.select_iban_and_gl_account(flow_data.accounts.map((acc) => acc.iban));
-			this.add_bank_accounts(
+			this.add_bank_account(
 				flow_data["accounts"].find((acc) => acc.iban === import_mapping.iban),
 				import_mapping.gl_account,
 				flow_data["bank_data"]["bank_name"]
@@ -392,10 +392,10 @@ class KlarnaKosmaConnect {
 		}
 	}
 
-	add_bank_accounts(bank_account, gl_account, bank_name) {
+	add_bank_account(bank_account, gl_account, bank_name) {
 		try {
 			this.frm.call({
-				method: "add_bank_accounts",
+				method: "add_bank_account",
 				args: {
 					account_data: bank_account,
 					gl_account: gl_account,
