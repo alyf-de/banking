@@ -15,7 +15,7 @@ from banking.demo_responses.test_responses import (
 	transactions_consent_response,
 )
 from banking.klarna_kosma_integration.doctype.banking_settings.banking_settings import (
-	add_bank_accounts,
+	add_bank_account,
 )
 from banking.klarna_kosma_integration.admin import Admin
 from banking.klarna_kosma_integration.utils import (
@@ -101,19 +101,20 @@ class TestKosma(FrappeTestCase):
 
 		self.assertEqual(bank_doc.name, "Testbank")
 
-		add_bank_accounts(
-			account_data=accounts_response_1.result["accounts"],
+		acc = create_account_for_bank_account("Personal Account")
+		test_account_dict = accounts_response_1.result["accounts"][0]
+		add_bank_account(
+			account_data=test_account_dict,
+			gl_account=acc,
 			company="Bolt Trades",
 			bank_name="Testbank",
 		)
 
 		bank_doc.reload()
-		test_account_dict = accounts_response_1.result["accounts"][0]
 		account_name = get_account_name(test_account_dict)
 
 		self.assertEqual(bank_doc.swift_number, "TESTDE10XXX")
 
-		self.assertEqual(get_count("Bank Account"), 5)
 		self.assertEqual(account_name, "My checking account (Max Mustermann)")
 		self.assertTrue(frappe.db.exists("Bank Account", f"{account_name} - {bank_name}"))
 
@@ -121,7 +122,7 @@ class TestKosma(FrappeTestCase):
 		self.assertEqual(account_doc.bank, bank_name)
 		self.assertEqual(
 			account_doc.account,
-			get_default_bank_cash_account("Bolt Trades", "Cash").get("account"),
+			acc,
 		)
 		self.assertEqual(account_doc.iban, test_account_dict.get("iban"))
 		self.assertEqual(account_doc.bank_account_no, test_account_dict.get("account_number"))
@@ -137,14 +138,16 @@ class TestKosma(FrappeTestCase):
 
 		self.assertEqual(bank_doc.name, "Testbank")
 
-		add_bank_accounts(
-			account_data=accounts_response_2.result["accounts"],
+		acc = create_account_for_bank_account("Max Mustermann")
+		test_account_dict = accounts_response_2.result["accounts"][0]
+		add_bank_account(
+			account_data=test_account_dict,
+			gl_account=acc,
 			company="Bolt Trades",
 			bank_name="Testbank",
 		)
 
 		bank_doc.reload()
-		test_account_dict = accounts_response_2.result["accounts"][0]
 		account_name = get_account_name(test_account_dict)
 
 		self.assertEqual(account_name, "DE06000000000023456789")
@@ -157,8 +160,11 @@ class TestKosma(FrappeTestCase):
 		create_session_doc(session_response.session_data, session_response.flow_data)
 
 		bank_name = add_bank(bank_data_response)
-		add_bank_accounts(
-			account_data=accounts_response_1.result["accounts"],
+		acc = create_account_for_bank_account("Business Account")
+		test_account_dict = accounts_response_1.result["accounts"][1]
+		add_bank_account(
+			account_data=test_account_dict,
+			gl_account=acc,
 			company="Bolt Trades",
 			bank_name="Testbank",
 		)
@@ -234,3 +240,17 @@ def get_formatted_consent():
 		"consent_token": consent_response.get("consent_token"),
 		"consent_expiry": add_days(get_datetime(), 90),
 	}
+
+
+def create_account_for_bank_account(account_name: str):
+	gl_account = frappe.get_doc(
+		{
+			"doctype": "Account",
+			"company": "Bolt Trades",
+			"parent_account": "Current Assets - BT",
+			"account_type": "Bank",
+			"is_group": 0,
+			"account_name": account_name,
+		}
+	).insert()
+	return gl_account.name
