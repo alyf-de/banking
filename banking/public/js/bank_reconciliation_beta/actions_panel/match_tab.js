@@ -197,7 +197,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	}
 
 	reconcile_selected_vouchers() {
-		var me = this;
+		const me = this;
 		let selected_vouchers = [];
 		let selected_map = this.actions_table.rowmanager.checkMap;
 		let voucher_rows = this.actions_table.getRows();
