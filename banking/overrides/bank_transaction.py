@@ -150,6 +150,7 @@ class CustomBankTransaction(BankTransaction):
 		payment_entry.reference_no = self.reference_number or first_invoice[DOCNAME]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 		payment_entry.reference_no = self.reference_number or payment_name
 		payment_entry.reference_date = self.date
 		payment_entry.submit()
@@ -190,6 +191,12 @@ def get_outstanding_amount(payment_doctype, payment_name):
 		invoices = split_invoices_based_on_payment_terms(
 			self.prepare_invoices_to_split(invoices_to_bill[1:]), self.company
 >>>>>>> 6e5f3be (fix: Create single PE for multiple unpaid invoices)
+=======
+		# clear references to allocate invoices correctly with splits
+		payment_entry.references = []
+		invoices = split_invoices_based_on_payment_terms(
+			self.prepare_invoices_to_split(invoices_to_bill), self.company
+>>>>>>> bd0628a (test: Reconcile BT with unpaid invoices)
 		)
 
 		to_allocate = self.unallocated_amount
