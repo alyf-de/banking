@@ -104,8 +104,10 @@ class CustomBankTransaction(BankTransaction):
 			)
 		payment_entry.reference_no = self.reference_number or first_invoice[DOCNAME]
 
+		# clear references to allocate invoices correctly with splits
+		payment_entry.references = []
 		invoices = split_invoices_based_on_payment_terms(
-			self.prepare_invoices_to_split(invoices_to_bill[1:]), self.company
+			self.prepare_invoices_to_split(invoices_to_bill), self.company
 		)
 
 		to_allocate = self.unallocated_amount
