@@ -8,7 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Coalesce
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, sbool
 from pypika.terms import Parameter
 
 from erpnext import get_company_currency, get_default_cost_center
@@ -78,11 +78,11 @@ def create_journal_entry_bts(
 	mode_of_payment: str = None,
 	party_type: str = None,
 	party: str = None,
-	allow_edit: int = 0,
+	allow_edit: bool | str = False,
 ):
 	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
 	if isinstance(allow_edit, str):
-		allow_edit = cint(allow_edit)
+		allow_edit = sbool(allow_edit)
 
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	if bank_transaction.deposit and bank_transaction.withdrawal:
@@ -182,6 +182,9 @@ def create_payment_entry_bts(
 	cost_center: str = None,
 	allow_edit: bool = False,
 ):
+	if isinstance(allow_edit, str):
+		allow_edit = sbool(allow_edit)
+
 	# Create a new payment entry based on the bank transaction
 	bank_transaction = frappe.db.get_values(
 		"Bank Transaction",
