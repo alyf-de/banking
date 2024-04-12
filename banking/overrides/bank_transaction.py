@@ -1,6 +1,7 @@
 import frappe
+from frappe import _
 from frappe.core.utils import find
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	get_payment_entry,
@@ -93,6 +94,7 @@ class CustomBankTransaction(BankTransaction):
 
 		# Make single PE against multiple invoices
 		if invoices_to_bill:
+			self.validate_period_closing()
 			payment_name = self.make_pe_against_invoices(invoices_to_bill)
 			self.add_to_payment_entry("Payment Entry", payment_name)  # Change doctype to PE
 
@@ -100,10 +102,33 @@ class CustomBankTransaction(BankTransaction):
 			self.save()  # runs on_update_after_submit
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	def make_payment_entry(
 		self, payment_doctype: str, payment_name: str, to_allocate: float
 	):
 =======
+=======
+	def validate_period_closing(self):
+		"""
+		Check if the Bank Transaction date is after the latest period closing date.
+		We cannot make PEs against this transaction's date (before period closing date).
+		"""
+		latest_period_close_date = frappe.db.get_value(
+			"Period Closing Voucher",
+			{"company": self.company, "docstatus": 1},
+			"posting_date",
+			order_by="posting_date desc",
+		)
+		if latest_period_close_date and getdate(self.date) <= getdate(
+			latest_period_close_date
+		):
+			frappe.throw(
+				_(
+					"Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
+				).format(frappe.format(latest_period_close_date, "Date"))
+			)
+
+>>>>>>> 907e35a (test: Tests for Issue #72 and fix Issue #81)
 	def add_to_payment_entry(self, payment_doctype, payment_name):
 		"""Add the payment entry to the bank transaction"""
 		pe = {
@@ -147,6 +172,7 @@ class CustomBankTransaction(BankTransaction):
 				party_amount=first_invoice[AMOUNT],
 				bank_account=bank_account,
 			)
+		payment_entry.posting_date = self.date
 		payment_entry.reference_no = self.reference_number or first_invoice[DOCNAME]
 
 <<<<<<< HEAD
