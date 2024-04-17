@@ -295,4 +295,22 @@ def get_outstanding_amount(payment_doctype, payment_name) -> float:
 
 	invoice = frappe.get_doc(payment_doctype, payment_name)
 	return flt(invoice.outstanding_amount, invoice.precision("outstanding_amount"))
+<<<<<<< HEAD
 >>>>>>> 6e5f3be (fix: Create single PE for multiple unpaid invoices)
+=======
+
+
+def on_update_after_submit(doc, event):
+	"""Validate if the Bank Transaction is over-allocated."""
+	to_allocate = flt(doc.withdrawal or doc.deposit)
+	for entry in doc.payment_entries:
+		to_allocate -= flt(entry.allocated_amount)
+		if to_allocate < 0.0:
+			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
+			frappe.throw(
+				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(
+					frappe.bold(f"{symbol} {str(abs(to_allocate))}"), frappe.bold(entry.idx)
+				),
+				title=_("Over Allocation"),
+			)
+>>>>>>> e98a265 (fix: Validate if the Bank Transaction is overallocated on update after submit)
