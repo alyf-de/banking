@@ -103,13 +103,11 @@ override_doctype_class = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Bank Transaction": {
+		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
+	}
+}
 
 # Scheduled Tasks
 # ---------------
