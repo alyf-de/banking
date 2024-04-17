@@ -31,6 +31,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
+		create_bank()
 		cls.gl_account = create_gl_account("_Test Bank Reco Tool")
 		cls.bank_account = create_bank_account(gl_account=cls.gl_account)
 		cls.customer = create_customer(customer_name="ABC Inc.")
@@ -407,3 +408,14 @@ def create_bank_account(
 		}
 	).insert()
 	return bank_account.name
+
+
+def create_bank(bank_name="Citi Bank"):
+	if not frappe.db.exists("Bank", bank_name):
+		bank = frappe.new_doc("Bank")
+		bank.bank_name = bank_name
+		bank.swift_number = "CITIUS33"
+		bank.insert()
+	else:
+		bank = frappe.get_doc("Bank", bank_name)
+	return bank
