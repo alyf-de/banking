@@ -64,7 +64,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 							to_reference_date: frm.doc.to_reference_date,
 						},
 						freeze: true,
-						freeze_message: "Auto Reconciling ...",
+						freeze_message: __("Auto Reconciling ..."),
 						callback: (r) => {
 							if (!r.exc) {
 								frm.refresh();
