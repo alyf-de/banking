@@ -43,7 +43,7 @@ class CustomBankTransaction(BankTransaction):
 					"Purchase Invoice",
 					"Expense Claim",
 				)
-				and outstanding_amount > 0.0
+				and outstanding_amount != 0.0
 			):
 				# Make PE against the unpaid invoice, link PE to Bank Transaction
 				invoices_to_bill.append(
@@ -123,6 +123,10 @@ class CustomBankTransaction(BankTransaction):
 				first_invoice[DOCNAME],
 				party_amount=first_invoice[AMOUNT],
 				bank_account=bank_account,
+				# make sure return invoice does not cause wrong payment type
+				# return SI against a deposit should be considered as "Receive" (discount)
+				# return SI against a withdrawal should be considered as "Pay" (refund)
+				payment_type="Receive" if self.deposit > 0 else "Pay",
 			)
 		payment_entry.posting_date = self.date
 		payment_entry.reference_no = self.reference_number or first_invoice[DOCNAME]
@@ -133,6 +137,7 @@ class CustomBankTransaction(BankTransaction):
 			self.prepare_invoices_to_split(invoices_to_bill), self.company
 		)
 
+		# TODO: fix to accomodate negative amount
 		to_allocate = self.unallocated_amount
 		for row in invoices:
 			row_allocated_amount = min(row.outstanding_amount, to_allocate)  # partial allocation
@@ -145,9 +150,9 @@ class CustomBankTransaction(BankTransaction):
 			if to_allocate <= 0:
 				break
 
-		payment_entry.paid_amount = sum(
-			row.allocated_amount for row in payment_entry.references
-		)
+		payment_entry.paid_amount = abs(
+			sum(row.allocated_amount for row in payment_entry.references)
+		)  # should not be negative
 		payment_entry.submit()  # TODO: submit it after testing
 		return payment_entry.name
 
