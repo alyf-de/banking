@@ -329,33 +329,57 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(bt.unallocated_amount, 0)
 
-	def test_unpaid_expense_claim_fully_reconcile(self):
+	def test_unpaid_expense_claims_fully_reconcile(self):
+		"""
+		Test if 2 unpaid expense claims fully reconcile against a Bank Transaction.
+		Test if they are paid and then the PE is reconciled.
+		"""
 		bt = create_bank_transaction(
-			withdrawal=200, reference_no="expense-cl-001234", bank_account=self.bank_account
+			withdrawal=300, reference_no="expense-cl-001234", bank_account=self.bank_account
 		)
 		expense_claim = make_expense_claim(
 			payable_account=frappe.db.get_value(
 				"Company", bt.company, "default_payable_account"
 			),
-			amount=300,
+			amount=200,
 			sanctioned_amount=200,
+			company=bt.company,
+			account="Travel Expenses - _TC",
+		)
+		expense_claim_2 = make_expense_claim(
+			payable_account=frappe.db.get_value(
+				"Company", bt.company, "default_payable_account"
+			),
+			amount=100,
+			sanctioned_amount=100,
 			company=bt.company,
 			account="Travel Expenses - _TC",
 		)
 		reconcile_vouchers(
 			bt.name,
 			json.dumps(
-				[{"payment_doctype": "Expense Claim", "payment_name": expense_claim.name}]
+				[
+					{"payment_doctype": "Expense Claim", "payment_name": expense_claim.name},
+					{"payment_doctype": "Expense Claim", "payment_name": expense_claim_2.name},
+				]
 			),
 		)
 
 		bt.reload()
 		expense_claim.reload()
-		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+		expense_claim_2.reload()
+		self.assertEqual(
+			bt.payment_entries[0].allocated_amount, 300
+		)  # one PE against 2 expense claims
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.unallocated_amount, 0)
+
 		self.assertEqual(expense_claim.total_amount_reimbursed, 200)
-		self.assertEqual(expense_claim.total_claimed_amount, 300)
+		self.assertEqual(expense_claim_2.total_amount_reimbursed, 100)
+
+		pe = get_pe_references([expense_claim.name, expense_claim_2.name])
+		self.assertEqual(pe[0].allocated_amount, 200)
+		self.assertEqual(pe[1].allocated_amount, 100)
 
 
 def get_pe_references(vouchers: list):
