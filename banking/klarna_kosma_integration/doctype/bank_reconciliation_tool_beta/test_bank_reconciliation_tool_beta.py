@@ -26,6 +26,8 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	create_payment_entry_bts,
 )
 
+from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
+
 
 class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	@classmethod
@@ -326,6 +328,34 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 2)
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(bt.unallocated_amount, 0)
+
+	def test_unpaid_expense_claim_fully_reconcile(self):
+		bt = create_bank_transaction(
+			withdrawal=200, reference_no="expense-cl-001234", bank_account=self.bank_account
+		)
+		expense_claim = make_expense_claim(
+			payable_account=frappe.db.get_value(
+				"Company", bt.company, "default_payable_account"
+			),
+			amount=300,
+			sanctioned_amount=200,
+			company=bt.company,
+			account="Travel Expenses - _TC",
+		)
+		reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[{"payment_doctype": "Expense Claim", "payment_name": expense_claim.name}]
+			),
+		)
+
+		bt.reload()
+		expense_claim.reload()
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(expense_claim.total_amount_reimbursed, 200)
+		self.assertEqual(expense_claim.total_claimed_amount, 300)
 
 
 def get_pe_references(vouchers: list):

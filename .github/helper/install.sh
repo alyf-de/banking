@@ -29,9 +29,11 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app payments --branch version-14
 bench get-app erpnext --branch version-14
+bench get-app hrms --branch version-14
 bench get-app banking "${GITHUB_WORKSPACE}"
 
 bench start &> bench_run_logs.txt &
 bench new-site --db-root-password root --admin-password admin test_site --install-app erpnext
+bench --site test_site install-app hrms
 bench --site test_site install-app banking
 bench setup requirements --dev
