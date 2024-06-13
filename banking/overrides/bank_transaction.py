@@ -126,6 +126,7 @@ class CustomBankTransaction(BankTransaction):
 			)
 		payment_entry.posting_date = self.date
 		payment_entry.reference_no = self.reference_number or first_invoice[DOCNAME]
+		payment_entry.reference_date = self.date
 
 		# clear references to allocate invoices correctly with splits
 		payment_entry.references = []
@@ -154,14 +155,18 @@ class CustomBankTransaction(BankTransaction):
 	def prepare_invoices_to_split(self, invoices):
 		invoices_to_split = []
 		for invoice in invoices:
+			is_expense_claim = invoice[DOCTYPE] == "Expense Claim"
+			total_field = "grand_total" if is_expense_claim else "base_grand_total"
+			due_date_field = "posting_date" if is_expense_claim else "due_date"
+
 			invoice_data = frappe.db.get_value(
 				invoice[DOCTYPE],
 				invoice[DOCNAME],
 				[
 					"name as voucher_no",
 					"posting_date",
-					"base_grand_total as invoice_amount",
-					"due_date",
+					f"{total_field} as invoice_amount",
+					f"{due_date_field} as due_date",
 				],
 				as_dict=True,
 			)
@@ -172,6 +177,7 @@ class CustomBankTransaction(BankTransaction):
 		return invoices_to_split
 
 	def validate_invoices_to_bill(self, invoices_to_bill):
+		"""Validate if the invoices are of the same doctype and party."""
 		unique_doctypes = {invoice[DOCTYPE] for invoice in invoices_to_bill}
 		if len(unique_doctypes) > 1:
 			frappe.throw(
