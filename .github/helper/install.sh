@@ -8,7 +8,7 @@ sudo apt update && sudo apt install redis-server libcups2-dev
 
 pip install frappe-bench
 
-git clone https://github.com/frappe/frappe --branch version-14 --depth 1
+git clone https://github.com/frappe/frappe --branch version-15 --depth 1
 bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frappe-bench
 
 mysql --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
@@ -27,9 +27,9 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
-bench get-app payments --branch version-14
-bench get-app erpnext --branch version-14
-bench get-app hrms --branch version-14
+bench get-app payments --branch version-15
+bench get-app erpnext --branch version-15
+bench get-app hrms --branch version-15
 bench get-app banking "${GITHUB_WORKSPACE}"
 
 bench start &> bench_run_logs.txt &
