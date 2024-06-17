@@ -262,13 +262,6 @@ def new_bank_transaction(account: str, transaction: Dict) -> bool:
 	debit = 0 if is_credit else float(amount)
 	credit = float(amount) if is_credit else 0
 
-	state_map = {
-		"PROCESSED": "Settled",
-		"PENDING": "Pending",
-		"CANCELED": "Settled",  # TODO: is this status ok ? Should we even consider making cancelled/failed records
-		"FAILED": "Settled",
-	}
-	status = state_map[transaction.get("state")]
 	transaction_id = transaction.get("transaction_id")
 
 	if not transaction_id and transaction.get("state") == "PENDING":
@@ -283,7 +276,6 @@ def new_bank_transaction(account: str, transaction: Dict) -> bool:
 		{
 			"doctype": "Bank Transaction",
 			"date": getdate(transaction.get("value_date") or transaction.get("date")),
-			"status": status,
 			"bank_account": account,
 			"deposit": credit,
 			"withdrawal": debit,
