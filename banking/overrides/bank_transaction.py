@@ -25,7 +25,7 @@ class CustomBankTransaction(BankTransaction):
 
 		# Vouchers can either all be paid or all be unpaid
 		if any(voucher["payment_doctype"] in unpaid_docs for voucher in vouchers):
-			self.reconcile_invoices()
+			self.reconcile_invoices(vouchers)
 		else:
 			self.reconcile_paid_vouchers(vouchers)
 
