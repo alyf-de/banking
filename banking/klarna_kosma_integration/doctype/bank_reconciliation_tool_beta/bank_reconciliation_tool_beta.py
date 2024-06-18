@@ -1,6 +1,7 @@
 # Copyright (c) 2023, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+import datetime
 from typing import Union
 
 import frappe
@@ -71,8 +72,8 @@ def get_bank_transactions(
 def create_journal_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str = None,
-	reference_date: str = None,
-	posting_date: str = None,
+	reference_date: str | datetime.date = None,
+	posting_date: str | datetime.date = None,
 	entry_type: str = None,
 	second_account: str = None,
 	mode_of_payment: str = None,
