@@ -211,7 +211,7 @@ def on_update_after_submit(doc, event):
 	to_allocate = flt(doc.withdrawal or doc.deposit)
 	for entry in doc.payment_entries:
 		to_allocate -= flt(entry.allocated_amount)
-		if to_allocate < 0.0:
+		if round(to_allocate, 2) < 0.0:
 			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
 			frappe.throw(
 				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(
