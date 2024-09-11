@@ -97,6 +97,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				{
 					content: row.party,
 					format: (value) => {
+						if (row.party_name) {
+							frappe.utils.add_link_title(row.party_type, row.party, row.party_name);
+						}
 						let formatted_value =  frappe.format(row.party, {fieldtype: "Link", options: row.party_type});
 						return row.party_match ? formatted_value.bold() : formatted_value;
 					}
