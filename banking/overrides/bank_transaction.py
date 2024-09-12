@@ -168,7 +168,7 @@ class CustomBankTransaction(BankTransaction):
 		payment_entry.paid_amount = abs(
 			sum(row.allocated_amount for row in payment_entry.references)
 		)  # should not be negative
-		payment_entry.submit()  # TODO: submit it after testing
+		payment_entry.submit()
 		return payment_entry.name
 
 	def prepare_invoices_to_split(self, invoices):
@@ -200,39 +200,33 @@ class CustomBankTransaction(BankTransaction):
 		Calculate a permissible positive and negative upper limit sum for the allocation.
 		This will ensure that the allocated positive and negative amounts add up to the unallocated amount.
 		"""
-		sum_positive = sum(
-			invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount > 0
-		)
-		sum_negative = abs(
+		sum_positive = (
 			sum(
-				invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount < 0
+				invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount > 0
 			)
+			or 0.0
 		)
-		if sum_negative and sum_positive:
-			if sum_negative > sum_positive:
-				frappe.throw(
-					title=_("Overallocated negative amount"),
-					msg=_("The negative amount is overallocated"),
+		sum_negative = (
+			abs(
+				sum(
+					invoice.outstanding_amount
+					for invoice in invoices
+					if invoice.outstanding_amount < 0
 				)
-		else:
-			# If there is only one type of amount, then dont bother adjusting
-			return sum_positive, sum_negative
+			)
+			or 0.0
+		)
+		if sum_negative > sum_positive:
+			frappe.throw(
+				title=_("Overallocated Returns"),
+				msg=_(
+					"The allocated amount cannot be negative. Please adjust the selected return vouchers."
+				),
+			)
 
-		difference = flt(sum_positive - sum_negative, self.precision("unallocated_amount"))
-		if (sum_positive < self.unallocated_amount) or (difference > self.unallocated_amount):
-			# NOTE: If sum_positive is far smaller than unallocated, avoid further reduction ((100, -10), 130)
-			# If difference is greater than unallocated (sum_positive is far greater), avoid further reduction ((1000, -10), 130)
-			# In both cases we want to reach closer to unallocated_amount
-			# Hence, sum_negative reduction is not pointless
-			sum_negative = 0
-		elif difference < self.unallocated_amount:
-			# Reduce the negative sum
-			to_reduce = difference
-			if difference >= sum_negative:
-				to_reduce = flt(
-					self.unallocated_amount - difference, self.precision("unallocated_amount")
-				)
-			sum_negative = flt(sum_negative - to_reduce, self.precision("unallocated_amount"))
+		allocation = self.unallocated_amount - (sum_positive - sum_negative)
+		if allocation < 0:
+			sum_positive += allocation
 
 		return sum_positive, sum_negative
 
