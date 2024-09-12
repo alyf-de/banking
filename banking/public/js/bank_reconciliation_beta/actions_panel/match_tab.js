@@ -187,7 +187,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		summary_field.empty();
 
 		// Show the actual allocated amount
-		let allocated_amount = flt(total_amount) - flt(actual_unallocated);
+		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
 
 		new erpnext.accounts.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
