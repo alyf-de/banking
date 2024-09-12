@@ -381,6 +381,70 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(pe[0].allocated_amount, 200)
 		self.assertEqual(pe[1].allocated_amount, 100)
 
+	def test_invoice_and_return(self):
+		"""Test invoices and returns paid by one bank transaction.
+
+		BT: 200
+		SI1, SI2, SI3: -100, -50, 350
+		"""
+		doc = create_bank_transaction(
+			date=add_days(getdate(), -2), deposit=200, bank_account=self.bank_account
+		)
+		customer = create_customer()
+		return_1 = create_sales_invoice(
+			rate=100,
+			qty=-1,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			is_return=1,
+		)
+		return_2 = create_sales_invoice(
+			rate=50,
+			qty=-1,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			is_return=1,
+		)
+		invoice_1 = create_sales_invoice(
+			rate=350,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		reconcile_vouchers(
+			doc.name,
+			json.dumps(
+				[
+					{"payment_doctype": "Sales Invoice", "payment_name": return_1.name},
+					{"payment_doctype": "Sales Invoice", "payment_name": return_2.name},
+					{"payment_doctype": "Sales Invoice", "payment_name": invoice_1.name},
+				]
+			),
+		)
+
+		doc.reload()
+		self.assertEqual(len(doc.payment_entries), 1)  # 1 PE made against 3 invoices
+		self.assertEqual(doc.payment_entries[0].allocated_amount, 200)
+
+		pe = get_pe_references([return_1.name, return_2.name, invoice_1.name])
+		self.assertEqual(pe[0].allocated_amount, -100)
+		self.assertEqual(pe[1].allocated_amount, -50)
+		self.assertEqual(pe[2].allocated_amount, 350)
+
+		# Check if the PE is posted on the same date as the BT
+		self.assertEqual(
+			doc.date,
+			frappe.db.get_value(
+				"Payment Entry", doc.payment_entries[0].payment_entry, "posting_date"
+			),
+		)
+
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
