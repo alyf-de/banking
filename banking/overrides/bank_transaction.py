@@ -216,6 +216,27 @@ class CustomBankTransaction(BankTransaction):
 			)
 			or 0.0
 		)
+		self.validate_sums(sum_positive, sum_negative, invoices)
+
+		# Adjust the positive sum (trim it) if overallocated
+		allocation = self.unallocated_amount - (sum_positive - sum_negative)
+		if allocation < 0:
+			sum_positive += allocation
+
+		return sum_positive, sum_negative
+
+	def validate_sums(self, sum_positive, sum_negative, invoices):
+		"""Validate if the sum of positive and negative amounts is equal to the unallocated amount."""
+		if sum_positive and not sum_negative:
+			return
+
+		if sum_negative and not sum_positive:
+			# Only -ve invoices are allowed for opposite transactions
+			# Eg. A return SINV can be matched with a withdrawal (it is a refund)
+			invoice_doctype = "Sales Invoice" if self.deposit > 0 else "Purchase Invoice"
+			if invoices[0]["voucher_type"] != invoice_doctype:
+				return
+
 		if sum_negative > sum_positive:
 			frappe.throw(
 				title=_("Overallocated Returns"),
@@ -223,12 +244,6 @@ class CustomBankTransaction(BankTransaction):
 					"The allocated amount cannot be negative. Please adjust the selected return vouchers."
 				),
 			)
-
-		allocation = self.unallocated_amount - (sum_positive - sum_negative)
-		if allocation < 0:
-			sum_positive += allocation
-
-		return sum_positive, sum_negative
 
 	def validate_invoices_to_bill(self, invoices_to_bill):
 		"""Validate if the invoices are of the same doctype and party."""

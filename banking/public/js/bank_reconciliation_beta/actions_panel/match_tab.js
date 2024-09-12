@@ -41,7 +41,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
 			flt(this.transaction.unallocated_amount),
-			0,
+			flt(this.transaction.unallocated_amount),
 			this.transaction.currency,
 		);
 	}
