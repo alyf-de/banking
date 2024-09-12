@@ -520,6 +520,8 @@ def get_matching_queries(
 	queries = []
 	exact_party_match = "exact_party_match" in document_types
 	currency = get_account_currency(bank_account)
+	is_withdrawal = transaction.withdrawal > 0.0
+	is_deposit = transaction.deposit > 0.0
 
 	if "payment_entry" in document_types:
 		query = get_pe_matching_query(
@@ -549,47 +551,29 @@ def get_matching_queries(
 
 	# -- Invoices --
 	include_unpaid = "unpaid_invoices" in document_types
-	invoice_dt = "sales_invoice" if transaction.deposit > 0.0 else "purchase_invoice"
-	invoice_map = {
-		"sales_invoice": get_unpaid_si_matching_query
-		if include_unpaid
-		else get_si_matching_query,
-		"purchase_invoice": get_unpaid_pi_matching_query
-		if include_unpaid
-		else get_pi_matching_query,
-		"expense_claim": get_unpaid_ec_matching_query
-		if (include_unpaid and transaction.withdrawal > 0.0)
-		else None,
+	invoice_dt = "sales_invoice" if is_deposit else "purchase_invoice"
+	invoice_queries_map = get_invoice_function_map(document_types, is_deposit)
+	kwargs = {
+		"exact_match": exact_match,
+		"exact_party_match": exact_party_match,
+		"currency": currency,
 	}
-	order = (
-		["sales_invoice", "purchase_invoice"]
-		if (transaction.deposit > 0.0)
-		else ["purchase_invoice", "expense_claim", "sales_invoice"]
-	)
-	invoice_map = {key: invoice_map[key] for key in order}
-
-	if not include_unpaid:  # only allow paid invoices of a certain doctype
-		invoice_map.get(invoice_dt)(exact_match, exact_party_match, currency)
-	else:
-		for doctype, method in invoice_map.items():
-			if (doctype not in document_types) or (not method):
-				continue
-			if doctype == "expense_claim":
-				query = method(exact_match, exact_party_match, currency, company)
+	if include_unpaid:
+		kwargs["company"] = company
+		for doctype, fn in invoice_queries_map.items():
+			if doctype != "expense_claim":
+				kwargs["include_only_returns"] = doctype != invoice_dt
 			else:
-				query = method(
-					exact_match,
-					exact_party_match,
-					currency,
-					company,
-					is_return=(doctype != invoice_dt),
-				)
-			queries.append(query)
+				del kwargs["include_only_returns"]
+			queries.append(fn(**kwargs))
+	else:
+		fn = invoice_queries_map.get(invoice_dt)
+		queries.append(fn(**kwargs))
 
-	if "loan_disbursement" in document_types and transaction.withdrawal > 0.0:
+	if "loan_disbursement" in document_types and is_withdrawal:
 		queries.append(get_ld_matching_query(bank_account, exact_match, transaction))
 
-	if "loan_repayment" in document_types and transaction.deposit > 0.0:
+	if "loan_repayment" in document_types and is_deposit:
 		queries.append(get_lr_matching_query(bank_account, exact_match, transaction))
 
 	if "bank_transaction" in document_types:
@@ -891,7 +875,7 @@ def get_je_matching_query(
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
 
-	if frappe.flags.auto_reconcile_vouchers == True:
+	if frappe.flags.auto_reconcile_vouchers:
 		query = query.where(ref_condition)
 
 	return str(query)
@@ -947,7 +931,7 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 
 
 def get_unpaid_si_matching_query(
-	exact_match, exact_party_match, currency, company, is_return
+	exact_match, exact_party_match, currency, company, include_only_returns=False
 ):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
@@ -982,7 +966,7 @@ def get_unpaid_si_matching_query(
 		.where(sales_invoice.currency == currency)
 	)
 
-	if is_return:
+	if include_only_returns:
 		query = query.where(sales_invoice.is_return == 1)
 	if exact_match:
 		query = query.where(outstanding_amount_condition)
@@ -1046,7 +1030,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 
 
 def get_unpaid_pi_matching_query(
-	exact_match, exact_party_match, currency, company, is_return
+	exact_match, exact_party_match, currency, company, include_only_returns=False
 ):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
@@ -1084,7 +1068,7 @@ def get_unpaid_pi_matching_query(
 		.where(purchase_invoice.currency == currency)
 	)
 
-	if is_return:
+	if include_only_returns:
 		query = query.where(purchase_invoice.is_return == 1)
 	if exact_match:
 		query = query.where(outstanding_amount_condition)
@@ -1142,3 +1126,31 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 		query = query.where(party_condition)
 
 	return str(query)
+
+
+def get_invoice_function_map(document_types: list, is_deposit: bool):
+	"""Get the function map for invoices based on the given filters."""
+	include_unpaid = "unpaid_invoices" in document_types
+	fn_map = {
+		"sales_invoice": (
+			get_unpaid_si_matching_query if include_unpaid else get_si_matching_query
+		),
+		"purchase_invoice": (
+			get_unpaid_pi_matching_query if include_unpaid else get_pi_matching_query
+		),
+		"expense_claim": (
+			get_unpaid_ec_matching_query if (include_unpaid and not is_deposit) else None
+		),
+	}
+	order = (
+		["sales_invoice", "purchase_invoice"]
+		if (is_deposit)
+		else ["purchase_invoice", "expense_claim", "sales_invoice"]
+	)
+
+	# Return the ordered function map that has a function and is in the document types
+	return {
+		doctype: fn_map[doctype]
+		for doctype in order
+		if (doctype in document_types and fn_map[doctype])
+	}
