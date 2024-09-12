@@ -186,7 +186,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		let summary_field = this.match_field_group.get_field("transaction_amount_summary").$wrapper;
 		summary_field.empty();
 
-		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
+		// Show the actual allocated amount
+		let allocated_amount = flt(total_amount) - flt(actual_unallocated);
 
 		new erpnext.accounts.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
