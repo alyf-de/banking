@@ -166,7 +166,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldname: "reference_number",
 				fieldtype: "Data",
 				label: __("Reference Number"),
-				default: this.transaction.reference_number || this.transaction.description.slice(0, 140),
+				default: (
+					this.transaction.reference_number
+					||
+					this.transaction.description ? this.transaction.description.slice(0, 140) : ""
+				),
 			},
 			{
 				fieldname: "posting_date",
