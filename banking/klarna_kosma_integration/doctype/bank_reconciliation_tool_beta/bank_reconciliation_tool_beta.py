@@ -29,9 +29,9 @@ class BankReconciliationToolBeta(Document):
 @frappe.whitelist()
 def get_bank_transactions(
 	bank_account: str,
-	from_date: str = None,
-	to_date: str = None,
-	order_by: str = "date asc",
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	order_by: str | datetime.date = "date asc",
 ):
 	# returns bank transactions for a bank account
 	filters = []
@@ -286,11 +286,11 @@ def upload_bank_statement(**args):
 @frappe.whitelist()
 def auto_reconcile_vouchers(
 	bank_account: str,
-	from_date: str = None,
-	to_date: str = None,
-	filter_by_reference_date: str = None,
-	from_reference_date: str = None,
-	to_reference_date: str = None,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: str | bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
 ):
 	# Auto reconcile vouchers with matching reference numbers
 	frappe.flags.auto_reconcile_vouchers = True
@@ -565,7 +565,7 @@ def get_matching_queries(
 		kwargs.company = company
 		for doctype, fn in invoice_queries_map.items():
 			if doctype in ["sales_invoice", "purchase_invoice"]:
-				kwargs.include_only_returns = (doctype != invoice_dt)
+				kwargs.include_only_returns = doctype != invoice_dt
 			elif kwargs.include_only_returns is not None:
 				# Remove the key when doctype == "expense_claim"
 				del kwargs.include_only_returns
@@ -588,7 +588,9 @@ def get_matching_queries(
 	return queries
 
 
-def get_bt_matching_query(exact_match: str, common_filters: frappe._dict, transaction_name: str):
+def get_bt_matching_query(
+	exact_match: bool, common_filters: frappe._dict, transaction_name: str
+):
 	# get matching bank transaction query
 	# find bank transactions in the same bank account with opposite sign
 	# same bank account must have same company and currency
@@ -883,7 +885,9 @@ def get_je_matching_query(
 	return query
 
 
-def get_si_matching_query(exact_match: bool, currency: str, common_filters: frappe._dict):
+def get_si_matching_query(
+	exact_match: bool, currency: str, common_filters: frappe._dict
+):
 	"""
 	Get matching sales invoices when they are also used as payment entries (POS).
 	"""
@@ -933,14 +937,20 @@ def get_si_matching_query(exact_match: bool, currency: str, common_filters: frap
 
 
 def get_unpaid_si_matching_query(
-	exact_match: bool, currency: str, common_filters: frappe._dict, company: str, include_only_returns: bool = False
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	include_only_returns: bool = False,
 ):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
 	party_condition = sales_invoice.customer == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	outstanding_amount_condition = sales_invoice.outstanding_amount == common_filters.amount
+	outstanding_amount_condition = (
+		sales_invoice.outstanding_amount == common_filters.amount
+	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	query = (
@@ -976,7 +986,9 @@ def get_unpaid_si_matching_query(
 	return query
 
 
-def get_pi_matching_query(exact_match: bool, currency: str, common_filters: frappe._dict):
+def get_pi_matching_query(
+	exact_match: bool, currency: str, common_filters: frappe._dict
+):
 	"""
 	Get matching purchase invoice query when they are also used as payment entries (is_paid)
 	"""
@@ -992,9 +1004,10 @@ def get_pi_matching_query(exact_match: bool, currency: str, common_filters: frap
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
 	# date of BT and paid PI could be the same (date of payment or the date of the bill)
-	date_condition = Coalesce(
-		purchase_invoice.bill_date, purchase_invoice.posting_date
-	) == common_filters.date
+	date_condition = (
+		Coalesce(purchase_invoice.bill_date, purchase_invoice.posting_date)
+		== common_filters.date
+	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	query = (
@@ -1030,14 +1043,20 @@ def get_pi_matching_query(exact_match: bool, currency: str, common_filters: frap
 
 
 def get_unpaid_pi_matching_query(
-	exact_match: bool, currency: str, common_filters: frappe._dict, company: str, include_only_returns: bool = False
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	include_only_returns: bool = False,
 ):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
 	party_condition = purchase_invoice.supplier == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	outstanding_amount_condition = purchase_invoice.outstanding_amount == common_filters.amount
+	outstanding_amount_condition = (
+		purchase_invoice.outstanding_amount == common_filters.amount
+	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	# We skip date rank as the date of an unpaid bill is mostly
@@ -1076,7 +1095,9 @@ def get_unpaid_pi_matching_query(
 	return query
 
 
-def get_unpaid_ec_matching_query(exact_match: bool, currency: str, common_filters: frappe._dict, company: str):
+def get_unpaid_ec_matching_query(
+	exact_match: bool, currency: str, common_filters: frappe._dict, company: str
+):
 	if currency != get_company_currency(company):
 		# Expense claims are always in company currency
 		return ""
