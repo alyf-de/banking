@@ -45,3 +45,5 @@ Please select a Bank Account to start reconciling.,"Bitte wählen Sie ein Bankko
 Fetching older transactions will count against your limit in the current billing period.,Das Abrufen älterer Transaktionen zählt gegen Ihr Limit im aktuellen Abrechnungszeitraum.,
 Select IBAN and corresponding ERPNext Account,IBAN und zugehöriges ERPNext-Konto auswählen,
 Bank Reconciliation Tool Beta,Bankabgleich Beta,
+"Are you trying to reconcile vouchers of different parties? If yes, please select an account for the Reconciliation Journal Entry.", "Versuchen Sie, Belege verschiedener Parteien abzugleichen? Wenn ja, wählen Sie bitte ein Konto für den Abgleichsbuchungssatz aus.",
+Multiple Party Reconciliation, Abgleich mehrerer Parteien,
