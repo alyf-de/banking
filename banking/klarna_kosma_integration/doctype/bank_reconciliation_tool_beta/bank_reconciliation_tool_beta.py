@@ -16,9 +16,6 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	BankTransaction,
 	get_total_allocated_amount,
 )
-from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
-	reconcile_vouchers,
-)
 from erpnext.accounts.utils import get_account_currency
 
 
@@ -300,7 +297,7 @@ def reconcile_voucher(
 			}
 		]
 	)
-	return reconcile_vouchers(transaction_name, vouchers)
+	return bulk_reconcile_vouchers(transaction_name, vouchers)
 
 
 @frappe.whitelist()
@@ -362,7 +359,7 @@ def auto_reconcile_vouchers(
 		)
 
 		unallocated_before = transaction.unallocated_amount
-		transaction = reconcile_vouchers(transaction.name, json.dumps(vouchers))
+		transaction = bulk_reconcile_vouchers(transaction.name, json.dumps(vouchers))
 
 		if transaction.status == "Reconciled":
 			reconciled.add(transaction.name)
