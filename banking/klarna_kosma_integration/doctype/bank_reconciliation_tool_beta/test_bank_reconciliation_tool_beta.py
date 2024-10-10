@@ -522,7 +522,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 				]
 			),
 			reconcile_multi_party=True,
-			account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
 		)
 		bt.reload()
 		si.reload()

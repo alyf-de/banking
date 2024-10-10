@@ -249,7 +249,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		}
 	}
 
-	bulk_reconcile_vouchers(selected_vouchers, reconcile_multi_party, account=null) {
+	bulk_reconcile_vouchers(selected_vouchers, reconcile_multi_party) {
 		let me = this;
 		frappe.call({
 			method:
@@ -258,7 +258,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				bank_transaction_name: this.transaction.name,
 				vouchers: selected_vouchers,
 				reconcile_multi_party: reconcile_multi_party,
-				account: account,
 			},
 			freeze: true,
 			freeze_message: __("Reconciling ..."),
@@ -282,31 +281,16 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			{
 				fieldtype: "HTML",
 				fieldname: "info",
-				options: __("Are you trying to reconcile vouchers of different parties? If yes, please select an account for the Reconciliation Journal Entry."),
-			},
-			{
-				fieldtype: "Link",
-				fieldname: "account",
-				label: __("Account"),
-				options: "Account",
-				reqd: 1,
-				get_query: () => {
-					return {
-						filters: {
-							is_group: 0,
-							company: this.transaction.company,
-						},
-					};
-				},
+				options: __("Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."),
 			},
 		]
 		frappe.prompt(
 			fields,
-			(values) => {
-				me.bulk_reconcile_vouchers(selected_vouchers, true, values.account);
+			() => {
+				me.bulk_reconcile_vouchers(selected_vouchers, true);
 			},
 			__("Multiple Party Reconciliation"),
-			__("Reconcile")
+			__("Confirm")
 		);
 	}
 
