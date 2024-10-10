@@ -240,31 +240,27 @@ def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
 	reconcile_multi_party: bool = False,
-	account: str | None = None,
 ) -> "BankTransaction":
 	"""
 	Reconcile multiple vouchers with a bank transaction.
 
 	:param vouchers: JSON string of vouchers to reconcile
-	        structure: [
-	                {
-	                        "payment_doctype": "Payment Entry",
-	                        "payment_name": "PE-00001",
-	                        "amount": 1000.0,
-	                        "party": "XYZ",
-	                }
-	        ]
+	                structure: [
+	                                {
+	                                                "payment_doctype": "Payment Entry",
+	                                                "payment_name": "PE-00001",
+	                                                "amount": 1000.0,
+	                                                "party": "XYZ",
+	                                }
+	                ]
 	"""
 	if isinstance(vouchers, str):
 		vouchers = json.loads(vouchers)
 
 	reconcile_multi_party = sbool(reconcile_multi_party)
 
-	if reconcile_multi_party and not account:
-		frappe.throw(_("An Account is required for multi-party reconciliation"))
-
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
-	transaction.add_payment_entries(vouchers, reconcile_multi_party, account)
+	transaction.add_payment_entries(vouchers, reconcile_multi_party)
 	transaction.validate_duplicate_references()
 	transaction.allocate_payment_entries()
 	transaction.update_allocated_amount()
