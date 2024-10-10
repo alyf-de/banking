@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.core.utils import find
+from frappe.model.document import Document
 from frappe.utils import flt, getdate
 
 from erpnext import get_default_cost_center
@@ -9,6 +10,8 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	split_invoices_based_on_payment_terms,
 )
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTransaction
+
+from typing import Callable
 
 DOCTYPE, DOCNAME, AMOUNT, PARTY = 0, 1, 2, 3
 
@@ -116,6 +119,21 @@ class CustomBankTransaction(BankTransaction):
 			)
 
 	def make_jv_against_invoices(self, invoices_to_bill: list) -> str:
+		def _attach_invoice(row: dict, journal_entry: "Document") -> None:
+			journal_entry.append(
+				"accounts",
+				{
+					"account": second_account,
+					"credit_in_account_currency": row.allocated_amount if self.deposit > 0 else 0.0,
+					"debit_in_account_currency": row.allocated_amount if self.withdrawal > 0 else 0.0,
+					"party_type": row.get("party_type"),
+					"party": row.get("party"),
+					"cost_center": get_default_cost_center(company),
+					"reference_type": row.voucher_type,
+					"reference_name": row.voucher_no,
+				},
+			)
+
 		self.validate_invoices_to_bill(invoices_to_bill, allow_multi_party=True)
 
 		company_account = frappe.get_value("Bank Account", self.bank_account, "account")
@@ -123,7 +141,7 @@ class CustomBankTransaction(BankTransaction):
 			"Account", company_account, ["company", "account_currency"]
 		)
 
-		second_account = self.get_debtor_creditor_account(invoices_to_bill[0])
+		second_account = get_debtor_creditor_account(invoices_to_bill[0])
 		second_account_currency = frappe.db.get_value(
 			"Account", second_account, "account_currency"
 		)
@@ -145,36 +163,7 @@ class CustomBankTransaction(BankTransaction):
 		invoices = split_invoices_based_on_payment_terms(
 			self.prepare_invoices_to_split(invoices_to_bill), self.company
 		)
-
-		# First class pass for positive amounts, negative amounts adjust accordingly
-		sum_postive, sum_negative = self.get_positive_and_negative_sums(invoices)
-		for row in invoices:
-			if row.outstanding_amount > 0:
-				if sum_postive <= 0:
-					continue
-				row_allocated_amount = min(row.outstanding_amount, sum_postive)
-				sum_postive -= row_allocated_amount
-			else:
-				if sum_negative <= 0:
-					continue
-				can_allocate = min(abs(row.outstanding_amount), sum_negative)
-				row_allocated_amount = -1 * can_allocate
-				sum_negative -= can_allocate
-
-			row.allocated_amount = row_allocated_amount
-			journal_entry.append(
-				"accounts",
-				{
-					"account": second_account,
-					"credit_in_account_currency": row_allocated_amount if self.deposit > 0 else 0.0,
-					"debit_in_account_currency": row_allocated_amount if self.withdrawal > 0 else 0.0,
-					"party_type": row.get("party_type"),
-					"party": row.get("party"),
-					"cost_center": get_default_cost_center(company),
-					"reference_type": row.voucher_type,
-					"reference_name": row.voucher_no,
-				},
-			)
+		self.adjust_and_allocate_invoices(invoices, journal_entry, action=_attach_invoice)
 
 		total_allocated_amount = sum(row.allocated_amount for row in invoices)
 		journal_entry.append(
@@ -182,9 +171,9 @@ class CustomBankTransaction(BankTransaction):
 			{
 				"account": company_account,
 				"bank_account": self.bank_account,
-				"credit_in_account_currency": total_allocated_amount
-				if self.withdrawal > 0
-				else 0.0,
+				"credit_in_account_currency": (
+					total_allocated_amount if self.withdrawal > 0 else 0.0
+				),
 				"debit_in_account_currency": total_allocated_amount if self.deposit > 0 else 0.0,
 				"cost_center": get_default_cost_center(company),
 			},
@@ -193,19 +182,14 @@ class CustomBankTransaction(BankTransaction):
 		journal_entry.submit()
 		return journal_entry.name
 
-	def get_debtor_creditor_account(self, invoice):
-		"""Get the debtor or creditor (intermediate) account based on the invoice type."""
-		account_field = (
-			"debit_to"
-			if invoice[DOCTYPE] == "Sales Invoice"
-			else "credit_to"
-			if invoice[DOCTYPE] == "Purchase Invoice"
-			else "payable_account"
-		)
-		return frappe.db.get_value(invoice[DOCTYPE], invoice[DOCNAME], account_field)
-
 	def make_pe_against_invoices(self, invoices_to_bill: list) -> str:
 		"""Make Payment Entry against multiple invoices."""
+
+		def _attach_invoice(row: dict, payment_entry: "Document") -> None:
+			row.reference_doctype = row.voucher_type
+			row.reference_name = row.voucher_no
+			payment_entry.append("references", row)
+
 		self.validate_invoices_to_bill(invoices_to_bill)
 
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
@@ -239,27 +223,7 @@ class CustomBankTransaction(BankTransaction):
 		invoices = split_invoices_based_on_payment_terms(
 			self.prepare_invoices_to_split(invoices_to_bill), self.company
 		)
-
-		# First class pass for positive amounts, negative amounts adjust accordingly
-		sum_postive, sum_negative = self.get_positive_and_negative_sums(invoices)
-		for row in invoices:
-			row.reference_doctype = row.voucher_type
-			row.reference_name = row.voucher_no
-
-			if row.outstanding_amount > 0:
-				if sum_postive <= 0:
-					continue
-				row_allocated_amount = min(row.outstanding_amount, sum_postive)
-				sum_postive -= row_allocated_amount
-			else:
-				if sum_negative <= 0:
-					continue
-				can_allocate = min(abs(row.outstanding_amount), sum_negative)
-				row_allocated_amount = -1 * can_allocate
-				sum_negative -= can_allocate
-
-			row.allocated_amount = row_allocated_amount
-			payment_entry.append("references", row)
+		self.adjust_and_allocate_invoices(invoices, payment_entry, action=_attach_invoice)
 
 		payment_entry.paid_amount = abs(
 			sum(row.allocated_amount for row in payment_entry.references)
@@ -329,6 +293,35 @@ class CustomBankTransaction(BankTransaction):
 
 		return sum_positive, sum_negative
 
+	def adjust_and_allocate_invoices(
+		self,
+		invoices: list,
+		payment_voucher: "Document",
+		action: Callable[[dict, Document], None],
+	) -> None:
+		"""
+		Adjust and allocate the invoicees to the payment voucher based on
+		the unallocated amount.
+		The `payment_voucher` object is mutated by param:action.
+		"""
+		sum_postive, sum_negative = self.get_positive_and_negative_sums(invoices)
+		for row in invoices:
+			if row.outstanding_amount > 0:
+				if sum_postive <= 0:
+					continue
+				row_allocated_amount = min(row.outstanding_amount, sum_postive)
+				sum_postive -= row_allocated_amount
+			else:
+				if sum_negative <= 0:
+					continue
+				can_allocate = min(abs(row.outstanding_amount), sum_negative)
+				row_allocated_amount = -1 * can_allocate
+				sum_negative -= can_allocate
+
+			row.allocated_amount = row_allocated_amount
+			# Attach the invoice to/Mutate the payment voucher
+			action(row, payment_voucher)
+
 	def validate_sums(self, sum_positive, sum_negative, invoices):
 		"""Validate if the sum of positive and negative amounts is equal to the unallocated amount."""
 		if sum_positive and not sum_negative:
@@ -389,6 +382,18 @@ def get_outstanding_amount(payment_doctype, payment_name) -> float:
 
 	invoice = frappe.get_doc(payment_doctype, payment_name)
 	return flt(invoice.outstanding_amount, invoice.precision("outstanding_amount"))
+
+
+def get_debtor_creditor_account(invoice: dict) -> str | None:
+	"""Get the debtor or creditor (intermediate) account based on the invoice type."""
+	account_field = (
+		"debit_to"
+		if invoice[DOCTYPE] == "Sales Invoice"
+		else "credit_to"
+		if invoice[DOCTYPE] == "Purchase Invoice"
+		else "payable_account"
+	)
+	return frappe.db.get_value(invoice[DOCTYPE], invoice[DOCNAME], account_field)
 
 
 def on_update_after_submit(doc, event):

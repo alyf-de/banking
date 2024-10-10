@@ -245,14 +245,7 @@ def bulk_reconcile_vouchers(
 	Reconcile multiple vouchers with a bank transaction.
 
 	:param vouchers: JSON string of vouchers to reconcile
-	                structure: [
-	                                {
-	                                                "payment_doctype": "Payment Entry",
-	                                                "payment_name": "PE-00001",
-	                                                "amount": 1000.0,
-	                                                "party": "XYZ",
-	                                }
-	                ]
+	structure: List(Dict(payment_doctype, payment_name, amount, party))
 	"""
 	if isinstance(vouchers, str):
 		vouchers = json.loads(vouchers)
