@@ -119,7 +119,19 @@ class CustomBankTransaction(BankTransaction):
 			)
 
 	def make_jv_against_invoices(self, invoices_to_bill: list) -> str:
+		"""Make Journal Entry against multiple invoices."""
+
 		def _attach_invoice(row: dict, journal_entry: "Document") -> None:
+			second_account = get_debtor_creditor_account(row)
+			second_account_currency = frappe.db.get_value(
+				"Account", second_account, "account_currency"
+			)
+			if second_account_currency != company_currency:
+				frappe.throw(
+					_(
+						"The currency of the second account ({0}) must be the same as of the bank account ({1})"
+					).format(second_account, company_currency)
+				)
 			journal_entry.append(
 				"accounts",
 				{
@@ -140,17 +152,6 @@ class CustomBankTransaction(BankTransaction):
 		company, company_currency = frappe.get_value(
 			"Account", company_account, ["company", "account_currency"]
 		)
-
-		second_account = get_debtor_creditor_account(invoices_to_bill[0])
-		second_account_currency = frappe.db.get_value(
-			"Account", second_account, "account_currency"
-		)
-		if second_account_currency != company_currency:
-			frappe.throw(
-				_(
-					"The currency of the second account ({0}) must be the same as of the bank account ({1})"
-				).format(second_account, company_currency)
-			)
 
 		journal_entry = frappe.new_doc("Journal Entry")
 		journal_entry.voucher_type = "Bank Entry"
@@ -388,12 +389,14 @@ def get_debtor_creditor_account(invoice: dict) -> str | None:
 	"""Get the debtor or creditor (intermediate) account based on the invoice type."""
 	account_field = (
 		"debit_to"
-		if invoice[DOCTYPE] == "Sales Invoice"
+		if invoice.get("voucher_type") == "Sales Invoice"
 		else "credit_to"
-		if invoice[DOCTYPE] == "Purchase Invoice"
+		if invoice.get("voucher_type") == "Purchase Invoice"
 		else "payable_account"
 	)
-	return frappe.db.get_value(invoice[DOCTYPE], invoice[DOCNAME], account_field)
+	return frappe.db.get_value(
+		invoice.get("voucher_type"), invoice.get("voucher_no"), account_field
+	)
 
 
 def on_update_after_submit(doc, event):
