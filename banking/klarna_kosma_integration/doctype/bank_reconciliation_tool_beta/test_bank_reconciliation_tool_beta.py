@@ -22,6 +22,7 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 )
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
+	auto_reconcile_vouchers,
 	create_journal_entry_bts,
 	create_payment_entry_bts,
 )
@@ -380,6 +381,104 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		pe = get_pe_references([expense_claim.name, expense_claim_2.name])
 		self.assertEqual(pe[0].allocated_amount, 200)
 		self.assertEqual(pe[1].allocated_amount, 100)
+
+	def test_invoice_and_return(self):
+		"""Test invoices and returns paid by one bank transaction.
+
+		BT: 200
+		SI1, SI2, SI3: -100, -50, 350
+		"""
+		doc = create_bank_transaction(
+			date=add_days(getdate(), -2), deposit=200, bank_account=self.bank_account
+		)
+		customer = create_customer()
+		return_1 = create_sales_invoice(
+			rate=100,
+			qty=-1,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			is_return=1,
+		)
+		return_2 = create_sales_invoice(
+			rate=50,
+			qty=-1,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			is_return=1,
+		)
+		invoice_1 = create_sales_invoice(
+			rate=350,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		reconcile_vouchers(
+			doc.name,
+			json.dumps(
+				[
+					{"payment_doctype": "Sales Invoice", "payment_name": return_1.name},
+					{"payment_doctype": "Sales Invoice", "payment_name": return_2.name},
+					{"payment_doctype": "Sales Invoice", "payment_name": invoice_1.name},
+				]
+			),
+		)
+
+		doc.reload()
+		self.assertEqual(len(doc.payment_entries), 1)  # 1 PE made against 3 invoices
+		self.assertEqual(doc.payment_entries[0].allocated_amount, 200)
+
+		pe = get_pe_references([return_1.name, return_2.name, invoice_1.name])
+		self.assertEqual(pe[0].allocated_amount, -100)
+		self.assertEqual(pe[1].allocated_amount, -50)
+		self.assertEqual(pe[2].allocated_amount, 350)
+
+		# Check if the PE is posted on the same date as the BT
+		self.assertEqual(
+			doc.date,
+			frappe.db.get_value(
+				"Payment Entry", doc.payment_entries[0].payment_entry, "posting_date"
+			),
+		)
+
+	def test_auto_reconciliation(self):
+		"""
+		Test auto reconciliation between a bank transaction and a payment entry.
+		"""
+		day_before_yesterday = add_days(getdate(), -2)
+		bt = create_bank_transaction(
+			date=day_before_yesterday,
+			deposit=300,
+			reference_no="Test001",
+			bank_account=self.bank_account,
+		)
+		create_payment_entry(
+			payment_type="Receive",
+			party_type="Customer",
+			party=self.customer,
+			paid_from="Debtors - _TC",
+			paid_to=self.gl_account,
+			paid_amount=250,
+			save=1,
+			submit=1,
+		)
+
+		auto_reconcile_vouchers(
+			bank_account=self.bank_account,
+			from_date=day_before_yesterday,
+			to_date=add_days(getdate(), 1),
+			filter_by_reference_date=False,
+		)
+		bt.reload()
+
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 250)
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertEqual(bt.unallocated_amount, 50)
 
 
 def get_pe_references(vouchers: list):

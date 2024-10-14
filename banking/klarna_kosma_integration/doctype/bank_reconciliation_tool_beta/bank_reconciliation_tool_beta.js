@@ -213,22 +213,22 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 	},
 
 	render_summary: function(frm) {
-		frm.get_field("reconciliation_tool_cards").$wrapper.empty();
+		// frm.get_field("reconciliation_tool_cards").$wrapper.empty();
 
-		frappe.require("bank_reconciliation_beta.bundle.js", () => {
-			let difference = flt(frm.doc.bank_statement_closing_balance) - flt(frm.cleared_balance);
-			let difference_color = difference >= 0 ?  "text-success" : "text-danger";
+		// frappe.require("bank_reconciliation_beta.bundle.js", () => {
+		// 	let difference = flt(frm.doc.bank_statement_closing_balance) - flt(frm.cleared_balance);
+		// 	let difference_color = difference >= 0 ?  "text-success" : "text-danger";
 
-			frm.summary_card = new erpnext.accounts.bank_reconciliation.SummaryCard({
-				$wrapper: frm.get_field("reconciliation_tool_cards").$wrapper,
-				values: {
-					"Bank Closing Balance": [frm.doc.bank_statement_closing_balance],
-					"ERP Closing Balance": [frm.cleared_balance],
-					"Difference": [difference, difference_color]
-				},
-				currency: frm.doc.account_currency,
-			})
-		});
+		// 	frm.summary_card = new erpnext.accounts.bank_reconciliation.SummaryCard({
+		// 		$wrapper: frm.get_field("reconciliation_tool_cards").$wrapper,
+		// 		values: {
+		// 			"Bank Closing Balance": [frm.doc.bank_statement_closing_balance],
+		// 			"ERP Closing Balance": [frm.cleared_balance],
+		// 			"Difference": [difference, difference_color]
+		// 		},
+		// 		currency: frm.doc.account_currency,
+		// 	})
+		// });
 	},
 
 	build_reconciliation_area: function(frm) {

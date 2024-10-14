@@ -10,7 +10,6 @@ from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Coalesce
 from frappe.utils import cint, flt, sbool
-from pypika.terms import Parameter
 
 from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
@@ -30,9 +29,9 @@ class BankReconciliationToolBeta(Document):
 @frappe.whitelist()
 def get_bank_transactions(
 	bank_account: str,
-	from_date: str = None,
-	to_date: str = None,
-	order_by: str = "date asc",
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	order_by: str | datetime.date = "date asc",
 ):
 	# returns bank transactions for a bank account
 	filters = []
@@ -287,11 +286,11 @@ def upload_bank_statement(**args):
 @frappe.whitelist()
 def auto_reconcile_vouchers(
 	bank_account: str,
-	from_date: str = None,
-	to_date: str = None,
-	filter_by_reference_date: str = None,
-	from_reference_date: str = None,
-	to_reference_date: str = None,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: str | bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
 ):
 	# Auto reconcile vouchers with matching reference numbers
 	frappe.flags.auto_reconcile_vouchers = True
@@ -362,19 +361,22 @@ def auto_reconcile_vouchers(
 @frappe.whitelist()
 def get_linked_payments(
 	bank_transaction_name: str,
-	document_types: str = None,
-	from_date: str = None,
-	to_date: str = None,
-	filter_by_reference_date: str = None,
-	from_reference_date: str = None,
-	to_reference_date: str = None,
-):
+	document_types: str | list,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: str | bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
+) -> list:
 	# get all matching payments for a bank transaction
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	gl_account, company = frappe.db.get_value(
 		"Bank Account", transaction.bank_account, ["account", "company"]
 	)
-	document_types = json.loads(document_types)
+
+	if isinstance(document_types, str):
+		document_types = json.loads(document_types)
+
 	matching = check_matching(
 		gl_account,
 		company,
@@ -382,7 +384,7 @@ def get_linked_payments(
 		document_types,
 		from_date,
 		to_date,
-		filter_by_reference_date,
+		sbool(filter_by_reference_date),
 		from_reference_date,
 		to_reference_date,
 	)
@@ -408,18 +410,28 @@ def subtract_allocations(gl_account, vouchers):
 
 
 def check_matching(
-	bank_account,
-	company,
-	transaction,
-	document_types,
-	from_date,
-	to_date,
-	filter_by_reference_date,
-	from_reference_date,
-	to_reference_date,
+	bank_account: str,
+	company: str,
+	transaction: "BankTransaction",
+	document_types: list,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
 ):
+	common_filters = frappe._dict(
+		amount=transaction.unallocated_amount,
+		payment_type=("Receive" if transaction.deposit > 0.0 else "Pay"),
+		reference_no=transaction.reference_number,
+		party_type=transaction.party_type,
+		party=transaction.party,
+		bank_account=bank_account,
+		date=transaction.date,
+	)
+
 	# combine all types of vouchers
-	subquery = get_queries(
+	queries = get_queries(
 		bank_account,
 		company,
 		transaction,
@@ -429,26 +441,12 @@ def check_matching(
 		filter_by_reference_date,
 		from_reference_date,
 		to_reference_date,
+		common_filters,
 	)
-	filters = {
-		"amount": transaction.unallocated_amount,
-		"payment_type": "Receive" if transaction.deposit > 0.0 else "Pay",
-		"reference_no": transaction.reference_number,
-		"party_type": transaction.party_type,
-		"party": transaction.party,
-		"bank_account": bank_account,
-		"date": transaction.date,
-	}
 
 	matching_vouchers = []
-	for query in subquery:
-		matching_vouchers.extend(
-			frappe.db.sql(
-				query,
-				filters,
-				as_dict=1,
-			)
-		)
+	for query in queries:
+		matching_vouchers.extend(query.run(as_dict=True))
 
 	if not matching_vouchers:
 		return []
@@ -465,15 +463,16 @@ def check_matching(
 
 
 def get_queries(
-	bank_account,
-	company,
-	transaction,
-	document_types,
-	from_date,
-	to_date,
-	filter_by_reference_date,
-	from_reference_date,
-	to_reference_date,
+	bank_account: str,
+	company: str,
+	transaction: "BankTransaction",
+	document_types: list,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
+	common_filters: frappe._dict = None,
 ):
 	# get queries to get matching vouchers
 	account_from_to = "paid_to" if transaction.deposit > 0.0 else "paid_from"
@@ -495,6 +494,7 @@ def get_queries(
 				filter_by_reference_date,
 				from_reference_date,
 				to_reference_date,
+				common_filters,
 			)
 			or []
 		)
@@ -503,40 +503,46 @@ def get_queries(
 
 
 def get_matching_queries(
-	bank_account,
-	company,
-	transaction,
-	document_types,
-	exact_match,
-	account_from_to,
-	from_date,
-	to_date,
-	filter_by_reference_date,
-	from_reference_date,
-	to_reference_date,
+	bank_account: str,
+	company: str,
+	transaction: "BankTransaction",
+	document_types: list,
+	exact_match: bool = False,
+	account_from_to: str = None,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
+	common_filters: frappe._dict = None,
 ):
+	if not common_filters:
+		common_filters = frappe._dict()
+
 	queries = []
-	exact_party_match = "exact_party_match" in document_types
 	currency = get_account_currency(bank_account)
+	is_withdrawal = transaction.withdrawal > 0.0
+	is_deposit = transaction.deposit > 0.0
+
+	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
 
 	if "payment_entry" in document_types:
 		query = get_pe_matching_query(
 			exact_match,
+			common_filters,
 			account_from_to,
-			transaction,
 			from_date,
 			to_date,
 			filter_by_reference_date,
 			from_reference_date,
 			to_reference_date,
-			exact_party_match,
 		)
 		queries.append(query)
 
 	if "journal_entry" in document_types:
 		query = get_je_matching_query(
 			exact_match,
-			transaction,
+			common_filters,
 			from_date,
 			to_date,
 			filter_by_reference_date,
@@ -545,74 +551,69 @@ def get_matching_queries(
 		)
 		queries.append(query)
 
-	if transaction.deposit > 0.0 and "sales_invoice" in document_types:
-		if "unpaid_invoices" in document_types:
-			query = get_unpaid_si_matching_query(
-				exact_match, exact_party_match, currency, company
-			)
-			queries.append(query)
-		else:
-			query = get_si_matching_query(exact_match, exact_party_match, currency)
-			queries.append(query)
+	# -- Invoices --
+	include_unpaid = "unpaid_invoices" in document_types
+	invoice_dt = "sales_invoice" if is_deposit else "purchase_invoice"
+	invoice_queries_map = get_invoice_function_map(document_types, is_deposit)
 
-	if transaction.withdrawal > 0.0 and "purchase_invoice" in document_types:
-		if "unpaid_invoices" in document_types:
-			query = get_unpaid_pi_matching_query(
-				exact_match, exact_party_match, currency, company
-			)
-			queries.append(query)
-		else:
-			query = get_pi_matching_query(exact_match, exact_party_match, currency)
-			queries.append(query)
+	kwargs = frappe._dict(
+		exact_match=exact_match,
+		currency=currency,
+		common_filters=common_filters,
+	)
+	if include_unpaid:
+		kwargs.company = company
+		for doctype, fn in invoice_queries_map.items():
+			if doctype in ["sales_invoice", "purchase_invoice"]:
+				kwargs.include_only_returns = doctype != invoice_dt
+			elif kwargs.include_only_returns is not None:
+				# Remove the key when doctype == "expense_claim"
+				del kwargs.include_only_returns
 
-	if (
-		transaction.withdrawal > 0.0
-		and "expense_claim" in document_types
-		and "unpaid_invoices" in document_types
-	):
-		query = get_unpaid_ec_matching_query(
-			exact_match, exact_party_match, currency, company
-		)
-		if query:
-			queries.append(query)
+			queries.append(fn(**kwargs))
+	else:
+		if fn := invoice_queries_map.get(invoice_dt):
+			queries.append(fn(**kwargs))
 
-	if "loan_disbursement" in document_types and transaction.withdrawal > 0.0:
-		queries.append(get_ld_matching_query(bank_account, exact_match, transaction))
+	if "loan_disbursement" in document_types and is_withdrawal:
+		queries.append(get_ld_matching_query(exact_match, common_filters))
 
-	if "loan_repayment" in document_types and transaction.deposit > 0.0:
-		queries.append(get_lr_matching_query(bank_account, exact_match, transaction))
+	if "loan_repayment" in document_types and is_deposit:
+		queries.append(get_lr_matching_query(exact_match, common_filters))
 
 	if "bank_transaction" in document_types:
-		query = get_bt_matching_query(exact_match, transaction, exact_party_match)
+		query = get_bt_matching_query(exact_match, common_filters, transaction.name)
 		queries.append(query)
 
 	return queries
 
 
-def get_bt_matching_query(exact_match, transaction, exact_party_match):
+def get_bt_matching_query(
+	exact_match: bool, common_filters: frappe._dict, transaction_name: str
+):
 	# get matching bank transaction query
 	# find bank transactions in the same bank account with opposite sign
 	# same bank account must have same company and currency
 	bt = frappe.qb.DocType("Bank Transaction")
-	field = "deposit" if transaction.withdrawal > 0.0 else "withdrawal"
+	field = "deposit" if common_filters.payment_type == "Pay" else "withdrawal"
 
 	ref_rank = (
 		frappe.qb.terms.Case()
-		.when(bt.reference_number == transaction.reference_number, 1)
+		.when(bt.reference_number == common_filters.reference_no, 1)
 		.else_(0)
 	)
 	unallocated_rank = (
 		frappe.qb.terms.Case()
-		.when(bt.unallocated_amount == transaction.unallocated_amount, 1)
+		.when(bt.unallocated_amount == common_filters.amount, 1)
 		.else_(0)
 	)
 
-	amount_equality = getattr(bt, field) == transaction.unallocated_amount
+	amount_equality = getattr(bt, field) == common_filters.amount
 	amount_rank = frappe.qb.terms.Case().when(amount_equality, 1).else_(0)
 
 	party_condition = (
-		(bt.party_type == transaction.party_type)
-		& (bt.party == transaction.party)
+		(bt.party_type == common_filters.party_type)
+		& (bt.party == common_filters.party)
 		& bt.party.isnotnull()
 	)
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
@@ -637,30 +638,29 @@ def get_bt_matching_query(exact_match, transaction, exact_party_match):
 			unallocated_rank.as_("unallocated_amount_match"),
 		)
 		.where(bt.status != "Reconciled")
-		.where(bt.name != transaction.name)
-		.where(bt.bank_account == transaction.bank_account)
+		.where(bt.name != transaction_name)
+		.where(bt.bank_account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(bt.docstatus == 1)
 	)
 
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
 
 
-def get_ld_matching_query(bank_account, exact_match, transaction):
+def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
-	matching_reference = loan_disbursement.reference_number == transaction.get(
-		"reference_number"
+	matching_reference = loan_disbursement.reference_number == common_filters
+	matching_party = (
+		loan_disbursement.applicant_type == common_filters.party_type
+		and loan_disbursement.applicant == common_filters.matching_party
 	)
-	matching_party = loan_disbursement.applicant_type == transaction.get(
-		"party_type"
-	) and loan_disbursement.applicant == transaction.get("party")
 
 	date_condition = (
 		Coalesce(loan_disbursement.reference_date, loan_disbursement.disbursement_date)
-		== transaction.date
+		== common_filters.date
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
@@ -686,29 +686,28 @@ def get_ld_matching_query(bank_account, exact_match, transaction):
 		)
 		.where(loan_disbursement.docstatus == 1)
 		.where(loan_disbursement.clearance_date.isnull())
-		.where(loan_disbursement.disbursement_account == bank_account)
+		.where(loan_disbursement.disbursement_account == common_filters.bank_account)
 	)
 
 	if exact_match:
-		query.where(loan_disbursement.disbursed_amount == transaction.unallocated_amount)
+		query.where(loan_disbursement.disbursed_amount == common_filters.amount)
 	else:
 		query.where(loan_disbursement.disbursed_amount > 0.0)
 
 	return query
 
 
-def get_lr_matching_query(bank_account, exact_match, transaction):
+def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_repayment = frappe.qb.DocType("Loan Repayment")
-	matching_reference = loan_repayment.reference_number == transaction.get(
-		"reference_number"
+	matching_reference = loan_repayment.reference_number == common_filters.reference_no
+	matching_party = (
+		loan_repayment.applicant_type == common_filters.party_type
+		and loan_repayment.applicant == common_filters.party
 	)
-	matching_party = loan_repayment.applicant_type == transaction.get(
-		"party_type"
-	) and loan_repayment.applicant == transaction.get("party")
 
 	date_condition = (
 		Coalesce(loan_repayment.reference_date, loan_repayment.posting_date)
-		== transaction.date
+		== common_filters.date
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
@@ -734,14 +733,14 @@ def get_lr_matching_query(bank_account, exact_match, transaction):
 		)
 		.where(loan_repayment.docstatus == 1)
 		.where(loan_repayment.clearance_date.isnull())
-		.where(loan_repayment.payment_account == bank_account)
+		.where(loan_repayment.payment_account == common_filters.bank_account)
 	)
 
 	if frappe.db.has_column("Loan Repayment", "repay_from_salary"):
 		query = query.where((loan_repayment.repay_from_salary == 0))
 
 	if exact_match:
-		query.where(loan_repayment.amount_paid == transaction.unallocated_amount)
+		query.where(loan_repayment.amount_paid == common_filters.amount)
 	else:
 		query.where(loan_repayment.amount_paid > 0.0)
 
@@ -749,31 +748,30 @@ def get_lr_matching_query(bank_account, exact_match, transaction):
 
 
 def get_pe_matching_query(
-	exact_match,
-	account_from_to,
-	transaction,
-	from_date,
-	to_date,
-	filter_by_reference_date,
-	from_reference_date,
-	to_reference_date,
-	exact_party_match,
+	exact_match: bool,
+	common_filters: frappe._dict,
+	account_from_to: str,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
 ):
-	to_from = "to" if transaction.deposit > 0.0 else "from"
+	to_from = "to" if common_filters.payment_type == "Receive" else "from"
 	currency_field = f"paid_{to_from}_account_currency"
-	payment_type = "Receive" if transaction.deposit > 0.0 else "Pay"
+	payment_type = common_filters.payment_type
 	pe = frappe.qb.DocType("Payment Entry")
 
-	ref_condition = pe.reference_no == transaction.reference_number
+	ref_condition = pe.reference_no == common_filters.reference_no
 	ref_rank = frappe.qb.terms.Case().when(ref_condition, 1).else_(0)
 
-	amount_equality = pe.paid_amount == transaction.unallocated_amount
+	amount_equality = pe.paid_amount == common_filters.amount
 	amount_rank = frappe.qb.terms.Case().when(amount_equality, 1).else_(0)
 	amount_condition = amount_equality if exact_match else pe.paid_amount > 0.0
 
 	party_condition = (
-		(pe.party_type == transaction.party_type)
-		& (pe.party == transaction.party)
+		(pe.party_type == common_filters.party_type)
+		& (pe.party == common_filters.party)
 		& pe.party.isnotnull()
 	)
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
@@ -782,7 +780,7 @@ def get_pe_matching_query(
 	if cint(filter_by_reference_date):
 		filter_by_date = pe.reference_date.between(from_reference_date, to_reference_date)
 
-	date_condition = Coalesce(pe.reference_date, pe.posting_date) == transaction.date
+	date_condition = Coalesce(pe.reference_date, pe.posting_date) == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	query = (
@@ -795,6 +793,7 @@ def get_pe_matching_query(
 			pe.reference_no,
 			pe.reference_date,
 			pe.party,
+			pe.party_name,
 			pe.party_type,
 			pe.posting_date,
 			getattr(pe, currency_field).as_("currency"),
@@ -806,49 +805,49 @@ def get_pe_matching_query(
 		.where(pe.docstatus == 1)
 		.where(pe.payment_type.isin([payment_type, "Internal Transfer"]))
 		.where(pe.clearance_date.isnull())
-		.where(getattr(pe, account_from_to) == Parameter("%(bank_account)s"))
+		.where(getattr(pe, account_from_to) == common_filters.bank_account)
 		.where(amount_condition)
 		.where(filter_by_date)
 		.orderby(pe.reference_date if cint(filter_by_reference_date) else pe.posting_date)
 	)
 
-	if frappe.flags.auto_reconcile_vouchers == True:
+	if frappe.flags.auto_reconcile_vouchers:
 		query = query.where(ref_condition)
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
 
 
 def get_je_matching_query(
-	exact_match,
-	transaction,
-	from_date,
-	to_date,
-	filter_by_reference_date,
-	from_reference_date,
-	to_reference_date,
+	exact_match: bool,
+	common_filters: frappe._dict,
+	from_date: str | datetime.date = None,
+	to_date: str | datetime.date = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date = None,
+	to_reference_date: str | datetime.date = None,
 ):
 	# get matching journal entry query
 	# We have mapping at the bank level
 	# So one bank could have both types of bank accounts like asset and liability
 	# So cr_or_dr should be judged only on basis of withdrawal and deposit and not account type
-	cr_or_dr = "credit" if transaction.withdrawal > 0.0 else "debit"
+	cr_or_dr = "credit" if common_filters.payment_type == "Pay" else "debit"
 	je = frappe.qb.DocType("Journal Entry")
 	jea = frappe.qb.DocType("Journal Entry Account")
 
-	ref_condition = je.cheque_no == transaction.reference_number
+	ref_condition = je.cheque_no == common_filters.reference_no
 	ref_rank = frappe.qb.terms.Case().when(ref_condition, 1).else_(0)
 
 	amount_field = f"{cr_or_dr}_in_account_currency"
-	amount_equality = getattr(jea, amount_field) == transaction.unallocated_amount
+	amount_equality = getattr(jea, amount_field) == common_filters.amount
 	amount_rank = frappe.qb.terms.Case().when(amount_equality, 1).else_(0)
 
 	filter_by_date = je.posting_date.between(from_date, to_date)
 	if cint(filter_by_reference_date):
 		filter_by_date = je.cheque_date.between(from_reference_date, to_reference_date)
 
-	date_condition = Coalesce(je.cheque_date, je.posting_date) == transaction.date
+	date_condition = Coalesce(je.cheque_date, je.posting_date) == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	query = (
@@ -873,32 +872,36 @@ def get_je_matching_query(
 		.where(je.docstatus == 1)
 		.where(je.voucher_type != "Opening Entry")
 		.where(je.clearance_date.isnull())
-		.where(jea.account == Parameter("%(bank_account)s"))
+		.where(jea.account == common_filters.bank_account)
 		.where(amount_equality if exact_match else getattr(jea, amount_field) > 0.0)
 		.where(je.docstatus == 1)
 		.where(filter_by_date)
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
 
-	if frappe.flags.auto_reconcile_vouchers == True:
+	if frappe.flags.auto_reconcile_vouchers:
 		query = query.where(ref_condition)
 
-	return str(query)
+	return query
 
 
-def get_si_matching_query(exact_match, exact_party_match, currency):
-	# get matching paid sales invoice query
+def get_si_matching_query(
+	exact_match: bool, currency: str, common_filters: frappe._dict
+):
+	"""
+	Get matching sales invoices when they are also used as payment entries (POS).
+	"""
 	si = frappe.qb.DocType("Sales Invoice")
 	sip = frappe.qb.DocType("Sales Invoice Payment")
 
-	amount_equality = sip.amount == Parameter("%(amount)s")
+	amount_equality = sip.amount == common_filters.amount
 	amount_rank = frappe.qb.terms.Case().when(amount_equality, 1).else_(0)
-	amount_condition = amount_equality if exact_match else sip.amount > 0.0
+	amount_condition = amount_equality if exact_match else sip.amount != 0.0
 
-	party_condition = si.customer == Parameter("%(party)s")
+	party_condition = si.customer == common_filters.party
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	date_condition = si.posting_date == Parameter("%(date)s")
+	date_condition = si.posting_date == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	query = (
@@ -922,25 +925,31 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 		)
 		.where(si.docstatus == 1)
 		.where(sip.clearance_date.isnull())
-		.where(sip.account == Parameter("%(bank_account)s"))
+		.where(sip.account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(si.currency == currency)
 	)
 
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
 
 
-def get_unpaid_si_matching_query(exact_match, exact_party_match, currency, company):
+def get_unpaid_si_matching_query(
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	include_only_returns: bool = False,
+):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
-	party_condition = sales_invoice.customer == Parameter("%(party)s")
+	party_condition = sales_invoice.customer == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	outstanding_amount_condition = sales_invoice.outstanding_amount == Parameter(
-		"%(amount)s"
+	outstanding_amount_condition = (
+		sales_invoice.outstanding_amount == common_filters.amount
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
@@ -955,43 +964,50 @@ def get_unpaid_si_matching_query(exact_match, exact_party_match, currency, compa
 			sales_invoice.posting_date.as_("reference_date"),
 			sales_invoice.customer.as_("party"),
 			ConstantColumn("Customer").as_("party_type"),
+			sales_invoice.customer_name.as_("party_name"),
 			sales_invoice.posting_date,
 			sales_invoice.currency,
 			party_match.as_("party_match"),
 			amount_match.as_("amount_match"),
 		)
 		.where(sales_invoice.docstatus == 1)
-		.where(sales_invoice.company == company)
-		.where(sales_invoice.is_return == 0)
-		.where(sales_invoice.outstanding_amount > 0.0)
+		.where(sales_invoice.company == company)  # because we do not have bank account check
+		.where(sales_invoice.outstanding_amount != 0.0)
 		.where(sales_invoice.currency == currency)
 	)
 
+	if include_only_returns:
+		query = query.where(sales_invoice.is_return == 1)
 	if exact_match:
 		query = query.where(outstanding_amount_condition)
-
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
 
 
-def get_pi_matching_query(exact_match, exact_party_match, currency):
-	# get matching purchase invoice query when they are also used as payment entries (is_paid)
+def get_pi_matching_query(
+	exact_match: bool, currency: str, common_filters: frappe._dict
+):
+	"""
+	Get matching purchase invoice query when they are also used as payment entries (is_paid)
+	"""
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
-	amount_equality = purchase_invoice.paid_amount == Parameter("%(amount)s")
+	amount_equality = purchase_invoice.paid_amount == common_filters.amount
 	amount_rank = frappe.qb.terms.Case().when(amount_equality, 1).else_(0)
 	amount_condition = (
-		amount_equality if exact_match else purchase_invoice.paid_amount > 0.0
+		amount_equality if exact_match else purchase_invoice.paid_amount != 0.0
 	)
 
-	party_condition = purchase_invoice.supplier == Parameter("%(party)s")
+	party_condition = purchase_invoice.supplier == common_filters.party
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	date_condition = Coalesce(
-		purchase_invoice.bill_date, purchase_invoice.posting_date
-	) == Parameter("%(date)s")
+	# date of BT and paid PI could be the same (date of payment or the date of the bill)
+	date_condition = (
+		Coalesce(purchase_invoice.bill_date, purchase_invoice.posting_date)
+		== common_filters.date
+	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	query = (
@@ -1005,6 +1021,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
+			purchase_invoice.supplier_name.as_("party_name"),
 			purchase_invoice.posting_date,
 			purchase_invoice.currency,
 			party_rank.as_("party_match"),
@@ -1014,28 +1031,36 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.is_paid == 1)
 		.where(purchase_invoice.clearance_date.isnull())
-		.where(purchase_invoice.cash_bank_account == Parameter("%(bank_account)s"))
+		.where(purchase_invoice.cash_bank_account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(purchase_invoice.currency == currency)
 	)
 
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
 
 
-def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, company):
+def get_unpaid_pi_matching_query(
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	include_only_returns: bool = False,
+):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
-	party_condition = purchase_invoice.supplier == Parameter("%(party)s")
+	party_condition = purchase_invoice.supplier == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
-	outstanding_amount_condition = purchase_invoice.outstanding_amount == Parameter(
-		"%(amount)s"
+	outstanding_amount_condition = (
+		purchase_invoice.outstanding_amount == common_filters.amount
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
+	# We skip date rank as the date of an unpaid bill is mostly
+	# earlier than the date of the bank transaction
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(
@@ -1047,6 +1072,7 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, compa
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
+			purchase_invoice.supplier_name.as_("party_name"),
 			purchase_invoice.posting_date,
 			purchase_invoice.currency,
 			party_match.as_("party_match"),
@@ -1054,27 +1080,31 @@ def get_unpaid_pi_matching_query(exact_match, exact_party_match, currency, compa
 		)
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.company == company)
-		.where(purchase_invoice.is_return == 0)
-		.where(purchase_invoice.outstanding_amount > 0.0)
+		.where(purchase_invoice.outstanding_amount != 0.0)
+		.where(purchase_invoice.is_paid == 0)
 		.where(purchase_invoice.currency == currency)
 	)
 
+	if include_only_returns:
+		query = query.where(purchase_invoice.is_return == 1)
 	if exact_match:
 		query = query.where(outstanding_amount_condition)
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
 
 
-def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, company):
+def get_unpaid_ec_matching_query(
+	exact_match: bool, currency: str, common_filters: frappe._dict, company: str
+):
 	if currency != get_company_currency(company):
 		# Expense claims are always in company currency
 		return ""
 
 	expense_claim = frappe.qb.DocType("Expense Claim")
 
-	party_condition = expense_claim.employee == Parameter("%(party)s")
+	party_condition = expense_claim.employee == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 
 	outstanding_amount = (
@@ -1083,7 +1113,7 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 		- expense_claim.total_amount_reimbursed
 		- expense_claim.total_advance_amount
 	)
-	outstanding_amount_condition = outstanding_amount == Parameter("%(amount)s")
+	outstanding_amount_condition = outstanding_amount == common_filters.amount
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 
 	query = (
@@ -1097,6 +1127,7 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 			expense_claim.posting_date.as_("reference_date"),
 			expense_claim.employee.as_("party"),
 			ConstantColumn("Employee").as_("party_type"),
+			expense_claim.employee_name.as_("party_name"),
 			expense_claim.posting_date,
 			ConstantColumn(currency).as_("currency"),
 			party_match.as_("party_match"),
@@ -1110,7 +1141,35 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 
 	if exact_match:
 		query = query.where(outstanding_amount_condition)
-	if exact_party_match:
+	if common_filters.exact_party_match:
 		query = query.where(party_condition)
 
-	return str(query)
+	return query
+
+
+def get_invoice_function_map(document_types: list, is_deposit: bool):
+	"""Get the function map for invoices based on the given filters."""
+	include_unpaid = "unpaid_invoices" in document_types
+	fn_map = {
+		"sales_invoice": (
+			get_unpaid_si_matching_query if include_unpaid else get_si_matching_query
+		),
+		"purchase_invoice": (
+			get_unpaid_pi_matching_query if include_unpaid else get_pi_matching_query
+		),
+		"expense_claim": (
+			get_unpaid_ec_matching_query if (include_unpaid and not is_deposit) else None
+		),
+	}
+	order = (
+		["sales_invoice", "purchase_invoice"]
+		if (is_deposit)
+		else ["purchase_invoice", "expense_claim", "sales_invoice"]
+	)
+
+	# Return the ordered function map that has a function and is in the document types
+	return {
+		doctype: fn_map[doctype]
+		for doctype in order
+		if (doctype in document_types and fn_map[doctype])
+	}

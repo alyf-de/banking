@@ -20,48 +20,14 @@ class CustomBankTransaction(BankTransaction):
 				frappe._("Bank Transaction {0} is already fully reconciled").format(self.name)
 			)
 
-		# avoid mutating self.unallocated_amount (is set by erpnext on submit/update after submit)
-		unallocated_amount = flt(self.unallocated_amount)
 		pe_length_before = len(self.payment_entries)
-		invoices_to_bill = []
+		unpaid_docs = ["Sales Invoice", "Purchase Invoice", "Expense Claim"]
 
-		for voucher in vouchers:
-			voucher_type, voucher_name = voucher["payment_doctype"], voucher["payment_name"]
-			if find(
-				self.payment_entries,
-				lambda x: x.payment_document == voucher_type and x.payment_entry == voucher_name,
-			):
-				continue  # Can't add same voucher twice
-
-			outstanding_amount = get_outstanding_amount(voucher_type, voucher_name)
-			allocated_by_voucher = min(unallocated_amount, outstanding_amount)
-
-			if (
-				voucher_type
-				in (
-					"Sales Invoice",
-					"Purchase Invoice",
-					"Expense Claim",
-				)
-				and outstanding_amount > 0.0
-			):
-				# Make PE against the unpaid invoice, link PE to Bank Transaction
-				invoices_to_bill.append(
-					(voucher_type, voucher_name, allocated_by_voucher, voucher.get("party"))
-				)
-			else:
-				self.add_to_payment_entry(voucher_type, voucher_name)
-
-			# Reduce unallocated amount
-			unallocated_amount = flt(
-				unallocated_amount - allocated_by_voucher, self.precision("unallocated_amount")
-			)
-
-		# Make single PE against multiple invoices
-		if invoices_to_bill:
-			self.validate_period_closing()
-			payment_name = self.make_pe_against_invoices(invoices_to_bill)
-			self.add_to_payment_entry("Payment Entry", payment_name)  # Change doctype to PE
+		# Vouchers can either all be paid or all be unpaid
+		if any(voucher["payment_doctype"] in unpaid_docs for voucher in vouchers):
+			self.reconcile_invoices(vouchers)
+		else:
+			self.reconcile_paid_vouchers(vouchers)
 
 		if len(self.payment_entries) != pe_length_before:
 			self.save()  # runs on_update_after_submit
@@ -102,6 +68,46 @@ class CustomBankTransaction(BankTransaction):
 		# Check if the invoice is unpaid
 		return flt(frappe.db.get_value(payment_doctype, payment_name, "outstanding_amount"))
 
+	def reconcile_paid_vouchers(self, vouchers):
+		"""Reconcile paid vouchers with the Bank Transaction."""
+		for voucher in vouchers:
+			voucher_type, voucher_name = voucher["payment_doctype"], voucher["payment_name"]
+			if self.is_duplicate_reference(voucher_type, voucher_name):
+				continue
+
+			self.add_to_payment_entry(voucher["payment_doctype"], voucher["payment_name"])
+
+	def reconcile_invoices(self, vouchers):
+		"""Reconcile unpaid invoices with the Bank Transaction."""
+		invoices_to_bill = []
+		for voucher in vouchers:
+			voucher_type, voucher_name = voucher["payment_doctype"], voucher["payment_name"]
+			if self.is_duplicate_reference(voucher_type, voucher_name):
+				continue
+
+			outstanding_amount = get_outstanding_amount(voucher_type, voucher_name)
+			if (
+				voucher_type
+				not in (
+					"Sales Invoice",
+					"Purchase Invoice",
+					"Expense Claim",
+				)
+				and outstanding_amount == 0.0
+			):
+				frappe.throw(_("Invalid Voucher Type"))
+
+			# Make PE against the unpaid invoice, link PE to Bank Transaction
+			invoices_to_bill.append(
+				(voucher_type, voucher_name, outstanding_amount, voucher.get("party"))
+			)
+
+		# Make single PE against multiple invoices
+		if invoices_to_bill:
+			self.validate_period_closing()
+			payment_name = self.make_pe_against_invoices(invoices_to_bill)
+			self.add_to_payment_entry("Payment Entry", payment_name)  # Change doctype to PE
+
 	def make_pe_against_invoices(self, invoices_to_bill):
 		"""Make Payment Entry against multiple invoices."""
 		self.validate_invoices_to_bill(invoices_to_bill)
@@ -123,6 +129,10 @@ class CustomBankTransaction(BankTransaction):
 				first_invoice[DOCNAME],
 				party_amount=first_invoice[AMOUNT],
 				bank_account=bank_account,
+				# make sure return invoice does not cause wrong payment type
+				# return SI against a deposit should be considered as "Receive" (discount)
+				# return SI against a withdrawal should be considered as "Pay" (refund)
+				payment_type="Receive" if self.deposit > 0 else "Pay",
 			)
 		payment_entry.posting_date = self.date
 		payment_entry.reference_no = self.reference_number or first_invoice[DOCNAME]
@@ -134,22 +144,31 @@ class CustomBankTransaction(BankTransaction):
 			self.prepare_invoices_to_split(invoices_to_bill), self.company
 		)
 
-		to_allocate = self.unallocated_amount
+		# First class pass for positive amounts, negative amounts adjust accordingly
+		sum_postive, sum_negative = self.get_positive_and_negative_sums(invoices)
 		for row in invoices:
-			row_allocated_amount = min(row.outstanding_amount, to_allocate)  # partial allocation
-			row.allocated_amount = row_allocated_amount
 			row.reference_doctype = row.voucher_type
 			row.reference_name = row.voucher_no
+
+			if row.outstanding_amount > 0:
+				if sum_postive <= 0:
+					continue
+				row_allocated_amount = min(row.outstanding_amount, sum_postive)
+				sum_postive -= row_allocated_amount
+			else:
+				if sum_negative <= 0:
+					continue
+				can_allocate = min(abs(row.outstanding_amount), sum_negative)
+				row_allocated_amount = -1 * can_allocate
+				sum_negative -= can_allocate
+
+			row.allocated_amount = row_allocated_amount
 			payment_entry.append("references", row)
 
-			to_allocate -= row_allocated_amount
-			if to_allocate <= 0:
-				break
-
-		payment_entry.paid_amount = sum(
-			row.allocated_amount for row in payment_entry.references
-		)
-		payment_entry.submit()  # TODO: submit it after testing
+		payment_entry.paid_amount = abs(
+			sum(row.allocated_amount for row in payment_entry.references)
+		)  # should not be negative
+		payment_entry.submit()
 		return payment_entry.name
 
 	def prepare_invoices_to_split(self, invoices):
@@ -176,6 +195,56 @@ class CustomBankTransaction(BankTransaction):
 
 		return invoices_to_split
 
+	def get_positive_and_negative_sums(self, invoices):
+		"""
+		Calculate a permissible positive and negative upper limit sum for the allocation.
+		This will ensure that the allocated positive and negative amounts add up to the unallocated amount.
+		"""
+		sum_positive = (
+			sum(
+				invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount > 0
+			)
+			or 0.0
+		)
+		sum_negative = (
+			abs(
+				sum(
+					invoice.outstanding_amount
+					for invoice in invoices
+					if invoice.outstanding_amount < 0
+				)
+			)
+			or 0.0
+		)
+		self.validate_sums(sum_positive, sum_negative, invoices)
+
+		# Adjust the positive sum (trim it) if overallocated
+		allocation = self.unallocated_amount - (sum_positive - sum_negative)
+		if allocation < 0:
+			sum_positive += allocation
+
+		return sum_positive, sum_negative
+
+	def validate_sums(self, sum_positive, sum_negative, invoices):
+		"""Validate if the sum of positive and negative amounts is equal to the unallocated amount."""
+		if sum_positive and not sum_negative:
+			return
+
+		if sum_negative and not sum_positive:
+			# Only -ve invoices are allowed for opposite transactions
+			# Eg. A return SINV can be matched with a withdrawal (it is a refund)
+			invoice_doctype = "Sales Invoice" if self.deposit > 0 else "Purchase Invoice"
+			if invoices[0]["voucher_type"] != invoice_doctype:
+				return
+
+		if sum_negative > sum_positive:
+			frappe.throw(
+				title=_("Overallocated Returns"),
+				msg=_(
+					"The allocated amount cannot be negative. Please adjust the selected return vouchers."
+				),
+			)
+
 	def validate_invoices_to_bill(self, invoices_to_bill):
 		"""Validate if the invoices are of the same doctype and party."""
 		unique_doctypes = {invoice[DOCTYPE] for invoice in invoices_to_bill}
@@ -189,6 +258,13 @@ class CustomBankTransaction(BankTransaction):
 			frappe.throw(
 				frappe._("Cannot make Reconciliation Payment Entry against multiple parties")
 			)
+
+	def is_duplicate_reference(self, voucher_type, voucher_name):
+		"""Check if the reference is already added to the Bank Transaction."""
+		return find(
+			self.payment_entries,
+			lambda x: x.payment_document == voucher_type and x.payment_entry == voucher_name,
+		)
 
 
 def get_outstanding_amount(payment_doctype, payment_name) -> float:
@@ -211,7 +287,7 @@ def on_update_after_submit(doc, event):
 	to_allocate = flt(doc.withdrawal or doc.deposit)
 	for entry in doc.payment_entries:
 		to_allocate -= flt(entry.allocated_amount)
-		if to_allocate < 0.0:
+		if round(to_allocate, 2) < 0.0:
 			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
 			frappe.throw(
 				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(

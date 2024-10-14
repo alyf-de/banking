@@ -41,6 +41,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
 			flt(this.transaction.unallocated_amount),
+			flt(this.transaction.unallocated_amount),
 			this.transaction.currency,
 		);
 	}
@@ -97,6 +98,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				{
 					content: row.party,
 					format: (value) => {
+						if (row.party_name) {
+							frappe.utils.add_link_title(row.party_type, row.party, row.party_name);
+						}
 						let formatted_value =  frappe.format(row.party, {fieldtype: "Link", options: row.party_type});
 						return row.party_match ? formatted_value.bold() : formatted_value;
 					}
@@ -163,32 +167,37 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, b) => a + b, 0
 		);
-		total_allocated = Math.min(total_allocated, this.transaction.unallocated_amount);
+		let max_allocated = Math.min(total_allocated, this.transaction.unallocated_amount);
 
 		// Deduct allocated amount from transaction's unallocated amount
 		// to show the final effect on reconciling
 		let transaction_amount = this.transaction.withdrawal || this.transaction.deposit;
-		let unallocated = flt(this.transaction.unallocated_amount) - flt(total_allocated);
+		let unallocated = flt(this.transaction.unallocated_amount) - flt(max_allocated);
+		let actual_unallocated = flt(this.transaction.unallocated_amount) - flt(total_allocated);
 
 		this.render_transaction_amount_summary(
-			flt(transaction_amount), unallocated, this.transaction.currency,
+			flt(transaction_amount), unallocated, actual_unallocated, this.transaction.currency,
 		);
 	}
 
-	render_transaction_amount_summary(total_amount, unallocated_amount, currency) {
+	render_transaction_amount_summary(
+		total_amount, unallocated_amount, actual_unallocated, currency
+	) {
 		let summary_field = this.match_field_group.get_field("transaction_amount_summary").$wrapper;
 		summary_field.empty();
 
+		// Show the actual allocated amount
 		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
 
 		new erpnext.accounts.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
 			values: {
 				"Amount": [total_amount],
-				"Allocated Amount": [allocated_amount],
+				"Allocated Amount": [allocated_amount, ""],
 				"To Allocate": [
 					unallocated_amount,
-					(unallocated_amount < 0 ? "text-danger" : unallocated_amount > 0 ? "text-blue" : "text-success")
+					(unallocated_amount < 0 ? "text-danger" : unallocated_amount > 0 ? "text-blue" : "text-success"),
+					actual_unallocated,
 				]
 			},
 			currency: currency,
@@ -416,7 +425,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				},
 			},
 			{
-				name: __("Remaining"),
+				name: __("Outstanding"),
 				editable: false,
 			},
 			{
