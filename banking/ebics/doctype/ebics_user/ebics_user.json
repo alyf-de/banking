@@ -19,6 +19,7 @@
   {
    "fieldname": "full_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Full Name",
    "mandatory_depends_on": "needs_certificates"
   },
@@ -29,6 +30,7 @@
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Company",
    "mandatory_depends_on": "needs_certificates",
    "options": "Company"
@@ -58,6 +60,7 @@
   {
    "fieldname": "bank",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Bank",
    "mandatory_depends_on": "needs_certificates",
    "options": "Bank"
@@ -71,7 +74,7 @@
   }
  ],
  "links": [],
- "modified": "2024-10-16 19:22:17.980268",
+ "modified": "2024-10-16 19:55:26.329514",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
@@ -102,7 +105,9 @@
    "write": 1
   }
  ],
+ "search_fields": "full_name,bank,company",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "full_name"
 }
