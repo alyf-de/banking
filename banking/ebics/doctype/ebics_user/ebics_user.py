@@ -6,7 +6,7 @@ from frappe.model.document import Document
 from banking.ebics.manager import EBICSManager
 from frappe import _
 from frappe.utils import get_link_to_form
-
+from banking.klarna_kosma_integration.admin import Admin
 
 class EBICSUser(Document):
 	def validate(self):
@@ -15,6 +15,25 @@ class EBICSUser(Document):
 
 		if self.bank:
 			self.validate_bank()
+
+	def before_insert(self):
+		self.register_user()
+
+	def on_update(self):
+		self.register_user()
+
+	def on_trash(self):
+		self.remove_user()
+
+	def register_user(self):
+		"""Indempotent method to register the user with the admin backend."""
+		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
+
+	def remove_user(self):
+		"""Indempotent method to remove the user from the admin backend."""
+		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		Admin().request.remove_ebics_user(host_id, self.partner_id, self.user_id)
 
 	def validate_country_code(self):
 		country_code = frappe.db.get_value("Country", self.country, "code")
@@ -33,7 +52,7 @@ class EBICSUser(Document):
 					get_link_to_form("Bank", self.bank)
 				)
 			)
-	
+
 	def attach_ini_letter(self, pdf_bytes: bytes):
 		file = frappe.new_doc("File")
 		file.file_name = f"ini_letter_{self.name}.pdf"
