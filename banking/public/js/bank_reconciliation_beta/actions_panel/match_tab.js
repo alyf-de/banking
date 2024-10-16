@@ -23,13 +23,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.render_transaction_amount_summary(0, 0, 0, this.transaction.currency);
 	}
 
-	matching_vouchers_empty_state() {
-		this.match_field_group.get_field("vouchers").$wrapper.empty();
-		this.match_field_group.get_field("vouchers").$wrapper.append(
-			`<div class="text-muted text-center mb-4">${__("Loading ...")}</div>`
-		);
-	}
-
 	async populate_matching_vouchers(event_obj) {
 		if (event_obj && event_obj.type === "input") {
 			// `bind_change_event` in `data.js` triggers both an input and change event
@@ -39,7 +32,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		}
 
 		this.summary_empty_state();
-		this.matching_vouchers_empty_state();
+		this.render_data_table();
+		this.actions_table.freeze();
 
 		let filter_fields = this.match_field_group.get_values();
 		let document_types = Object.keys(filter_fields).filter(field => filter_fields[field] === 1);
@@ -47,7 +41,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.update_filters_in_state(document_types);
 
 		let vouchers = await this.get_matching_vouchers(document_types);
-		this.render_data_table(vouchers);
+		this.set_table_data(vouchers);
+		this.actions_table.unfreeze();
 
 		let transaction_amount = this.transaction.withdrawal || this.transaction.deposit;
 		this.render_transaction_amount_summary(
@@ -82,7 +77,32 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		return vouchers || [];
 	}
 
-	render_data_table(vouchers) {
+	render_data_table() {
+		const datatable_options = {
+			columns: this.get_data_table_columns(),
+			data: [],
+			dynamicRowHeight: true,
+			checkboxColumn: true,
+			inlineFilters: true,
+			layout: "fluid",
+			serialNoColumn: false,
+			freezeMessage: __("Loading..."),
+		};
+
+		this.actions_table = new frappe.DataTable(
+			this.match_field_group.get_field("vouchers").$wrapper[0],
+			datatable_options
+		);
+
+		// Highlight first row
+		this.actions_table.style.setStyle(
+			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
+		);
+
+		this.bind_row_check_event();
+	}
+
+	set_table_data(vouchers) {
 		this.summary_data = {};
 		let table_data = vouchers.map((row) => {
 			return [
@@ -127,28 +147,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			];
 		});
 
-		const datatable_options = {
-			columns: this.get_data_table_columns(),
-			data: table_data,
-			dynamicRowHeight: true,
-			checkboxColumn: true,
-			inlineFilters: true,
-			layout: "fluid",
-			serialNoColumn: false,
-		};
-
-
-		this.actions_table = new frappe.DataTable(
-			this.match_field_group.get_field("vouchers").$wrapper[0],
-			datatable_options
-		);
-
-		// Highlight first row
-		this.actions_table.style.setStyle(
-			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
-		);
-
-		this.bind_row_check_event();
+		this.actions_table.refresh(table_data, this.get_data_table_columns());
 	}
 
 	bind_row_check_event() {
