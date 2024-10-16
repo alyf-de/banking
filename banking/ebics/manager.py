@@ -8,14 +8,18 @@ class EBICSManager:
 		self,
 		license_name: str,
 		license_key: str,
-		ebics_user_ids: list[str] | None = None,
+		ebics_user_ids: str | list[str] | None = None,
 	):
-		fintech.register(
-			license_name,
-			license_key,
-			ebics_user_ids or "*",
-		)
-	
+		try:
+			fintech.register(
+				name=license_name,
+				keycode=license_key,
+				users=ebics_user_ids,
+			)
+		except RuntimeError as e:
+			if e.args[0] != "'register' can be called only once":
+				raise e
+
 	def set_keyring(self, keyring_path: str, keyring_passphrase: str):
 		from fintech.ebics import EbicsKeyRing
 

@@ -76,6 +76,7 @@ def initialize(ebics_user: str):
 	manager = EBICSManager(
 		license_name=banking_settings.fintech_licensee_name,
 		license_key=banking_settings.get_password("fintech_license_key"),
+		ebics_user_ids=user.user_id
 	)
 
 	manager.set_keyring(
@@ -98,8 +99,7 @@ def initialize(ebics_user: str):
 			user.full_name, user.company, country_code.upper()
 		)
 
-	# # TODO: enable this line once we're serious
-	# manager.send_keys_to_bank()
+	manager.send_keys_to_bank()
 
 	ini_bytes = manager.create_ini_letter(bank.bank_name, language=frappe.local.lang)
 	user.attach_ini_letter(ini_bytes)
