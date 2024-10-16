@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "full_name",
-  "license_key",
   "column_break_hlxa",
   "company",
   "country",
@@ -22,12 +21,6 @@
    "fieldtype": "Data",
    "label": "Full Name",
    "mandatory_depends_on": "needs_certificates"
-  },
-  {
-   "description": "Your user license provided by ALYF.",
-   "fieldname": "license_key",
-   "fieldtype": "Password",
-   "label": "License Key"
   },
   {
    "fieldname": "column_break_hlxa",
@@ -78,7 +71,7 @@
   }
  ],
  "links": [],
- "modified": "2024-09-06 18:02:27.914669",
+ "modified": "2024-10-16 19:22:17.980268",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
