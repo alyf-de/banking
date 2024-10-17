@@ -114,6 +114,7 @@ function download_bank_statements(ebics_user) {
 					indicator: "red",
 				});
 			}
-		}
+		},
+		__("Download Bank Statements")
 	);
 }
