@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import get_link_to_form
 from banking.klarna_kosma_integration.admin import Admin
 
+
 class EBICSUser(Document):
 	def validate(self):
 		if self.country:
@@ -45,7 +46,9 @@ class EBICSUser(Document):
 			)
 
 	def validate_bank(self):
-		host_id, url = frappe.db.get_value("Bank", self.bank, ["ebics_host_id", "ebics_url"])
+		host_id, url = frappe.db.get_value(
+			"Bank", self.bank, ["ebics_host_id", "ebics_url"]
+		)
 		if not host_id or not url:
 			frappe.throw(
 				_("Please add EBICS Host ID and URL to bank {0}").format(
