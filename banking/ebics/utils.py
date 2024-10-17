@@ -105,5 +105,6 @@ def _create_bank_transaction(bank_account: str, company: str, sepa_transaction):
 	bt.bank_party_iban = sepa_transaction.iban
 	bt.bank_party_name = sepa_transaction.name
 
-	bt.insert()
-	bt.submit()
+	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
+		bt.insert()
+		bt.submit()
