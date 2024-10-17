@@ -66,3 +66,10 @@ class EBICSManager:
 			bankname=bank_name,
 			lang=language,
 		)
+
+	def download_bank_keys(self):
+		client = self.get_client()
+		return client.HPB()
+
+	def activate_bank_keys(self) -> None:
+		self.bank.activate_keys()

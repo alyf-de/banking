@@ -87,3 +87,24 @@ def initialize(ebics_user: str):
 	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
 	ini_bytes = manager.create_ini_letter(bank_name, language=frappe.local.lang)
 	user.attach_ini_letter(ini_bytes)
+	user.db_set("initialized", 1)
+
+
+@frappe.whitelist()
+def download_bank_keys(ebics_user: str):
+	user = frappe.get_doc("EBICS User", ebics_user)
+	user.check_permission("write")
+
+	manager = get_ebics_manager(ebics_user)
+
+	return manager.download_bank_keys()
+
+
+@frappe.whitelist()
+def confirm_bank_keys(ebics_user: str):
+	user = frappe.get_doc("EBICS User", ebics_user)
+	user.check_permission("write")
+
+	manager = get_ebics_manager(ebics_user)
+	manager.activate_bank_keys()
+	user.db_set("bank_keys_activated", 1)

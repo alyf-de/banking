@@ -6,6 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "full_name",
+  "initialized",
+  "bank_keys_activated",
   "column_break_hlxa",
   "company",
   "country",
@@ -71,10 +73,24 @@
    "fieldname": "needs_certificates",
    "fieldtype": "Check",
    "label": "Needs Certificate"
+  },
+  {
+   "default": "0",
+   "fieldname": "initialized",
+   "fieldtype": "Check",
+   "label": "Initialized",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "bank_keys_activated",
+   "fieldtype": "Check",
+   "label": "Bank Keys Activated",
+   "read_only": 1
   }
  ],
  "links": [],
- "modified": "2024-10-16 19:55:26.329514",
+ "modified": "2024-10-17 16:40:46.058973",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
