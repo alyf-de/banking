@@ -10,6 +10,11 @@
   "admin_endpoint",
   "enabled",
   "use_test_environment",
+  "use_ebics",
+  "ebics_section",
+  "fintech_licensee_name",
+  "fintech_license_key",
+  "ebics_keyring_passphrase",
   "section_break_2",
   "customer_id",
   "column_break_4",
@@ -70,12 +75,40 @@
    "fieldname": "use_test_environment",
    "fieldtype": "Check",
    "label": "Use Test Environment"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_ebics",
+   "fieldtype": "Check",
+   "label": "Use Ebics"
+  },
+  {
+   "depends_on": "use_ebics",
+   "fieldname": "ebics_section",
+   "fieldtype": "Section Break",
+   "label": "Ebics"
+  },
+  {
+   "fieldname": "fintech_license_key",
+   "fieldtype": "Password",
+   "label": "Fintech License Key"
+  },
+  {
+   "fieldname": "fintech_licensee_name",
+   "fieldtype": "Data",
+   "label": "Fintech Licensee Name"
+  },
+  {
+   "fieldname": "ebics_keyring_passphrase",
+   "fieldtype": "Password",
+   "hidden": 1,
+   "label": "Ebics Keyring Passphrase"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-03-12 21:09:51.503474",
+ "modified": "2024-09-06 16:59:20.538238",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",
