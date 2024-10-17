@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from banking.ebics.manager import EBICSManager
+from banking.ebics.utils import get_ebics_manager
 from frappe import _
 from frappe.utils import get_link_to_form
 from banking.klarna_kosma_integration.admin import Admin
@@ -68,23 +68,7 @@ def initialize(ebics_user: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	bank = frappe.get_doc("Bank", user.bank)
-
-	banking_settings = frappe.get_single("Banking Settings")
-	banking_settings.ensure_ebics_keyring_passphrase()
-
-	manager = EBICSManager(
-		license_name=banking_settings.fintech_licensee_name,
-		license_key=banking_settings.get_password("fintech_license_key"),
-	)
-
-	manager.set_keyring(
-		frappe.get_site_path("private", "files", "ebics_keyring"),
-		banking_settings.get_password("ebics_keyring_passphrase"),
-	)
-
-	manager.set_user(user.partner_id, user.user_id)
-	manager.set_bank(bank.ebics_host_id, bank.ebics_url)
+	manager = get_ebics_manager(ebics_user)
 
 	try:
 		manager.create_user_keys()
@@ -100,5 +84,6 @@ def initialize(ebics_user: str):
 
 	manager.send_keys_to_bank()
 
-	ini_bytes = manager.create_ini_letter(bank.bank_name, language=frappe.local.lang)
+	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
+	ini_bytes = manager.create_ini_letter(bank_name, language=frappe.local.lang)
 	user.attach_ini_letter(ini_bytes)
