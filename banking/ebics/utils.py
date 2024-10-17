@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+
 from banking.ebics.manager import EBICSManager
 
 
@@ -72,7 +73,7 @@ def sync_ebics_transactions(ebics_user: str, start_date: str, end_date: str):
 
 def _create_bank_transaction(bank_account: str, company: str, sepa_transaction):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction."""
-	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML 
+	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 	alternative_id = (
 		sepa_transaction._xmlobj.to_dict()
 		.get("TxDtls", {})

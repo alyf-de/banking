@@ -2,10 +2,11 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.model.document import Document
-from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from frappe import _
+from frappe.model.document import Document
 from frappe.utils import get_link_to_form
+
+from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
 
 

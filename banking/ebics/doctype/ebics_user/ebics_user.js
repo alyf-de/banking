@@ -22,7 +22,9 @@ frappe.ui.form.on("EBICS User", {
 				__("Validate Bank Keys"),
 				async () => {
 					bank_keys = await get_bank_keys(frm.doc.name);
-					message = __("Please confirm that the following keys are identical to the ones mentioned on your bank's letter:");
+					message = __(
+						"Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
+					);
 					frappe.confirm(
 						`<p>${message}</p>
 						<pre>${bank_keys}</pre>`,
@@ -37,12 +39,9 @@ frappe.ui.form.on("EBICS User", {
 		}
 
 		if (frm.doc.initialized && frm.doc.bank_keys_activated) {
-			frm.add_custom_button(
-				__("Download Bank Statements"),
-				() => {
-					download_bank_statements(frm.doc.name);
-				}
-			);
+			frm.add_custom_button(__("Download Bank Statements"), () => {
+				download_bank_statements(frm.doc.name);
+			});
 		}
 	},
 });
@@ -60,7 +59,6 @@ async function get_bank_keys(ebics_user) {
 		});
 	}
 }
-
 
 async function confirm_bank_keys(ebics_user) {
 	try {
@@ -80,7 +78,6 @@ async function confirm_bank_keys(ebics_user) {
 	}
 }
 
-
 function download_bank_statements(ebics_user) {
 	frappe.prompt(
 		[
@@ -95,13 +92,17 @@ function download_bank_statements(ebics_user) {
 				label: __("To Date"),
 				fieldtype: "Date",
 				default: frappe.datetime.now_date(),
-			}
+			},
 		],
 		async (values) => {
 			try {
 				await frappe.xcall(
 					"banking.ebics.doctype.ebics_user.ebics_user.download_bank_statements",
-					{ ebics_user: ebics_user, from_date: values.from_date, to_date: values.to_date }
+					{
+						ebics_user: ebics_user,
+						from_date: values.from_date,
+						to_date: values.to_date,
+					}
 				);
 				frappe.show_alert({
 					message: __("Bank statements downloaded"),
