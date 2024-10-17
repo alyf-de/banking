@@ -1,3 +1,4 @@
+import contextlib
 import frappe
 from frappe import _
 
@@ -74,13 +75,8 @@ def sync_ebics_transactions(ebics_user: str, start_date: str, end_date: str):
 def _create_bank_transaction(bank_account: str, company: str, sepa_transaction):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction."""
 	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
-	alternative_id = (
-		sepa_transaction._xmlobj.to_dict()
-		.get("TxDtls", {})
-		.get("Refs", {})
-		.get("TxId", None)
-	)
-	transaction_id = sepa_transaction.bank_reference or alternative_id
+	# For our test bank, the latter is a timestamp with nanosecond accuracy.
+	transaction_id = sepa_transaction.bank_reference or sepa_transaction._xmlobj.Refs.TxId.text
 
 	# NOTE: This does not work for old data, this ID is different from Kosma's
 	if sepa_transaction.bank_reference and frappe.db.exists(
