@@ -35,6 +35,15 @@ frappe.ui.form.on("EBICS User", {
 				frm.doc.bank_keys_activated ? __("Actions") : null
 			);
 		}
+
+		if (frm.doc.initialized && frm.doc.bank_keys_activated) {
+			frm.add_custom_button(
+				__("Download Bank Statements"),
+				() => {
+					download_bank_statements(frm.doc.name);
+				}
+			);
+		}
 	},
 });
 
@@ -46,7 +55,7 @@ async function get_bank_keys(ebics_user) {
 		);
 	} catch (e) {
 		frappe.show_alert({
-			message: e,
+			message: e || __("An error occurred"),
 			indicator: "red",
 		});
 	}
@@ -65,8 +74,45 @@ async function confirm_bank_keys(ebics_user) {
 		});
 	} catch (e) {
 		frappe.show_alert({
-			message: e,
+			message: e || __("An error occurred"),
 			indicator: "red",
 		});
 	}
+}
+
+
+function download_bank_statements(ebics_user) {
+	frappe.prompt(
+		[
+			{
+				fieldname: "from_date",
+				label: __("From Date"),
+				fieldtype: "Date",
+				default: frappe.datetime.now_date(),
+			},
+			{
+				fieldname: "to_date",
+				label: __("To Date"),
+				fieldtype: "Date",
+				default: frappe.datetime.now_date(),
+			}
+		],
+		async (values) => {
+			try {
+				await frappe.xcall(
+					"banking.ebics.doctype.ebics_user.ebics_user.download_bank_statements",
+					{ ebics_user: ebics_user, from_date: values.from_date, to_date: values.to_date }
+				);
+				frappe.show_alert({
+					message: __("Bank statements downloaded"),
+					indicator: "green",
+				});
+			} catch (e) {
+				frappe.show_alert({
+					message: e || __("An error occurred"),
+					indicator: "red",
+				});
+			}
+		}
+	);
 }

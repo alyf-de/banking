@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from banking.ebics.utils import get_ebics_manager
+from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from frappe import _
 from frappe.utils import get_link_to_form
 from banking.klarna_kosma_integration.admin import Admin
@@ -111,3 +111,13 @@ def confirm_bank_keys(ebics_user: str):
 	manager = get_ebics_manager(ebics_user)
 	manager.activate_bank_keys()
 	user.db_set("bank_keys_activated", 1)
+
+
+@frappe.whitelist()
+def download_bank_statements(
+	ebics_user: str, from_date: str | None = None, to_date: str | None = None
+):
+	frappe.has_permission("EBICS User", "read", throw=True)
+	frappe.has_permission("Bank Transaction", "create", throw=True)
+
+	sync_ebics_transactions(ebics_user, from_date, to_date)

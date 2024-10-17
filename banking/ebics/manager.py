@@ -73,3 +73,19 @@ class EBICSManager:
 
 	def activate_bank_keys(self) -> None:
 		self.bank.activate_keys()
+
+	def download_bank_statements(self, start_date: str | None = None, end_date: str | None = None):
+		"""Yield an iterator over CAMTDocument objects for the given date range."""
+		from fintech.sepa import CAMTDocument
+
+		client = self.get_client()
+		camt53 = client.C53(start_date, end_date)
+		try:
+			camt54 = client.C54(start_date, end_date)
+		except fintech.ebics.EbicsTechnicalError as e:
+			camt54 = None
+
+		for name in sorted(camt53):
+			yield CAMTDocument(xml=camt53[name], camt54=camt54)
+
+		client.confirm_download(success=True)
