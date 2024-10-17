@@ -19,7 +19,7 @@ frappe.ui.form.on("EBICS User", {
 
 		if (frm.doc.initialized) {
 			frm.add_custom_button(
-				__("Validate Bank Keys"),
+				__("Verify Bank Keys"),
 				async () => {
 					bank_keys = await get_bank_keys(frm.doc.name);
 					message = __(
