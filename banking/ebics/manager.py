@@ -8,13 +8,11 @@ class EBICSManager:
 		self,
 		license_name: str,
 		license_key: str,
-		ebics_user_ids: str | list[str] | None = None,
 	):
 		try:
 			fintech.register(
 				name=license_name,
 				keycode=license_key,
-				users=ebics_user_ids,
 			)
 		except RuntimeError as e:
 			if e.args[0] != "'register' can be called only once":

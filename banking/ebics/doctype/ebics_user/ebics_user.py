@@ -76,7 +76,6 @@ def initialize(ebics_user: str):
 	manager = EBICSManager(
 		license_name=banking_settings.fintech_licensee_name,
 		license_key=banking_settings.get_password("fintech_license_key"),
-		ebics_user_ids=user.user_id
 	)
 
 	manager.set_keyring(
