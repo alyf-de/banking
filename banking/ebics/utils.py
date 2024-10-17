@@ -18,7 +18,7 @@ def get_ebics_manager(ebics_user: str) -> "EBICSManager":
 	)
 
 	manager.set_keyring(
-		frappe.get_site_path("private", "files", "ebics_keyring"),
+		frappe.get_site_path("ebics_keyring.json"),
 		banking_settings.get_password("ebics_keyring_passphrase"),
 	)
 
