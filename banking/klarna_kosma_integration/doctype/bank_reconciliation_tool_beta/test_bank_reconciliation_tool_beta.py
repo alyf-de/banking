@@ -522,14 +522,32 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		si.reload()
 		si2.reload()
 
-		je_references = frappe.db.count(
-			"Journal Entry Account",
-			{"parenttype": "Journal Entry", "parent": bt.payment_entries[0].payment_entry},
-		)
-		self.assertEqual(je_references, 3)
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+
+		self.assertEqual(len(je.accounts), 3)
+		self.assertEqual(je.voucher_type, "Bank Entry")
+		self.assertEqual(je.accounts[0].account, si.debit_to)
+		self.assertEqual(je.accounts[0].credit, 50)
+		self.assertEqual(je.accounts[0].party_type, "Customer")
+		self.assertEqual(je.accounts[0].party, si.customer)
+		self.assertEqual(je.accounts[0].reference_type, "Sales Invoice")
+		self.assertEqual(je.accounts[0].reference_name, si.name)
+		self.assertEqual(je.accounts[1].account, si2.debit_to)
+		self.assertEqual(je.accounts[1].credit, 100)
+		self.assertEqual(je.accounts[1].party_type, "Customer")
+		self.assertEqual(je.accounts[1].party, si2.customer)
+		self.assertEqual(je.accounts[1].reference_type, "Sales Invoice")
+		self.assertEqual(je.accounts[1].reference_name, si2.name)
+		self.assertEqual(je.accounts[2].account, frappe.db.get_value("Bank Account", bt.bank_account, "account"))
+		self.assertEqual(je.accounts[2].debit, 150)
+		self.assertEqual(je.total_debit, 150)
+		self.assertEqual(je.total_credit, 150)
+
+		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 150)
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si2.outstanding_amount, 100)
 
