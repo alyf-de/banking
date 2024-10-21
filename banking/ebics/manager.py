@@ -1,4 +1,9 @@
 import fintech
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from typing import Iterator
+	from banking.ebics.types import EbicsKeyRing, EbicsUser, EbicsBank, EbicsClient, CAMTDocument
 
 
 class EBICSManager:
@@ -21,7 +26,7 @@ class EBICSManager:
 	def set_keyring(self, keyring_path: str, keyring_passphrase: str):
 		from fintech.ebics import EbicsKeyRing
 
-		self.keyring = EbicsKeyRing(
+		self.keyring: "EbicsKeyRing" = EbicsKeyRing(
 			keys=keyring_path,
 			passphrase=keyring_passphrase,
 		)
@@ -29,14 +34,14 @@ class EBICSManager:
 	def set_user(self, partner_id: str, user_id: str):
 		from fintech.ebics import EbicsUser
 
-		self.user = EbicsUser(
+		self.user: "EbicsUser" = EbicsUser(
 			keyring=self.keyring, partnerid=partner_id, userid=user_id, transport_only=True
 		)
 
 	def set_bank(self, host_id: str, url: str):
 		from fintech.ebics import EbicsBank
 
-		self.bank = EbicsBank(keyring=self.keyring, hostid=host_id, url=url)
+		self.bank: "EbicsBank" = EbicsBank(keyring=self.keyring, hostid=host_id, url=url)
 
 	def create_user_keys(self):
 		self.user.create_keys(keyversion="A005", bitlength=2048)
@@ -48,7 +53,7 @@ class EBICSManager:
 			countryName=country_code,
 		)
 
-	def get_client(self):
+	def get_client(self) -> "EbicsClient":
 		from fintech.ebics import EbicsClient
 
 		return EbicsClient(self.bank, self.user)
@@ -74,7 +79,7 @@ class EBICSManager:
 	def activate_bank_keys(self) -> None:
 		self.bank.activate_keys()
 
-	def download_bank_statements(self, start_date: str | None = None, end_date: str | None = None):
+	def download_bank_statements(self, start_date: str | None = None, end_date: str | None = None) -> "Iterator[CAMTDocument]":
 		"""Yield an iterator over CAMTDocument objects for the given date range."""
 		from fintech.sepa import CAMTDocument
 

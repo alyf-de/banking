@@ -1,8 +1,13 @@
 import contextlib
+from typing import TYPE_CHECKING
+
 import frappe
 from frappe import _
 
 from banking.ebics.manager import EBICSManager
+
+if TYPE_CHECKING:
+	from .types import SEPATransaction
 
 
 def get_ebics_manager(ebics_user: str) -> "EBICSManager":
@@ -72,8 +77,11 @@ def sync_ebics_transactions(ebics_user: str, start_date: str, end_date: str):
 				_create_bank_transaction(bank_account, user.company, transaction)
 
 
-def _create_bank_transaction(bank_account: str, company: str, sepa_transaction):
-	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction."""
+def _create_bank_transaction(bank_account: str, company: str, sepa_transaction: "SEPATransaction"):
+	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
+
+	https://www.joonis.de/en/fintech/doc/sepa/#fintech.sepa.SEPATransaction
+	"""
 	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 	# For our test bank, the latter is a timestamp with nanosecond accuracy.
 	transaction_id = sepa_transaction.bank_reference or sepa_transaction._xmlobj.Refs.TxId.text
