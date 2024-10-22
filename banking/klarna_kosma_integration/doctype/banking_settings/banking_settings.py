@@ -19,7 +19,10 @@ from banking.klarna_kosma_integration.utils import (
 
 
 class BankingSettings(Document):
-	pass
+	def ensure_ebics_keyring_passphrase(self):
+		"""Create a new EBICS Keyring Passphrase if EBICS is enabled and no passphrase is set."""
+		if self.use_ebics and not self.ebics_keyring_passphrase:
+			self.ebics_keyring_passphrase = frappe.generate_hash()
 
 
 @frappe.whitelist()

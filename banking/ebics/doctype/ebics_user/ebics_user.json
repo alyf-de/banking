@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-09-06 16:28:04.926015",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "full_name",
+  "initialized",
+  "bank_keys_activated",
+  "column_break_hlxa",
+  "company",
+  "country",
+  "bank",
+  "section_break_qjlc",
+  "partner_id",
+  "user_id",
+  "needs_certificates"
+ ],
+ "fields": [
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Full Name",
+   "mandatory_depends_on": "needs_certificates"
+  },
+  {
+   "fieldname": "column_break_hlxa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "mandatory_depends_on": "needs_certificates",
+   "options": "Company"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "mandatory_depends_on": "needs_certificates",
+   "options": "Country"
+  },
+  {
+   "description": "Please enter the values provided by your bank.",
+   "fieldname": "section_break_qjlc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "partner_id",
+   "fieldtype": "Data",
+   "label": "Partner ID"
+  },
+  {
+   "fieldname": "user_id",
+   "fieldtype": "Data",
+   "label": "User ID"
+  },
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Bank",
+   "mandatory_depends_on": "needs_certificates",
+   "options": "Bank"
+  },
+  {
+   "default": "0",
+   "description": "Enable this for EBICS accounts whose key management is based on certificates (eg. French banks).",
+   "fieldname": "needs_certificates",
+   "fieldtype": "Check",
+   "label": "Needs Certificate"
+  },
+  {
+   "default": "0",
+   "fieldname": "initialized",
+   "fieldtype": "Check",
+   "label": "Initialized",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "bank_keys_activated",
+   "fieldtype": "Check",
+   "label": "Bank Keys Activated",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2024-10-17 16:40:46.058973",
+ "modified_by": "Administrator",
+ "module": "EBICS",
+ "name": "EBICS User",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "full_name,bank,company",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "full_name"
+}

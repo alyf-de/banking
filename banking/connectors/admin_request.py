@@ -90,7 +90,9 @@ class AdminRequest:
 		data.update({"session_id": session_id})
 
 		method = "banking_admin.api.end_session"
-		requests.post(url=self.url + method, headers=self.headers, data=json.dumps(data))
+		requests.post(
+			url=self.url + method, headers=self.headers, data=json.dumps(data)
+		)
 
 	def consent_accounts(self, consent_id: str, consent_token: str):
 		data = self.data
@@ -136,3 +138,23 @@ class AdminRequest:
 	def get_customer_portal(self):
 		method = "banking_admin.api.get_customer_portal"
 		return requests.get(url=self.url + method)
+
+	def register_ebics_user(self, host_id: str, partner_id: str, user_id: str):
+		data = self.data
+		data.update({"host_id": host_id, "partner_id": partner_id, "user_id": user_id})
+		method = "banking_admin.ebics_api.register_ebics_user"
+		return requests.post(
+			url=self.url + method,
+			headers=self.headers,
+			json=data,
+		)
+
+	def remove_ebics_user(self, host_id: str, partner_id: str, user_id: str):
+		data = self.data
+		data.update({"host_id": host_id, "partner_id": partner_id, "user_id": user_id})
+		method = "banking_admin.ebics_api.remove_ebics_user"
+		return requests.post(
+			url=self.url + method,
+			headers=self.headers,
+			json=data,
+		)
