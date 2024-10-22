@@ -387,13 +387,12 @@ def get_outstanding_amount(payment_doctype, payment_name) -> float:
 
 def get_debtor_creditor_account(invoice: dict) -> str | None:
 	"""Get the debtor or creditor (intermediate) account based on the invoice type."""
-	account_field = (
-		"debit_to"
-		if invoice.get("voucher_type") == "Sales Invoice"
-		else "credit_to"
-		if invoice.get("voucher_type") == "Purchase Invoice"
-		else "payable_account"
-	)
+	if invoice.get("voucher_type") == "Sales Invoice":
+		account_field = "debit_to"
+	elif invoice.get("voucher_type") == "Purchase Invoice":
+		account_field = "credit_to"
+	else:
+		account_field = "payable_account"
 	return frappe.db.get_value(
 		invoice.get("voucher_type"), invoice.get("voucher_no"), account_field
 	)
