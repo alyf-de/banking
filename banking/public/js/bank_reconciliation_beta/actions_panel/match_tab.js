@@ -276,21 +276,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	}
 
 	show_multiple_party_reconcile_prompt(selected_vouchers) {
-		let me = this;
-		let fields = [
-			{
-				fieldtype: "HTML",
-				fieldname: "info",
-				options: __("Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."),
-			},
-		]
-		frappe.prompt(
-			fields,
+		frappe.confirm(
+			__("Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."),
 			() => {
-				me.bulk_reconcile_vouchers(selected_vouchers, true);
+				this.bulk_reconcile_vouchers(selected_vouchers, true);
 			},
-			__("Multiple Party Reconciliation"),
-			__("Confirm")
 		);
 	}
 
