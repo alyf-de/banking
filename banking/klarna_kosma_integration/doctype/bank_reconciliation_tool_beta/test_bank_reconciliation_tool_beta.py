@@ -8,9 +8,6 @@ from frappe.tests.utils import FrappeTestCase
 
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 
-from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
-	reconcile_vouchers,
-)
 from erpnext.accounts.doctype.bank_transaction.test_bank_transaction import (
 	create_gl_account,
 )
@@ -22,6 +19,11 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 )
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
+<<<<<<< HEAD
+=======
+	auto_reconcile_vouchers,
+	bulk_reconcile_vouchers,
+>>>>>>> ea3fd7c (test: Multi Party Reconciliation)
 	create_journal_entry_bts,
 	create_payment_entry_bts,
 )
@@ -67,7 +69,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			item="Reco Item",
 		)
 
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			doc.name,
 			json.dumps(
 				[
@@ -115,7 +117,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			item="Reco Item",
 		)
 
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			doc.name,
 			json.dumps(
 				[
@@ -148,7 +150,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			cost_center="Main - _TC",
 			item="Reco Item",
 		)
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt1.name,
 			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
 		)
@@ -157,7 +159,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt1.payment_entries[0].allocated_amount, 100)
 		self.assertEqual(si.outstanding_amount, 100)
 
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt2.name,
 			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
 		)
@@ -191,7 +193,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			submit=1,
 		)
 		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt.name,
 			json.dumps(
 				[
@@ -222,7 +224,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		)
 		bt1 = create_bank_transaction(deposit=100, bank_account=self.bank_account)
 		bt2 = create_bank_transaction(deposit=100, bank_account=self.bank_account)
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt1.name,
 			json.dumps([{"payment_doctype": "Payment Entry", "payment_name": pe.name}]),
 		)
@@ -232,7 +234,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt1.payment_entries[0].payment_entry, pe.name)
 		self.assertEqual(bt1.status, "Reconciled")
 
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt2.name,
 			json.dumps([{"payment_doctype": "Payment Entry", "payment_name": pe.name}]),
 		)
@@ -299,7 +301,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		)
 
 		# 50/200 reconciled
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt.name,
 			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
 		)
@@ -355,7 +357,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			company=bt.company,
 			account="Travel Expenses - _TC",
 		)
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			bt.name,
 			json.dumps(
 				[
@@ -417,7 +419,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			item="Reco Item",
 		)
 
-		reconcile_vouchers(
+		bulk_reconcile_vouchers(
 			doc.name,
 			json.dumps(
 				[
@@ -445,6 +447,116 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			),
 		)
 
+<<<<<<< HEAD
+=======
+	def test_auto_reconciliation(self):
+		"""
+		Test auto reconciliation between a bank transaction and a payment entry.
+		"""
+		day_before_yesterday = add_days(getdate(), -2)
+		bt = create_bank_transaction(
+			date=day_before_yesterday,
+			deposit=300,
+			reference_no="Test001",
+			bank_account=self.bank_account,
+		)
+		create_payment_entry(
+			payment_type="Receive",
+			party_type="Customer",
+			party=self.customer,
+			paid_from="Debtors - _TC",
+			paid_to=self.gl_account,
+			paid_amount=250,
+			save=1,
+			submit=1,
+		)
+
+		auto_reconcile_vouchers(
+			bank_account=self.bank_account,
+			from_date=day_before_yesterday,
+			to_date=add_days(getdate(), 1),
+			filter_by_reference_date=False,
+		)
+		bt.reload()
+
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 250)
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertEqual(bt.unallocated_amount, 50)
+
+	def test_multi_party_reconciliation(self):
+		bt = create_bank_transaction(
+			deposit=150,
+			bank_account=self.bank_account,
+			reference_no="multi-party",
+			reference_date=getdate(),
+		)
+		customer = create_customer()
+		si = create_sales_invoice(
+			rate=50,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		si2 = create_sales_invoice(
+			rate=200,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{
+						"payment_doctype": "Sales Invoice",
+						"payment_name": si.name,
+						"party": customer,
+					},
+					{
+						"payment_doctype": "Sales Invoice",
+						"payment_name": si2.name,
+						"party": self.customer,
+					},
+				]
+			),
+			reconcile_multi_party=True,
+		)
+		bt.reload()
+		si.reload()
+		si2.reload()
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+
+		self.assertEqual(len(je.accounts), 3)
+		self.assertEqual(je.voucher_type, "Bank Entry")
+		self.assertEqual(je.accounts[0].account, si.debit_to)
+		self.assertEqual(je.accounts[0].credit, 50)
+		self.assertEqual(je.accounts[0].party_type, "Customer")
+		self.assertEqual(je.accounts[0].party, si.customer)
+		self.assertEqual(je.accounts[0].reference_type, "Sales Invoice")
+		self.assertEqual(je.accounts[0].reference_name, si.name)
+		self.assertEqual(je.accounts[1].account, si2.debit_to)
+		self.assertEqual(je.accounts[1].credit, 100)
+		self.assertEqual(je.accounts[1].party_type, "Customer")
+		self.assertEqual(je.accounts[1].party, si2.customer)
+		self.assertEqual(je.accounts[1].reference_type, "Sales Invoice")
+		self.assertEqual(je.accounts[1].reference_name, si2.name)
+		self.assertEqual(je.accounts[2].account, frappe.db.get_value("Bank Account", bt.bank_account, "account"))
+		self.assertEqual(je.accounts[2].debit, 150)
+		self.assertEqual(je.total_debit, 150)
+		self.assertEqual(je.total_credit, 150)
+
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 150)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+
+		self.assertEqual(si.outstanding_amount, 0)
+		self.assertEqual(si2.outstanding_amount, 100)
+
+>>>>>>> ea3fd7c (test: Multi Party Reconciliation)
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(

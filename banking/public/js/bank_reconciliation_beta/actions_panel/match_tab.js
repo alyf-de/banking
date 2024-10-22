@@ -218,6 +218,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 					payment_doctype: row[5].doctype,
 					payment_name: row[5].content,  // Voucher name
 					amount: this.get_amount_from_row(row),
+					party: row[4].content,  // Party
 				});
 			}
 		});
@@ -230,12 +231,33 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			return;
 		}
 
+		let voucher_types = new Set(selected_vouchers.map(voucher => voucher.payment_doctype));
+		if (voucher_types.size > 1) {
+			frappe.show_alert({
+				message: __("Please select vouchers of the same type to reconcile"),
+				indicator: "red"
+			});
+			return;
+		}
+
+		// If the vouchers have different parties prepare a prompt to reconcile multi-party
+		let parties = new Set(selected_vouchers.map(voucher => voucher.party));
+		if (parties.size > 1) {
+			this.show_multiple_party_reconcile_prompt(selected_vouchers);
+		} else {
+			this.bulk_reconcile_vouchers(selected_vouchers, false);
+		}
+	}
+
+	bulk_reconcile_vouchers(selected_vouchers, reconcile_multi_party) {
+		let me = this;
 		frappe.call({
 			method:
-				"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.reconcile_vouchers",
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.bulk_reconcile_vouchers",
 			args: {
 				bank_transaction_name: this.transaction.name,
 				vouchers: selected_vouchers,
+				reconcile_multi_party: reconcile_multi_party,
 			},
 			freeze: true,
 			freeze_message: __("Reconciling ..."),
@@ -251,6 +273,15 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				me.actions_panel.after_transaction_reconcile(response.message, false);
 			},
 		});
+	}
+
+	show_multiple_party_reconcile_prompt(selected_vouchers) {
+		frappe.confirm(
+			__("Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."),
+			() => {
+				this.bulk_reconcile_vouchers(selected_vouchers, true);
+			},
+		);
 	}
 
 	get_match_tab_fields() {
@@ -411,7 +442,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				click: () => {
 					this.reconcile_selected_vouchers();
 				}
-			}
+			},
 		];
 	}
 
