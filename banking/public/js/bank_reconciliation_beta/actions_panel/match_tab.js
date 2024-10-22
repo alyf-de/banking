@@ -16,26 +16,33 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		});
 		this.match_field_group.make()
 
-		this.summary_empty_state();
 		await this.populate_matching_vouchers();
 	}
 
 	summary_empty_state() {
-		let summary_field = this.match_field_group.get_field("transaction_amount_summary").$wrapper;
-		summary_field.append(
-			`<div class="report-summary reconciliation-summary" style="height: 90px;">
-			</div>`
-		);
+		this.render_transaction_amount_summary(0, 0, 0, this.transaction.currency);
 	}
 
-	async populate_matching_vouchers() {
+	async populate_matching_vouchers(event_obj) {
+		if (event_obj && event_obj.type === "input") {
+			// `bind_change_event` in `data.js` triggers both an input and change event
+			// This triggers the `populate_matching_vouchers` twice on clicking on filters
+			// Since the input event is debounced, we can ignore it for a checkbox
+			return;
+		}
+
+		this.summary_empty_state();
+		this.render_data_table();
+		this.actions_table.freeze();
+
 		let filter_fields = this.match_field_group.get_values();
 		let document_types = Object.keys(filter_fields).filter(field => filter_fields[field] === 1);
 
 		this.update_filters_in_state(document_types);
 
 		let vouchers = await this.get_matching_vouchers(document_types);
-		this.render_data_table(vouchers);
+		this.set_table_data(vouchers);
+		this.actions_table.unfreeze();
 
 		let transaction_amount = this.transaction.withdrawal || this.transaction.deposit;
 		this.render_transaction_amount_summary(
@@ -70,7 +77,32 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		return vouchers || [];
 	}
 
-	render_data_table(vouchers) {
+	render_data_table() {
+		const datatable_options = {
+			columns: this.get_data_table_columns(),
+			data: [],
+			dynamicRowHeight: true,
+			checkboxColumn: true,
+			inlineFilters: true,
+			layout: "fluid",
+			serialNoColumn: false,
+			freezeMessage: __("Loading..."),
+		};
+
+		this.actions_table = new frappe.DataTable(
+			this.match_field_group.get_field("vouchers").$wrapper[0],
+			datatable_options
+		);
+
+		// Highlight first row
+		this.actions_table.style.setStyle(
+			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
+		);
+
+		this.bind_row_check_event();
+	}
+
+	set_table_data(vouchers) {
 		this.summary_data = {};
 		let table_data = vouchers.map((row) => {
 			return [
@@ -115,28 +147,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			];
 		});
 
-		const datatable_options = {
-			columns: this.get_data_table_columns(),
-			data: table_data,
-			dynamicRowHeight: true,
-			checkboxColumn: true,
-			inlineFilters: true,
-			layout: "fluid",
-			serialNoColumn: false,
-		};
-
-
-		this.actions_table = new frappe.DataTable(
-			this.match_field_group.get_field("vouchers").$wrapper[0],
-			datatable_options
-		);
-
-		// Highlight first row
-		this.actions_table.style.setStyle(
-			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
-		);
-
-		this.bind_row_check_event();
+		this.actions_table.refresh(table_data, this.get_data_table_columns());
 	}
 
 	bind_row_check_event() {
@@ -292,8 +303,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "payment_entry",
 				fieldtype: "Check",
 				default: filters_state.payment_entry,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -301,8 +312,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "journal_entry",
 				fieldtype: "Check",
 				default: filters_state.journal_entry,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -313,8 +324,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "purchase_invoice",
 				fieldtype: "Check",
 				default: filters_state.purchase_invoice,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -322,8 +333,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "sales_invoice",
 				fieldtype: "Check",
 				default: filters_state.sales_invoice,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -334,8 +345,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "loan_repayment",
 				fieldtype: "Check",
 				default: filters_state.loan_repayment,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -343,8 +354,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "loan_disbursement",
 				fieldtype: "Check",
 				default: filters_state.loan_disbursement,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -355,8 +366,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "expense_claim",
 				fieldtype: "Check",
 				default: filters_state.expense_claim,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -364,8 +375,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "bank_transaction",
 				fieldtype: "Check",
 				default: filters_state.bank_transaction,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -376,8 +387,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "exact_match",
 				fieldtype: "Check",
 				default: filters_state.exact_match,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				}
 			},
 			{
@@ -388,8 +399,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "exact_party_match",
 				fieldtype: "Check",
 				default: this.transaction.party_type && this.transaction.party ? 1 : 0,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				},
 				read_only: !Boolean(this.transaction.party_type && this.transaction.party)
 			},
@@ -401,8 +412,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldname: "unpaid_invoices",
 				fieldtype: "Check",
 				default: filters_state.unpaid_invoices,
-				onchange: () => {
-					this.populate_matching_vouchers();
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
 				},
 				depends_on: "eval: doc.sales_invoice || doc.purchase_invoice || doc.expense_claim",
 			},
