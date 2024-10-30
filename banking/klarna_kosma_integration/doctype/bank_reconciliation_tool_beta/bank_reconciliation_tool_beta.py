@@ -35,13 +35,16 @@ def get_bank_transactions(
 	to_date: str = None,
 	order_by: str = "date asc",
 ):
-	# returns bank transactions for a bank account
-	filters = []
-	filters.append(["bank_account", "=", bank_account])
-	filters.append(["docstatus", "=", 1])
-	filters.append(["unallocated_amount", ">", 0.0])
+	"""Return bank transactions for a bank account"""
+	filters = [
+		["bank_account", "=", bank_account],
+		["docstatus", "=", 1],
+		["unallocated_amount", ">", 0.001],
+	]
+
 	if to_date:
 		filters.append(["date", "<=", to_date])
+
 	if from_date:
 		filters.append(["date", ">=", from_date])
 
