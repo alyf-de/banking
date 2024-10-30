@@ -44,7 +44,8 @@ def get_bank_transactions(
 		filters.append(["date", "<=", to_date])
 	if from_date:
 		filters.append(["date", ">=", from_date])
-	transactions = frappe.get_all(
+
+	return frappe.get_list(
 		"Bank Transaction",
 		fields=[
 			"date",
@@ -66,7 +67,6 @@ def get_bank_transactions(
 		filters=filters,
 		order_by=order_by,
 	)
-	return transactions
 
 
 @frappe.whitelist()
@@ -87,6 +87,8 @@ def create_journal_entry_bts(
 		allow_edit = sbool(allow_edit)
 
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	bank_transaction.check_permission("read")
+
 	if bank_transaction.deposit and bank_transaction.withdrawal:
 		frappe.throw(
 			_(
@@ -398,8 +400,10 @@ def get_linked_payments(
 	from_reference_date: str = None,
 	to_reference_date: str = None,
 ) -> list:
-	# get all matching payments for a bank transaction
+	"""Get all matching payments for a bank transaction"""
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction.check_permission("read")
+
 	gl_account, company = frappe.db.get_value(
 		"Bank Account", transaction.bank_account, ["account", "company"]
 	)
@@ -557,7 +561,13 @@ def get_matching_queries(
 	is_withdrawal = transaction.withdrawal > 0.0
 	is_deposit = transaction.deposit > 0.0
 
+<<<<<<< HEAD
 	if "payment_entry" in document_types:
+=======
+	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
+
+	if "payment_entry" in document_types and frappe.has_permission("Payment Entry"):
+>>>>>>> 6c97bc8 (fix(Bank Reconciliation Tool): check role perms)
 		query = get_pe_matching_query(
 			exact_match,
 			account_from_to,
@@ -571,7 +581,7 @@ def get_matching_queries(
 		)
 		queries.append(query)
 
-	if "journal_entry" in document_types:
+	if "journal_entry" in document_types and frappe.has_permission("Journal Entry"):
 		query = get_je_matching_query(
 			exact_match,
 			transaction,
@@ -596,15 +606,28 @@ def get_matching_queries(
 	if include_unpaid:
 		kwargs["company"] = company
 		for doctype, fn in invoice_queries_map.items():
+<<<<<<< HEAD
 			if doctype != "expense_claim":
 				kwargs["include_only_returns"] = doctype != invoice_dt
 			else:
 				del kwargs["include_only_returns"]
+=======
+			if not frappe.has_permission(frappe.unscrub(doctype)):
+				continue
+
+			if doctype in ["sales_invoice", "purchase_invoice"]:
+				kwargs.include_only_returns = doctype != invoice_dt
+			elif kwargs.include_only_returns is not None:
+				# Remove the key when doctype == "expense_claim"
+				del kwargs.include_only_returns
+
+>>>>>>> 6c97bc8 (fix(Bank Reconciliation Tool): check role perms)
 			queries.append(fn(**kwargs))
-	else:
-		if fn := invoice_queries_map.get(invoice_dt):
+	elif fn := invoice_queries_map.get(invoice_dt):
+		if frappe.has_permission(frappe.unscrub(invoice_dt)):
 			queries.append(fn(**kwargs))
 
+<<<<<<< HEAD
 	if "loan_disbursement" in document_types and is_withdrawal:
 		queries.append(get_ld_matching_query(bank_account, exact_match, transaction))
 
@@ -613,6 +636,16 @@ def get_matching_queries(
 
 	if "bank_transaction" in document_types:
 		query = get_bt_matching_query(exact_match, transaction, exact_party_match)
+=======
+	if "loan_disbursement" in document_types and is_withdrawal and frappe.has_permission("Loan Disbursement"):
+		queries.append(get_ld_matching_query(exact_match, common_filters))
+
+	if "loan_repayment" in document_types and is_deposit and frappe.has_permission("Loan Repayment"):
+		queries.append(get_lr_matching_query(exact_match, common_filters))
+
+	if "bank_transaction" in document_types and frappe.has_permission("Bank Transaction"):
+		query = get_bt_matching_query(exact_match, common_filters, transaction.name)
+>>>>>>> 6c97bc8 (fix(Bank Reconciliation Tool): check role perms)
 		queries.append(query)
 
 	return queries
