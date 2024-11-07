@@ -183,13 +183,20 @@ frappe.ui.form.on('Banking Settings', {
 					</p>
 					<p>
 						<b>${ __("Subscriber") }</b>:
-						${subscription.full_name}</p>
+						${subscription.full_name}
+					</p>
 					<p>
 						<b>${ __("Status") }</b>:
-						${subscription.subscription_status}</p>
+						${subscription.subscription_status}
+					</p>
 					<p>
 						<b>${ __("Transaction Limit") }</b>:
-						${subscription.usage} (${__("Usage")}) / ${subscription.transaction_limit} (${__("Limit")})</p>
+						${subscription.usage} (${__("Usage")}) / ${subscription.transaction_limit} (${__("Limit")})
+					</p>
+					<p>
+						<b>${ __("Ebics Users") }</b>:
+						${subscription.ebics_usage.used} (${__("Usage")}) / ${subscription.ebics_usage.allowed} (${__("Limit")})
+					</p>
 					<p>
 						<b>${ __("Valid Till") }</b>:
 						${frappe.format(subscription.plan_end_date, {"fieldtype": "Date"})}
