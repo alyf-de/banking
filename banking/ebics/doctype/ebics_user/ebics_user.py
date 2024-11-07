@@ -138,7 +138,9 @@ def confirm_bank_keys(ebics_user: str):
 def download_bank_statements(
 	ebics_user: str, from_date: str | None = None, to_date: str | None = None
 ):
-	frappe.has_permission("EBICS User", "read", throw=True)
 	frappe.has_permission("Bank Transaction", "create", throw=True)
 
-	sync_ebics_transactions(ebics_user, from_date, to_date)
+	user = frappe.get_doc("EBICS User", ebics_user)
+	user.check_permission("read")
+
+	sync_ebics_transactions(user, from_date, to_date)

@@ -39,10 +39,7 @@ def get_ebics_manager(ebics_user: "EBICSUser", passphrase: str | None = None) ->
 	return manager
 
 
-def sync_ebics_transactions(ebics_user: str, start_date: str, end_date: str):
-	user = frappe.get_doc("EBICS User", ebics_user)
-	user.check_permission("write")
-
+def sync_ebics_transactions(user: "EBICSUser", start_date: str | None = None, end_date: str | None = None):
 	manager = get_ebics_manager(user)
 	for camt_document in manager.download_bank_statements(start_date, end_date):
 		bank_account = frappe.db.get_value(

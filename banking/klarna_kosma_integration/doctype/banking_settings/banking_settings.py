@@ -97,9 +97,17 @@ def sync_all_accounts_and_transactions():
 	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
 	Called via hooks.
 	"""
-	if not frappe.db.get_single_value("Banking Settings", "enabled"):
+	banking_settings = frappe.get_single("Banking Settings")
+	if not banking_settings.enabled:
 		return
 
+	if banking_settings.provider == "Klarna Kosma":
+		daily_sync_kosma()
+	elif banking_settings.provider == "EBICS":
+		daily_sync_ebics()
+
+
+def daily_sync_kosma():
 	accounts_list = []
 
 	for bank, company in frappe.get_all(
@@ -129,6 +137,22 @@ def sync_all_accounts_and_transactions():
 
 	for bank_account in accounts_list:
 		sync_transactions(account=bank_account)
+
+
+def daily_sync_ebics():
+	from banking.ebics.utils import sync_ebics_transactions
+
+	for ebics_user in frappe.get_all("EBICS User", filters={"initialized": 1, "bank_keys_activated": 1}, pluck="name"):
+		user = frappe.get_doc("EBICS User", ebics_user)
+		try:
+			sync_ebics_transactions(user)
+		except Exception:
+			frappe.log_error(
+				title=_("Banking Error"),
+				message=_("Error in daily EBICS sync"),
+				reference_doctype="EBICS User",
+				reference_name=ebics_user
+			)
 
 
 def get_bank_accounts_to_sync(bank: str, company: str) -> list:
