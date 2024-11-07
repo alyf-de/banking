@@ -176,7 +176,6 @@ frappe.ui.form.on('Banking Settings', {
 					style="border: 1px solid var(--gray-300);
 					border-radius: 4px;
 					padding: 1rem;
-					width: calc(50% - 15px);
 					margin-bottom: 0.5rem;
 				">
 					<p style="font-weight: 700; font-size: 16px;">
