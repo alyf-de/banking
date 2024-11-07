@@ -30,12 +30,22 @@ class EBICSUser(Document):
 	def register_user(self):
 		"""Indempotent method to register the user with the admin backend."""
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
-		Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
+		try:
+			Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
+		except Exception:
+			title = _("Failed to register EBICS user.")
+			frappe.log_error(title=title)
+			frappe.throw(title)
 
 	def remove_user(self):
 		"""Indempotent method to remove the user from the admin backend."""
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
-		Admin().request.remove_ebics_user(host_id, self.partner_id, self.user_id)
+		try:
+			Admin().request.remove_ebics_user(host_id, self.partner_id, self.user_id)
+		except Exception:
+			title = _("Failed to remove EBICS user registration.")
+			frappe.log_error(title=title)
+			frappe.throw(title)
 
 	def validate_country_code(self):
 		country_code = frappe.db.get_value("Country", self.country, "code")
