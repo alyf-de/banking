@@ -1,5 +1,6 @@
 # Copyright (c) 2024, ALYF GmbH and contributors
 # For license information, please see license.txt
+import json
 
 import frappe
 from frappe import _
@@ -76,13 +77,22 @@ class EBICSUser(Document):
 		file.content = pdf_bytes
 		file.save()
 
+	def store_keyring(self, keys: dict):
+		self.db_set("keyring", json.dumps(keys, indent=2))
+
+	def get_keyring(self) -> dict:
+		return json.loads(self.keyring) if self.keyring else {}
+
 
 @frappe.whitelist()
-def initialize(ebics_user: str):
+def initialize(ebics_user: str, passphrase: str, signature_passphrase: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	manager = get_ebics_manager(ebics_user)
+	user.signature_passphrase = signature_passphrase
+	user.save()
+
+	manager = get_ebics_manager(user, passphrase)
 
 	try:
 		manager.create_user_keys()
@@ -109,7 +119,7 @@ def download_bank_keys(ebics_user: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	manager = get_ebics_manager(ebics_user)
+	manager = get_ebics_manager(user)
 
 	return manager.download_bank_keys()
 
@@ -119,7 +129,7 @@ def confirm_bank_keys(ebics_user: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	manager = get_ebics_manager(ebics_user)
+	manager = get_ebics_manager(user)
 	manager.activate_bank_keys()
 	user.db_set("bank_keys_activated", 1)
 

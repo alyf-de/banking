@@ -8,15 +8,16 @@ from banking.ebics.manager import EBICSManager
 
 if TYPE_CHECKING:
 	from .types import SEPATransaction
+	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 
 
-def get_ebics_manager(ebics_user: str) -> "EBICSManager":
+def get_ebics_manager(ebics_user: "EBICSUser", passphrase: str | None = None) -> "EBICSManager":
 	"""Get an EBICSManager instance for the given EBICS User.
 
-	:param ebics_user: The name of the EBICS User record.
+	:param ebics_user: The EBICS User record.
+	:param passphrase: The secret passphrase for uploads to the bank.
 	"""
 	banking_settings = frappe.get_single("Banking Settings")
-	banking_settings.ensure_ebics_keyring_passphrase()
 
 	manager = EBICSManager(
 		license_name=banking_settings.fintech_licensee_name,
@@ -24,16 +25,15 @@ def get_ebics_manager(ebics_user: str) -> "EBICSManager":
 	)
 
 	manager.set_keyring(
-		frappe.get_site_path("ebics_keyring.json"),
-		banking_settings.get_password("ebics_keyring_passphrase"),
+		keys=ebics_user.get_keyring(),
+		save_to_db=ebics_user.store_keyring,
+		sig_passphrase=ebics_user.get_password("signature_passphrase"),
+		passphrase=passphrase,
 	)
 
-	bank, partner_id, user_id = frappe.db.get_value(
-		"EBICS User", ebics_user, ["bank", "partner_id", "user_id"]
-	)
-	host_id, url = frappe.db.get_value("Bank", bank, ["ebics_host_id", "ebics_url"])
+	manager.set_user(ebics_user.partner_id, ebics_user.user_id)
 
-	manager.set_user(partner_id, user_id)
+	host_id, url = frappe.db.get_value("Bank", ebics_user.bank, ["ebics_host_id", "ebics_url"])
 	manager.set_bank(host_id, url)
 
 	return manager
@@ -43,7 +43,7 @@ def sync_ebics_transactions(ebics_user: str, start_date: str, end_date: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	manager = get_ebics_manager(ebics_user)
+	manager = get_ebics_manager(user)
 	for camt_document in manager.download_bank_statements(start_date, end_date):
 		bank_account = frappe.db.get_value(
 			"Bank Account",

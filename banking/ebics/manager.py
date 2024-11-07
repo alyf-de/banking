@@ -2,7 +2,7 @@ import fintech
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from typing import Iterator
+	from typing import Iterator, Callable
 	from banking.ebics.types import EbicsKeyRing, EbicsUser, EbicsBank, EbicsClient, CAMTDocument
 
 
@@ -23,12 +23,17 @@ class EBICSManager:
 			if e.args[0] != "'register' can be called only once":
 				raise e
 
-	def set_keyring(self, keyring_path: str, keyring_passphrase: str):
+	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
 
-		self.keyring: "EbicsKeyRing" = EbicsKeyRing(
-			keys=keyring_path,
-			passphrase=keyring_passphrase,
+		class CustomKeyRing(EbicsKeyRing):
+			def _write(self, keydict):
+				save_to_db(keydict)
+
+		self.keyring: "EbicsKeyRing" = CustomKeyRing(
+			keys=keys,
+			passphrase=passphrase,
+			sig_passphrase=sig_passphrase,
 		)
 
 	def set_user(self, partner_id: str, user_id: str):

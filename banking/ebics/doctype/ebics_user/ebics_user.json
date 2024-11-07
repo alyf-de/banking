@@ -15,7 +15,10 @@
   "section_break_qjlc",
   "partner_id",
   "user_id",
-  "needs_certificates"
+  "needs_certificates",
+  "section_break_juzm",
+  "signature_passphrase",
+  "keyring"
  ],
  "fields": [
   {
@@ -87,10 +90,26 @@
    "fieldtype": "Check",
    "label": "Bank Keys Activated",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_break_juzm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "signature_passphrase",
+   "fieldtype": "Password",
+   "label": "Signature Passphrase",
+   "read_only": 1
+  },
+  {
+   "fieldname": "keyring",
+   "fieldtype": "Code",
+   "label": "Keyring",
+   "read_only": 1
   }
  ],
  "links": [],
- "modified": "2024-10-17 16:40:46.058973",
+ "modified": "2024-11-07 19:31:58.525194",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
