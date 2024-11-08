@@ -12,13 +12,13 @@ frappe.ui.form.on("EBICS User", {
 							fieldname: "passphrase",
 							label: __("Passphrase"),
 							fieldtype: "Password",
-							description: __("Set a new password for uploading transactions to your bank.")
+							description: __("Set a new password for downloading bank statements from your bank. This one will be stored in ERPNext.")
 						},
 						{
 							fieldname: "signature_passphrase",
 							label: __("Signature Passphrase"),
 							fieldtype: "Password",
-							description: __("Set a new password for downloading bank statements from your bank. This one will be stored in ERPNext.")
+							description: __("Set a new password for uploading transactions to your bank.")
 						},
 						{
 							fieldname: "info",
@@ -48,6 +48,10 @@ frappe.ui.form.on("EBICS User", {
 				__("Verify Bank Keys"),
 				async () => {
 					bank_keys = await get_bank_keys(frm.doc.name);
+					if (!bank_keys) {
+						return;
+					}
+
 					message = __(
 						"Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
 					);

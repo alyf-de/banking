@@ -102,10 +102,10 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	user.signature_passphrase = signature_passphrase
+	user.passphrase = passphrase
 	user.save()
 
-	manager = get_ebics_manager(user, passphrase)
+	manager = get_ebics_manager(user, signature_passphrase)
 
 	try:
 		manager.create_user_keys()

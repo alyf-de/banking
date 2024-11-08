@@ -17,7 +17,7 @@
   "user_id",
   "needs_certificates",
   "section_break_juzm",
-  "signature_passphrase",
+  "passphrase",
   "keyring"
  ],
  "fields": [
@@ -98,22 +98,22 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "signature_passphrase",
-   "fieldtype": "Password",
-   "label": "Signature Passphrase",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
    "fieldname": "keyring",
    "fieldtype": "Code",
    "label": "Keyring",
    "no_copy": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "passphrase",
+   "fieldtype": "Password",
+   "label": "Passphrase",
+   "no_copy": 1,
+   "read_only": 1
   }
  ],
  "links": [],
- "modified": "2024-11-08 17:08:32.763328",
+ "modified": "2024-11-08 18:14:08.305413",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
