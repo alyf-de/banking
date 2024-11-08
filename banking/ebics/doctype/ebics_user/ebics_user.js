@@ -3,6 +3,12 @@
 
 frappe.ui.form.on("EBICS User", {
 	refresh(frm) {
+		if (frm.doc.initialized && !frm.doc.bank_keys_activated) {
+			frm.dashboard.set_headline(
+				__("Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys.")
+			);
+		}
+
 		frm.add_custom_button(
 			__("Initialize"),
 			() => {
