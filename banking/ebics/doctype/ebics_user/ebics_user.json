@@ -82,6 +82,7 @@
    "fieldname": "initialized",
    "fieldtype": "Check",
    "label": "Initialized",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -89,6 +90,7 @@
    "fieldname": "bank_keys_activated",
    "fieldtype": "Check",
    "label": "Bank Keys Activated",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -99,17 +101,19 @@
    "fieldname": "signature_passphrase",
    "fieldtype": "Password",
    "label": "Signature Passphrase",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "keyring",
    "fieldtype": "Code",
    "label": "Keyring",
+   "no_copy": 1,
    "read_only": 1
   }
  ],
  "links": [],
- "modified": "2024-11-07 19:31:58.525194",
+ "modified": "2024-11-08 17:08:32.763328",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
