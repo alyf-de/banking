@@ -9,6 +9,7 @@ from frappe.utils import get_link_to_form
 
 from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
+from requests import HTTPError
 
 
 class EBICSUser(Document):
@@ -32,18 +33,30 @@ class EBICSUser(Document):
 		"""Indempotent method to register the user with the admin backend."""
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
 		try:
-			Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
-		except Exception:
-			title = _("Failed to register EBICS user.")
-			frappe.log_error(title=title)
-			frappe.throw(title)
+			r = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
+			r.raise_for_status()
+		except HTTPError as e:
+			if e.response.status_code == 402:
+				# User already exists for this customer
+				return
+			elif e.response.status_code == 403:
+				title = _("Banking Error")
+				msg = _("Bank account limit exceeded.")
+				frappe.log_error(title=_("Banking Error"), message=msg)
+				frappe.throw(title=title, msg=msg)
+			elif e.response.status_code == 409:
+				title = _("Banking Error")
+				msg = _("User ID not available.")
+				frappe.log_error(title=_("Banking Error"), message=msg)
+				frappe.throw(title=title, msg=msg)
 
 	def remove_user(self):
 		"""Indempotent method to remove the user from the admin backend."""
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
 		try:
-			Admin().request.remove_ebics_user(host_id, self.partner_id, self.user_id)
-		except Exception:
+			r = Admin().request.remove_ebics_user(host_id, self.partner_id, self.user_id)
+			r.raise_for_status()
+		except HTTPError:
 			title = _("Failed to remove EBICS user registration.")
 			frappe.log_error(title=title)
 			frappe.throw(title)
