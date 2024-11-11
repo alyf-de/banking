@@ -6,7 +6,19 @@ on:
     branches:
       - version-14
       - version-15
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
   pull_request:
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
 
 concurrency:
   group: version-15-banking-${{ github.event.number }}

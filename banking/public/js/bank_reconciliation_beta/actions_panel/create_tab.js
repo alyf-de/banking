@@ -169,7 +169,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				default: (
 					this.transaction.reference_number
 					||
-					this.transaction.description ? this.transaction.description.slice(0, 140) : ""
+					(this.transaction.description ? this.transaction.description.slice(0, 140) : "")
 				),
 			},
 			{

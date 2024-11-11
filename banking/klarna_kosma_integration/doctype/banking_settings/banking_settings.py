@@ -55,7 +55,7 @@ def add_bank_account(
 
 	existing_bank_account = frappe.db.exists("Bank Account", {"account": gl_account})
 	if existing_bank_account:
-		update_bank_account(account_data, existing_bank_account)
+		update_bank_account(account_data, existing_bank_account, relink=True)
 	else:
 		create_bank_account(account_data, bank_name, company, gl_account)
 

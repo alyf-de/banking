@@ -190,11 +190,17 @@ def create_bank_account(
 		)
 
 
-def update_bank_account(account_data: dict, bank_account_name: str) -> None:
+def update_bank_account(
+	account_data: dict, bank_account_name: str, relink=False
+) -> None:
 	try:
-		frappe.db.set_value(
-			"Bank Account", bank_account_name, "kosma_account_id", account_data.get("id")
-		)
+		to_update = {"kosma_account_id": account_data.get("id")}
+		if relink:
+			# Reset last integration date if relinking
+			# It will be picked up from the new consent start date
+			to_update["last_integration_date"] = None
+
+		frappe.db.set_value("Bank Account", bank_account_name, to_update)
 	except Exception:
 		frappe.log_error(
 			title=_("Kosma Error - Bank Account Update"), message=frappe.get_traceback()

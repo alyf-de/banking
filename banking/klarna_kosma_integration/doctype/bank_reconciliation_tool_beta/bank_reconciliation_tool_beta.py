@@ -16,10 +16,10 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	BankTransaction,
 	get_total_allocated_amount,
 )
-from erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
-	reconcile_vouchers,
-)
 from erpnext.accounts.utils import get_account_currency
+
+
+MAX_QUERY_RESULTS = 150
 
 
 class BankReconciliationToolBeta(Document):
@@ -33,16 +33,20 @@ def get_bank_transactions(
 	to_date: str | datetime.date = None,
 	order_by: str | datetime.date = "date asc",
 ):
-	# returns bank transactions for a bank account
-	filters = []
-	filters.append(["bank_account", "=", bank_account])
-	filters.append(["docstatus", "=", 1])
-	filters.append(["unallocated_amount", ">", 0.0])
+	"""Return bank transactions for a bank account"""
+	filters = [
+		["bank_account", "=", bank_account],
+		["docstatus", "=", 1],
+		["unallocated_amount", ">", 0.001],
+	]
+
 	if to_date:
 		filters.append(["date", "<=", to_date])
+
 	if from_date:
 		filters.append(["date", ">=", from_date])
-	transactions = frappe.get_all(
+
+	return frappe.get_list(
 		"Bank Transaction",
 		fields=[
 			"date",
@@ -64,7 +68,6 @@ def get_bank_transactions(
 		filters=filters,
 		order_by=order_by,
 	)
-	return transactions
 
 
 @frappe.whitelist()
@@ -85,6 +88,8 @@ def create_journal_entry_bts(
 		allow_edit = sbool(allow_edit)
 
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	bank_transaction.check_permission("read")
+
 	if bank_transaction.deposit and bank_transaction.withdrawal:
 		frappe.throw(
 			_(
@@ -239,6 +244,34 @@ def create_payment_entry_bts(
 
 
 @frappe.whitelist()
+def bulk_reconcile_vouchers(
+	bank_transaction_name: str,
+	vouchers: str | list[dict],
+	reconcile_multi_party: bool = False,
+) -> "BankTransaction":
+	"""
+	Reconcile multiple vouchers with a bank transaction.
+
+	:param vouchers: JSON string of vouchers to reconcile
+	structure: List(Dict(payment_doctype, payment_name, amount, party))
+	"""
+	if isinstance(vouchers, str):
+		vouchers = json.loads(vouchers)
+
+	reconcile_multi_party = sbool(reconcile_multi_party)
+
+	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction.add_payment_entries(vouchers, reconcile_multi_party)
+	transaction.validate_duplicate_references()
+	transaction.allocate_payment_entries()
+	transaction.update_allocated_amount()
+	transaction.set_status()
+	transaction.save()
+
+	return transaction
+
+
+@frappe.whitelist()
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
 ) -> Union[dict, "BankTransaction"]:
@@ -261,7 +294,7 @@ def reconcile_voucher(
 			}
 		]
 	)
-	return reconcile_vouchers(transaction_name, vouchers)
+	return bulk_reconcile_vouchers(transaction_name, vouchers)
 
 
 @frappe.whitelist()
@@ -323,7 +356,7 @@ def auto_reconcile_vouchers(
 		)
 
 		unallocated_before = transaction.unallocated_amount
-		transaction = reconcile_vouchers(transaction.name, json.dumps(vouchers))
+		transaction = bulk_reconcile_vouchers(transaction.name, json.dumps(vouchers))
 
 		if transaction.status == "Reconciled":
 			reconciled.add(transaction.name)
@@ -368,8 +401,10 @@ def get_linked_payments(
 	from_reference_date: str | datetime.date = None,
 	to_reference_date: str | datetime.date = None,
 ) -> list:
-	# get all matching payments for a bank transaction
+	"""Get all matching payments for a bank transaction"""
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction.check_permission("read")
+
 	gl_account, company = frappe.db.get_value(
 		"Bank Account", transaction.bank_account, ["account", "company"]
 	)
@@ -527,6 +562,7 @@ def get_matching_queries(
 	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
 
 	if "payment_entry" in document_types:
+		frappe.has_permission("Payment Entry", throw=True)
 		query = get_pe_matching_query(
 			exact_match,
 			common_filters,
@@ -540,6 +576,7 @@ def get_matching_queries(
 		queries.append(query)
 
 	if "journal_entry" in document_types:
+		frappe.has_permission("Journal Entry", throw=True)
 		query = get_je_matching_query(
 			exact_match,
 			common_filters,
@@ -564,6 +601,8 @@ def get_matching_queries(
 	if include_unpaid:
 		kwargs.company = company
 		for doctype, fn in invoice_queries_map.items():
+			frappe.has_permission(frappe.unscrub(doctype), throw=True)
+
 			if doctype in ["sales_invoice", "purchase_invoice"]:
 				kwargs.include_only_returns = doctype != invoice_dt
 			elif kwargs.include_only_returns is not None:
@@ -571,17 +610,20 @@ def get_matching_queries(
 				del kwargs.include_only_returns
 
 			queries.append(fn(**kwargs))
-	else:
-		if fn := invoice_queries_map.get(invoice_dt):
-			queries.append(fn(**kwargs))
+	elif fn := invoice_queries_map.get(invoice_dt):
+		frappe.has_permission(frappe.unscrub(invoice_dt), throw=True)
+		queries.append(fn(**kwargs))
 
 	if "loan_disbursement" in document_types and is_withdrawal:
+		frappe.has_permission("Loan Disbursement", throw=True)
 		queries.append(get_ld_matching_query(exact_match, common_filters))
 
 	if "loan_repayment" in document_types and is_deposit:
+		frappe.has_permission("Loan Repayment", throw=True)
 		queries.append(get_lr_matching_query(exact_match, common_filters))
 
 	if "bank_transaction" in document_types:
+		frappe.has_permission("Bank Transaction", throw=True)
 		query = get_bt_matching_query(exact_match, common_filters, transaction.name)
 		queries.append(query)
 
@@ -642,6 +684,7 @@ def get_bt_matching_query(
 		.where(bt.bank_account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(bt.docstatus == 1)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if common_filters.exact_party_match:
@@ -687,6 +730,7 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 		.where(loan_disbursement.docstatus == 1)
 		.where(loan_disbursement.clearance_date.isnull())
 		.where(loan_disbursement.disbursement_account == common_filters.bank_account)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if exact_match:
@@ -734,6 +778,7 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 		.where(loan_repayment.docstatus == 1)
 		.where(loan_repayment.clearance_date.isnull())
 		.where(loan_repayment.payment_account == common_filters.bank_account)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if frappe.db.has_column("Loan Repayment", "repay_from_salary"):
@@ -809,6 +854,7 @@ def get_pe_matching_query(
 		.where(amount_condition)
 		.where(filter_by_date)
 		.orderby(pe.reference_date if cint(filter_by_reference_date) else pe.posting_date)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if frappe.flags.auto_reconcile_vouchers:
@@ -877,6 +923,7 @@ def get_je_matching_query(
 		.where(je.docstatus == 1)
 		.where(filter_by_date)
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if frappe.flags.auto_reconcile_vouchers:
@@ -928,6 +975,7 @@ def get_si_matching_query(
 		.where(sip.account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(si.currency == currency)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if common_filters.exact_party_match:
@@ -974,6 +1022,7 @@ def get_unpaid_si_matching_query(
 		.where(sales_invoice.company == company)  # because we do not have bank account check
 		.where(sales_invoice.outstanding_amount != 0.0)
 		.where(sales_invoice.currency == currency)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if include_only_returns:
@@ -1034,6 +1083,7 @@ def get_pi_matching_query(
 		.where(purchase_invoice.cash_bank_account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(purchase_invoice.currency == currency)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if common_filters.exact_party_match:
@@ -1083,6 +1133,7 @@ def get_unpaid_pi_matching_query(
 		.where(purchase_invoice.outstanding_amount != 0.0)
 		.where(purchase_invoice.is_paid == 0)
 		.where(purchase_invoice.currency == currency)
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if include_only_returns:
@@ -1137,6 +1188,7 @@ def get_unpaid_ec_matching_query(
 		.where(expense_claim.company == company)
 		.where(outstanding_amount > 0.0)
 		.where(expense_claim.status == "Unpaid")
+		.limit(MAX_QUERY_RESULTS)
 	)
 
 	if exact_match:
