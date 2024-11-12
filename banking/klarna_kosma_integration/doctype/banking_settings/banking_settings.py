@@ -32,6 +32,8 @@ class BankingSettings(Document):
 			response.raise_for_status()
 		except HTTPError:
 			return self.reset_fintech_license()
+		except Exception:
+			return
 
 		data = response.json().get("message", {})
 		self.fintech_licensee_name = data.get("licensee_name")
