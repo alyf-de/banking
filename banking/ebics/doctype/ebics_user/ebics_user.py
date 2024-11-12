@@ -97,6 +97,10 @@ class EBICSUser(Document):
 		return json.loads(self.keyring) if self.keyring else {}
 
 
+def on_doctype_update():
+	frappe.db.add_unique("EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user")
+
+
 @frappe.whitelist()
 def initialize(ebics_user: str, passphrase: str, signature_passphrase: str):
 	user = frappe.get_doc("EBICS User", ebics_user)
