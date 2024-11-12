@@ -101,9 +101,10 @@ def sync_all_accounts_and_transactions():
 	if not banking_settings.enabled:
 		return
 
-	if banking_settings.provider == "Klarna Kosma":
+	if banking_settings.enable_klarna_kosma:
 		daily_sync_kosma()
-	elif banking_settings.provider == "EBICS":
+
+	if banking_settings.enable_ebics:
 		daily_sync_ebics()
 
 

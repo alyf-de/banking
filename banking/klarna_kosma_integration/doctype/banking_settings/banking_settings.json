@@ -7,17 +7,18 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "provider",
-  "column_break_lxfc",
   "enabled",
-  "use_test_environment",
   "section_break_2",
   "admin_endpoint",
   "customer_id",
   "api_token",
   "column_break_4",
   "subscription",
+  "klarna_kosma_section",
+  "enable_klarna_kosma",
+  "use_test_environment",
   "ebics_section",
+  "enable_ebics",
   "fintech_licensee_name",
   "fintech_license_key"
  ],
@@ -67,43 +68,50 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.provider == \"Klarna Kosma\"",
+   "depends_on": "enable_klarna_kosma",
    "fieldname": "use_test_environment",
    "fieldtype": "Check",
    "label": "Use Test Environment"
   },
   {
-   "depends_on": "eval: doc.provider == \"EBICS\"",
    "fieldname": "ebics_section",
    "fieldtype": "Section Break",
-   "label": "EBICS Settings"
+   "label": "EBICS"
   },
   {
+   "depends_on": "enable_ebics",
    "fieldname": "fintech_license_key",
    "fieldtype": "Password",
    "label": "Fintech License Key"
   },
   {
+   "depends_on": "enable_ebics",
    "fieldname": "fintech_licensee_name",
    "fieldtype": "Data",
    "label": "Fintech Licensee Name"
   },
   {
-   "default": "Klarna Kosma",
-   "fieldname": "provider",
-   "fieldtype": "Select",
-   "label": "Provider",
-   "options": "Klarna Kosma\nEBICS"
+   "fieldname": "klarna_kosma_section",
+   "fieldtype": "Section Break",
+   "label": "Klarna Kosma"
   },
   {
-   "fieldname": "column_break_lxfc",
-   "fieldtype": "Column Break"
+   "default": "1",
+   "fieldname": "enable_klarna_kosma",
+   "fieldtype": "Check",
+   "label": "Enable Klarna Kosma (Legacy)"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_ebics",
+   "fieldtype": "Check",
+   "label": "Enable EBICS (New)"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-07 19:41:42.591973",
+ "modified": "2024-11-12 10:52:29.765202",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

@@ -6,7 +6,7 @@ frappe.ui.form.on('Banking Settings', {
 		if (frm.doc.enabled) {
 			frm.trigger("get_app_health");
 
-			if (frm.doc.provider === "Klarna Kosma") {
+			if (frm.doc.enable_klarna_kosma) {
 				frm.add_custom_button(__('Link Bank and Accounts'), () => {
 					frm.events.refresh_banks(frm);
 				});
@@ -18,7 +18,9 @@ frappe.ui.form.on('Banking Settings', {
 				frm.add_custom_button(__("Older Transactions"), () => {
 					frm.events.sync_transactions(frm, true);
 				}, __("Sync"));
-			} else if (frm.doc.provider === "EBICS") {
+			}
+
+			if (frm.doc.enable_ebics) {
 				frm.add_custom_button(__("View EBICS Users"), () => {
 					frappe.set_route("List", "EBICS User");
 				});
