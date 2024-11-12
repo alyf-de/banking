@@ -41,7 +41,7 @@ class EBICSUser(Document):
 				return
 			elif e.response.status_code == 403:
 				title = _("Banking Error")
-				msg = _("Bank account limit exceeded.")
+				msg = _("EBICS User limit exceeded.")
 				frappe.log_error(title=_("Banking Error"), message=msg)
 				frappe.throw(title=title, msg=msg)
 			elif e.response.status_code == 409:
