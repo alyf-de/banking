@@ -139,6 +139,10 @@ class AdminRequest:
 		method = "banking_admin.api.get_customer_portal"
 		return requests.get(url=self.url + method)
 
+	def get_fintech_license(self):
+		method = "banking_admin.ebics_api.get_fintech_license"
+		return requests.post(url=self.url + method, headers=self.headers, json=self.data.copy())
+
 	def register_ebics_user(self, host_id: str, partner_id: str, user_id: str):
 		data = self.data
 		data.update({"host_id": host_id, "partner_id": partner_id, "user_id": user_id})

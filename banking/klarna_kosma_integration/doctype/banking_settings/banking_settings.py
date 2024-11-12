@@ -1,6 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from requests import HTTPError
 from semantic_version import Version
 from typing import Dict, Optional, Union
 
@@ -19,7 +20,26 @@ from banking.klarna_kosma_integration.utils import (
 
 
 class BankingSettings(Document):
-	pass
+	def before_validate(self):
+		self.update_fintech_license()
+
+	def update_fintech_license(self):
+		if not self.enabled:
+			return self.reset_fintech_license()
+
+		try:
+			response = Admin(self).request.get_fintech_license()
+			response.raise_for_status()
+		except HTTPError:
+			return self.reset_fintech_license()
+
+		data = response.json().get("message", {})
+		self.fintech_licensee_name = data.get("licensee_name")
+		self.fintech_license_key = data.get("license_key")
+
+	def reset_fintech_license(self):
+		self.fintech_licensee_name = None
+		self.fintech_license_key = None
 
 
 @frappe.whitelist()
