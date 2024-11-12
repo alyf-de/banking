@@ -9,47 +9,49 @@ frappe.ui.form.on("EBICS User", {
 			);
 		}
 
-		frm.add_custom_button(
-			__("Initialize"),
-			() => {
-				frappe.prompt(
-					[
-						{
-							fieldname: "passphrase",
-							label: __("Passphrase"),
-							fieldtype: "Password",
-							description: __("Set a new password for downloading bank statements from your bank. This one will be stored in ERPNext.")
+		if (!frm.doc.initialized || frappe.boot.developer_mode) {
+			frm.add_custom_button(
+				__("Initialize"),
+				() => {
+					frappe.prompt(
+						[
+							{
+								fieldname: "passphrase",
+								label: __("Passphrase"),
+								fieldtype: "Password",
+								description: __("Set a new password for downloading bank statements from your bank. This one will be stored in ERPNext.")
+							},
+							{
+								fieldname: "signature_passphrase",
+								label: __("Signature Passphrase"),
+								fieldtype: "Password",
+								description: __("Set a new password for uploading transactions to your bank.")
+							},
+							{
+								fieldname: "info",
+								fieldtype: "HTML",
+								options: __(
+									"When you lose these passwords, you will have to go through the initialization process with your bank again."
+								)
+							}
+						],
+						(values) => {
+							frappe.call({
+								method: "banking.ebics.doctype.ebics_user.ebics_user.initialize",
+								args: { ebics_user: frm.doc.name, ...values },
+								freeze: true,
+								freeze_message: __("Initializing..."),
+								callback: () => frm.reload_doc(),
+							});
 						},
-						{
-							fieldname: "signature_passphrase",
-							label: __("Signature Passphrase"),
-							fieldtype: "Password",
-							description: __("Set a new password for uploading transactions to your bank.")
-						},
-						{
-							fieldname: "info",
-							fieldtype: "HTML",
-							options: __(
-								"When you lose these passwords, you will have to go through the initialization process with your bank again."
-							)
-						}
-					],
-					(values) => {
-						frappe.call({
-							method: "banking.ebics.doctype.ebics_user.ebics_user.initialize",
-							args: { ebics_user: frm.doc.name, ...values },
-							freeze: true,
-							freeze_message: __("Initializing..."),
-							callback: () => frm.reload_doc(),
-						});
-					},
-					__("Initialize EBICS User")
-				);
-			},
-			frm.doc.initialized ? __("Actions") : null
-		);
+						__("Initialize EBICS User")
+					);
+				},
+				frm.doc.initialized ? __("Actions") : null
+			);
+		}
 
-		if (frm.doc.initialized) {
+		if (frm.doc.initialized && (!frm.doc.bank_keys_activated || frappe.boot.developer_mode)) {
 			frm.add_custom_button(
 				__("Verify Bank Keys"),
 				async () => {
