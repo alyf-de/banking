@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 
 
-def get_ebics_manager(ebics_user: "EBICSUser", sig_passphrase: str | None = None) -> "EBICSManager":
+def get_ebics_manager(ebics_user: "EBICSUser", passphrase: str | None = None, sig_passphrase: str | None = None) -> "EBICSManager":
 	"""Get an EBICSManager instance for the given EBICS User.
 
 	:param ebics_user: The EBICS User record.
@@ -28,7 +28,7 @@ def get_ebics_manager(ebics_user: "EBICSUser", sig_passphrase: str | None = None
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
 		sig_passphrase=sig_passphrase,
-		passphrase=ebics_user.get_password("passphrase"),
+		passphrase=passphrase or ebics_user.get_password("passphrase"),
 	)
 
 	manager.set_user(ebics_user.partner_id, ebics_user.user_id)
@@ -39,8 +39,8 @@ def get_ebics_manager(ebics_user: "EBICSUser", sig_passphrase: str | None = None
 	return manager
 
 
-def sync_ebics_transactions(user: "EBICSUser", start_date: str | None = None, end_date: str | None = None):
-	manager = get_ebics_manager(user)
+def sync_ebics_transactions(user: "EBICSUser", start_date: str | None = None, end_date: str | None = None, passphrase: str | None = None):
+	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 	for camt_document in manager.download_bank_statements(start_date, end_date):
 		bank_account = frappe.db.get_value(
 			"Bank Account",

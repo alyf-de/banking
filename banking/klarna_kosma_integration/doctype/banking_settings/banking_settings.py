@@ -143,7 +143,16 @@ def daily_sync_kosma():
 def daily_sync_ebics():
 	from banking.ebics.utils import sync_ebics_transactions
 
-	for ebics_user in frappe.get_all("EBICS User", filters={"initialized": 1, "bank_keys_activated": 1}, pluck="name"):
+	for ebics_user in frappe.get_all(
+		"EBICS User",
+		filters={
+			"initialized": 1,
+			"bank_keys_activated": 1,
+			"passphrase": ("is", "set"),
+			"keyring": ("is", "set")
+		},
+		pluck="name"
+	):
 		user = frappe.get_doc("EBICS User", ebics_user)
 		try:
 			sync_ebics_transactions(user)

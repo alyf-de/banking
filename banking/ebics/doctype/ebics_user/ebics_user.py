@@ -102,14 +102,19 @@ def on_doctype_update():
 
 
 @frappe.whitelist()
-def initialize(ebics_user: str, passphrase: str, signature_passphrase: str):
+def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	user.passphrase = passphrase
-	user.save()
+	if store_passphrase:
+		user.passphrase = passphrase
+		user.save()
 
-	manager = get_ebics_manager(user, signature_passphrase)
+	manager = get_ebics_manager(
+		ebics_user=user,
+		passphrase=passphrase,
+		sig_passphrase=signature_passphrase
+	)
 
 	try:
 		manager.create_user_keys()
@@ -153,11 +158,11 @@ def confirm_bank_keys(ebics_user: str):
 
 @frappe.whitelist()
 def download_bank_statements(
-	ebics_user: str, from_date: str | None = None, to_date: str | None = None
+	ebics_user: str, from_date: str | None = None, to_date: str | None = None, passphrase: str | None = None
 ):
 	frappe.has_permission("Bank Transaction", "create", throw=True)
 
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("read")
 
-	sync_ebics_transactions(user, from_date, to_date)
+	sync_ebics_transactions(user, from_date, to_date, passphrase)

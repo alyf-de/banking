@@ -94,8 +94,10 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "section_break_juzm",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Credentials"
   },
   {
    "fieldname": "keyring",
@@ -105,15 +107,15 @@
    "read_only": 1
   },
   {
+   "description": "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually.",
    "fieldname": "passphrase",
    "fieldtype": "Password",
    "label": "Passphrase",
-   "no_copy": 1,
-   "read_only": 1
+   "no_copy": 1
   }
  ],
  "links": [],
- "modified": "2024-11-08 18:14:08.305413",
+ "modified": "2024-11-12 11:12:34.861290",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",

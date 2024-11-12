@@ -19,7 +19,14 @@ frappe.ui.form.on("EBICS User", {
 								fieldname: "passphrase",
 								label: __("Passphrase"),
 								fieldtype: "Password",
-								description: __("Set a new password for downloading bank statements from your bank. This one will be stored in ERPNext.")
+								description: __("Set a new password for downloading bank statements from your bank.")
+							},
+							{
+								fieldname: "store_passphrase",
+								label: __("Store Passphrase"),
+								fieldtype: "Check",
+								default: 1,
+								description: __("Store the passphrase in the ERPNext database to enable automated, regular download of bank statements.")
 							},
 							{
 								fieldname: "signature_passphrase",
@@ -31,7 +38,7 @@ frappe.ui.form.on("EBICS User", {
 								fieldname: "info",
 								fieldtype: "HTML",
 								options: __(
-									"When you lose these passwords, you will have to go through the initialization process with your bank again."
+									"Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
 								)
 							}
 						],
@@ -78,7 +85,7 @@ frappe.ui.form.on("EBICS User", {
 
 		if (frm.doc.initialized && frm.doc.bank_keys_activated) {
 			frm.add_custom_button(__("Download Bank Statements"), () => {
-				download_bank_statements(frm.doc.name);
+				download_bank_statements(frm.doc.name, !frm.doc.passphrase);
 			});
 		}
 	},
@@ -116,22 +123,33 @@ async function confirm_bank_keys(ebics_user) {
 	}
 }
 
-function download_bank_statements(ebics_user) {
+function download_bank_statements(ebics_user, needs_passphrase) {
+	const fields = [
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.now_date(),
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.now_date(),
+		},
+	];
+
+	if (needs_passphrase) {
+		fields.push({
+			fieldname: "passphrase",
+			label: __("Passphrase"),
+			fieldtype: "Password",
+			reqd: true
+		});
+	}
+
 	frappe.prompt(
-		[
-			{
-				fieldname: "from_date",
-				label: __("From Date"),
-				fieldtype: "Date",
-				default: frappe.datetime.now_date(),
-			},
-			{
-				fieldname: "to_date",
-				label: __("To Date"),
-				fieldtype: "Date",
-				default: frappe.datetime.now_date(),
-			},
-		],
+		fields,
 		async (values) => {
 			try {
 				await frappe.xcall(
@@ -140,6 +158,7 @@ function download_bank_statements(ebics_user) {
 						ebics_user: ebics_user,
 						from_date: values.from_date,
 						to_date: values.to_date,
+						passphrase: values.passphrase,
 					}
 				);
 				frappe.show_alert({
