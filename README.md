@@ -20,6 +20,8 @@ Check out the [Banking Wiki](https://github.com/alyf-de/banking/wiki) for a step
 
 ## Country and Bank Coverage
 
+<img src="ready_for_ebics.jpg" height="70px">
+
 We use the EBICS protocol which is widely supported by banks in the following countries:
 
 - 🇦🇹 Austria
