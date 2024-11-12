@@ -20,34 +20,12 @@ Check out the [Banking Wiki](https://github.com/alyf-de/banking/wiki) for a step
 
 ## Country and Bank Coverage
 
-Currently, we [support more than 15.000 banks from the following countries](https://portal.openbanking.klarna.com/bank-matrix).
+We use the EBICS protocol which is widely supported by banks in the following countries:
 
 - 🇦🇹 Austria
-- 🇧🇪 Belgium
-- 🇭🇷 Croatia
-- 🇨🇿 Czech Republic
-- 🇩🇰 Denmark
-- 🇪🇪 Estonia
-- 🇫🇮 Finland
 - 🇫🇷 France
 - 🇩🇪 Germany
-- 🇭🇺 Hungary
-- 🇮🇪 Ireland
-- 🇮🇹 Italy
-- 🇱🇻 Latvia
-- 🇱🇹 Lithuania
-- 🇱🇺 Luxembourg
-- 🇲🇹 Malta
-- 🇳🇱 Netherlands
-- 🇳🇴 Norway
-- 🇵🇱 Poland
-- 🇵🇹 Portugal
-- 🇷🇴 Romania
-- 🇸🇰 Slovakia
-- 🇪🇸 Spain
-- 🇸🇪 Sweden
 - 🇨🇭 Switzerland
-- 🇬🇧 United Kingdom
 
 ## Installation
 
