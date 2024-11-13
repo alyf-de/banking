@@ -83,3 +83,4 @@ Please add EBICS Host ID and URL to bank {0},Veuillez ajouter l'ID d'hôte EBICS
 Bank Account not found for IBAN {0},Compte bancaire introuvable pour IBAN {0},
 EBICS Host ID,ID d'hôte EBICS,
 EBICS URL,URL EBICS,
+Usage,Utilisation,
