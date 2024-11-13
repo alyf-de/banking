@@ -175,16 +175,10 @@ def daily_sync_ebics():
 		},
 		pluck="name",
 	):
-		user = frappe.get_doc("EBICS User", ebics_user)
-		try:
-			sync_ebics_transactions(user)
-		except Exception:
-			frappe.log_error(
-				title=_("Banking Error"),
-				message=_("Error in daily EBICS sync"),
-				reference_doctype="EBICS User",
-				reference_name=ebics_user,
-			)
+		frappe.enqueue(
+			sync_ebics_transactions,
+			ebics_user=ebics_user,
+		)
 
 
 def get_bank_accounts_to_sync(bank: str, company: str) -> list:

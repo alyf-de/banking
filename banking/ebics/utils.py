@@ -46,11 +46,12 @@ def get_ebics_manager(
 
 
 def sync_ebics_transactions(
-	user: "EBICSUser",
+	ebics_user: str,
 	start_date: str | None = None,
 	end_date: str | None = None,
 	passphrase: str | None = None,
 ):
+	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 	for camt_document in manager.download_bank_statements(start_date, end_date):
 		bank_account = frappe.db.get_value(
@@ -64,7 +65,11 @@ def sync_ebics_transactions(
 			},
 		)
 		if not bank_account:
-			frappe.throw(_("Bank Account not found for IBAN {0}").format(camt_document.iban))
+			frappe.log_error(
+				title=_("Banking Error"),
+				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+			)
+			continue
 
 		for transaction in camt_document:
 			if transaction.status != "BOOK":

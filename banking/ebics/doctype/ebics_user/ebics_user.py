@@ -166,4 +166,10 @@ def download_bank_statements(
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("read")
 
-	sync_ebics_transactions(user, from_date, to_date, passphrase)
+	frappe.enqueue(
+		sync_ebics_transactions,
+		ebics_user=ebics_user,
+		start_date=from_date,
+		end_date=to_date,
+		passphrase=passphrase,
+	)

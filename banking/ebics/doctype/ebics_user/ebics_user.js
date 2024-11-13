@@ -162,8 +162,8 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 					}
 				);
 				frappe.show_alert({
-					message: __("Bank statements downloaded"),
-					indicator: "green",
+					message: __("Bank statements are being downloaded in the background."),
+					indicator: "blue",
 				});
 			} catch (e) {
 				frappe.show_alert({
