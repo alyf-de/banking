@@ -803,13 +803,13 @@ class EbicsUser:
 		Parameters:
 		* validity_period - The validity period in years.
 		* x509_dn - Keyword arguments representing Distinguished Names for creating self-signed certificates. Possible arguments include:
-				- commonName [CN]
-				- organizationName [O]
-				- organizationalUnitName [OU]
-				- countryName [C]
-				- stateOrProvinceName [ST]
-				- localityName [L]
-				- emailAddress
+		    - commonName [CN]
+		    - organizationName [O]
+		    - organizationalUnitName [OU]
+		    - countryName [C]
+		    - stateOrProvinceName [ST]
+		    - localityName [L]
+		    - emailAddress
 
 		Returns: A list of key versions for which a new certificate was created (new since v6.4).
 		"""
@@ -872,19 +872,17 @@ class EbicsUser:
 		"""
 		...
 
-	def import_keys(
-		self, passphrase: str | None = None, **keys: dict[str, bytes]
-	) -> None:
+	def import_keys(self, passphrase: str | None = None, **keys: dict[str, bytes]) -> None:
 		"""Imports private user keys from a set of keyword arguments. The key ring is automatically updated and saved.
 
 		Parameters:
 		* passphrase - The passphrase if the keys are encrypted. Only DES or 3TDES encrypted keys are supported.
 		* keys - Keyword arguments representing the private keys to import. The keyword name represents the key version, and the value is the byte string
 		  of the corresponding key, either in DER or PEM format (PKCS#1 or PKCS#8). Supported keys include:
-				- A006: The signature key (RSASSA-PSS)
-				- A005: The signature key (RSASSA-PKCS1-v1_5)
-				- X002: The authentication key
-				- E002: The encryption key
+		        - A006: The signature key (RSASSA-PSS)
+		        - A005: The signature key (RSASSA-PKCS1-v1_5)
+		        - X002: The authentication key
+		        - E002: The encryption key
 		"""
 		...
 
@@ -932,30 +930,30 @@ class BusinessTransactionFormat:
 	```python
 	# SEPA Credit Transfer
 	CCT = BusinessTransactionFormat(
-									service='SCT',
-									msg_name='pain.001',
+	    service='SCT',
+	    msg_name='pain.001',
 	)
 
 	# SEPA Direct Debit (Core)
 	CDD = BusinessTransactionFormat(
-									service='SDD',
-									msg_name='pain.008',
-									option='COR',
+	    service='SDD',
+	    msg_name='pain.008',
+	    option='COR',
 	)
 
 	# SEPA Direct Debit (B2B)
 	CDB = BusinessTransactionFormat(
-									service='SDD',
-									msg_name='pain.008',
-									option='B2B',
+	    ervice='SDD',
+	    msg_name='pain.008',
+	    option='B2B',
 	)
 
 	# End of Period Statement (camt.053)
 	C53 = BusinessTransactionFormat(
-									service='EOP',
-									msg_name='camt.053',
-									scope='DE',
-									container='ZIP',
+	    service='EOP',
+	    msg_name='camt.053',
+	    scope='DE',
+	    container='ZIP',
 	)
 	```
 	"""
@@ -1466,9 +1464,7 @@ class EbicsClient:
 		Returns: The assigned order id."""
 		...
 
-	def PTK(
-		self, start: str | date | None = None, end: str | date | None = None
-	) -> str:
+	def PTK(self, start: str | date | None = None, end: str | date | None = None) -> str:
 		"""Downloads the customer usage report in text format.
 
 		Parameters:
@@ -1591,9 +1587,7 @@ class EbicsClient:
 		"""Flag whether remote SSL certificates should be checked for validity (default: True)."""
 		...
 
-	def confirm_download(
-		self, trans_id: str | None = None, success: bool = True
-	) -> None:
+	def confirm_download(self, trans_id: str | None = None, success: bool = True) -> None:
 		"""Confirms the receipt of previously executed downloads.
 
 		Parameters:
@@ -1716,7 +1710,7 @@ class CAMTDocument:
 		* camt54 - In case xml is a CAMT52 or CAMT53 document, an additional CAMT54 document or a sequence of such documents can be passed, which are automatically merged with the corresponding batch transactions.
 		"""
 		...
-	
+
 	def __iter__(self) -> Iterator[SEPATransaction]:
 		"""Returns an iterator over the transactions."""
 		...

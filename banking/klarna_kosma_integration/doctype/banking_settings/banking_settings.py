@@ -171,9 +171,9 @@ def daily_sync_ebics():
 			"initialized": 1,
 			"bank_keys_activated": 1,
 			"passphrase": ("is", "set"),
-			"keyring": ("is", "set")
+			"keyring": ("is", "set"),
 		},
-		pluck="name"
+		pluck="name",
 	):
 		user = frappe.get_doc("EBICS User", ebics_user)
 		try:
@@ -183,7 +183,7 @@ def daily_sync_ebics():
 				title=_("Banking Error"),
 				message=_("Error in daily EBICS sync"),
 				reference_doctype="EBICS User",
-				reference_name=ebics_user
+				reference_name=ebics_user,
 			)
 
 

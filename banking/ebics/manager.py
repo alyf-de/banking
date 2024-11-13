@@ -3,7 +3,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from typing import Iterator, Callable
-	from banking.ebics.types import EbicsKeyRing, EbicsUser, EbicsBank, EbicsClient, CAMTDocument
+	from banking.ebics.types import (
+		EbicsKeyRing,
+		EbicsUser,
+		EbicsBank,
+		EbicsClient,
+		CAMTDocument,
+	)
 
 
 class EBICSManager:
@@ -23,7 +29,9 @@ class EBICSManager:
 			if e.args[0] != "'register' can be called only once":
 				raise e
 
-	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
+	def set_keyring(
+		self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None
+	):
 		from fintech.ebics import EbicsKeyRing
 
 		class CustomKeyRing(EbicsKeyRing):
@@ -51,7 +59,9 @@ class EBICSManager:
 	def create_user_keys(self):
 		self.user.create_keys(keyversion="A005", bitlength=2048)
 
-	def create_user_certificates(self, user_name: str, organization_name: str, country_code: str):
+	def create_user_certificates(
+		self, user_name: str, organization_name: str, country_code: str
+	):
 		self.user.create_certificates(
 			commonName=user_name,
 			organizationName=organization_name,
@@ -84,7 +94,9 @@ class EBICSManager:
 	def activate_bank_keys(self) -> None:
 		self.bank.activate_keys()
 
-	def download_bank_statements(self, start_date: str | None = None, end_date: str | None = None) -> "Iterator[CAMTDocument]":
+	def download_bank_statements(
+		self, start_date: str | None = None, end_date: str | None = None
+	) -> "Iterator[CAMTDocument]":
 		"""Yield an iterator over CAMTDocument objects for the given date range."""
 		from fintech.sepa import CAMTDocument
 

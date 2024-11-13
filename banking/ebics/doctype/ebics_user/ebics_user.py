@@ -71,9 +71,7 @@ class EBICSUser(Document):
 			)
 
 	def validate_bank(self):
-		host_id, url = frappe.db.get_value(
-			"Bank", self.bank, ["ebics_host_id", "ebics_url"]
-		)
+		host_id, url = frappe.db.get_value("Bank", self.bank, ["ebics_host_id", "ebics_url"])
 		if not host_id or not url:
 			frappe.throw(
 				_("Please add EBICS Host ID and URL to bank {0}").format(
@@ -98,11 +96,15 @@ class EBICSUser(Document):
 
 
 def on_doctype_update():
-	frappe.db.add_unique("EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user")
+	frappe.db.add_unique(
+		"EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user"
+	)
 
 
 @frappe.whitelist()
-def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
+def initialize(
+	ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int
+):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
@@ -111,9 +113,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 		user.save()
 
 	manager = get_ebics_manager(
-		ebics_user=user,
-		passphrase=passphrase,
-		sig_passphrase=signature_passphrase
+		ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
 	)
 
 	try:
@@ -124,9 +124,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 
 	if user.needs_certificates:
 		country_code = frappe.db.get_value("Country", user.country, "code")
-		manager.create_user_certificates(
-			user.full_name, user.company, country_code.upper()
-		)
+		manager.create_user_certificates(user.full_name, user.company, country_code.upper())
 
 	manager.send_keys_to_bank()
 
@@ -158,7 +156,10 @@ def confirm_bank_keys(ebics_user: str):
 
 @frappe.whitelist()
 def download_bank_statements(
-	ebics_user: str, from_date: str | None = None, to_date: str | None = None, passphrase: str | None = None
+	ebics_user: str,
+	from_date: str | None = None,
+	to_date: str | None = None,
+	passphrase: str | None = None,
 ):
 	frappe.has_permission("Bank Transaction", "create", throw=True)
 

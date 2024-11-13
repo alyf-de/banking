@@ -90,9 +90,7 @@ class AdminRequest:
 		data.update({"session_id": session_id})
 
 		method = "banking_admin.api.end_session"
-		requests.post(
-			url=self.url + method, headers=self.headers, data=json.dumps(data)
-		)
+		requests.post(url=self.url + method, headers=self.headers, data=json.dumps(data))
 
 	def consent_accounts(self, consent_id: str, consent_token: str):
 		data = self.data
@@ -141,7 +139,9 @@ class AdminRequest:
 
 	def get_fintech_license(self):
 		method = "banking_admin.ebics_api.get_fintech_license"
-		return requests.post(url=self.url + method, headers=self.headers, json=self.data.copy())
+		return requests.post(
+			url=self.url + method, headers=self.headers, json=self.data.copy()
+		)
 
 	def register_ebics_user(self, host_id: str, partner_id: str, user_id: str):
 		data = self.data
