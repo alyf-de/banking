@@ -1,6 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from requests import HTTPError
 from semantic_version import Version
 from typing import Dict, Optional, Union
 
@@ -19,7 +20,28 @@ from banking.klarna_kosma_integration.utils import (
 
 
 class BankingSettings(Document):
-	pass
+	def before_validate(self):
+		self.update_fintech_license()
+
+	def update_fintech_license(self):
+		if not self.enabled:
+			return self.reset_fintech_license()
+
+		try:
+			response = Admin(self).request.get_fintech_license()
+			response.raise_for_status()
+		except HTTPError:
+			return self.reset_fintech_license()
+		except Exception:
+			return
+
+		data = response.json().get("message", {})
+		self.fintech_licensee_name = data.get("licensee_name")
+		self.fintech_license_key = data.get("license_key")
+
+	def reset_fintech_license(self):
+		self.fintech_licensee_name = None
+		self.fintech_license_key = None
 
 
 @frappe.whitelist()
@@ -97,9 +119,18 @@ def sync_all_accounts_and_transactions():
 	Refresh all Bank accounts and enqueue their transactions sync, via the Consent API.
 	Called via hooks.
 	"""
-	if not frappe.db.get_single_value("Banking Settings", "enabled"):
+	banking_settings = frappe.get_single("Banking Settings")
+	if not banking_settings.enabled:
 		return
 
+	if banking_settings.enable_klarna_kosma:
+		daily_sync_kosma()
+
+	if banking_settings.enable_ebics:
+		daily_sync_ebics()
+
+
+def daily_sync_kosma():
 	accounts_list = []
 
 	for bank, company in frappe.get_all(
@@ -129,6 +160,25 @@ def sync_all_accounts_and_transactions():
 
 	for bank_account in accounts_list:
 		sync_transactions(account=bank_account)
+
+
+def daily_sync_ebics():
+	from banking.ebics.utils import sync_ebics_transactions
+
+	for ebics_user in frappe.get_all(
+		"EBICS User",
+		filters={
+			"initialized": 1,
+			"bank_keys_activated": 1,
+			"passphrase": ("is", "set"),
+			"keyring": ("is", "set"),
+		},
+		pluck="name",
+	):
+		frappe.enqueue(
+			sync_ebics_transactions,
+			ebics_user=ebics_user,
+		)
 
 
 def get_bank_accounts_to_sync(bank: str, company: str) -> list:

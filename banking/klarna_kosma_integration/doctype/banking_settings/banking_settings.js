@@ -6,17 +6,25 @@ frappe.ui.form.on('Banking Settings', {
 		if (frm.doc.enabled) {
 			frm.trigger("get_app_health");
 
-			frm.add_custom_button(__('Link Bank and Accounts'), () => {
-				frm.events.refresh_banks(frm);
-			});
+			if (frm.doc.enable_klarna_kosma) {
+				frm.add_custom_button(__('Link Bank and Accounts'), () => {
+					frm.events.refresh_banks(frm);
+				});
 
-			frm.add_custom_button(__("Transactions"), () => {
-				frm.events.sync_transactions(frm);
-			}, __("Sync"));
+				frm.add_custom_button(__("Transactions"), () => {
+					frm.events.sync_transactions(frm);
+				}, __("Sync"));
 
-			frm.add_custom_button(__("Older Transactions"), () => {
-				frm.events.sync_transactions(frm, true);
-			}, __("Sync"));
+				frm.add_custom_button(__("Older Transactions"), () => {
+					frm.events.sync_transactions(frm, true);
+				}, __("Sync"));
+			}
+
+			if (frm.doc.enable_ebics) {
+				frm.add_custom_button(__("View EBICS Users"), () => {
+					frappe.set_route("List", "EBICS User");
+				});
+			}
 
 			if (frm.doc.customer_id && frm.doc.admin_endpoint && frm.doc.api_token) {
 				frm.trigger("get_subscription");
@@ -176,7 +184,6 @@ frappe.ui.form.on('Banking Settings', {
 					style="border: 1px solid var(--gray-300);
 					border-radius: 4px;
 					padding: 1rem;
-					width: calc(50% - 15px);
 					margin-bottom: 0.5rem;
 				">
 					<p style="font-weight: 700; font-size: 16px;">
@@ -184,13 +191,20 @@ frappe.ui.form.on('Banking Settings', {
 					</p>
 					<p>
 						<b>${ __("Subscriber") }</b>:
-						${subscription.full_name}</p>
+						${subscription.full_name}
+					</p>
 					<p>
 						<b>${ __("Status") }</b>:
-						${subscription.subscription_status}</p>
+						${subscription.subscription_status}
+					</p>
 					<p>
 						<b>${ __("Transaction Limit") }</b>:
-						${subscription.usage} (${__("Usage")}) / ${subscription.transaction_limit} (${__("Limit")})</p>
+						${subscription.usage} (${__("Usage")}) / ${subscription.transaction_limit} (${__("Limit")})
+					</p>
+					<p>
+						<b>${ __("Ebics Users") }</b>:
+						${subscription.ebics_usage.used} (${__("Usage")}) / ${subscription.ebics_usage.allowed} (${__("Limit")})
+					</p>
 					<p>
 						<b>${ __("Valid Till") }</b>:
 						${frappe.format(subscription.plan_end_date, {"fieldtype": "Date"})}

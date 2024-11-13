@@ -1,1 +1,2 @@
 Klarna Kosma Integration
+EBICS

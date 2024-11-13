@@ -20,34 +20,14 @@ Check out the [Banking Wiki](https://github.com/alyf-de/banking/wiki) for a step
 
 ## Country and Bank Coverage
 
-Currently, we [support more than 15.000 banks from the following countries](https://portal.openbanking.klarna.com/bank-matrix).
+<img src="ready_for_ebics.jpg" height="70px">
+
+We use the EBICS protocol which is widely supported by banks in the following countries:
 
 - 🇦🇹 Austria
-- 🇧🇪 Belgium
-- 🇭🇷 Croatia
-- 🇨🇿 Czech Republic
-- 🇩🇰 Denmark
-- 🇪🇪 Estonia
-- 🇫🇮 Finland
 - 🇫🇷 France
 - 🇩🇪 Germany
-- 🇭🇺 Hungary
-- 🇮🇪 Ireland
-- 🇮🇹 Italy
-- 🇱🇻 Latvia
-- 🇱🇹 Lithuania
-- 🇱🇺 Luxembourg
-- 🇲🇹 Malta
-- 🇳🇱 Netherlands
-- 🇳🇴 Norway
-- 🇵🇱 Poland
-- 🇵🇹 Portugal
-- 🇷🇴 Romania
-- 🇸🇰 Slovakia
-- 🇪🇸 Spain
-- 🇸🇪 Sweden
 - 🇨🇭 Switzerland
-- 🇬🇧 United Kingdom
 
 ## Installation
 
@@ -56,4 +36,14 @@ Install [via Frappe Cloud](https://frappecloud.com/marketplace/apps/banking) or 
 ```bash
 bench get-app https://github.com/alyf-de/banking.git
 bench --site <sitename> install-app banking
+```
+
+If you want to use ebics on Apple Silicon, the runtime library must be signed manually:
+
+```bash
+# python3.11
+sudo codesign --force --deep --sign - env/lib/python3.11/site-packages/fintech/runtime/darwin/aarch64/pyarmor_runtime.so
+
+# python3.10
+sudo codesign --force --deep --sign - env/lib/python3.10/site-packages/fintech/pytransform/platforms/darwin/aarch64/_pytransform.dylib
 ```

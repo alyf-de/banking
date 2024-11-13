@@ -16,7 +16,8 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
-   "link_count": 1,
+   "link_count": 2,
+   "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
   },
@@ -29,9 +30,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "EBICS User",
+   "link_count": 0,
+   "link_to": "EBICS User",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2023-09-18 19:49:39.472163",
+ "modified": "2024-10-16 19:52:52.240230",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "ALYF Banking",

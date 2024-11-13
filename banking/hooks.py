@@ -185,6 +185,29 @@ kosma_custom_fields = {
 			translatable=0,
 		)
 	],
+	"Bank": [
+		dict(
+			fieldname="ebics_section",
+			label="EBICS",
+			fieldtype="Section Break",
+			insert_after="plaid_access_token",
+		),
+		dict(
+			fieldname="ebics_host_id",
+			label="EBICS Host ID",
+			fieldtype="Data",
+			insert_after="ebics_section",
+			translatable=0,
+		),
+		dict(
+			fieldname="ebics_url",
+			label="EBICS URL",
+			fieldtype="Data",
+			options="URL",
+			insert_after="ebics_host_id",
+			translatable=0,
+		),
+	],
 }
 
 kosma_property_setters = {

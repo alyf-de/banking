@@ -1,0 +1,5 @@
+[pre_model_sync]
+banking.patches.recreate_custom_fields
+
+[post_model_sync]
+execute:frappe.db.set_single_value("Banking Settings", "enable_klarna_kosma", 1)

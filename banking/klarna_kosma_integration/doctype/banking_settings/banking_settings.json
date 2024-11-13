@@ -7,15 +7,20 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "admin_endpoint",
   "enabled",
-  "use_test_environment",
   "section_break_2",
+  "admin_endpoint",
   "customer_id",
-  "column_break_4",
   "api_token",
-  "section_break_aiyw3",
-  "subscription"
+  "column_break_4",
+  "subscription",
+  "klarna_kosma_section",
+  "enable_klarna_kosma",
+  "use_test_environment",
+  "ebics_section",
+  "enable_ebics",
+  "fintech_licensee_name",
+  "fintech_license_key"
  ],
  "fields": [
   {
@@ -25,9 +30,9 @@
    "label": "Enabled"
   },
   {
-   "depends_on": "enabled",
    "fieldname": "section_break_2",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Subscription"
   },
   {
    "fieldname": "column_break_4",
@@ -56,10 +61,6 @@
    "mandatory_depends_on": "enabled"
   },
   {
-   "fieldname": "section_break_aiyw3",
-   "fieldtype": "Section Break"
-  },
-  {
    "depends_on": "subscription",
    "fieldname": "subscription",
    "fieldtype": "HTML",
@@ -67,15 +68,52 @@
   },
   {
    "default": "0",
+   "depends_on": "enable_klarna_kosma",
    "fieldname": "use_test_environment",
    "fieldtype": "Check",
    "label": "Use Test Environment"
+  },
+  {
+   "fieldname": "ebics_section",
+   "fieldtype": "Section Break",
+   "label": "EBICS"
+  },
+  {
+   "depends_on": "enable_ebics",
+   "fieldname": "fintech_license_key",
+   "fieldtype": "Password",
+   "label": "Fintech License Key",
+   "read_only": 1
+  },
+  {
+   "depends_on": "enable_ebics",
+   "fieldname": "fintech_licensee_name",
+   "fieldtype": "Data",
+   "label": "Fintech Licensee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "klarna_kosma_section",
+   "fieldtype": "Section Break",
+   "label": "Klarna Kosma"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_klarna_kosma",
+   "fieldtype": "Check",
+   "label": "Enable Klarna Kosma (Legacy)"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_ebics",
+   "fieldtype": "Check",
+   "label": "Enable EBICS (New)"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-03-12 21:09:51.503474",
+ "modified": "2024-11-12 13:20:54.035378",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

@@ -28,11 +28,15 @@ from banking.klarna_kosma_integration.utils import (
 class Admin:
 	"""A class that directly communicates with the Banking Admin App."""
 
-	def __init__(self) -> None:
+	def __init__(self, settings=None) -> None:
+		"""Initialize the Admin class with the necessary settings.
+
+		:param settings: Banking Settings document. Enables you to pass the most recent settings that may not be in the database yet.
+		"""
 		self.ip_address = get_current_ip()
 		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
 
-		settings = frappe.get_single("Banking Settings")
+		settings = settings or frappe.get_single("Banking Settings")
 		self.use_test_environment = settings.use_test_environment
 		self.api_token = settings.get_password("api_token")
 		self.customer_id = settings.customer_id
