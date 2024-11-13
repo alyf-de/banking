@@ -51,7 +51,8 @@ frappe.ui.form.on("EBICS User", {
 								callback: () => frm.reload_doc(),
 							});
 						},
-						__("Initialize EBICS User")
+						__("Initialize EBICS User"),
+						__("Initialize")
 					);
 				},
 				frm.doc.initialized ? __("Actions") : null
@@ -172,6 +173,7 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 				});
 			}
 		},
-		__("Download Bank Statements")
+		__("Download Bank Statements"),
+		__("Download")
 	);
 }
