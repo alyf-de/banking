@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "full_name",
+  "start_date",
   "initialized",
   "bank_keys_activated",
   "column_break_hlxa",
@@ -112,10 +113,16 @@
    "fieldtype": "Password",
    "label": "Passphrase",
    "no_copy": 1
+  },
+  {
+   "description": "Bank transactions that happened before this date must not be imported.",
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
   }
  ],
  "links": [],
- "modified": "2024-11-12 11:12:34.861290",
+ "modified": "2024-11-13 23:08:45.591377",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",

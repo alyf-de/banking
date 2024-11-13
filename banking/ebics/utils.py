@@ -7,6 +7,7 @@ from frappe import _
 from banking.ebics.manager import EBICSManager
 
 if TYPE_CHECKING:
+	from datetime import date
 	from .types import SEPATransaction
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 
@@ -81,13 +82,18 @@ def sync_ebics_transactions(
 				# from camt.054 that is sometimes available.
 				# If that's not possible, create a single transaction
 				for sub_transaction in transaction:
-					_create_bank_transaction(bank_account, user.company, sub_transaction)
+					_create_bank_transaction(
+						bank_account, user.company, sub_transaction, user.start_date
+					)
 			else:
-				_create_bank_transaction(bank_account, user.company, transaction)
+				_create_bank_transaction(bank_account, user.company, transaction, user.start_date)
 
 
 def _create_bank_transaction(
-	bank_account: str, company: str, sepa_transaction: "SEPATransaction"
+	bank_account: str,
+	company: str,
+	sepa_transaction: "SEPATransaction",
+	start_date: "date" = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -104,6 +110,9 @@ def _create_bank_transaction(
 		"Bank Transaction",
 		{"transaction_id": transaction_id, "bank_account": bank_account},
 	):
+		return
+
+	if start_date and sepa_transaction.date < start_date:
 		return
 
 	bt = frappe.new_doc("Bank Transaction")
