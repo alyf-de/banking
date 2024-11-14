@@ -68,12 +68,12 @@ frappe.ui.form.on("EBICS User", {
 						passphrase = await ask_for_passphrase();
 					}
 
-					bank_keys = await get_bank_keys(frm.doc.name, passphrase);
+					const bank_keys = await get_bank_keys(frm.doc.name, passphrase);
 					if (!bank_keys) {
 						return;
 					}
 
-					message = __(
+					const message = __(
 						"Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
 					);
 					frappe.confirm(
