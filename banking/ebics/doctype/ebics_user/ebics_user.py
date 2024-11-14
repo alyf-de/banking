@@ -135,21 +135,21 @@ def initialize(
 
 
 @frappe.whitelist()
-def download_bank_keys(ebics_user: str):
+def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	manager = get_ebics_manager(user)
+	manager = get_ebics_manager(user, passphrase=passphrase)
 
 	return manager.download_bank_keys()
 
 
 @frappe.whitelist()
-def confirm_bank_keys(ebics_user: str):
+def confirm_bank_keys(ebics_user: str, passphrase: str | None = None):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
-	manager = get_ebics_manager(user)
+	manager = get_ebics_manager(user, passphrase=passphrase)
 	manager.activate_bank_keys()
 	user.db_set("bank_keys_activated", 1)
 
