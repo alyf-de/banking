@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Coalesce
+from frappe.query_builder.functions import Coalesce, CustomFunction
 from frappe.utils import cint, flt, sbool
 
 from erpnext import get_company_currency, get_default_cost_center
@@ -17,9 +17,10 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	get_total_allocated_amount,
 )
 from erpnext.accounts.utils import get_account_currency
-
+from pypika import Order
 
 MAX_QUERY_RESULTS = 150
+Instr = CustomFunction("INSTR", ["a", "b"])
 
 
 class BankReconciliationToolBeta(Document):
@@ -488,6 +489,10 @@ def check_matching(
 
 	if transaction.description:
 		for voucher in matching_vouchers:
+			if voucher.get("name_in_desc_match"):
+				# already covered in DB query
+				continue
+
 			# higher rank if voucher name is in bank transaction
 			reference_no = voucher["reference_no"]
 			if reference_no and (reference_no.strip() in transaction.description):
@@ -560,6 +565,7 @@ def get_matching_queries(
 	is_deposit = transaction.deposit > 0.0
 
 	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
+	common_filters.description = transaction.description
 
 	if "payment_entry" in document_types:
 		frappe.has_permission("Payment Entry", throw=True)
@@ -951,12 +957,21 @@ def get_si_matching_query(
 	date_condition = si.posting_date == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
+	description_condition = (
+		Instr(common_filters.description, si.name) > 0
+		if common_filters.description
+		else False
+	)
+	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
+
+	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
+
 	query = (
 		frappe.qb.from_(sip)
 		.join(si)
 		.on(sip.parent == si.name)
 		.select(
-			(party_rank + amount_rank + date_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			si.name,
 			sip.amount.as_("paid_amount"),
@@ -969,12 +984,14 @@ def get_si_matching_query(
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
+			description_match.as_("name_in_desc_match"),
 		)
 		.where(si.docstatus == 1)
 		.where(sip.clearance_date.isnull())
 		.where(sip.account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(si.currency == currency)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -1000,11 +1017,18 @@ def get_unpaid_si_matching_query(
 		sales_invoice.outstanding_amount == common_filters.amount
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
+	description_condition = (
+		Instr(common_filters.description, sales_invoice.name) > 0
+		if common_filters.description
+		else False
+	)
+	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
+	rank_expression = party_match + amount_match + description_match + 1
 
 	query = (
 		frappe.qb.from_(sales_invoice)
 		.select(
-			(party_match + amount_match + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			sales_invoice.name.as_("name"),
 			sales_invoice.outstanding_amount.as_("paid_amount"),
@@ -1017,11 +1041,13 @@ def get_unpaid_si_matching_query(
 			sales_invoice.currency,
 			party_match.as_("party_match"),
 			amount_match.as_("amount_match"),
+			description_match.as_("name_in_desc_match"),
 		)
 		.where(sales_invoice.docstatus == 1)
 		.where(sales_invoice.company == company)  # because we do not have bank account check
 		.where(sales_invoice.outstanding_amount != 0.0)
 		.where(sales_invoice.currency == currency)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -1059,10 +1085,19 @@ def get_pi_matching_query(
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
+	description_condition = (
+		Instr(common_filters.description, purchase_invoice.name) > 0
+		if common_filters.description
+		else False
+	)
+	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
+
+	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
+
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(
-			(party_rank + amount_rank + date_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name,
 			purchase_invoice.paid_amount,
@@ -1076,6 +1111,7 @@ def get_pi_matching_query(
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
+			description_match.as_("name_in_desc_match"),
 		)
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.is_paid == 1)
@@ -1083,6 +1119,7 @@ def get_pi_matching_query(
 		.where(purchase_invoice.cash_bank_account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(purchase_invoice.currency == currency)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -1108,13 +1145,20 @@ def get_unpaid_pi_matching_query(
 		purchase_invoice.outstanding_amount == common_filters.amount
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
+	description_condition = (
+		Instr(common_filters.description, purchase_invoice.name) > 0
+		if common_filters.description
+		else False
+	)
+	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
+	rank_expression = party_match + amount_match + description_match + 1
 
 	# We skip date rank as the date of an unpaid bill is mostly
 	# earlier than the date of the bank transaction
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(
-			(party_match + amount_match + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name.as_("name"),
 			purchase_invoice.outstanding_amount.as_("paid_amount"),
@@ -1127,12 +1171,14 @@ def get_unpaid_pi_matching_query(
 			purchase_invoice.currency,
 			party_match.as_("party_match"),
 			amount_match.as_("amount_match"),
+			description_match.as_("name_in_desc_match"),
 		)
 		.where(purchase_invoice.docstatus == 1)
 		.where(purchase_invoice.company == company)
 		.where(purchase_invoice.outstanding_amount != 0.0)
 		.where(purchase_invoice.is_paid == 0)
 		.where(purchase_invoice.currency == currency)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -1147,7 +1193,10 @@ def get_unpaid_pi_matching_query(
 
 
 def get_unpaid_ec_matching_query(
-	exact_match: bool, currency: str, common_filters: frappe._dict, company: str
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
 ):
 	if currency != get_company_currency(company):
 		# Expense claims are always in company currency
@@ -1166,11 +1215,19 @@ def get_unpaid_ec_matching_query(
 	)
 	outstanding_amount_condition = outstanding_amount == common_filters.amount
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
+	description_condition = (
+		Instr(common_filters.description, expense_claim.name) > 0
+		if common_filters.description
+		else False
+	)
+	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
+
+	rank_expression = party_match + amount_match + description_match + 1
 
 	query = (
 		frappe.qb.from_(expense_claim)
 		.select(
-			(party_match + amount_match + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Expense Claim").as_("doctype"),
 			expense_claim.name.as_("name"),
 			outstanding_amount.as_("paid_amount"),
@@ -1183,11 +1240,13 @@ def get_unpaid_ec_matching_query(
 			ConstantColumn(currency).as_("currency"),
 			party_match.as_("party_match"),
 			amount_match.as_("amount_match"),
+			description_match.as_("name_in_desc_match"),
 		)
 		.where(expense_claim.docstatus == 1)
 		.where(expense_claim.company == company)
 		.where(outstanding_amount > 0.0)
 		.where(expense_claim.status == "Unpaid")
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
