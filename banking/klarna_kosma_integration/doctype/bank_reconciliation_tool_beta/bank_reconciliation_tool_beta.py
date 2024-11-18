@@ -834,10 +834,12 @@ def get_pe_matching_query(
 	date_condition = Coalesce(pe.reference_date, pe.posting_date) == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
+	rank_expression = ref_rank + amount_rank + party_rank + date_rank + 1
+
 	query = (
 		frappe.qb.from_(pe)
 		.select(
-			(ref_rank + amount_rank + party_rank + date_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Payment Entry").as_("doctype"),
 			pe.name,
 			pe.paid_amount,
@@ -859,7 +861,7 @@ def get_pe_matching_query(
 		.where(getattr(pe, account_from_to) == common_filters.bank_account)
 		.where(amount_condition)
 		.where(filter_by_date)
-		.orderby(pe.reference_date if cint(filter_by_reference_date) else pe.posting_date)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -902,12 +904,14 @@ def get_je_matching_query(
 	date_condition = Coalesce(je.cheque_date, je.posting_date) == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
+	rank_expression = ref_rank + amount_rank + date_rank + 1
+
 	query = (
 		frappe.qb.from_(jea)
 		.join(je)
 		.on(jea.parent == je.name)
 		.select(
-			(ref_rank + amount_rank + date_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Journal Entry").as_("doctype"),
 			je.name,
 			getattr(jea, amount_field).as_("paid_amount"),
@@ -928,7 +932,7 @@ def get_je_matching_query(
 		.where(amount_equality if exact_match else getattr(jea, amount_field) > 0.0)
 		.where(je.docstatus == 1)
 		.where(filter_by_date)
-		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
