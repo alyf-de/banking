@@ -970,12 +970,9 @@ def get_si_matching_query(
 	date_condition = si.posting_date == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	description_condition = (
-		Instr(common_filters.description, RegExpReplace(si.name, r"^[^0-9]*", "")) > 0
-		if common_filters.description
-		else False
+	description_match = get_description_match_condition(
+		common_filters.description, si.name
 	)
-	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
 
 	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
 
@@ -1030,13 +1027,9 @@ def get_unpaid_si_matching_query(
 		sales_invoice.outstanding_amount == common_filters.amount
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
-	description_condition = (
-		Instr(common_filters.description, RegExpReplace(sales_invoice.name, r"^[^0-9]*", ""))
-		> 0
-		if common_filters.description
-		else False
+	description_match = get_description_match_condition(
+		common_filters.description, sales_invoice.name
 	)
-	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
 	rank_expression = party_match + amount_match + description_match + 1
 
 	query = (
@@ -1099,15 +1092,9 @@ def get_pi_matching_query(
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	description_condition = (
-		Instr(
-			common_filters.description, RegExpReplace(purchase_invoice.name, r"^[^0-9]*", "")
-		)
-		> 0
-		if common_filters.description
-		else False
+	description_match = get_description_match_condition(
+		common_filters.description, purchase_invoice.name
 	)
-	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
 
 	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
 
@@ -1162,15 +1149,9 @@ def get_unpaid_pi_matching_query(
 		purchase_invoice.outstanding_amount == common_filters.amount
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
-	description_condition = (
-		Instr(
-			common_filters.description, RegExpReplace(purchase_invoice.name, r"^[^0-9]*", "")
-		)
-		> 0
-		if common_filters.description
-		else False
+	description_match = get_description_match_condition(
+		common_filters.description, purchase_invoice.name
 	)
-	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
 	rank_expression = party_match + amount_match + description_match + 1
 
 	# We skip date rank as the date of an unpaid bill is mostly
@@ -1235,13 +1216,9 @@ def get_unpaid_ec_matching_query(
 	)
 	outstanding_amount_condition = outstanding_amount == common_filters.amount
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
-	description_condition = (
-		Instr(common_filters.description, RegExpReplace(expense_claim.name, r"^[^0-9]*", ""))
-		> 0
-		if common_filters.description
-		else False
+	description_match = get_description_match_condition(
+		common_filters.description, expense_claim.name
 	)
-	description_match = frappe.qb.terms.Case().when(description_condition, 1).else_(0)
 
 	rank_expression = party_match + amount_match + description_match + 1
 
@@ -1305,3 +1282,28 @@ def get_invoice_function_map(document_types: list, is_deposit: bool):
 		for doctype in order
 		if (doctype in document_types and fn_map[doctype])
 	}
+
+
+def get_description_match_condition(description: str, name_column):
+	"""Get the description match condition for a document name.
+
+	Args:
+	    description: The bank transaction description to search in
+	    name_column: The document name column to match against (e.g., expense_claim.name)
+
+	Returns:
+	    A query condition that will be 1 if the description contains the document number
+	    and 0 otherwise.
+	"""
+	return (
+		frappe.qb.terms.Case()
+		.when(
+			(
+				Instr(description, RegExpReplace(name_column, r"^[^0-9]*", "")) > 0
+				if description
+				else False
+			),
+			1,
+		)
+		.else_(0)
+	)
