@@ -557,12 +557,6 @@ def get_matching_queries(
 	is_withdrawal = transaction.withdrawal > 0.0
 	is_deposit = transaction.deposit > 0.0
 
-<<<<<<< HEAD
-=======
-	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
-	common_filters.description = transaction.description
-
->>>>>>> 623bbf7 (fix: include description match in rank (#132))
 	if "payment_entry" in document_types:
 		query = get_pe_matching_query(
 			exact_match,
@@ -597,6 +591,7 @@ def get_matching_queries(
 		"exact_match": exact_match,
 		"exact_party_match": exact_party_match,
 		"currency": currency,
+		"description": transaction.description,
 	}
 	if include_unpaid:
 		kwargs["company"] = company
@@ -725,12 +720,8 @@ def get_ld_matching_query(bank_account, exact_match, transaction):
 		)
 		.where(loan_disbursement.docstatus == 1)
 		.where(loan_disbursement.clearance_date.isnull())
-<<<<<<< HEAD
 		.where(loan_disbursement.disbursement_account == bank_account)
-=======
-		.where(loan_disbursement.disbursement_account == common_filters.bank_account)
 		.orderby(rank_expression, order=Order.desc)
->>>>>>> 623bbf7 (fix: include description match in rank (#132))
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -781,12 +772,8 @@ def get_lr_matching_query(bank_account, exact_match, transaction):
 		)
 		.where(loan_repayment.docstatus == 1)
 		.where(loan_repayment.clearance_date.isnull())
-<<<<<<< HEAD
 		.where(loan_repayment.payment_account == bank_account)
-=======
-		.where(loan_repayment.payment_account == common_filters.bank_account)
 		.orderby(rank_expression, order=Order.desc)
->>>>>>> 623bbf7 (fix: include description match in rank (#132))
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -946,7 +933,7 @@ def get_je_matching_query(
 	return str(query)
 
 
-def get_si_matching_query(exact_match, exact_party_match, currency):
+def get_si_matching_query(exact_match, exact_party_match, currency, description):
 	"""
 	Get matching sales invoices when they are also used as payment entries (POS).
 	"""
@@ -964,7 +951,7 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	description_match = get_description_match_condition(
-		common_filters.description, si.name
+		description, si.name
 	)
 
 	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
@@ -1005,7 +992,7 @@ def get_si_matching_query(exact_match, exact_party_match, currency):
 
 
 def get_unpaid_si_matching_query(
-	exact_match, exact_party_match, currency, company, include_only_returns=False
+	exact_match, exact_party_match, currency, company, description, include_only_returns=False
 ):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
@@ -1017,7 +1004,7 @@ def get_unpaid_si_matching_query(
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_match = get_description_match_condition(
-		common_filters.description, sales_invoice.name
+		description, sales_invoice.name
 	)
 	rank_expression = party_match + amount_match + description_match + 1
 
@@ -1057,7 +1044,7 @@ def get_unpaid_si_matching_query(
 	return str(query)
 
 
-def get_pi_matching_query(exact_match, exact_party_match, currency):
+def get_pi_matching_query(exact_match, exact_party_match, currency, description):
 	"""
 	Get matching purchase invoice query when they are also used as payment entries (is_paid)
 	"""
@@ -1079,7 +1066,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	description_match = get_description_match_condition(
-		common_filters.description, purchase_invoice.name
+		description, purchase_invoice.name
 	)
 
 	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
@@ -1120,7 +1107,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency):
 
 
 def get_unpaid_pi_matching_query(
-	exact_match, exact_party_match, currency, company, include_only_returns=False
+	exact_match, exact_party_match, currency, company, description, include_only_returns=False
 ):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
@@ -1132,7 +1119,7 @@ def get_unpaid_pi_matching_query(
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_match = get_description_match_condition(
-		common_filters.description, purchase_invoice.name
+		description, purchase_invoice.name
 	)
 	rank_expression = party_match + amount_match + description_match + 1
 
@@ -1175,16 +1162,7 @@ def get_unpaid_pi_matching_query(
 	return str(query)
 
 
-<<<<<<< HEAD
-def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, company):
-=======
-def get_unpaid_ec_matching_query(
-	exact_match: bool,
-	currency: str,
-	common_filters: frappe._dict,
-	company: str,
-):
->>>>>>> 623bbf7 (fix: include description match in rank (#132))
+def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, company, description):
 	if currency != get_company_currency(company):
 		# Expense claims are always in company currency
 		return ""
@@ -1203,7 +1181,7 @@ def get_unpaid_ec_matching_query(
 	outstanding_amount_condition = outstanding_amount == Parameter("%(amount)s")
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_match = get_description_match_condition(
-		common_filters.description, expense_claim.name
+		description, expense_claim.name
 	)
 
 	rank_expression = party_match + amount_match + description_match + 1
