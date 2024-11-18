@@ -21,6 +21,7 @@ from pypika import Order
 
 MAX_QUERY_RESULTS = 150
 Instr = CustomFunction("INSTR", ["a", "b"])
+RegExpReplace = CustomFunction("REGEXP_REPLACE", ["a", "b", "c"])
 
 
 class BankReconciliationToolBeta(Document):
@@ -970,7 +971,7 @@ def get_si_matching_query(
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	description_condition = (
-		Instr(common_filters.description, si.name) > 0
+		Instr(common_filters.description, RegExpReplace(si.name, r"^[^0-9]*", "")) > 0
 		if common_filters.description
 		else False
 	)
@@ -1030,7 +1031,8 @@ def get_unpaid_si_matching_query(
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_condition = (
-		Instr(common_filters.description, sales_invoice.name) > 0
+		Instr(common_filters.description, RegExpReplace(sales_invoice.name, r"^[^0-9]*", ""))
+		> 0
 		if common_filters.description
 		else False
 	)
@@ -1098,7 +1100,10 @@ def get_pi_matching_query(
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	description_condition = (
-		Instr(common_filters.description, purchase_invoice.name) > 0
+		Instr(
+			common_filters.description, RegExpReplace(purchase_invoice.name, r"^[^0-9]*", "")
+		)
+		> 0
 		if common_filters.description
 		else False
 	)
@@ -1158,7 +1163,10 @@ def get_unpaid_pi_matching_query(
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_condition = (
-		Instr(common_filters.description, purchase_invoice.name) > 0
+		Instr(
+			common_filters.description, RegExpReplace(purchase_invoice.name, r"^[^0-9]*", "")
+		)
+		> 0
 		if common_filters.description
 		else False
 	)
@@ -1228,7 +1236,8 @@ def get_unpaid_ec_matching_query(
 	outstanding_amount_condition = outstanding_amount == common_filters.amount
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_condition = (
-		Instr(common_filters.description, expense_claim.name) > 0
+		Instr(common_filters.description, RegExpReplace(expense_claim.name, r"^[^0-9]*", ""))
+		> 0
 		if common_filters.description
 		else False
 	)
