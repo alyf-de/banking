@@ -666,11 +666,12 @@ def get_bt_matching_query(
 	)
 	party_rank = frappe.qb.terms.Case().when(party_condition, 1).else_(0)
 	amount_condition = amount_equality if exact_match else getattr(bt, field) > 0.0
+	rank_expression = ref_rank + amount_rank + party_rank + unallocated_rank + 1
 
 	query = (
 		frappe.qb.from_(bt)
 		.select(
-			(ref_rank + amount_rank + party_rank + unallocated_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Bank Transaction").as_("doctype"),
 			bt.name,
 			bt.unallocated_amount.as_("paid_amount"),
@@ -690,6 +691,7 @@ def get_bt_matching_query(
 		.where(bt.bank_account == common_filters.bank_account)
 		.where(amount_condition)
 		.where(bt.docstatus == 1)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -716,10 +718,12 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
 	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
+	rank_expression = reference_rank + party_rank + date_rank + 1
+
 	query = (
 		frappe.qb.from_(loan_disbursement)
 		.select(
-			(reference_rank + party_rank + date_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Loan Disbursement").as_("doctype"),
 			loan_disbursement.name,
 			loan_disbursement.disbursed_amount.as_("paid_amount"),
@@ -736,6 +740,7 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 		.where(loan_disbursement.docstatus == 1)
 		.where(loan_disbursement.clearance_date.isnull())
 		.where(loan_disbursement.disbursement_account == common_filters.bank_account)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
@@ -764,10 +769,12 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 	reference_rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
 	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
+	rank_expression = reference_rank + party_rank + date_rank + 1
+
 	query = (
 		frappe.qb.from_(loan_repayment)
 		.select(
-			(reference_rank + party_rank + date_rank + 1).as_("rank"),
+			rank_expression.as_("rank"),
 			ConstantColumn("Loan Repayment").as_("doctype"),
 			loan_repayment.name,
 			loan_repayment.amount_paid.as_("paid_amount"),
@@ -784,6 +791,7 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 		.where(loan_repayment.docstatus == 1)
 		.where(loan_repayment.clearance_date.isnull())
 		.where(loan_repayment.payment_account == common_filters.bank_account)
+		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
 
