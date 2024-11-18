@@ -1298,11 +1298,7 @@ def get_description_match_condition(description: str, name_column):
 	return (
 		frappe.qb.terms.Case()
 		.when(
-			(
-				Instr(description, RegExpReplace(name_column, r"^[^0-9]*", "")) > 0
-				if description
-				else False
-			),
+			Instr(description or "", RegExpReplace(name_column, r"^[^0-9]*", "")) > 0,
 			1,
 		)
 		.else_(0)
