@@ -489,7 +489,7 @@ def check_matching(
 
 	if transaction.description:
 		for voucher in matching_vouchers:
-			if voucher.get("name_in_desc_match"):
+			if "name_in_desc_match" in voucher:
 				# already covered in DB query
 				continue
 
