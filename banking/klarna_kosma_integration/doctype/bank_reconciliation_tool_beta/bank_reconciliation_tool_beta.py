@@ -18,6 +18,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 )
 from erpnext.accounts.utils import get_account_currency
 from pypika import Order
+from pypika.queries import Table
 
 MAX_QUERY_RESULTS = 150
 Instr = CustomFunction("INSTR", ["a", "b"])
@@ -596,24 +597,45 @@ def get_matching_queries(
 	include_unpaid = "unpaid_invoices" in document_types
 	invoice_dt = "sales_invoice" if is_deposit else "purchase_invoice"
 	invoice_queries_map = get_invoice_function_map(document_types, is_deposit)
+<<<<<<< HEAD
 	kwargs = {
 		"exact_match": exact_match,
 		"exact_party_match": exact_party_match,
 		"currency": currency,
 		"description": transaction.description,
 	}
+=======
+	reference_field_map = get_reference_field_map()
+
+	kwargs = frappe._dict(
+		exact_match=exact_match,
+		currency=currency,
+		common_filters=common_filters,
+	)
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	if include_unpaid:
 		kwargs["company"] = company
 		for doctype, fn in invoice_queries_map.items():
 			frappe.has_permission(frappe.unscrub(doctype), throw=True)
+<<<<<<< HEAD
 
 			if doctype != "expense_claim":
 				kwargs["include_only_returns"] = doctype != invoice_dt
 			else:
 				del kwargs["include_only_returns"]
+=======
+			kwargs.reference_field = reference_field_map.get(doctype)
+			if doctype in ["sales_invoice", "purchase_invoice"]:
+				kwargs.include_only_returns = doctype != invoice_dt
+			elif kwargs.include_only_returns is not None:
+				# Remove the key when doctype == "expense_claim"
+				del kwargs.include_only_returns
+
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 			queries.append(fn(**kwargs))
 	elif fn := invoice_queries_map.get(invoice_dt):
 		frappe.has_permission(frappe.unscrub(invoice_dt), throw=True)
+		kwargs.reference_field = reference_field_map.get(invoice_dt)
 		queries.append(fn(**kwargs))
 
 	if "loan_disbursement" in document_types and is_withdrawal:
@@ -947,7 +969,16 @@ def get_je_matching_query(
 	return str(query)
 
 
+<<<<<<< HEAD
 def get_si_matching_query(exact_match, exact_party_match, currency, description):
+=======
+def get_si_matching_query(
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	reference_field: str = "name",
+):
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	"""
 	Get matching sales invoices when they are also used as payment entries (POS).
 	"""
@@ -965,7 +996,11 @@ def get_si_matching_query(exact_match, exact_party_match, currency, description)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	description_match = get_description_match_condition(
+<<<<<<< HEAD
 		description, si.name
+=======
+		common_filters.description, si, reference_field
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	)
 
 	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
@@ -979,7 +1014,7 @@ def get_si_matching_query(exact_match, exact_party_match, currency, description)
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			si.name,
 			sip.amount.as_("paid_amount"),
-			si.name.as_("reference_no"),
+			si[reference_field or "name"].as_("reference_no"),
 			si.posting_date.as_("reference_date"),
 			si.customer.as_("party"),
 			ConstantColumn("Customer").as_("party_type"),
@@ -1006,7 +1041,16 @@ def get_si_matching_query(exact_match, exact_party_match, currency, description)
 
 
 def get_unpaid_si_matching_query(
+<<<<<<< HEAD
 	exact_match, exact_party_match, currency, company, description, include_only_returns=False
+=======
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	include_only_returns: bool = False,
+	reference_field: str = "name",
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 ):
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 
@@ -1018,7 +1062,11 @@ def get_unpaid_si_matching_query(
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_match = get_description_match_condition(
+<<<<<<< HEAD
 		description, sales_invoice.name
+=======
+		common_filters.description, sales_invoice, reference_field
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	)
 	rank_expression = party_match + amount_match + description_match + 1
 
@@ -1029,7 +1077,7 @@ def get_unpaid_si_matching_query(
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			sales_invoice.name.as_("name"),
 			sales_invoice.outstanding_amount.as_("paid_amount"),
-			sales_invoice.name.as_("reference_no"),
+			sales_invoice[reference_field or "name"].as_("reference_no"),
 			sales_invoice.posting_date.as_("reference_date"),
 			sales_invoice.customer.as_("party"),
 			ConstantColumn("Customer").as_("party_type"),
@@ -1058,7 +1106,16 @@ def get_unpaid_si_matching_query(
 	return str(query)
 
 
+<<<<<<< HEAD
 def get_pi_matching_query(exact_match, exact_party_match, currency, description):
+=======
+def get_pi_matching_query(
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	reference_field: str = "name",
+):
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	"""
 	Get matching purchase invoice query when they are also used as payment entries (is_paid)
 	"""
@@ -1080,7 +1137,11 @@ def get_pi_matching_query(exact_match, exact_party_match, currency, description)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
 	description_match = get_description_match_condition(
+<<<<<<< HEAD
 		description, purchase_invoice.name
+=======
+		common_filters.description, purchase_invoice, reference_field
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	)
 
 	rank_expression = party_rank + amount_rank + date_rank + description_match + 1
@@ -1092,7 +1153,7 @@ def get_pi_matching_query(exact_match, exact_party_match, currency, description)
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name,
 			purchase_invoice.paid_amount,
-			purchase_invoice.bill_no.as_("reference_no"),
+			purchase_invoice[reference_field or "name"].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
@@ -1121,7 +1182,16 @@ def get_pi_matching_query(exact_match, exact_party_match, currency, description)
 
 
 def get_unpaid_pi_matching_query(
+<<<<<<< HEAD
 	exact_match, exact_party_match, currency, company, description, include_only_returns=False
+=======
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	include_only_returns: bool = False,
+	reference_field: str = "name",
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 ):
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
@@ -1133,7 +1203,11 @@ def get_unpaid_pi_matching_query(
 	)
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_match = get_description_match_condition(
+<<<<<<< HEAD
 		description, purchase_invoice.name
+=======
+		common_filters.description, purchase_invoice, reference_field
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	)
 	rank_expression = party_match + amount_match + description_match + 1
 
@@ -1146,7 +1220,7 @@ def get_unpaid_pi_matching_query(
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name.as_("name"),
 			purchase_invoice.outstanding_amount.as_("paid_amount"),
-			purchase_invoice.bill_no.as_("reference_no"),
+			purchase_invoice[reference_field or "name"].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
@@ -1176,7 +1250,17 @@ def get_unpaid_pi_matching_query(
 	return str(query)
 
 
+<<<<<<< HEAD
 def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, company, description):
+=======
+def get_unpaid_ec_matching_query(
+	exact_match: bool,
+	currency: str,
+	common_filters: frappe._dict,
+	company: str,
+	reference_field: str = "name",
+):
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	if currency != get_company_currency(company):
 		# Expense claims are always in company currency
 		return ""
@@ -1195,7 +1279,11 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 	outstanding_amount_condition = outstanding_amount == Parameter("%(amount)s")
 	amount_match = frappe.qb.terms.Case().when(outstanding_amount_condition, 1).else_(0)
 	description_match = get_description_match_condition(
+<<<<<<< HEAD
 		description, expense_claim.name
+=======
+		common_filters.description, expense_claim, reference_field
+>>>>>>> 9adf5a9 (feat: Configurable Reference Field)
 	)
 
 	rank_expression = party_match + amount_match + description_match + 1
@@ -1207,7 +1295,7 @@ def get_unpaid_ec_matching_query(exact_match, exact_party_match, currency, compa
 			ConstantColumn("Expense Claim").as_("doctype"),
 			expense_claim.name.as_("name"),
 			outstanding_amount.as_("paid_amount"),
-			expense_claim.name.as_("reference_no"),
+			expense_claim[reference_field or "name"].as_("reference_no"),
 			expense_claim.posting_date.as_("reference_date"),
 			expense_claim.employee.as_("party"),
 			ConstantColumn("Employee").as_("party_type"),
@@ -1262,7 +1350,9 @@ def get_invoice_function_map(document_types: list, is_deposit: bool):
 	}
 
 
-def get_description_match_condition(description: str, name_column):
+def get_description_match_condition(
+	description: str, table: Table, column_name: str = "name"
+):
 	"""Get the description match condition for a document name.
 
 	Args:
@@ -1273,11 +1363,29 @@ def get_description_match_condition(description: str, name_column):
 	    A query condition that will be 1 if the description contains the document number
 	    and 0 otherwise.
 	"""
+	column_name = column_name or "name"
+	column = table[column_name]
+	# Perform replace if the column is the name, else the column value is ambiguous
+	# Eg. column_name = "custom_ref_no" and its value = "tuf5673i" should be untouched
+	search_term = (
+		RegExpReplace(column, r"^[^0-9]*", "") if column_name == "name" else column
+	)
 	return (
 		frappe.qb.terms.Case()
 		.when(
-			Instr(description or "", RegExpReplace(name_column, r"^[^0-9]*", "")) > 0,
+			Instr(description or "", search_term) > 0,
 			1,
 		)
 		.else_(0)
 	)
+
+
+def get_reference_field_map() -> dict:
+	reference_fields = frappe.get_all(
+		"Banking Reference Mapping",
+		filters={
+			"parent": "Banking Settings",
+		},
+		fields=["document_type", "field_name"],
+	)
+	return {frappe.scrub(row.document_type): row.field_name for row in reference_fields}

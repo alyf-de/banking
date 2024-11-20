@@ -256,6 +256,38 @@ frappe.ui.form.on('Banking Settings', {
 	},
 });
 
+frappe.ui.form.on('Banking Reference Mapping', {
+	reference_fields_add: (frm, cdt, cdn) => {
+		set_field_options(frm, cdt, cdn);
+	},
+
+	document_type: (frm, cdt, cdn) => {
+		set_field_options(frm, cdt, cdn);
+	}
+});
+
+function set_field_options(frm, cdt, cdn) {
+	let doc = frappe.get_doc(cdt, cdn);
+		let document_type = doc.document_type || "Sales Invoice";
+
+		// set options for `field_name`
+		frappe.model.with_doctype(document_type,  () => {
+			let meta = frappe.get_meta(document_type);
+			let fields = meta.fields.filter((field) => {
+				return (
+					["Link", "Data"].includes(field.fieldtype)
+					&& field.is_virtual === 0
+				);
+			});
+			let fieldnames = fields.map((field) => field.fieldname).sort();
+
+			let grid = frm.fields_dict.reference_fields.grid;
+			grid.update_docfield_property("field_name", "options", fieldnames);
+			frm.refresh_field("reference_fields");
+		});
+}
+
+
 class KlarnaKosmaConnect {
 	constructor(opts) {
 		Object.assign(this, opts);
