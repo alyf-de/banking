@@ -982,8 +982,8 @@ def get_si_matching_query(
 	"""
 	Get matching sales invoices when they are also used as payment entries (POS).
 	"""
-	si = frappe.qb.DocType("Sales Invoice")
-	sip = frappe.qb.DocType("Sales Invoice Payment")
+	si = frappe.qb.DocType("Sales Invoice").as_("si")
+	sip = frappe.qb.DocType("Sales Invoice Payment").as_("sip")
 
 	amount_equality = sip.amount == Parameter("%(amount)s")
 	amount_rank = frappe.qb.terms.Case().when(amount_equality, 1).else_(0)
