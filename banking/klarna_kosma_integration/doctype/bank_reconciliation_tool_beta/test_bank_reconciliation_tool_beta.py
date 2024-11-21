@@ -3,8 +3,10 @@
 import json
 
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.utils import add_days, getdate
 from frappe.tests.utils import FrappeTestCase
+
 
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 
@@ -23,6 +25,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,
 	create_payment_entry_bts,
+	get_linked_payments,
 )
 
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
@@ -554,6 +557,65 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si2.outstanding_amount, 100)
 
+	def test_configurable_reference_field(self):
+		create_custom_field(
+			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
+		)
+
+		settings = frappe.get_single("Banking Settings")
+		settings.append(
+			"reference_fields", {"document_type": "Sales Invoice", "field_name": "custom_ref_no"}
+		)
+		settings.save()
+
+		bt = create_bank_transaction(
+			date=getdate(),
+			deposit=300,
+			reference_no="Test001",
+			bank_account=self.bank_account,
+			description="Payment for Order: ORD-WXL-03456 | 300 | Thank you",
+		)
+		si = create_sales_invoice(
+			rate=300,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			do_not_submit=True,
+		)
+		si.custom_ref_no = "ORD-WXL-03456"
+		si.submit()
+
+		si2 = create_sales_invoice(
+			rate=20,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			do_not_submit=True,
+		)
+		si2.custom_ref_no = "ORD-WXL-15467"
+		si2.submit()
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+
+		# Get linked payments and check if the custom field value is present
+		self.assertEqual(len(matched_vouchers), 2)
+		self.assertEqual(matched_vouchers[0]["reference_no"], si.custom_ref_no)
+		self.assertEqual(matched_vouchers[0]["name"], si.name)
+		self.assertEqual(matched_vouchers[0]["rank"], 3)
+		self.assertEqual(matched_vouchers[0]["name_in_desc_match"], 1)
+		#  Check if ranking across another SI is correct
+		self.assertEqual(matched_vouchers[1]["reference_no"], si2.custom_ref_no)
+		self.assertEqual(matched_vouchers[1]["name"], si2.name)
+		self.assertEqual(matched_vouchers[1]["rank"], 1)
+		self.assertEqual(matched_vouchers[1]["name_in_desc_match"], 0)
+
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
@@ -571,12 +633,14 @@ def create_bank_transaction(
 	reference_no: str = None,
 	reference_date: str = None,
 	bank_account: str = None,
+	description: str = None,
 ):
 	doc = frappe.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"company": "_Test Company",
-			"description": "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
+			"description": description
+			or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
 			"date": date or frappe.utils.nowdate(),
 			"deposit": deposit or 0.0,
 			"withdrawal": withdrawal or 0.0,
