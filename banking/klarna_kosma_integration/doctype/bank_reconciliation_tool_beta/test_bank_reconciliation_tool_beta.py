@@ -43,6 +43,12 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		cls.create_item(
 			cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
 		)
+		frappe.db.savepoint("before_bank_reco_tool_beta_tests")
+
+	def tearDown(self):
+		"""Runs after each test."""
+		# Make sure invoices are rolled back to not affect invoice count assertions
+		frappe.db.rollback(save_point="before_bank_reco_tool_beta_tests")
 
 	def test_unpaid_invoices_more_than_transaction(self):
 		"""
@@ -558,6 +564,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(si2.outstanding_amount, 100)
 
 	def test_configurable_reference_field(self):
+		"""Test if configured reference field is considered."""
 		create_custom_field(
 			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
 		)
@@ -615,6 +622,43 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(matched_vouchers[1]["name"], si2.name)
 		self.assertEqual(matched_vouchers[1]["rank"], 1)
 		self.assertEqual(matched_vouchers[1]["name_in_desc_match"], 0)
+
+	def test_no_configurable_reference_field(self):
+		"""Test if Name is considered as the reference field if not configured."""
+		create_custom_field(
+			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
+		)
+		bt = create_bank_transaction(
+			date=getdate(),
+			deposit=300,
+			reference_no="Test001",
+			bank_account=self.bank_account,
+			description="Payment for Order: ORD-WXL-03456 | 300 | Thank you",
+		)
+		si = create_sales_invoice(
+			rate=300,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			do_not_submit=True,
+		)
+		si.custom_ref_no = "ORD-WXL-03456"
+		si.submit()
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+
+		# Get linked payments and check if the custom field value is present
+		self.assertEqual(len(matched_vouchers), 1)
+		self.assertEqual(matched_vouchers[0]["reference_no"], si.name)
+		self.assertEqual(matched_vouchers[0]["name"], si.name)
+		self.assertEqual(matched_vouchers[0]["rank"], 2)
+		self.assertEqual(matched_vouchers[0]["name_in_desc_match"], 0)
 
 
 def get_pe_references(vouchers: list):
