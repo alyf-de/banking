@@ -86,4 +86,9 @@ Bank Account not found for IBAN {0},Bankkonto nicht gefunden für IBAN {0},
 EBICS Host ID,EBICS-Host-ID,
 EBICS URL,EBICS-URL,
 Usage,Nutzung,
+<<<<<<< HEAD
 Credentials,Anmeldedaten,
+=======
+Invalid Field,Unzulässiges Feld,
+Field {} does not exist in {}. Please check the configuration in Banking Settings.,"Feld {} existiert nicht in {}. Bitte überprüfen Sie die Konfiguration in den Bankeneinstellungen.",
+>>>>>>> 903e59e (fix: Validate if the config points to a deleted field)

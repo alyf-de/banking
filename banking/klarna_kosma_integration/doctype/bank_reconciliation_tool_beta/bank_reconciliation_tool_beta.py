@@ -1381,6 +1381,25 @@ def get_description_match_condition(
 
 
 def get_reference_field_map() -> dict:
+	"""Get the reference field map for the document types from Banking Settings."""
+
+	def _validate_and_get_field(row: dict) -> str:
+		is_df = frappe.db.exists(
+			"DocField", {"fieldname": row.field_name, "parent": row.document_type}
+		)
+		is_custom = frappe.db.exists(
+			"Custom Field", {"fieldname": row.field_name, "dt": row.document_type}
+		)
+		if not (is_df or is_custom):
+			frappe.throw(
+				title=_("Invalid Field"),
+				msg=_(
+					"Field {} does not exist in {}. Please check the configuration in Banking Settings."
+				).format(frappe.bold(row.field_name), frappe.bold(row.document_type)),
+			)
+
+		return row.field_name
+
 	reference_fields = frappe.get_all(
 		"Banking Reference Mapping",
 		filters={
@@ -1388,4 +1407,8 @@ def get_reference_field_map() -> dict:
 		},
 		fields=["document_type", "field_name"],
 	)
-	return {frappe.scrub(row.document_type): row.field_name for row in reference_fields}
+
+	return {
+		frappe.scrub(row.document_type): _validate_and_get_field(row)
+		for row in reference_fields
+	}

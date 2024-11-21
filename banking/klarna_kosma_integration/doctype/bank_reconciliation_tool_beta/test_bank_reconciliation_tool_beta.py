@@ -33,7 +33,7 @@ from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	@classmethod
-	def setUpClass(cls):
+	def setUpClass(cls) -> None:
 		super().setUpClass()
 		create_bank()
 		cls.gl_account = create_gl_account("_Test Bank Reco Tool")
@@ -43,9 +43,11 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		cls.create_item(
 			cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
 		)
+
+	def setUp(self) -> None:
 		frappe.db.savepoint("before_bank_reco_tool_beta_tests")
 
-	def tearDown(self):
+	def tearDown(self) -> None:
 		"""Runs after each test."""
 		# Make sure invoices are rolled back to not affect invoice count assertions
 		frappe.db.rollback(save_point="before_bank_reco_tool_beta_tests")
