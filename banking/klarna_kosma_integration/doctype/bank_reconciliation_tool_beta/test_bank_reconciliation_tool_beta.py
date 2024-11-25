@@ -32,25 +32,20 @@ from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 
 class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
-	@classmethod
-	def setUpClass(cls) -> None:
-		super().setUpClass()
-		create_bank()
-		cls.gl_account = create_gl_account("_Test Bank Reco Tool")
-		cls.bank_account = create_bank_account(gl_account=cls.gl_account)
-		cls.customer = create_customer(customer_name="ABC Inc.")
-
-		cls.create_item(
-			cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
-		)
-
 	def setUp(self) -> None:
-		frappe.db.savepoint("before_bank_reco_tool_beta_tests")
+		create_bank()
+		self.gl_account = create_gl_account("_Test Bank Reco Tool")
+		self.bank_account = create_bank_account(gl_account=self.gl_account)
+		self.customer = create_customer(customer_name="ABC Inc.")
+
+		self.create_item(
+			item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
+		)
 
 	def tearDown(self) -> None:
 		"""Runs after each test."""
 		# Make sure invoices are rolled back to not affect invoice count assertions
-		frappe.db.rollback(save_point="before_bank_reco_tool_beta_tests")
+		frappe.db.rollback()
 
 	def test_unpaid_invoices_more_than_transaction(self):
 		"""
