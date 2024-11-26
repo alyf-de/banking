@@ -32,20 +32,28 @@ from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 
 class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
-	def setUp(self) -> None:
-		create_bank()
-		self.gl_account = create_gl_account("_Test Bank Reco Tool")
-		self.bank_account = create_bank_account(gl_account=self.gl_account)
-		self.customer = create_customer(customer_name="ABC Inc.")
+	@classmethod
+	def setUpClass(cls) -> None:
+		super().setUpClass()
 
-		self.create_item(
-			item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
+		create_custom_field(
+			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
+		)  # commits to db internally
+
+		create_bank()
+		cls.gl_account = create_gl_account("_Test Bank Reco Tool")
+		cls.bank_account = create_bank_account(gl_account=cls.gl_account)
+		cls.customer = create_customer(customer_name="ABC Inc.")
+
+		cls.create_item(
+			cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
 		)
+		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	def tearDown(self) -> None:
 		"""Runs after each test."""
 		# Make sure invoices are rolled back to not affect invoice count assertions
-		frappe.db.rollback()
+		frappe.db.rollback(save_point="bank_reco_beta_before_tests")
 
 	def test_unpaid_invoices_more_than_transaction(self):
 		"""
@@ -562,10 +570,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 	def test_configurable_reference_field(self):
 		"""Test if configured reference field is considered."""
-		create_custom_field(
-			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
-		)
-
 		settings = frappe.get_single("Banking Settings")
 		settings.append(
 			"reference_fields", {"document_type": "Sales Invoice", "field_name": "custom_ref_no"}
@@ -622,9 +626,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 	def test_no_configurable_reference_field(self):
 		"""Test if Name is considered as the reference field if not configured."""
-		create_custom_field(
-			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
-		)
 		bt = create_bank_transaction(
 			date=getdate(),
 			deposit=300,
