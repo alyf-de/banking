@@ -124,7 +124,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				{
 					content: row.reference_no || '',
 					format: (value) => {
-						let reference_match = row.reference_number_match || row.name_in_desc_match;
+						let reference_match = row.reference_number_match || row.ref_in_desc_match;
 						return reference_match ? value.bold() : value;
 					}
 				},
@@ -141,7 +141,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				{
 					content: row.name,
 					format: (value) => {
-						return frappe.format(row.name, {fieldtype: "Link", options: row.doctype});
+						let formatted_value = frappe.format(value, {fieldtype: "Link", options: row.doctype});
+						return row.name_in_desc_match ? formatted_value.bold() : formatted_value;
 					},
 					doctype: row.doctype,
 				},
