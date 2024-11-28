@@ -646,7 +646,7 @@ def get_matching_queries(
 			queries.append(fn(**kwargs))
 	elif fn := invoice_queries_map.get(invoice_dt):
 		frappe.has_permission(frappe.unscrub(invoice_dt), throw=True)
-		kwargs.reference_field = reference_field_map.get(invoice_dt)
+		kwargs.reference_field = reference_field_map.get(invoice_dt, "name")
 		queries.append(fn(**kwargs))
 
 	if "loan_disbursement" in document_types and is_withdrawal:
@@ -891,10 +891,16 @@ def get_pe_matching_query(
 	to_reference_date,
 	exact_party_match,
 ):
+<<<<<<< HEAD
 	to_from = "to" if transaction.deposit > 0.0 else "from"
 	currency_field = f"paid_{to_from}_account_currency"
 	payment_type = "Receive" if transaction.deposit > 0.0 else "Pay"
+=======
+>>>>>>> 3620f8f (fix: correct fieldname and misc)
 	pe = frappe.qb.DocType("Payment Entry")
+	to_from = "to" if common_filters.payment_type == "Receive" else "from"
+	payment_type = common_filters.payment_type
+	currency_field = getattr(pe, f"paid_{to_from}_account_currency")
 
 <<<<<<< HEAD
 	ref_condition = pe.reference_no == transaction.reference_number
@@ -946,7 +952,7 @@ def get_pe_matching_query(
 			pe.party_name,
 			pe.party_type,
 			pe.posting_date,
-			getattr(pe, currency_field).as_("currency"),
+			currency_field.as_("currency"),
 			ref_rank.as_("reference_number_match"),
 			amount_rank.as_("amount_match"),
 			party_rank.as_("party_match"),
@@ -1036,7 +1042,7 @@ def get_je_matching_query(
 			rank_expression.as_("rank"),
 			ConstantColumn("Journal Entry").as_("doctype"),
 			je.name,
-			getattr(jea, amount_field).as_("paid_amount"),
+			amount_field.as_("paid_amount"),
 			je.cheque_no.as_("reference_no"),
 			je.cheque_date.as_("reference_date"),
 			je.pay_to_recd_from.as_("party"),
