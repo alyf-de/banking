@@ -579,7 +579,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		bt = create_bank_transaction(
 			date=getdate(),
 			deposit=300,
-			reference_no="Test001",
+			reference_no="ORD-WXL-03456",
 			bank_account=self.bank_account,
 			description="Payment for Order: ORD-WXL-03456 | 300 | Thank you",
 		)
@@ -611,18 +611,22 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			from_date=add_days(getdate(), -1),
 			to_date=add_days(getdate(), 1),
 		)
+		first_match, second_match = matched_vouchers[0], matched_vouchers[1]
 
 		# Get linked payments and check if the custom field value is present
 		self.assertEqual(len(matched_vouchers), 2)
-		self.assertEqual(matched_vouchers[0]["reference_no"], si.custom_ref_no)
-		self.assertEqual(matched_vouchers[0]["name"], si.name)
-		self.assertEqual(matched_vouchers[0]["rank"], 3)
-		self.assertEqual(matched_vouchers[0]["name_in_desc_match"], 1)
+		self.assertEqual(first_match["reference_no"], si.custom_ref_no)
+		self.assertEqual(first_match["name"], si.name)
+		self.assertEqual(first_match["rank"], 4)
+		self.assertEqual(first_match["ref_in_desc_match"], 1)
+		self.assertEqual(first_match["reference_number_match"], 1)
+		self.assertEqual(second_match["ref_in_desc_match"], 0)
+		self.assertEqual(second_match["reference_number_match"], 0)
 		#  Check if ranking across another SI is correct
-		self.assertEqual(matched_vouchers[1]["reference_no"], si2.custom_ref_no)
-		self.assertEqual(matched_vouchers[1]["name"], si2.name)
-		self.assertEqual(matched_vouchers[1]["rank"], 1)
-		self.assertEqual(matched_vouchers[1]["name_in_desc_match"], 0)
+		self.assertEqual(second_match["reference_no"], si2.custom_ref_no)
+		self.assertEqual(second_match["name"], si2.name)
+		self.assertEqual(second_match["rank"], 1)
+		self.assertEqual(second_match["ref_in_desc_match"], 0)
 
 	def test_no_configurable_reference_field(self):
 		"""Test if Name is considered as the reference field if not configured."""
@@ -650,13 +654,15 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			from_date=add_days(getdate(), -1),
 			to_date=add_days(getdate(), 1),
 		)
+		first_match = matched_vouchers[0]
 
 		# Get linked payments and check if the custom field value is present
 		self.assertEqual(len(matched_vouchers), 1)
-		self.assertEqual(matched_vouchers[0]["reference_no"], si.name)
-		self.assertEqual(matched_vouchers[0]["name"], si.name)
-		self.assertEqual(matched_vouchers[0]["rank"], 2)
-		self.assertEqual(matched_vouchers[0]["name_in_desc_match"], 0)
+		self.assertEqual(first_match["reference_no"], si.name)
+		self.assertEqual(first_match["name"], si.name)
+		self.assertEqual(first_match["rank"], 2)
+		self.assertEqual(first_match["amount_match"], 1)
+		self.assertEqual(first_match["ref_in_desc_match"], 0)
 
 
 def get_pe_references(vouchers: list):
