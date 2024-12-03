@@ -13,6 +13,7 @@
   "company",
   "country",
   "bank",
+  "intraday_sync",
   "section_break_qjlc",
   "partner_id",
   "user_id",
@@ -119,10 +120,17 @@
    "fieldname": "start_date",
    "fieldtype": "Date",
    "label": "Start Date"
+  },
+  {
+   "default": "0",
+   "description": "If enabled, transactions are downloaded four times a day.",
+   "fieldname": "intraday_sync",
+   "fieldtype": "Check",
+   "label": "Intraday Sync"
   }
  ],
  "links": [],
- "modified": "2024-11-13 23:08:45.591377",
+ "modified": "2024-12-03 17:41:16.793609",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",

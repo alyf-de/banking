@@ -51,10 +51,15 @@ def sync_ebics_transactions(
 	start_date: str | None = None,
 	end_date: str | None = None,
 	passphrase: str | None = None,
+	intraday: bool = False,
 ):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
-	for camt_document in manager.download_bank_statements(start_date, end_date):
+	for camt_document in (
+		manager.download_intraday_transactions()
+		if intraday
+		else manager.download_bank_statements(start_date, end_date)
+	):
 		bank_account = frappe.db.get_value(
 			"Bank Account",
 			{

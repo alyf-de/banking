@@ -181,6 +181,31 @@ def daily_sync_ebics():
 		)
 
 
+def intraday_sync_ebics():
+	from banking.ebics.utils import sync_ebics_transactions
+
+	banking_settings = frappe.get_single("Banking Settings")
+	if not banking_settings.enabled or not banking_settings.enable_ebics:
+		return
+
+	for ebics_user in frappe.get_all(
+		"EBICS User",
+		filters={
+			"initialized": 1,
+			"bank_keys_activated": 1,
+			"passphrase": ("is", "set"),
+			"keyring": ("is", "set"),
+			"intraday_sync": 1,
+		},
+		pluck="name",
+	):
+		frappe.enqueue(
+			sync_ebics_transactions,
+			ebics_user=ebics_user,
+			intraday=True,
+		)
+
+
 def get_bank_accounts_to_sync(bank: str, company: str) -> list:
 	"""
 	Get bank accounts from Kosma via the consent API.

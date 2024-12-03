@@ -113,6 +113,11 @@ doc_events = {
 # ---------------
 
 scheduler_events = {
+	"cron": {
+		"30 6,10,14,18 * * *": [
+			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.intraday_sync_ebics",
+		],
+	},
 	"daily": [
 		"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions"
 	],

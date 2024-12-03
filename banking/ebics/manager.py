@@ -133,3 +133,14 @@ class EBICSManager:
 			yield CAMTDocument(xml=camt53[name], camt54=camt54)
 
 		client.confirm_download(success=True)
+
+	def download_intraday_transactions(self) -> "Iterator[CAMTDocument]":
+		"""Yield an iterator over CAMTDocument objects."""
+		from fintech.sepa import CAMTDocument
+
+		client = self.get_client()
+		camt52 = client.C52()
+		for name in sorted(camt52):
+			yield CAMTDocument(xml=camt52[name])
+
+		client.confirm_download(success=False)  # TODO: change to False
