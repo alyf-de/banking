@@ -94,14 +94,24 @@ class EBICSManager:
 	def activate_bank_keys(self) -> None:
 		self.bank.activate_keys()
 
-	def get_permitted_order_types(self) -> list[str]:
+	def get_permitted_order_types(self, level: str = "T") -> list[str]:
+		"""Return a list of individual order types for the given (or unspecified) authorisation level."""
 		client = self.get_client()
 		user_data = client.HTD(parsed=True)
 		permissions = (
 			user_data.get("HTDResponseOrderData", {}).get("UserInfo", {}).get("Permission", [])
 		)
 
-		return [permission.get("OrderTypes") for permission in permissions]
+		# Collect all order types for the specified level
+		level_perms = []
+		for permission in permissions:
+			if permission.get("@AuthorisationLevel", level) == level:
+				order_types = permission.get("OrderTypes")
+				if isinstance(order_types, str):
+					# Split if it's a space-separated string
+					level_perms.extend(order_types.split())
+
+		return level_perms
 
 	def download_bank_statements(
 		self, start_date: str | None = None, end_date: str | None = None
