@@ -139,7 +139,12 @@ class EBICSManager:
 		from fintech.sepa import CAMTDocument
 
 		client = self.get_client()
-		camt52 = client.C52()
+
+		try:
+			camt52 = client.C52()
+		except fintech.ebics.EbicsNoDataAvailable:
+			return
+
 		for name in sorted(camt52):
 			yield CAMTDocument(xml=camt52[name])
 
