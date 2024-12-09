@@ -63,7 +63,7 @@ def sync_ebics_transactions(
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission to download intraday transactions. The permitted types are {1}"
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
 			).format(ebics_user, ", ".join(permitted_types)),
 		)
 
@@ -71,7 +71,7 @@ def sync_ebics_transactions(
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission to download bank statements. The permitted types are {1}"
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
 			).format(ebics_user, ", ".join(permitted_types)),
 		)
 
