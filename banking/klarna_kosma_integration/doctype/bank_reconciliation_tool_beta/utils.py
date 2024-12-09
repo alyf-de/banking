@@ -3,7 +3,7 @@ from frappe import _
 
 from pypika.queries import Table
 from pypika.terms import Case, Field
-from frappe.query_builder.functions import CustomFunction
+from frappe.query_builder.functions import CustomFunction, Cast
 
 Instr = CustomFunction("INSTR", ["a", "b"])
 RegExpReplace = CustomFunction("REGEXP_REPLACE", ["a", "b", "c"])
@@ -27,6 +27,10 @@ def amount_rank_condition(amount: Field, bank_amount: float) -> Case:
 
 def ref_equality_condition(reference_no: Field, bank_reference_no: str) -> Case:
 	"""Get the rank query for reference number matching."""
+	if not bank_reference_no or bank_reference_no == "NOTPROVIDED":
+		# If bank reference number is not provided, then it is not a match
+		return Cast(0, "int")
+
 	return frappe.qb.terms.Case().when(reference_no == bank_reference_no, 1).else_(0)
 
 
@@ -43,21 +47,31 @@ def get_description_match_condition(
 	A query condition that will be 1 if the description contains the document number
 	and 0 otherwise.
 	"""
+	if not description:
+		return Cast(0, "int")
+
 	column_name = column_name or "name"
 	column = table[column_name]
 	# Perform replace if the column is the name, else the column value is ambiguous
 	# Eg. column_name = "custom_ref_no" and its value = "tuf5673i" should be untouched
-	search_term = (
-		RegExpReplace(column, r"^[^0-9]*", "") if column_name == "name" else column
-	)
-	return (
-		frappe.qb.terms.Case()
-		.when(
-			Instr(description or "", search_term) > 0,
-			1,
+	if column_name == "name":
+		return (
+			frappe.qb.terms.Case()
+			.when(
+				Instr(description, RegExpReplace(column, r"^[^0-9]*", "")) > 0,
+				1,
+			)
+			.else_(0)
 		)
-		.else_(0)
-	)
+	else:
+		return (
+			frappe.qb.terms.Case()
+			.when(
+				column.notnull() & (column != "") & (Instr(description, column) > 0),
+				1,
+			)
+			.else_(0)
+		)
 
 
 def get_reference_field_map() -> dict:
