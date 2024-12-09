@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
+from frappe.utils.data import getdate
 
 from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
@@ -172,4 +173,6 @@ def download_bank_statements(
 		start_date=from_date,
 		end_date=to_date,
 		passphrase=passphrase,
+		intraday=getdate(from_date) == getdate(),
+		now=frappe.conf.developer_mode,
 	)
