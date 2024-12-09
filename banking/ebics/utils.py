@@ -106,7 +106,7 @@ def _create_bank_transaction(
 	)
 
 	# NOTE: This does not work for old data, this ID is different from Kosma's
-	if sepa_transaction.bank_reference and frappe.db.exists(
+	if transaction_id and frappe.db.exists(
 		"Bank Transaction",
 		{"transaction_id": transaction_id, "bank_account": bank_account},
 	):
