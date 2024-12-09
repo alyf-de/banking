@@ -50,6 +50,10 @@ frappe.ui.form.on('Banking Settings', {
 				"primary"
 			);
 		}
+
+		frm.doc.reference_fields.map((field) => {
+			set_field_options(frm, field.doctype, field.name);
+		});
 	},
 
 	refresh_banks: (frm) => {
