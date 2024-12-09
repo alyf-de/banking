@@ -268,23 +268,23 @@ frappe.ui.form.on('Banking Reference Mapping', {
 
 function set_field_options(frm, cdt, cdn) {
 	let doc = frappe.get_doc(cdt, cdn);
-		let document_type = doc.document_type || "Sales Invoice";
+	let document_type = doc.document_type || "Sales Invoice";
 
-		// set options for `field_name`
-		frappe.model.with_doctype(document_type,  () => {
-			let meta = frappe.get_meta(document_type);
-			let fields = meta.fields.filter((field) => {
-				return (
-					["Link", "Data"].includes(field.fieldtype)
-					&& field.is_virtual === 0
-				);
-			});
-			let fieldnames = fields.map((field) => field.fieldname).sort();
-
-			let grid = frm.fields_dict.reference_fields.grid;
-			grid.update_docfield_property("field_name", "options", fieldnames);
-			frm.refresh_field("reference_fields");
+	// set options for `field_name`
+	frappe.model.with_doctype(document_type,  () => {
+		let meta = frappe.get_meta(document_type);
+		let fields = meta.fields.filter((field) => {
+			return (
+				["Link", "Data"].includes(field.fieldtype)
+				&& field.is_virtual === 0
+			);
 		});
+		let fieldnames = fields.map((field) => field.fieldname).sort();
+
+		let grid = frm.fields_dict.reference_fields.grid;
+		grid.update_docfield_property("field_name", "options", fieldnames);
+		frm.refresh_field("reference_fields");
+	});
 }
 
 

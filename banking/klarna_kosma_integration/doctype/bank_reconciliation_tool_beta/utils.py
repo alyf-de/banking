@@ -1,5 +1,6 @@
 import frappe
 from pypika.queries import Table
+from pypika.terms import Case, Field
 from frappe.query_builder.functions import CustomFunction
 
 Instr = CustomFunction("INSTR", ["a", "b"])
@@ -17,19 +18,19 @@ RegExpReplace = CustomFunction("REGEXP_REPLACE", ["a", "b", "c"])
 # ref_in_desc_match: if ref in voucher IN bank statement description
 
 
-def amount_rank_condition(amount: any, bank_amount: float):
+def amount_rank_condition(amount: Field, bank_amount: float) -> Case:
 	"""Get the rank query for amount matching."""
 	return frappe.qb.terms.Case().when(amount == bank_amount, 1).else_(0)
 
 
-def ref_equality_condition(reference_no: any, bank_reference_no: str):
+def ref_equality_condition(reference_no: Field, bank_reference_no: str) -> Case:
 	"""Get the rank query for reference number matching."""
 	return frappe.qb.terms.Case().when(reference_no == bank_reference_no, 1).else_(0)
 
 
 def get_description_match_condition(
 	description: str, table: Table, column_name: str = "name"
-):
+) -> Case:
 	"""Get the description match condition for a column.
 
 	Args:

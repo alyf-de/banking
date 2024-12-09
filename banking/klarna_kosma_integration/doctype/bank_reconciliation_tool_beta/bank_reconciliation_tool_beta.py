@@ -1378,7 +1378,7 @@ def get_pi_matching_query(
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name,
 			purchase_invoice.paid_amount,
-			purchase_invoice[reference_field or "name"].as_("reference_no"),
+			purchase_invoice[reference_field or "bill_no"].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
