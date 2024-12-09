@@ -148,4 +148,4 @@ class EBICSManager:
 		for name in sorted(camt52):
 			yield CAMTDocument(xml=camt52[name])
 
-		client.confirm_download(success=False)  # TODO: change to False
+		client.confirm_download(success=True)
