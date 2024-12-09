@@ -1,4 +1,6 @@
 import frappe
+from frappe import _
+
 from pypika.queries import Table
 from pypika.terms import Case, Field
 from frappe.query_builder.functions import CustomFunction
