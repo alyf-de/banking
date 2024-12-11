@@ -122,19 +122,12 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 					}
 				},
 				{
-					content: row.reference_no || '',
-					format: (value) => {
-						let reference_match = row.reference_number_match || row.ref_in_desc_match;
-						return reference_match ? value.bold() : value;
-					}
-				},
-				{
 					content: row.party,
 					format: (value) => {
 						if (row.party_name) {
 							frappe.utils.add_link_title(row.party_type, row.party, row.party_name);
 						}
-						let formatted_value =  frappe.format(row.party, {fieldtype: "Link", options: row.party_type});
+						let formatted_value =  frappe.format(value, {fieldtype: "Link", options: row.party_type});
 						return row.party_match ? formatted_value.bold() : formatted_value;
 					}
 				},
@@ -145,6 +138,13 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 						return row.name_in_desc_match ? formatted_value.bold() : formatted_value;
 					},
 					doctype: row.doctype,
+				},
+				{
+					content: row.reference_no || '',
+					format: (value) => {
+						let reference_match = row.reference_number_match || row.ref_in_desc_match;
+						return reference_match ? value.bold() : value;
+					}
 				},
 			];
 		});
@@ -165,7 +165,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	check_data_table_row(row) {
 		if (!row) return;
 
-		let id = row[5].content;  // Voucher name
+		let id = row[this.position_of("Voucher")].content;
 		let value = this.get_amount_from_row(row);
 
 		// If `id` in summary_data, remove it (row was unchecked), else add it
@@ -226,12 +226,12 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		selected_map.forEach((value, idx) => {
 			if (value === 1) {
-				let row = voucher_rows[idx];
+				const row = voucher_rows[idx];
 				selected_vouchers.push({
-					payment_doctype: row[5].doctype,
-					payment_name: row[5].content,  // Voucher name
+					payment_doctype: row[this.position_of("Voucher")].doctype,
+					payment_name: row[this.position_of("Voucher")].content,
 					amount: this.get_amount_from_row(row),
-					party: row[4].content,  // Party
+					party: row[this.position_of("Party")].content,
 				});
 			}
 		});
@@ -459,6 +459,18 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		];
 	}
 
+	position_of(label) {
+		// NOTE: Edit this function if the order of columns in the data table changes
+		const column_positions = {
+			"Date": 1,
+			"Outstanding": 2,
+			"Party": 3,
+			"Voucher": 4,
+			"Reference": 5,
+		};
+		return column_positions[label];
+	}
+
 	get_data_table_columns() {
 		return [
 			{
@@ -470,11 +482,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				editable: false,
 			},
 			{
-				name: __("Reference"),
-				editable: false,
-				align: "left",
-			},
-			{
 				name: __("Party"),
 				editable: false,
 				align: "left",
@@ -484,10 +491,16 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				editable: false,
 				align: "left",
 			},
+			{
+				name: __("Reference"),
+				editable: false,
+				align: "left",
+			},
 		];
 	}
 
 	get_amount_from_row(row) {
-		return row[2].content;  // Amount
+		const amount_position = this.position_of("Outstanding");
+		return row[amount_position].content;  // Amount
 	}
 }
