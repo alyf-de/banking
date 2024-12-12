@@ -20,7 +20,10 @@
   "ebics_section",
   "enable_ebics",
   "fintech_licensee_name",
-  "fintech_license_key"
+  "fintech_license_key",
+  "bank_reconciliation_tab",
+  "advanced_section",
+  "reference_fields"
  ],
  "fields": [
   {
@@ -108,12 +111,29 @@
    "fieldname": "enable_ebics",
    "fieldtype": "Check",
    "label": "Enable EBICS (New)"
+  },
+  {
+   "fieldname": "bank_reconciliation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Bank Reconciliation"
+  },
+  {
+   "description": "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>",
+   "fieldname": "reference_fields",
+   "fieldtype": "Table",
+   "label": "Reference Fields",
+   "options": "Banking Reference Mapping"
+  },
+  {
+   "fieldname": "advanced_section",
+   "fieldtype": "Section Break",
+   "label": "Advanced"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-12 13:20:54.035378",
+ "modified": "2024-12-09 08:38:57.909849",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

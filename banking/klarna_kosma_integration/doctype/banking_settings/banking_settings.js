@@ -50,6 +50,10 @@ frappe.ui.form.on('Banking Settings', {
 				"primary"
 			);
 		}
+
+		frm.doc.reference_fields.map((field) => {
+			set_field_options(frm, field.doctype, field.name);
+		});
 	},
 
 	refresh_banks: (frm) => {
@@ -255,6 +259,45 @@ frappe.ui.form.on('Banking Settings', {
 		}
 	},
 });
+
+frappe.ui.form.on('Banking Reference Mapping', {
+	reference_fields_add: (frm, cdt, cdn) => {
+		set_field_options(frm, cdt, cdn);
+	},
+
+	document_type: (frm, cdt, cdn) => {
+		set_field_options(frm, cdt, cdn);
+	}
+});
+
+function set_field_options(frm, cdt, cdn) {
+	const doc = frappe.get_doc(cdt, cdn);
+	const document_type = doc.document_type || "Sales Invoice";
+
+	// set options for `field_name`
+	frappe.model.with_doctype(document_type,  () => {
+		const meta = frappe.get_meta(document_type);
+		const fields = meta.fields.filter((field) => {
+			return (
+				["Link", "Data"].includes(field.fieldtype)
+				&& field.is_virtual === 0
+			);
+		});
+
+		frm.fields_dict.reference_fields.grid.update_docfield_property(
+			"field_name",
+			"options",
+			fields.map((field) => {
+				return {
+					value: field.fieldname,
+					label: __(field.label),
+				}
+			}).sort((a, b) => a.label.localeCompare(b.label))
+		);
+		frm.refresh_field("reference_fields");
+	});
+}
+
 
 class KlarnaKosmaConnect {
 	constructor(opts) {
