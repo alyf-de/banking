@@ -51,10 +51,39 @@ def sync_ebics_transactions(
 	start_date: str | None = None,
 	end_date: str | None = None,
 	passphrase: str | None = None,
+	intraday: bool = False,
 ):
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
-	for camt_document in manager.download_bank_statements(start_date, end_date):
+
+	# Not sure yet, how reliable permitted types are. For now, we just log an error
+	# instead of raising an exception or returning.
+	permitted_types = manager.get_permitted_order_types()
+	if intraday and "C52" not in permitted_types:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_(
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
+			).format(ebics_user, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
+		)
+
+	if not intraday and "C53" not in permitted_types:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_(
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
+			).format(ebics_user, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
+		)
+
+	for camt_document in (
+		manager.download_intraday_transactions()
+		if intraday
+		else manager.download_bank_statements(start_date, end_date)
+	):
 		bank_account = frappe.db.get_value(
 			"Bank Account",
 			{
@@ -69,6 +98,8 @@ def sync_ebics_transactions(
 			frappe.log_error(
 				title=_("Banking Error"),
 				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+				reference_doctype="EBICS User",
+				reference_name=ebics_user,
 			)
 			continue
 

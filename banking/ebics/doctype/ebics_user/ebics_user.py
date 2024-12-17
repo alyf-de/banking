@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
+from frappe.utils.data import getdate
 
 from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
@@ -42,12 +43,22 @@ class EBICSUser(Document):
 			elif e.response.status_code == 403:
 				title = _("Banking Error")
 				msg = _("EBICS User limit exceeded.")
-				frappe.log_error(title=_("Banking Error"), message=msg)
+				frappe.log_error(
+					title=_("Banking Error"),
+					message=msg,
+					reference_doctype="EBICS User",
+					reference_name=self.name,
+				)
 				frappe.throw(title=title, msg=msg)
 			elif e.response.status_code == 409:
 				title = _("Banking Error")
 				msg = _("User ID not available.")
-				frappe.log_error(title=_("Banking Error"), message=msg)
+				frappe.log_error(
+					title=_("Banking Error"),
+					message=msg,
+					reference_doctype="EBICS User",
+					reference_name=self.name,
+				)
 				frappe.throw(title=title, msg=msg)
 
 	def remove_user(self):
@@ -58,7 +69,11 @@ class EBICSUser(Document):
 			r.raise_for_status()
 		except HTTPError:
 			title = _("Failed to remove EBICS user registration.")
-			frappe.log_error(title=title)
+			frappe.log_error(
+				title=title,
+				reference_doctype="EBICS User",
+				reference_name=self.name,
+			)
 			frappe.throw(title)
 
 	def validate_country_code(self):
@@ -172,4 +187,6 @@ def download_bank_statements(
 		start_date=from_date,
 		end_date=to_date,
 		passphrase=passphrase,
+		intraday=getdate(from_date) == getdate(),
+		now=frappe.conf.developer_mode,
 	)
