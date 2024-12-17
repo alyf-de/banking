@@ -151,32 +151,60 @@ async function confirm_bank_keys(ebics_user, passphrase) {
 }
 
 function download_bank_statements(ebics_user, needs_passphrase) {
-	const fields = [
-		{
-			fieldname: "from_date",
-			label: __("From Date"),
-			fieldtype: "Date",
-			default: frappe.datetime.now_date(),
-		},
-		{
-			fieldname: "to_date",
-			label: __("To Date"),
-			fieldtype: "Date",
-			default: frappe.datetime.now_date(),
-		},
-	];
-
-	if (needs_passphrase) {
-		fields.push({
-			fieldname: "passphrase",
-			label: __("Passphrase"),
-			fieldtype: "Password",
-			reqd: true
-		});
-	}
-
-	frappe.prompt(
-		fields,
+	const dialog = frappe.prompt(
+		[
+			{
+				fieldname: "from_date",
+				label: __("From Date"),
+				fieldtype: "Date",
+				default: frappe.datetime.now_date(),
+				onchange: () => {
+					const from_date = dialog.get_value("from_date");
+					const empty_disclaimer = __(
+						"If no <a href='/app/bank-transaction' target='_blank'>Bank Transactions</a> are created, please check the <a href='/app/error-log' target='_blank'>Error Logs</a>. If there are no errors, the bank likely did not provide any (new) bank statements for this period."
+					);
+					if (from_date == frappe.datetime.now_date()) {
+						dialog.set_df_property(
+							"note",
+							"options",
+							__(
+								"We'll try to download new transactions from today, using <code>camt.052</code>."
+							) + `<br><br>${empty_disclaimer}`
+						);
+					} else {
+						dialog.set_df_property(
+							"note",
+							"options",
+							__(
+								"We'll try to download all transactions of completed days in the selected period, using <code>camt.053</code>."
+							) + `<br><br>${empty_disclaimer}`
+						);
+					}
+				},
+			},
+			{
+				fieldname: "to_date",
+				label: __("To Date"),
+				fieldtype: "Date",
+				default: frappe.datetime.now_date(),
+			},
+			...(
+				needs_passphrase
+				? [
+						{
+							fieldname: "passphrase",
+							label: __("Passphrase"),
+							fieldtype: "Password",
+							reqd: true,
+						},
+				  ]
+				: []
+			),
+			{
+				fieldname: "note",
+				fieldtype: "HTML",
+			},
+		],
 		async (values) => {
 			try {
 				await frappe.xcall(
