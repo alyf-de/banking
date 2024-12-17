@@ -123,14 +123,14 @@
   },
   {
    "default": "0",
-   "description": "If enabled, transactions are downloaded four times a day, otherwise once a day.",
+   "description": "If enabled, <code>camt.052</code> transactions are downloaded four times a day. Otherwise <code>camt.053</code> transactions are downloaded once a day.",
    "fieldname": "intraday_sync",
    "fieldtype": "Check",
    "label": "Intraday Sync"
   }
  ],
  "links": [],
- "modified": "2024-12-09 17:09:21.685988",
+ "modified": "2024-12-17 17:32:29.103126",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
