@@ -65,6 +65,8 @@ def sync_ebics_transactions(
 			message=_(
 				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
 			).format(ebics_user, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
 		)
 
 	if not intraday and "C53" not in permitted_types:
@@ -73,6 +75,8 @@ def sync_ebics_transactions(
 			message=_(
 				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
 			).format(ebics_user, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
 		)
 
 	for camt_document in (
@@ -94,6 +98,8 @@ def sync_ebics_transactions(
 			frappe.log_error(
 				title=_("Banking Error"),
 				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+				reference_doctype="EBICS User",
+				reference_name=ebics_user,
 			)
 			continue
 

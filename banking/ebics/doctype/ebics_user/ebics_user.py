@@ -43,12 +43,22 @@ class EBICSUser(Document):
 			elif e.response.status_code == 403:
 				title = _("Banking Error")
 				msg = _("EBICS User limit exceeded.")
-				frappe.log_error(title=_("Banking Error"), message=msg)
+				frappe.log_error(
+					title=_("Banking Error"),
+					message=msg,
+					reference_doctype="EBICS User",
+					reference_name=self.name,
+				)
 				frappe.throw(title=title, msg=msg)
 			elif e.response.status_code == 409:
 				title = _("Banking Error")
 				msg = _("User ID not available.")
-				frappe.log_error(title=_("Banking Error"), message=msg)
+				frappe.log_error(
+					title=_("Banking Error"),
+					message=msg,
+					reference_doctype="EBICS User",
+					reference_name=self.name,
+				)
 				frappe.throw(title=title, msg=msg)
 
 	def remove_user(self):
@@ -59,7 +69,11 @@ class EBICSUser(Document):
 			r.raise_for_status()
 		except HTTPError:
 			title = _("Failed to remove EBICS user registration.")
-			frappe.log_error(title=title)
+			frappe.log_error(
+				title=title,
+				reference_doctype="EBICS User",
+				reference_name=self.name,
+			)
 			frappe.throw(title)
 
 	def validate_country_code(self):
