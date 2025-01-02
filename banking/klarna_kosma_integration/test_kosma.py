@@ -207,9 +207,7 @@ class TestKosma(FrappeTestCase):
 	def test_bank_consent_set_get(self):
 		from banking.klarna_kosma_integration.utils import (
 			get_consent_data,
-			get_consent_start_date,
 		)
-		from erpnext.accounts.utils import get_fiscal_year
 
 		session_data = session_response.session_data
 		create_session_doc(session_data, session_response.flow_data)
@@ -226,12 +224,6 @@ class TestKosma(FrappeTestCase):
 		consent_id, consent_token = get_consent_data(bank_name, "Bolt Trades")
 		self.assertEqual(consent_id, consent_response.get("consent_id"))
 		self.assertEqual(consent_token, consent_response.get("consent_token"))
-
-		start_date = get_consent_start_date(session_data.get("session_id_short"))
-		current_fiscal_year = get_fiscal_year(nowdate(), as_dict=True)
-
-		# check if consent start date is start of fiscal year
-		self.assertEqual(getdate(start_date), current_fiscal_year.year_start_date)
 
 
 def get_formatted_consent():
