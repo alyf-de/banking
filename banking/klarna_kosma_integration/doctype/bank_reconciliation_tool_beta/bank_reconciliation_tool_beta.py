@@ -430,25 +430,38 @@ def get_linked_payments(
 		from_reference_date,
 		to_reference_date,
 	)
-	return subtract_allocations(gl_account, matching)
+	subtract_allocations(gl_account, matching)
+
+	return matching
 
 
 def subtract_allocations(gl_account, vouchers):
-	"Look up & subtract any existing Bank Transaction allocations"
-	copied = []
+	"""Look up & subtract any existing Bank Transaction allocations.
+
+	For example, assume `vouchers` contains a Payment Entry of 300 that already
+	has 100 allocated to some Bank Transaction. This function will subtract 100
+	from the Payment Entry's outstanding amount, so that the remaining amount
+	for reconciliation will be 200.
+
+	This does not affect "unpaid" vouchers (e.g. unpaid invoices) since they
+	are never directly allocated to a Bank Transaction.
+	"""
+	rows = get_total_allocated_amount([
+		(voucher.get("doctype"), voucher.get("name"))
+		for voucher in vouchers
+	])
+
+	if not rows:
+		return
+
 	for voucher in vouchers:
-		rows = get_total_allocated_amount(voucher.get("doctype"), voucher.get("name"))
-		amount = None
-		for row in rows:
-			if row["gl_account"] == gl_account:
-				amount = row["total"]
-				break
+		for (doctype, name), values in rows.items():
+			if doctype != voucher.get("doctype") or name != voucher.get("name"):
+				continue
 
-		if amount:
-			voucher["paid_amount"] -= amount
-
-		copied.append(voucher)
-	return copied
+			for value in values:
+				if value["gl_account"] == gl_account:
+					voucher["paid_amount"] -= value["total"]
 
 
 def check_matching(
