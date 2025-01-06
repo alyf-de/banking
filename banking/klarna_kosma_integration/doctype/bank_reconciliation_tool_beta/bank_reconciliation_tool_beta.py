@@ -446,10 +446,9 @@ def subtract_allocations(gl_account, vouchers):
 	This does not affect "unpaid" vouchers (e.g. unpaid invoices) since they
 	are never directly allocated to a Bank Transaction.
 	"""
-	rows = get_total_allocated_amount([
-		(voucher.get("doctype"), voucher.get("name"))
-		for voucher in vouchers
-	])
+	rows = get_total_allocated_amount(
+		[(voucher.get("doctype"), voucher.get("name")) for voucher in vouchers]
+	)
 
 	if not rows:
 		return
@@ -1139,6 +1138,11 @@ def get_pi_matching_query(
 	"""
 	Get matching purchase invoice query when they are also used as payment entries (is_paid)
 	"""
+	# Default to bill_no instead of name.
+	# "name" is passed when it is unset. Handle specific default here.
+	if reference_field == "name" or not reference_field:
+		reference_field = "bill_no"
+
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
 	amount_rank = amount_rank_condition(
@@ -1187,7 +1191,7 @@ def get_pi_matching_query(
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name,
 			purchase_invoice.paid_amount,
-			purchase_invoice[reference_field or "bill_no"].as_("reference_no"),
+			purchase_invoice[reference_field].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
@@ -1227,6 +1231,11 @@ def get_unpaid_pi_matching_query(
 	include_only_returns: bool = False,
 	reference_field: str = "name",
 ):
+	# Default to bill_no instead of name.
+	# "name" is passed when it is unset. Handle specific default here.
+	if reference_field == "name" or not reference_field:
+		reference_field = "bill_no"
+
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 	party_filter = purchase_invoice.supplier == Parameter("%(party)s")
 	party_match = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
@@ -1263,7 +1272,7 @@ def get_unpaid_pi_matching_query(
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name.as_("name"),
 			purchase_invoice.outstanding_amount.as_("paid_amount"),
-			purchase_invoice[reference_field or "name"].as_("reference_no"),
+			purchase_invoice[reference_field].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
