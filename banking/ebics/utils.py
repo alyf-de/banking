@@ -129,7 +129,11 @@ def sync_ebics_transactions(
 				# Skip PDNG and INFO transactions
 				continue
 
-			if user.split_batch_transactions and transaction.batch and len(transaction):
+			if (
+				transaction.batch
+				and (user.split_batch_transactions or len(transaction) == 1)
+				and len(transaction) >= 1
+			):
 				# Split batch transactions into sub-transactions, based on info
 				# from camt.054 that is sometimes available.
 				# If that's not possible, create a single transaction
