@@ -114,7 +114,7 @@ def sync_ebics_transactions(
 			continue
 
 		for transaction in camt_document:
-			if transaction.status != "BOOK":
+			if transaction.status and transaction.status != "BOOK":
 				# Skip PDNG and INFO transactions
 				continue
 
