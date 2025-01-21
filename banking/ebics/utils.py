@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 import frappe
 from frappe import _
+from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager
 
@@ -24,9 +25,19 @@ def get_ebics_manager(
 	"""
 	banking_settings = frappe.get_single("Banking Settings")
 
+	license_key = None
+	try:
+		license_key = banking_settings.get_password("fintech_license_key")
+	except (frappe.AuthenticationError, frappe.ValidationError):
+		frappe.throw(
+			_(
+				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
+			).format(get_link_to_form("Banking Settings", "Banking Settings"))
+		)
+
 	manager = EBICSManager(
 		license_name=banking_settings.fintech_licensee_name,
-		license_key=banking_settings.get_password("fintech_license_key"),
+		license_key=license_key,
 	)
 
 	manager.set_keyring(
