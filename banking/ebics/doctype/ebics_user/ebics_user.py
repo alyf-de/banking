@@ -120,6 +120,8 @@ def on_doctype_update():
 def initialize(
 	ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int
 ):
+	ensure_ebics_is_enabled()
+
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
@@ -151,6 +153,8 @@ def initialize(
 
 @frappe.whitelist()
 def download_bank_keys(ebics_user: str, passphrase: str | None = None):
+	ensure_ebics_is_enabled()
+
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
@@ -161,6 +165,8 @@ def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 
 @frappe.whitelist()
 def confirm_bank_keys(ebics_user: str, passphrase: str | None = None):
+	ensure_ebics_is_enabled()
+
 	user = frappe.get_doc("EBICS User", ebics_user)
 	user.check_permission("write")
 
@@ -176,6 +182,8 @@ def download_bank_statements(
 	to_date: str | None = None,
 	passphrase: str | None = None,
 ):
+	ensure_ebics_is_enabled()
+
 	frappe.has_permission("Bank Transaction", "create", throw=True)
 
 	user = frappe.get_doc("EBICS User", ebics_user)
@@ -190,3 +198,19 @@ def download_bank_statements(
 		intraday=getdate(from_date) == getdate(),
 		now=frappe.conf.developer_mode,
 	)
+
+
+def ensure_ebics_is_enabled():
+	if not frappe.db.get_single_value("Banking Settings", "enabled"):
+		frappe.throw(
+			_("Please activate the checkbox 'Enabled' in the {0}.").format(
+				get_link_to_form("Banking Settings", "Banking Settings")
+			)
+		)
+
+	if not frappe.db.get_single_value("Banking Settings", "enable_ebics"):
+		frappe.throw(
+			_("Please activate the checkbox 'Enable EBICS' in the {0}.").format(
+				get_link_to_form("Banking Settings", "Banking Settings")
+			)
+		)
