@@ -79,11 +79,21 @@ def sync_ebics_transactions(
 			reference_name=ebics_user,
 		)
 
-	for camt_document in (
-		manager.download_intraday_transactions()
-		if intraday
-		else manager.download_bank_statements(start_date, end_date)
-	):
+	try:
+		camt_documents = (
+			manager.download_intraday_transactions()
+			if intraday
+			else manager.download_bank_statements(start_date, end_date)
+		)
+	except Exception:
+		frappe.log_error(
+			title=_("Banking Error"),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
+		)
+		return
+
+	for camt_document in camt_documents:
 		bank_account = frappe.db.get_value(
 			"Bank Account",
 			{
