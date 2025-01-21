@@ -13,6 +13,7 @@
   "company",
   "country",
   "bank",
+  "split_batch_transactions",
   "intraday_sync",
   "section_break_qjlc",
   "partner_id",
@@ -127,10 +128,17 @@
    "fieldname": "intraday_sync",
    "fieldtype": "Check",
    "label": "Intraday Sync"
+  },
+  {
+   "default": "1",
+   "description": "If enabled, a separate <b>Bank Transaction</b> will be created for each sub-transaction in a batch.",
+   "fieldname": "split_batch_transactions",
+   "fieldtype": "Check",
+   "label": "Split Batch Transactions"
   }
  ],
  "links": [],
- "modified": "2024-12-17 17:32:29.103126",
+ "modified": "2025-01-21 15:21:31.597353",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
