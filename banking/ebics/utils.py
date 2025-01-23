@@ -153,7 +153,11 @@ def sync_ebics_transactions(
 				# If that's not possible, create a single transaction
 				for sub_transaction in transaction:
 					_create_bank_transaction(
-						bank_account, user.company, sub_transaction, user.start_date
+						bank_account,
+						user.company,
+						sub_transaction,
+						user.start_date,
+						is_sub_transaction=True,
 					)
 			else:
 				_create_bank_transaction(bank_account, user.company, transaction, user.start_date)
@@ -164,6 +168,7 @@ def _create_bank_transaction(
 	company: str,
 	sepa_transaction: "SEPATransaction",
 	start_date: "date" = None,
+	is_sub_transaction: bool = False,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -200,6 +205,15 @@ def _create_bank_transaction(
 	bt.transaction_id = transaction_id
 	bt.bank_party_iban = sepa_transaction.iban
 	bt.bank_party_name = sepa_transaction.name
+
+	if is_sub_transaction and not bt.bank_party_name:
+		# Temporary workaround to parse the party name from camt.052.001.08
+		# Can be removed once it's supported by the fintech library
+		bt.bank_party_name = (
+			sepa_transaction._xmlobj.RltdPties.Dbtr.Pty.Nm._text
+			if sepa_transaction._xmlobj.CdtDbtInd._text == "CRDT"
+			else sepa_transaction._xmlobj.RltdPties.Cdtr.Pty.Nm._text
+		)
 
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
 		bt.insert()
