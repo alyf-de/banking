@@ -114,20 +114,22 @@ class EBICSManager:
 		return level_perms
 
 	def download_bank_statements(
-		self, start_date: str | None = None, end_date: str | None = None
+		self,
+		start_date: str | None = None,
+		end_date: str | None = None,
+		with_c54: bool = False,
 	) -> "Iterator[CAMTDocument]":
 		"""Yield an iterator over CAMTDocument objects for the given date range."""
 		from fintech.sepa import CAMTDocument
 
 		client = self.get_client()
-		permitted_types = self.get_permitted_order_types()
 
 		try:
 			camt53 = client.C53(start_date, end_date)
 		except fintech.ebics.EbicsNoDataAvailable:
 			return
 
-		camt54 = client.C54(start_date, end_date) if "C54" in permitted_types else None
+		camt54 = client.C54(start_date, end_date) if with_c54 else None
 
 		for name in sorted(camt53):
 			yield CAMTDocument(xml=camt53[name], camt54=camt54)

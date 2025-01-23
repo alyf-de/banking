@@ -90,11 +90,25 @@ def sync_ebics_transactions(
 			reference_name=ebics_user,
 		)
 
+	if not intraday and user.split_batch_transactions and "C54" not in permitted_types:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_(
+				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
+			).format(ebics_user, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
+		)
+
 	try:
 		camt_documents = (
 			manager.download_intraday_transactions()
 			if intraday
-			else manager.download_bank_statements(start_date, end_date)
+			else manager.download_bank_statements(
+				start_date,
+				end_date,
+				with_c54=user.split_batch_transactions and "C54" in permitted_types,
+			)
 		)
 	except Exception:
 		frappe.log_error(
