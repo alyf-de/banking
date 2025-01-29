@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"rY4kqSgqjV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Banking</span>\",\"col\":12}},{\"id\":\"ik6keY0zOR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation\",\"col\":3}},{\"id\":\"-xJNZCe4fr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transactions\",\"col\":4}},{\"id\":\"zve0DHAzCk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MRvsFZVnBb\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "content": "[{\"id\":\"rY4kqSgqjV\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Banking</span>\",\"col\":12}},{\"id\":\"-xJNZCe4fr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transactions\",\"col\":6}},{\"id\":\"ik6keY0zOR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation\",\"col\":6}},{\"id\":\"u9Uhmqo0Qv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"EBICS Users\",\"col\":6}},{\"id\":\"zve0DHAzCk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"MRvsFZVnBb\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
  "creation": "2023-09-01 18:57:28.811898",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,7 +16,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
-   "link_count": 2,
+   "link_count": 1,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -30,19 +30,9 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "EBICS User",
-   "link_count": 0,
-   "link_to": "EBICS User",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2025-01-29 16:39:55.108679",
+ "modified": "2025-01-29 18:34:42.028256",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "ALYF Banking",
@@ -71,6 +61,15 @@
    "label": "Bank Transactions",
    "link_to": "Bank Transaction",
    "stats_filter": "{\"unallocated_amount\":[\">=\",0.01], \"docstatus\": 1}",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "EBICS Users",
+   "link_to": "EBICS User",
+   "stats_filter": "[[\"EBICS User\",\"bank_keys_activated\",\"=\",1,false]]",
    "type": "DocType"
   },
   {
