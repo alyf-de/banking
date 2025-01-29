@@ -1,30 +1,6 @@
-import json
 import frappe
-
-from frappe.client import get_count
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_days, getdate, get_datetime, nowdate
-
-from banking.connectors.admin_transaction import AdminTransaction
-from banking.demo_responses.test_responses import (
-	accounts_response_1,
-	accounts_response_2,
-	bank_data_response,
-	consent_response,
-	session_response,
-	transactions_consent_response,
-)
-from banking.klarna_kosma_integration.doctype.banking_settings.banking_settings import (
-	add_bank_account,
-)
 from banking.klarna_kosma_integration.admin import Admin
-from banking.klarna_kosma_integration.utils import (
-	add_bank,
-	create_bank_transactions,
-	create_session_doc,
-	get_account_name,
-)
-
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
 	get_default_bank_cash_account,
 )
@@ -59,16 +35,12 @@ class TestKosma(FrappeTestCase):
 		doc.enabled = False
 		doc.save()
 
-	def tearDown(self):
-		# Required as session id is static in test response
-		# but also has to be a unique primary key
-		frappe.db.delete("Klarna Kosma Session")
-
-	def test_kosma_obj(self):
-		"""Test if Kosma objects are initialised correctly"""
+	def test_admin_obj(self):
+		"""Test if Admin objects are initialised correctly"""
 		admin = Admin()
 		self.assertEqual(admin.api_token, "xabsttcpQr5")
 		self.assertEqual(admin.customer_id, "ADCB8A")
+<<<<<<< HEAD
 
 	def test_kosma_session(self):
 		"""Test creation of Kosma session and updation via flow"""
@@ -246,3 +218,5 @@ def create_account_for_bank_account(account_name: str):
 		}
 	).insert()
 	return gl_account.name
+=======
+>>>>>>> cd12768 (feat!: remove kosma (#168))

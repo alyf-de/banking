@@ -1,11 +1,11 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-import json
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Optional
 from banking.klarna_kosma_integration.exception_handler import ExceptionHandler
 
 import frappe
 import requests
+<<<<<<< HEAD
 from frappe import _
 from frappe.utils import (
 	add_days,
@@ -344,6 +344,8 @@ def get_consent_start_date(session_id_short: str) -> str:
 		json.loads(consent_scope).get("transactions", {}).get("from_date", None)
 	)
 	return consent_start
+=======
+>>>>>>> cd12768 (feat!: remove kosma (#168))
 
 
 def get_current_ip() -> Optional[str]:
@@ -363,44 +365,3 @@ def get_current_ip() -> Optional[str]:
 			ExceptionHandler(exc)
 
 	return ip_address
-
-
-def get_account_data_for_request(account: str):
-	if not account:
-		return {}
-
-	iban, account_id = frappe.db.get_value(
-		"Bank Account", account, ["iban", "kosma_account_id"]
-	)
-	return {"iban": iban, "account_id": account_id}
-
-
-def set_session_state(session_id_short: str, result: str = None):
-	result = result or {}
-
-	frappe.db.set_value(
-		"Klarna Kosma Session",
-		session_id_short,
-		{
-			"flow_state": result.get("state", "EXCEPTION"),
-			"status": result.get("session_state", "Running"),
-		},
-	)
-
-
-def get_country_code(company: Optional[str] = None):
-	"""
-	Get Country Code from Company or Bank Account.
-	"""
-	if not company:
-		return None
-
-	country = frappe.db.get_value("Company", company, "country")
-
-	if country not in SUPPORTED_COUNTRIES:
-		return None
-
-	if country == "Malta":
-		return "ML"  # Kosma uses ML for Malta, ERPNext uses MT
-
-	return frappe.db.get_value("Country", country, "code").upper()
