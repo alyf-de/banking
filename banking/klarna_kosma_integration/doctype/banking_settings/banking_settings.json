@@ -1,4 +1,4 @@
- {
+{
  "actions": [],
  "allow_rename": 1,
  "creation": "2022-12-01 16:21:37.132544",
@@ -14,9 +14,6 @@
   "api_token",
   "column_break_4",
   "subscription",
-  "klarna_kosma_section",
-  "enable_klarna_kosma",
-  "use_test_environment",
   "ebics_section",
   "enable_ebics",
   "fintech_licensee_name",
@@ -70,13 +67,6 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "depends_on": "enable_klarna_kosma",
-   "fieldname": "use_test_environment",
-   "fieldtype": "Check",
-   "label": "Use Test Environment"
-  },
-  {
    "fieldname": "ebics_section",
    "fieldtype": "Section Break",
    "label": "EBICS"
@@ -94,17 +84,6 @@
    "fieldtype": "Data",
    "label": "Fintech Licensee Name",
    "read_only": 1
-  },
-  {
-   "fieldname": "klarna_kosma_section",
-   "fieldtype": "Section Break",
-   "label": "Klarna Kosma"
-  },
-  {
-   "default": "1",
-   "fieldname": "enable_klarna_kosma",
-   "fieldtype": "Check",
-   "label": "Enable Klarna Kosma (Legacy)"
   },
   {
    "default": "0",
@@ -133,7 +112,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-09 08:38:57.909849",
+ "modified": "2025-01-29 17:04:19.776579",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

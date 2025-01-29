@@ -178,18 +178,7 @@ before_tests = "banking.utils.before_tests"
 # 	"banking.auth.validate"
 # ]
 
-kosma_custom_fields = {
-	"Bank Account": [
-		dict(
-			owner="Administrator",
-			fieldname="kosma_account_id",
-			label="Kosma Account ID",
-			fieldtype="Data",
-			insert_after="mask",
-			read_only=1,
-			translatable=0,
-		)
-	],
+alyf_banking_custom_fields = {
 	"Bank": [
 		dict(
 			fieldname="ebics_section",
@@ -215,7 +204,7 @@ kosma_custom_fields = {
 	],
 }
 
-kosma_property_setters = {
+alyf_banking_property_setters = {
 	"Bank Account": [
 		dict(
 			fieldname="last_integration_date",

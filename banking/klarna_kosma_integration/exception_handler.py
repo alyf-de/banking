@@ -98,29 +98,3 @@ class ExceptionHandler:
 			frappe.throw(
 				title=_("Banking Error"), msg=self.get_msg(error_data), exc=BankingError
 			)
-
-	def get_msg(self, error: dict):
-		"""Add instructions to Kosma error messages."""
-		msg = error.get("message")
-
-		if error.get("code") == "CONSENT.RESOURCE_NOT_GRANTED":
-			info = _("Please go to Banking Settings and click on {0}.").format(
-				frappe.bold(_("Link Bank and Accounts"))
-			)
-			msg += " " + info
-
-		return msg
-
-
-@frappe.whitelist()
-def handle_ui_error(error: str, session_id_short: str):
-	from banking.klarna_kosma_integration.admin import Admin
-
-	if error:  # might be empty
-		error = json.loads(error)
-		frappe.log_error(title=_("Banking Error"), message=error.get("message"))
-
-	doc = frappe.get_doc("Klarna Kosma Session", session_id_short)
-	session_id = doc.get_password("session_id")
-
-	Admin().end_session(session_id, session_id_short)
