@@ -7,13 +7,13 @@ from frappe.custom.doctype.property_setter.property_setter import make_property_
 def after_install():
 	click.echo("Installing Banking Customizations ...")
 
-	create_custom_fields(frappe.get_hooks("kosma_custom_fields"))
+	create_custom_fields(frappe.get_hooks("alyf_banking_custom_fields"))
 	make_property_setters()
 
 
 def make_property_setters():
 	for doctypes, property_setters in frappe.get_hooks(
-		"kosma_property_setters", {}
+		"alyf_banking_property_setters", {}
 	).items():
 		if isinstance(doctypes, str):
 			doctypes = (doctypes,)
