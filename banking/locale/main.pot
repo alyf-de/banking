@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-01-31 19:26+0053\n"
-"PO-Revision-Date: 2025-01-31 19:26+0053\n"
+"POT-Creation-Date: 2025-01-31 20:31+0053\n"
+"PO-Revision-Date: 2025-01-31 20:31+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
 "MIME-Version: 1.0\n"
@@ -141,11 +141,11 @@ msgstr ""
 msgid "Bank Transaction"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:106
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:122
 msgid "Bank Transaction {0} Matched"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:98
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:114
 msgid "Bank Transaction {0} Partially {1}"
 msgstr ""
 
@@ -153,7 +153,7 @@ msgstr ""
 msgid "Bank Transaction {0} is already fully reconciled"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:108
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:124
 msgid "Bank Transaction {0} reconciled with a new {1}"
 msgstr ""
 
@@ -258,6 +258,10 @@ msgstr ""
 msgid "Create"
 msgstr ""
 
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:70
+msgid "Create Voucher"
+msgstr ""
+
 #. Label of a Section Break field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 msgid "Credentials"
@@ -285,6 +289,10 @@ msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:98
 msgid "Description"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:47
+msgid "Details"
 msgstr ""
 
 #. Label of a Select field in DocType 'Banking Reference Mapping'
@@ -557,6 +565,10 @@ msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:341
 msgid "Loan Repayment"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:58
+msgid "Match Voucher"
 msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:192
