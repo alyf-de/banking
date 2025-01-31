@@ -174,3 +174,16 @@
 	font-weight: 500;
 	margin-bottom: .5rem;
 }
+
+
+[data-theme=dark] .actions-panel {
+	.dt-cell[data-row-index="0"] {
+		background-color: #00ff3c0f;
+	}
+}
+
+[data-theme=light] .actions-panel {
+	.dt-cell[data-row-index="0"] {
+		background-color: #F4FAEE;
+	}
+}
