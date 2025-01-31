@@ -3,4 +3,4 @@ from frappe import get_hooks
 
 
 def execute():
-	create_custom_fields(get_hooks("kosma_custom_fields"))
+	create_custom_fields(get_hooks("alyf_banking_custom_fields"))
