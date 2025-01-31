@@ -1,0 +1,951 @@
+# Translations template for ALYF Banking.
+# Copyright (C) 2025 ALYF GmbH
+# This file is distributed under the same license as the ALYF Banking project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ALYF Banking VERSION\n"
+"Report-Msgid-Bugs-To: hallo@alyf.de\n"
+"POT-Creation-Date: 2025-01-31 19:26+0053\n"
+"PO-Revision-Date: 2025-01-31 19:26+0053\n"
+"Last-Translator: hallo@alyf.de\n"
+"Language-Team: hallo@alyf.de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.1\n"
+
+#. Header text in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "<span class=\"h4\">Banking</span>"
+msgstr ""
+
+#. Description of the 'Reference Fields' (Table) field in DocType 'Banking
+#. Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:129
+msgid "A new version of the Banking app is available ({0}). Please update your instance."
+msgstr ""
+
+#. Name of a Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "ALYF Banking"
+msgstr ""
+
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Account Currency"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:122
+msgid "Account Holder"
+msgstr ""
+
+#. Label of a Currency field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Account Opening Balance"
+msgstr ""
+
+#. Name of a role
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Accounts Manager"
+msgstr ""
+
+#. Name of a role
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Accounts User"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:58
+#: banking/ebics/doctype/ebics_user/ebics_user.js:88
+msgid "Actions"
+msgstr ""
+
+#. Label of a Data field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Admin URL"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Advanced"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:129
+#: banking/ebics/doctype/ebics_user/ebics_user.js:147
+#: banking/ebics/doctype/ebics_user/ebics_user.js:225
+msgid "An error occurred"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:288
+msgid "Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
+msgstr "Stai cercando di conciliare ricevute di parti diverse? Questa azione concilierà le ricevute utilizzando un movimento contabile."
+
+#: banking/klarna_kosma_integration/exception_handler.py:42
+msgid "Authentication error due to invalid credentials."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:49
+msgid "Auto Reconcile"
+msgstr "Conciliazione automatica"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:395
+msgid "Auto Reconciliation Complete"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:67
+msgid "Auto Reconciling ..."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:51
+msgid "Auto reconcile bank transactions based on matching reference numbers?"
+msgstr ""
+
+#. Label of a Link field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Bank"
+msgstr ""
+
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Bank Account"
+msgstr ""
+
+#: banking/ebics/utils.py:135
+msgid "Bank Account not found for IBAN {0}"
+msgstr ""
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Bank Keys Activated"
+msgstr ""
+
+#. Label of a Tab Break field in DocType 'Banking Settings'
+#. Label of a shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Bank Reconciliation"
+msgstr ""
+
+#. Name of a DocType
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Bank Reconciliation Tool Beta"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:371
+msgid "Bank Transaction"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:106
+msgid "Bank Transaction {0} Matched"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:98
+msgid "Bank Transaction {0} Partially {1}"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:24
+msgid "Bank Transaction {0} is already fully reconciled"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:108
+msgid "Bank Transaction {0} reconciled with a new {1}"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:57
+msgid "Bank Transaction {0} updated"
+msgstr ""
+
+#. Label of a shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Bank Transactions"
+msgstr "Transazioni bancarie"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:142
+msgid "Bank keys confirmed"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:220
+msgid "Bank statements are being downloaded in the background."
+msgstr ""
+
+#. Description of the 'Start Date' (Date) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Bank transactions that happened before this date must not be imported."
+msgstr ""
+
+#: banking/klarna_kosma_integration/exception_handler.py:93
+msgid "Banking Action has failed due to the following error(s):"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:44
+#: banking/ebics/doctype/ebics_user/ebics_user.py:47
+#: banking/ebics/doctype/ebics_user/ebics_user.py:54
+#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:75
+#: banking/ebics/utils.py:85 banking/ebics/utils.py:95
+#: banking/ebics/utils.py:115 banking/ebics/utils.py:134
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:159
+#: banking/klarna_kosma_integration/exception_handler.py:23
+#: banking/klarna_kosma_integration/exception_handler.py:39
+#: banking/klarna_kosma_integration/exception_handler.py:41
+#: banking/klarna_kosma_integration/exception_handler.py:50
+#: banking/klarna_kosma_integration/exception_handler.py:56
+#: banking/klarna_kosma_integration/exception_handler.py:65
+#: banking/klarna_kosma_integration/exception_handler.py:67
+#: banking/klarna_kosma_integration/exception_handler.py:76
+#: banking/klarna_kosma_integration/exception_handler.py:81
+#: banking/klarna_kosma_integration/exception_handler.py:87
+#: banking/klarna_kosma_integration/exception_handler.py:96
+#: banking/klarna_kosma_integration/exception_handler.py:99
+msgid "Banking Error"
+msgstr ""
+
+#. Name of a DocType
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Banking Reference Mapping"
+msgstr ""
+
+#. Name of a DocType
+#. Label of a Link in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Banking Settings"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:102
+msgid "Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:353
+msgid "Cannot make Reconciliation Payment Entry against multiple doctypes"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:362
+msgid "Cannot make Reconciliation Payment Entry against multiple parties"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:185
+msgid "Cheque/Reference Date"
+msgstr ""
+
+#. Label of a Currency field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Closing Balance"
+msgstr ""
+
+#. Label of a Link field in DocType 'EBICS User'
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Company"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:116
+msgid "Continue"
+msgstr ""
+
+#. Label of a Link field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Country"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:288
+msgid "Create"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Credentials"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:113
+msgid "Currency"
+msgstr ""
+
+#. Label of a Data field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Customer ID"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:74
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:472
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:116
+msgid "Date"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:81
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:118
+msgid "Deposit"
+msgstr "Deposito"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:98
+msgid "Description"
+msgstr ""
+
+#. Label of a Select field in DocType 'Banking Reference Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:143
+msgid "Document Type"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:231
+msgid "Download"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:93
+#: banking/ebics/doctype/ebics_user/ebics_user.js:230
+msgid "Download Bank Statements"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:54
+msgid "Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "EBICS"
+msgstr ""
+
+#. Name of a DocType
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "EBICS User"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:45
+msgid "EBICS User limit exceeded."
+msgstr ""
+
+#: banking/ebics/utils.py:96
+msgid "EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
+msgstr ""
+
+#. Label of a shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "EBICS Users"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Ebics Users"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:198
+msgid "Edit in Full Page"
+msgstr ""
+
+#. Description of the 'Admin URL' (Data) field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Eg: https://banking.alyf.de"
+msgstr ""
+
+#. Label of a Check field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Enable EBICS (New)"
+msgstr ""
+
+#. Description of the 'Needs Certificate' (Check) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Enable this for EBICS accounts whose key management is based on certificates (eg. French banks)."
+msgstr ""
+
+#. Label of a Check field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Enabled"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:115
+msgid "Enter Passphrase"
+msgstr ""
+
+#. Description of the 'Passphrase' (Password) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:159
+msgid "Error while fetching releases"
+msgstr ""
+
+#. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
+#. Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:362
+msgid "Expense Claim"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:92
+msgid "Failed to create {0} against {1}"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:120
+msgid "Failed to reconcile new {0} against {1}"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:275
+msgid "Failed to reconcile {0}"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:71
+msgid "Failed to remove EBICS user registration."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:47
+msgid "Failed to update {0}"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:35
+msgid "Fetching Bank Transactions"
+msgstr ""
+
+#. Label of a Select field in DocType 'Banking Reference Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Field Name"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/utils.py:92
+msgid "Field {} does not exist in {}. Please check the configuration in Banking Settings."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:94
+msgid "Filter Required"
+msgstr ""
+
+#. Label of a Check field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Filter by Reference Date"
+msgstr "Filtra per data di riferimento"
+
+#. Label of a Section Break field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Filters"
+msgstr ""
+
+#. Label of a Password field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Fintech License Key"
+msgstr ""
+
+#. Label of a Data field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Fintech Licensee Name"
+msgstr ""
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:158
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "From Date"
+msgstr ""
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "From Reference Date"
+msgstr ""
+
+#. Label of a Data field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Full Name"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:47
+msgid "Get Bank Transactions"
+msgstr "Ottieni transazioni bancarie"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:279
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:190
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:437
+msgid "Hidden field for alignment"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:66
+msgid "ID"
+msgstr ""
+
+#. Description of the 'Intraday Sync' (Check) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "If enabled, <code>camt.052</code> transactions are downloaded four times a day. Otherwise <code>camt.053</code> transactions are downloaded once a day."
+msgstr ""
+
+#. Description of the 'Split Batch Transactions' (Check) field in DocType
+#. 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "If enabled, a separate <b>Bank Transaction</b> will be created for each sub-transaction in a batch."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:163
+msgid "If no <a href='/app/bank-transaction' target='_blank'>Bank Transactions</a> are created, please check the <a href='/app/error-log' target='_blank'>Error Logs</a>. If there are no errors, the bank likely did not provide any (new) bank statements for this period."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:14
+#: banking/ebics/doctype/ebics_user/ebics_user.js:55
+msgid "Initialize"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:54
+msgid "Initialize EBICS User"
+msgstr ""
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Initialized"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:50
+msgid "Initializing..."
+msgstr ""
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Intraday Sync"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/utils.py:91
+msgid "Invalid Field"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:102
+msgid "Invalid Voucher Type"
+msgstr ""
+
+#: banking/ebics/utils.py:86
+msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
+msgstr ""
+
+#: banking/ebics/utils.py:76
+msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:308
+msgid "Journal Entry"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:208
+msgid "Journal Entry Type"
+msgstr ""
+
+#. Label of a Code field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Keyring"
+msgstr ""
+
+#: banking/config/desktop.py:9
+msgid "Klarna Kosma Integration"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Last Renewed On"
+msgstr "Ultimo rinnovo il"
+
+#: banking/ebics/utils.py:33
+msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Limit"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:89
+msgid "Loading..."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:350
+msgid "Loan Disbursement"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:341
+msgid "Loan Repayment"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:192
+msgid "Mode of Payment"
+msgstr ""
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Needs Certificate"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:73
+msgid "No Transactions found for the current filters."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:30
+msgid "No changes to update"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:375
+msgid "No matches occurred via Auto Reconciliation"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:40
+msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:19
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:99
+msgid "Open Billing Portal"
+msgstr "Apri portale di fatturazione"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:476
+msgid "Outstanding"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:412
+msgid "Over Allocation"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:340
+msgid "Overallocated Returns"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:390
+msgid "Partially Reconciled"
+msgstr ""
+
+#. Label of a Data field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Partner ID"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:180
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:480
+msgid "Party"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:130
+msgid "Party Account Number"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:138
+msgid "Party IBAN"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:160
+msgid "Party Type"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:126
+msgid "Party Type and Party is required for Receivable / Payable account {0}"
+msgstr ""
+
+#. Label of a Password field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:20
+#: banking/ebics/doctype/ebics_user/ebics_user.js:107
+#: banking/ebics/doctype/ebics_user/ebics_user.js:196
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Passphrase"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:299
+msgid "Payment Entry"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:213
+msgid "Please activate the checkbox 'Enable EBICS' in the {0}."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:206
+msgid "Please activate the checkbox 'Enabled' in the {0}."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:92
+msgid "Please add EBICS Host ID and URL to bank {0}"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:83
+msgid "Please add a two-letter country code to country {0}"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:76
+msgid "Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
+msgstr ""
+
+#. Description of the 'section_break_qjlc' (Section Break) field in DocType
+#. 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Please enter the values provided by your bank."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:8
+msgid "Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:208
+msgid "Please select a Bank Account to start reconciling."
+msgstr "Selezionare un conto bancario per iniziare la conciliazione."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:236
+msgid "Please select at least one voucher to reconcile"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:245
+msgid "Please select vouchers of the same type to reconcile"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:93
+msgid "Please set the 'Bank Account' filter"
+msgstr ""
+
+#. Label of a Password field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Portal API Token"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:178
+msgid "Posting Date"
+msgstr ""
+
+#. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
+#. Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:320
+msgid "Purchase Invoice"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:446
+msgid "Reconcile"
+msgstr "Concilia"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:381
+msgid "Reconciled"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:271
+msgid "Reconciling ..."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:23
+msgid "Redirecting to Customer Portal ..."
+msgstr "Reindirizzamento al portale del cliente ..."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:490
+msgid "Reference"
+msgstr ""
+
+#. Label of a Table field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Reference Fields"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:168
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:151
+msgid "Reference Number"
+msgstr ""
+
+#. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
+#. Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:329
+msgid "Sales Invoice"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:22
+msgid "Set a new password for downloading bank statements from your bank."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:35
+msgid "Set a new password for uploading transactions to your bank."
+msgstr ""
+
+#. Label of a Card Break in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Settings"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:383
+msgid "Show Exact Amount"
+msgstr "Mostra importo esatto"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:395
+msgid "Show Exact Party"
+msgstr "Mostra parte esatta"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:33
+msgid "Signature Passphrase"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:31
+msgid "Signup for Banking"
+msgstr ""
+
+#: banking/klarna_kosma_integration/exception_handler.py:68
+msgid "Something went wrong. Please retry in a while."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:104
+msgid "Sort By"
+msgstr "Ordina per"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Split Batch Transactions"
+msgstr ""
+
+#. Label of a Date field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Start Date"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Status"
+msgstr "Stato"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:26
+msgid "Store Passphrase"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:29
+msgid "Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:199
+msgid "Submit"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Subscriber"
+msgstr "Abbonato"
+
+#. Label of a Section Break field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Subscription"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Subscription Details"
+msgstr "Dettagli abbonamento"
+
+#. Name of a role
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "System Manager"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:409
+msgid "The Bank Transaction is over-allocated by {0} at row {1}."
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:341
+msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:133
+#: banking/overrides/bank_transaction.py:131
+msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:134
+msgid "The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
+msgstr ""
+
+#: banking/klarna_kosma_integration/exception_handler.py:78
+msgid "The server has errored. Please retry in some time."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:105
+msgid "To Allocate"
+msgstr "Importo da allocare"
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:187
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "To Date"
+msgstr ""
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "To Reference Date"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:380
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:389
+msgid "Transaction"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:380
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:389
+msgid "Transactions"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:119
+msgid "Unallocated Amount"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:408
+msgid "Unpaid Vouchers"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:146
+msgid "Update"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:44
+msgid "Updating ..."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:79
+msgid "Upload a Bank Statement"
+msgstr "Carica un estratto conto bancario"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Usage"
+msgstr ""
+
+#. Label of a Data field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "User ID"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:55
+msgid "User ID not available."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+msgid "Valid Till"
+msgstr "Valido fino al"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:64
+msgid "Verify Bank Keys"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:10
+msgid "View EBICS Users"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:485
+msgid "Voucher"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:178
+msgid "We'll try to download all transactions of completed days in the selected period, using <code>camt.053</code>."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:170
+msgid "We'll try to download new transactions from today, using <code>camt.052</code>."
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:88
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:117
+msgid "Withdrawal"
+msgstr "Prelievo"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:378
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:387
+msgid "{0} {1} {2}"
+msgstr ""
+
+#. Count format of shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "{} Active"
+msgstr ""
+
+#. Count format of shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "{} Unreconciled"
+msgstr ""
+
