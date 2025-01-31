@@ -1,15 +1,17 @@
-import fintech
 from typing import TYPE_CHECKING
 
+import fintech
+
 if TYPE_CHECKING:
-	from typing import Iterator, Callable
-	from banking.ebics.types import (
-		EbicsKeyRing,
-		EbicsUser,
+	from typing import Callable, Iterator
+
+	from fintech.ebics import (
 		EbicsBank,
 		EbicsClient,
-		CAMTDocument,
+		EbicsKeyRing,
+		EbicsUser,
 	)
+	from fintech.sepa import CAMTDocument
 
 
 class EBICSManager:

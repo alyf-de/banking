@@ -9,7 +9,7 @@ from banking.ebics.manager import EBICSManager
 
 if TYPE_CHECKING:
 	from datetime import date
-	from .types import SEPATransaction
+	from fintech.sepa import SEPATransaction
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 
 
