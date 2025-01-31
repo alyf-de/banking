@@ -94,11 +94,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			datatable_options
 		);
 
-		// Highlight first row
-		this.actions_table.style.setStyle(
-			".dt-cell[data-row-index='0']", {backgroundColor: '#F4FAEE'}
-		);
-
 		this.bind_row_check_event();
 	}
 
