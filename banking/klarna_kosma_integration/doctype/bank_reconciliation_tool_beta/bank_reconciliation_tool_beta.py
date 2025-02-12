@@ -617,7 +617,7 @@ def get_matching_queries(
 		exact_match=exact_match,
 		exact_party_match=exact_party_match,
 		currency=currency,
-		description=transaction.description,
+		description=frappe.db.escape(transaction.description),
 		reference_number=transaction.reference_number,
 	)
 	reference_field_map = get_reference_field_map()
