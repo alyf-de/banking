@@ -583,7 +583,7 @@ def get_matching_queries(
 	is_deposit = transaction.deposit > 0.0
 
 	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
-	common_filters.description = transaction.description
+	common_filters.description = frappe.db.escape(transaction.description)
 
 	if "payment_entry" in document_types:
 		frappe.has_permission("Payment Entry", throw=True)
