@@ -65,7 +65,9 @@ class EBICSUser(Document):
 		"""Indempotent method to remove the user from the admin backend."""
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
 		try:
-			r = Admin().request.remove_ebics_user(host_id, self.partner_id, self.user_id)
+			r = Admin().request.register_ebics_user(
+				host_id, self.partner_id, self.user_id, remove=True
+			)
 			r.raise_for_status()
 		except HTTPError:
 			title = _("Failed to remove EBICS user registration.")
