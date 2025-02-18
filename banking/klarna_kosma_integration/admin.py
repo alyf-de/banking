@@ -4,7 +4,6 @@ import frappe
 
 from banking.connectors.admin_request import AdminRequest
 from banking.klarna_kosma_integration.exception_handler import ExceptionHandler
-from banking.klarna_kosma_integration.utils import get_current_ip
 
 
 class Admin:
@@ -15,19 +14,14 @@ class Admin:
 
 		:param settings: Banking Settings document. Enables you to pass the most recent settings that may not be in the database yet.
 		"""
-		self.ip_address = get_current_ip()
-		self.user_agent = frappe.get_request_header("User-Agent") if frappe.request else None
-
 		settings = settings or frappe.get_single("Banking Settings")
 		self.api_token = settings.get_password("api_token")
 		self.customer_id = settings.customer_id
-		self.url = settings.admin_endpoint + "/api/method/"
+		self.url = settings.admin_endpoint
 
 	@property
 	def request(self):
 		return AdminRequest(
-			ip_address=self.ip_address,
-			user_agent=self.user_agent,
 			api_token=self.api_token,
 			url=self.url,
 			customer_id=self.customer_id,
