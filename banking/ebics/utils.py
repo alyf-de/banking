@@ -202,7 +202,7 @@ def _create_bank_transaction(
 	bt.withdrawal = abs(min(amount, 0))
 	bt.currency = sepa_transaction.amount.currency
 
-	bt.description = "\n".join(sepa_transaction.purpose)
+	bt.description = "\n".join(sepa_transaction.purpose) or sepa_transaction.info
 	bt.reference_number = sepa_transaction.eref
 	bt.transaction_id = transaction_id
 	bt.bank_party_iban = sepa_transaction.iban
