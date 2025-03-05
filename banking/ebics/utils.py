@@ -138,6 +138,10 @@ def sync_ebics_transactions(
 			)
 			continue
 
+		if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
+			# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
+			camt_document._strict_batch_parsing = True
+
 		for transaction in camt_document:
 			if transaction.status and transaction.status != "BOOK":
 				# Skip PDNG and INFO transactions
