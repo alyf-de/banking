@@ -138,6 +138,10 @@ def sync_ebics_transactions(
 			)
 			continue
 
+		if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
+			# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
+			camt_document._strict_batch_parsing = True
+
 		for transaction in camt_document:
 			if transaction.status and transaction.status != "BOOK":
 				# Skip PDNG and INFO transactions
@@ -198,7 +202,7 @@ def _create_bank_transaction(
 	bt.withdrawal = abs(min(amount, 0))
 	bt.currency = sepa_transaction.amount.currency
 
-	bt.description = "\n".join(sepa_transaction.purpose)
+	bt.description = "\n".join(sepa_transaction.purpose) or sepa_transaction.info
 	bt.reference_number = sepa_transaction.eref
 	bt.transaction_id = transaction_id
 	bt.bank_party_iban = sepa_transaction.iban
