@@ -193,6 +193,7 @@ def download_bank_statements(
 
 	frappe.enqueue(
 		sync_ebics_transactions,
+		requested_by="User",
 		ebics_user=ebics_user,
 		start_date=from_date,
 		end_date=to_date,
