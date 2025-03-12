@@ -66,6 +66,7 @@ def daily_sync_ebics():
 	):
 		frappe.enqueue(
 			sync_ebics_transactions,
+			requested_by="System",
 			ebics_user=ebics_user,
 		)
 
@@ -90,6 +91,7 @@ def intraday_sync_ebics():
 	):
 		frappe.enqueue(
 			sync_ebics_transactions,
+			requested_by="System",
 			ebics_user=ebics_user,
 			intraday=True,
 		)
