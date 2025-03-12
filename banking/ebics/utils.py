@@ -1,6 +1,8 @@
 import contextlib
-from typing import TYPE_CHECKING
+import json
+from typing import TYPE_CHECKING, Literal
 
+import fintech
 import frappe
 from frappe import _
 from frappe.utils.data import get_link_to_form
@@ -59,6 +61,7 @@ def get_ebics_manager(
 
 def sync_ebics_transactions(
 	ebics_user: str,
+	requested_by: Literal["User", "System"],
 	start_date: str | None = None,
 	end_date: str | None = None,
 	passphrase: str | None = None,
@@ -67,50 +70,44 @@ def sync_ebics_transactions(
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 
-	# Not sure yet, how reliable permitted types are. For now, we just log an error
-	# instead of raising an exception or returning.
+	from fintech.sepa import (
+		CAMTDocument,
+	)  # import possible only after manager is initialized
+
 	permitted_types = manager.get_permitted_order_types()
-	if intraday and "C52" not in permitted_types:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
-			).format(ebics_user, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=ebics_user,
-		)
+	validate_permitted_types(user, permitted_types, intraday)
 
-	if not intraday and "C53" not in permitted_types:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
-			).format(ebics_user, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=ebics_user,
-		)
-
-	if not intraday and user.split_batch_transactions and "C54" not in permitted_types:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
-			).format(ebics_user, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=ebics_user,
-		)
+	with_c54 = user.split_batch_transactions and "C54" in permitted_types
+	request = log_request(
+		ebics_user,
+		"C52" if intraday else "C53",
+		requested_by,
+		{
+			"start_date": start_date,
+			"end_date": end_date,
+		},
+	)
 
 	try:
-		camt_documents = (
-			manager.download_intraday_transactions()
-			if intraday
-			else manager.download_bank_statements(
-				start_date,
-				end_date,
-				with_c54=user.split_batch_transactions and "C54" in permitted_types,
-			)
+		client = manager.get_client()
+		main_xml = (
+			client.C52(start_date, end_date) if intraday else client.C53(start_date, end_date)
 		)
-	except Exception:
+		batch_xml = client.C54(start_date, end_date) if with_c54 else None
+		request.db_set(
+			{
+				"status": "Successful",
+				"response": json.dumps(
+					{file_name: file.decode() for file_name, file in main_xml.items()},
+					indent=2,
+				),
+			}
+		)
+	except fintech.ebics.EbicsNoDataAvailable:
+		request.db_set({"status": "Successful", "response": "No Data Available"})
+		return
+	except Exception as e:
+		request.db_set({"status": "Failed", "response": str(e)})
 		frappe.log_error(
 			title=_("Banking Error"),
 			reference_doctype="EBICS User",
@@ -118,52 +115,108 @@ def sync_ebics_transactions(
 		)
 		return
 
-	for camt_document in camt_documents:
-		bank_account = frappe.db.get_value(
-			"Bank Account",
-			{
-				"iban": camt_document.iban,
-				"disabled": 0,
-				"bank": user.bank,
-				"is_company_account": 1,
-				"company": user.company,
-			},
+	# Keep the request log, no matter what happens next.
+	frappe.db.commit()
+
+	# We want to process either all documents or none. If we fail to process one, we
+	# want to rollback the entire transaction and report an error.
+	try:
+		for name in sorted(main_xml):
+			camt_document = CAMTDocument(xml=main_xml[name], camt54=batch_xml)
+			process_camt_document(user, camt_document)
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(
+			title=_("Banking Error"),
+			reference_doctype="EBICS Request",
+			reference_name=request.name,
 		)
-		if not bank_account:
-			frappe.log_error(
-				title=_("Banking Error"),
-				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
-				reference_doctype="EBICS User",
-				reference_name=ebics_user,
-			)
+		client.confirm_download(success=False)
+		return
+
+	client.confirm_download(success=True)
+
+
+def validate_permitted_types(user, permitted_types, intraday: bool):
+	# Not sure yet, how reliable permitted types are. For now, we just log an error
+	# instead of raising an exception or returning.
+	if intraday and "C52" not in permitted_types:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_(
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
+			).format(user.name, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=user.name,
+		)
+
+	if not intraday and "C53" not in permitted_types:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_(
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
+			).format(user.name, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=user.name,
+		)
+
+	if not intraday and user.split_batch_transactions and "C54" not in permitted_types:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_(
+				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
+			).format(user.name, ", ".join(permitted_types)),
+			reference_doctype="EBICS User",
+			reference_name=user.name,
+		)
+
+
+def process_camt_document(user, camt_document):
+	bank_account = frappe.db.get_value(
+		"Bank Account",
+		{
+			"iban": camt_document.iban,
+			"disabled": 0,
+			"bank": user.bank,
+			"is_company_account": 1,
+			"company": user.company,
+		},
+	)
+	if not bank_account:
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+			reference_doctype="EBICS User",
+			reference_name=user.name,
+		)
+		return
+
+	if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
+		# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
+		camt_document._strict_batch_parsing = True
+
+	for transaction in camt_document:
+		if transaction.status and transaction.status != "BOOK":
+			# Skip PDNG and INFO transactions
 			continue
 
-		if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
-			# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
-			camt_document._strict_batch_parsing = True
-
-		for transaction in camt_document:
-			if transaction.status and transaction.status != "BOOK":
-				# Skip PDNG and INFO transactions
-				continue
-
-			if (
-				transaction.batch
-				and (user.split_batch_transactions or len(transaction) == 1)
-				and len(transaction) >= 1
-			):
-				# Split batch transactions into sub-transactions, based on info
-				# from camt.054 that is sometimes available.
-				# If that's not possible, create a single transaction
-				for sub_transaction in transaction:
-					_create_bank_transaction(
-						bank_account,
-						user.company,
-						sub_transaction,
-						user.start_date,
-					)
-			else:
-				_create_bank_transaction(bank_account, user.company, transaction, user.start_date)
+		if (
+			transaction.batch
+			and (user.split_batch_transactions or len(transaction) == 1)
+			and len(transaction) >= 1
+		):
+			# Split batch transactions into sub-transactions, based on info
+			# from camt.054 that is sometimes available.
+			# If that's not possible, create a single transaction
+			for sub_transaction in transaction:
+				_create_bank_transaction(
+					bank_account,
+					user.company,
+					sub_transaction,
+					user.start_date,
+				)
+		else:
+			_create_bank_transaction(bank_account, user.company, transaction, user.start_date)
 
 
 def _create_bank_transaction(
@@ -211,3 +264,17 @@ def _create_bank_transaction(
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
 		bt.insert()
 		bt.submit()
+
+
+def log_request(
+	ebics_user: str,
+	order_type: str,
+	requested_by: Literal["User", "System"],
+	parameters: dict,
+):
+	request = frappe.new_doc("EBICS Request")
+	request.ebics_user = ebics_user
+	request.order_type = order_type
+	request.requested_by = requested_by
+	request.parameters = json.dumps(parameters, indent=2)
+	return request.save(ignore_permissions=True)
