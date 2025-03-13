@@ -114,10 +114,10 @@ doc_events = {
 
 scheduler_events = {
 	"cron": {
-		"30 6,10,14,18 * * *": [  # at 6:30, 10:30, 14:30, 18:30
+		"7 7-18 * * 1-5": [  # At minute 7 past every hour from 7 through 18 on every day-of-week from Monday through Friday.
 			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.intraday_sync_ebics",
 		],
-		"42 2 * * *": [  # daily at 2:42 am
+		"42 4 * * *": [  # Daily at 4:42 am
 			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions",
 		],
 	},

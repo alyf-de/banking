@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import fintech
 
 if TYPE_CHECKING:
-	from typing import Callable, Iterator
+	from typing import Callable
 
 	from fintech.ebics import (
 		EbicsBank,
@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 		EbicsKeyRing,
 		EbicsUser,
 	)
-	from fintech.sepa import CAMTDocument
 
 
 class EBICSManager:
@@ -114,42 +113,3 @@ class EBICSManager:
 					level_perms.extend(order_types.split())
 
 		return level_perms
-
-	def download_bank_statements(
-		self,
-		start_date: str | None = None,
-		end_date: str | None = None,
-		with_c54: bool = False,
-	) -> "Iterator[CAMTDocument]":
-		"""Yield an iterator over CAMTDocument objects for the given date range."""
-		from fintech.sepa import CAMTDocument
-
-		client = self.get_client()
-
-		try:
-			camt53 = client.C53(start_date, end_date)
-		except fintech.ebics.EbicsNoDataAvailable:
-			return
-
-		camt54 = client.C54(start_date, end_date) if with_c54 else None
-
-		for name in sorted(camt53):
-			yield CAMTDocument(xml=camt53[name], camt54=camt54)
-
-		client.confirm_download(success=True)
-
-	def download_intraday_transactions(self) -> "Iterator[CAMTDocument]":
-		"""Yield an iterator over CAMTDocument objects."""
-		from fintech.sepa import CAMTDocument
-
-		client = self.get_client()
-
-		try:
-			camt52 = client.C52()
-		except fintech.ebics.EbicsNoDataAvailable:
-			return
-
-		for name in sorted(camt52):
-			yield CAMTDocument(xml=camt52[name])
-
-		client.confirm_download(success=True)

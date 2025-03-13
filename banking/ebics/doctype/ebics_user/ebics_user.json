@@ -137,8 +137,13 @@
    "label": "Split Batch Transactions"
   }
  ],
- "links": [],
- "modified": "2025-01-21 15:21:31.597353",
+ "links": [
+  {
+   "link_doctype": "EBICS Request",
+   "link_fieldname": "ebics_user"
+  }
+ ],
+ "modified": "2025-03-12 17:59:35.346499",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
