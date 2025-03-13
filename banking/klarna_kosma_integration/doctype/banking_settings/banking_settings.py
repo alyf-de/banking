@@ -1,6 +1,7 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 
+from datetime import timedelta
 from requests import HTTPError
 from semantic_version import Version
 from typing import Dict
@@ -8,7 +9,7 @@ from typing import Dict
 import frappe
 from frappe import _
 from frappe.model.document import Document
-
+from frappe.utils.data import now_datetime
 from banking.klarna_kosma_integration.admin import Admin
 
 
@@ -54,6 +55,14 @@ def sync_all_accounts_and_transactions():
 def daily_sync_ebics():
 	from banking.ebics.utils import sync_ebics_transactions
 
+	if frappe.conf.developer_mode:
+		frappe.throw(
+			_(
+				"Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
+			)
+		)
+
+	yesterday = (now_datetime() - timedelta(days=1)).date().isoformat()
 	for ebics_user in frappe.get_all(
 		"EBICS User",
 		filters={
@@ -66,6 +75,9 @@ def daily_sync_ebics():
 	):
 		frappe.enqueue(
 			sync_ebics_transactions,
+			requested_by="System",
+			start_date=yesterday,
+			end_date=yesterday,
 			ebics_user=ebics_user,
 		)
 
@@ -73,10 +85,18 @@ def daily_sync_ebics():
 def intraday_sync_ebics():
 	from banking.ebics.utils import sync_ebics_transactions
 
+	if frappe.conf.developer_mode:
+		frappe.throw(
+			_(
+				"Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
+			)
+		)
+
 	banking_settings = frappe.get_single("Banking Settings")
 	if not banking_settings.enabled or not banking_settings.enable_ebics:
 		return
 
+	today = now_datetime().date().isoformat()
 	for ebics_user in frappe.get_all(
 		"EBICS User",
 		filters={
@@ -90,6 +110,9 @@ def intraday_sync_ebics():
 	):
 		frappe.enqueue(
 			sync_ebics_transactions,
+			requested_by="System",
+			start_date=today,
+			end_date=today,
 			ebics_user=ebics_user,
 			intraday=True,
 		)
