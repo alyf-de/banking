@@ -54,6 +54,13 @@ def sync_all_accounts_and_transactions():
 def daily_sync_ebics():
 	from banking.ebics.utils import sync_ebics_transactions
 
+	if frappe.conf.developer_mode:
+		frappe.throw(
+			_(
+				"Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
+			)
+		)
+
 	for ebics_user in frappe.get_all(
 		"EBICS User",
 		filters={
@@ -73,6 +80,13 @@ def daily_sync_ebics():
 
 def intraday_sync_ebics():
 	from banking.ebics.utils import sync_ebics_transactions
+
+	if frappe.conf.developer_mode:
+		frappe.throw(
+			_(
+				"Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
+			)
+		)
 
 	banking_settings = frappe.get_single("Banking Settings")
 	if not banking_settings.enabled or not banking_settings.enable_ebics:
