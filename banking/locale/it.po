@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-03-26 12:34+0053\n"
+"POT-Creation-Date: 2025-03-26 20:44+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -116,7 +116,7 @@ msgstr ""
 msgid "Bank Account"
 msgstr ""
 
-#: banking/ebics/utils.py:188
+#: banking/ebics/utils.py:116
 msgid "Bank Account not found for IBAN {0}"
 msgstr ""
 
@@ -190,10 +190,10 @@ msgstr ""
 #: banking/ebics/doctype/ebics_user/ebics_user.py:44
 #: banking/ebics/doctype/ebics_user/ebics_user.py:47
 #: banking/ebics/doctype/ebics_user/ebics_user.py:54
-#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:112
-#: banking/ebics/utils.py:130 banking/ebics/utils.py:145
-#: banking/ebics/utils.py:155 banking/ebics/utils.py:165
-#: banking/ebics/utils.py:187
+#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:98
+#: banking/ebics/utils.py:115 banking/ebics/utils.py:132
+#: banking/ebics/utils.py:147 banking/ebics/utils.py:157
+#: banking/ebics/utils.py:167
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:182
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
@@ -355,7 +355,7 @@ msgstr ""
 msgid "EBICS User limit exceeded."
 msgstr ""
 
-#: banking/ebics/utils.py:166
+#: banking/ebics/utils.py:168
 msgid "EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
 msgstr ""
 
@@ -450,7 +450,8 @@ msgstr ""
 msgid "Field {} does not exist in {}. Please check the configuration in Banking Settings."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:94
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:99
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:258
 msgid "Filter Required"
 msgstr ""
 
@@ -550,11 +551,11 @@ msgstr ""
 msgid "Invalid Voucher Type"
 msgstr ""
 
-#: banking/ebics/utils.py:156
+#: banking/ebics/utils.py:158
 msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
 msgstr ""
 
-#: banking/ebics/utils.py:146
+#: banking/ebics/utils.py:148
 msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
 msgstr ""
 
@@ -579,7 +580,7 @@ msgstr ""
 msgid "Last Renewed On"
 msgstr "Ultimo rinnovo il"
 
-#: banking/ebics/utils.py:35
+#: banking/ebics/utils.py:332
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr ""
 
@@ -733,7 +734,7 @@ msgstr ""
 msgid "Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:208
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:213
 msgid "Please select a Bank Account to start reconciling."
 msgstr "Selezionare un conto bancario per iniziare la conciliazione."
 
@@ -745,7 +746,8 @@ msgstr ""
 msgid "Please select vouchers of the same type to reconcile"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:93
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:98
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:257
 msgid "Please set the 'Bank Account' filter"
 msgstr ""
 
@@ -974,9 +976,13 @@ msgstr ""
 msgid "Updating ..."
 msgstr ""
 
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:84
+msgid "Upload CAMT file"
+msgstr ""
+
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:79
-msgid "Upload a Bank Statement"
-msgstr "Carica un estratto conto bancario"
+msgid "Upload CSV / Excel file"
+msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
 msgid "Usage"
