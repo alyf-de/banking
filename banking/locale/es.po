@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-01-31 20:31+0053\n"
+"POT-Creation-Date: 2025-03-26 12:34+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -27,7 +27,7 @@ msgstr ""
 msgid "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:129
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:152
 msgid "A new version of the Banking app is available ({0}). Please update your instance."
 msgstr ""
 
@@ -116,7 +116,7 @@ msgstr ""
 msgid "Bank Account"
 msgstr ""
 
-#: banking/ebics/utils.py:135
+#: banking/ebics/utils.py:188
 msgid "Bank Account not found for IBAN {0}"
 msgstr ""
 
@@ -179,6 +179,10 @@ msgstr ""
 msgid "Bank transactions that happened before this date must not be imported."
 msgstr ""
 
+#: banking/custom/bank.py:13
+msgid "Bank {0} does not have EBICS Host ID or URL set"
+msgstr ""
+
 #: banking/klarna_kosma_integration/exception_handler.py:93
 msgid "Banking Action has failed due to the following error(s):"
 msgstr ""
@@ -186,10 +190,11 @@ msgstr ""
 #: banking/ebics/doctype/ebics_user/ebics_user.py:44
 #: banking/ebics/doctype/ebics_user/ebics_user.py:47
 #: banking/ebics/doctype/ebics_user/ebics_user.py:54
-#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:75
-#: banking/ebics/utils.py:85 banking/ebics/utils.py:95
-#: banking/ebics/utils.py:115 banking/ebics/utils.py:134
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:159
+#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:112
+#: banking/ebics/utils.py:130 banking/ebics/utils.py:145
+#: banking/ebics/utils.py:155 banking/ebics/utils.py:165
+#: banking/ebics/utils.py:187
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:182
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
 #: banking/klarna_kosma_integration/exception_handler.py:41
@@ -295,6 +300,11 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:60
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:90
+msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
+msgstr ""
+
 #. Label of a Select field in DocType 'Banking Reference Mapping'
 #: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:143
@@ -319,7 +329,24 @@ msgstr ""
 msgid "EBICS"
 msgstr ""
 
+#: banking/custom/bank.py:14
+msgid "EBICS Configuration Missing"
+msgstr ""
+
+#: banking/custom/bank.js:14
+msgid "EBICS Protocol Versions"
+msgstr ""
+
 #. Name of a DocType
+#. Linked DocType in EBICS User's connections
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "EBICS Request"
+msgstr ""
+
+#. Label of a Link field in DocType 'EBICS Request'
+#. Name of a DocType
+#: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 msgid "EBICS User"
 msgstr ""
@@ -328,7 +355,7 @@ msgstr ""
 msgid "EBICS User limit exceeded."
 msgstr ""
 
-#: banking/ebics/utils.py:96
+#: banking/ebics/utils.py:166
 msgid "EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
 msgstr ""
 
@@ -374,7 +401,7 @@ msgstr ""
 msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:159
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:182
 msgid "Error while fetching releases"
 msgstr ""
 
@@ -383,6 +410,11 @@ msgstr ""
 #: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:362
 msgid "Expense Claim"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Failed"
 msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:92
@@ -397,7 +429,7 @@ msgstr ""
 msgid "Failed to reconcile {0}"
 msgstr ""
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:71
+#: banking/ebics/doctype/ebics_user/ebics_user.py:73
 msgid "Failed to remove EBICS user registration."
 msgstr ""
 
@@ -518,11 +550,11 @@ msgstr ""
 msgid "Invalid Voucher Type"
 msgstr ""
 
-#: banking/ebics/utils.py:86
+#: banking/ebics/utils.py:156
 msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
 msgstr ""
 
-#: banking/ebics/utils.py:76
+#: banking/ebics/utils.py:146
 msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
 msgstr ""
 
@@ -547,7 +579,7 @@ msgstr ""
 msgid "Last Renewed On"
 msgstr "Última renovación en"
 
-#: banking/ebics/utils.py:33
+#: banking/ebics/utils.py:35
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr ""
 
@@ -580,6 +612,11 @@ msgstr ""
 msgid "Needs Certificate"
 msgstr ""
 
+#. Option for the 'Status' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "No Data Available"
+msgstr ""
+
 #: banking/public/js/bank_reconciliation_beta/panel_manager.js:73
 msgid "No Transactions found for the current filters."
 msgstr ""
@@ -602,6 +639,11 @@ msgstr ""
 msgid "Open Billing Portal"
 msgstr "Abrir portal de facturación"
 
+#. Label of a Data field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Order Type"
+msgstr ""
+
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:476
 msgid "Outstanding"
 msgstr ""
@@ -612,6 +654,11 @@ msgstr ""
 
 #: banking/overrides/bank_transaction.py:340
 msgid "Overallocated Returns"
+msgstr ""
+
+#. Label of a Code field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Parameters"
 msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:390
@@ -656,19 +703,19 @@ msgstr ""
 msgid "Payment Entry"
 msgstr ""
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:213
+#: banking/ebics/doctype/ebics_user/ebics_user.py:216
 msgid "Please activate the checkbox 'Enable EBICS' in the {0}."
 msgstr ""
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:206
+#: banking/ebics/doctype/ebics_user/ebics_user.py:209
 msgid "Please activate the checkbox 'Enabled' in the {0}."
 msgstr ""
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:92
+#: banking/ebics/doctype/ebics_user/ebics_user.py:94
 msgid "Please add EBICS Host ID and URL to bank {0}"
 msgstr ""
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:83
+#: banking/ebics/doctype/ebics_user/ebics_user.py:85
 msgid "Please add a two-letter country code to country {0}"
 msgstr ""
 
@@ -748,6 +795,16 @@ msgstr ""
 msgid "Reference Number"
 msgstr ""
 
+#. Label of a Select field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Requested By"
+msgstr ""
+
+#. Label of a Code field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Response"
+msgstr ""
+
 #. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
 #. Mapping'
 #: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
@@ -776,6 +833,10 @@ msgstr "Mostrar cantidad exacta"
 msgid "Show Exact Party"
 msgstr "Mostrar parte exacta"
 
+#: banking/custom/bank.js:5
+msgid "Show Protocol Versions"
+msgstr ""
+
 #: banking/ebics/doctype/ebics_user/ebics_user.js:33
 msgid "Signature Passphrase"
 msgstr ""
@@ -802,6 +863,8 @@ msgstr ""
 msgid "Start Date"
 msgstr ""
 
+#. Label of a Select field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
 msgid "Status"
 msgstr "Estado"
@@ -831,7 +894,18 @@ msgstr ""
 msgid "Subscription Details"
 msgstr "Detalles de suscripción"
 
+#. Option for the 'Status' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Successful"
+msgstr ""
+
+#. Option for the 'Requested By' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "System"
+msgstr ""
+
 #. Name of a role
+#: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
@@ -851,7 +925,7 @@ msgstr ""
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:134
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:157
 msgid "The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
 msgstr ""
 
@@ -906,6 +980,11 @@ msgstr "Subir un extracto bancario"
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
 msgid "Usage"
+msgstr ""
+
+#. Option for the 'Requested By' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "User"
 msgstr ""
 
 #. Label of a Data field in DocType 'EBICS User'
