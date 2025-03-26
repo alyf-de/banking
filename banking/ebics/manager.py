@@ -113,3 +113,19 @@ class EBICSManager:
 					level_perms.extend(order_types.split())
 
 		return level_perms
+
+
+def get_protocol_versions(ebics_host_id: str, ebics_url: str):
+	"""Return a list of protocol versions supported by the bank."""
+	try:
+		fintech.register()
+	except RuntimeError as e:
+		if e.args[0] != "'register' can be called only once":
+			raise e
+
+	from fintech.ebics import EbicsKeyRing, EbicsBank
+
+	keyring = EbicsKeyRing({})
+	bank = EbicsBank(keyring, ebics_host_id, ebics_url)
+
+	return bank.get_protocol_versions()
