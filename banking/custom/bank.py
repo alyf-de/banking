@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from banking.ebics.manager import get_protocol_versions as _get_protocol_versions
+from banking.ebics.utils import get_protocol_versions as _get_protocol_versions
 
 
 @frappe.whitelist()

@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING
 
-import fintech
-
 if TYPE_CHECKING:
 	from typing import Callable
 
@@ -15,20 +13,6 @@ if TYPE_CHECKING:
 
 class EBICSManager:
 	__slots__ = ["keyring", "user", "bank"]
-
-	def __init__(
-		self,
-		license_name: str,
-		license_key: str,
-	):
-		try:
-			fintech.register(
-				name=license_name,
-				keycode=license_key,
-			)
-		except RuntimeError as e:
-			if e.args[0] != "'register' can be called only once":
-				raise e
 
 	def set_keyring(
 		self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None
@@ -113,19 +97,3 @@ class EBICSManager:
 					level_perms.extend(order_types.split())
 
 		return level_perms
-
-
-def get_protocol_versions(ebics_host_id: str, ebics_url: str):
-	"""Return a list of protocol versions supported by the bank."""
-	try:
-		fintech.register()
-	except RuntimeError as e:
-		if e.args[0] != "'register' can be called only once":
-			raise e
-
-	from fintech.ebics import EbicsKeyRing, EbicsBank
-
-	keyring = EbicsKeyRing({})
-	bank = EbicsBank(keyring, ebics_host_id, ebics_url)
-
-	return bank.get_protocol_versions()

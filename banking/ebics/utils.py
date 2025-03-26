@@ -25,23 +25,9 @@ def get_ebics_manager(
 	:param ebics_user: The EBICS User record.
 	:param passphrase: The secret passphrase for uploads to the bank.
 	"""
-	banking_settings = frappe.get_single("Banking Settings")
+	register_fintech(needs_license_key=True)
 
-	license_key = None
-	try:
-		license_key = banking_settings.get_password("fintech_license_key")
-	except (frappe.AuthenticationError, frappe.ValidationError):
-		frappe.throw(
-			_(
-				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
-			).format(get_link_to_form("Banking Settings", "Banking Settings"))
-		)
-
-	manager = EBICSManager(
-		license_name=banking_settings.fintech_licensee_name,
-		license_key=license_key,
-	)
-
+	manager = EBICSManager()
 	manager.set_keyring(
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
@@ -123,7 +109,23 @@ def sync_ebics_transactions(
 	try:
 		for name in sorted(main_xml):
 			camt_document = CAMTDocument(xml=main_xml[name], camt54=batch_xml)
-			process_camt_document(user, camt_document)
+			bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
+			if not bank_account:
+				frappe.log_error(
+					title=_("Banking Error"),
+					message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+					reference_doctype="EBICS User",
+					reference_name=user.name,
+				)
+				continue
+
+			process_camt_document(
+				camt_document,
+				bank_account,
+				user.company,
+				user.start_date,
+				user.split_batch_transactions,
+			)
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(
@@ -171,25 +173,30 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		)
 
 
-def process_camt_document(user, camt_document):
-	bank_account = frappe.db.get_value(
+def get_bank_account(iban: str, bank: str, company: str) -> str | None:
+	return frappe.db.get_value(
 		"Bank Account",
 		{
-			"iban": camt_document.iban,
+			"iban": iban,
 			"disabled": 0,
-			"bank": user.bank,
+			"bank": bank,
 			"is_company_account": 1,
-			"company": user.company,
+			"company": company,
 		},
 	)
-	if not bank_account:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
-			reference_doctype="EBICS User",
-			reference_name=user.name,
+
+
+def process_camt_document(
+	camt_document,
+	bank_account: str,
+	company: "str | None" = None,
+	earliest_date: "date | None" = None,
+	split_batch_transactions: bool = False,
+):
+	if not company:
+		company = frappe.db.get_value(
+			"Bank Account", bank_account, "company"
 		)
-		return
 
 	if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
 		# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
@@ -202,7 +209,7 @@ def process_camt_document(user, camt_document):
 
 		if (
 			transaction.batch
-			and (user.split_batch_transactions or len(transaction) == 1)
+			and (split_batch_transactions or len(transaction) == 1)
 			and len(transaction) >= 1
 		):
 			# Split batch transactions into sub-transactions, based on info
@@ -211,12 +218,17 @@ def process_camt_document(user, camt_document):
 			for sub_transaction in transaction:
 				_create_bank_transaction(
 					bank_account,
-					user.company,
+					company,
 					sub_transaction,
-					user.start_date,
+					earliest_date,
 				)
 		else:
-			_create_bank_transaction(bank_account, user.company, transaction, user.start_date)
+			_create_bank_transaction(
+				bank_account,
+				company,
+				transaction,
+				earliest_date,
+			)
 
 
 def _create_bank_transaction(
@@ -278,3 +290,55 @@ def log_request(
 	request.requested_by = requested_by
 	request.parameters = json.dumps(parameters, indent=2)
 	return request.save(ignore_permissions=True)
+
+
+def get_protocol_versions(ebics_host_id: str, ebics_url: str):
+	"""Return a list of protocol versions supported by the bank."""
+	register_fintech()
+
+	from fintech.ebics import EbicsKeyRing, EbicsBank
+
+	keyring = EbicsKeyRing({})
+	bank = EbicsBank(keyring, ebics_host_id, ebics_url)
+
+	return bank.get_protocol_versions()
+
+
+@frappe.whitelist()
+def upload_camt_file():
+	frappe.has_permission("Bank Transaction", "create", throw=True)
+
+	file_bytes = frappe.local.uploaded_file
+	bank_account = frappe.form_dict.docname
+
+	register_fintech()
+
+	from fintech.sepa import CAMTDocument
+
+	camt_document = CAMTDocument(file_bytes.decode())
+	process_camt_document(camt_document, bank_account)
+
+
+def register_fintech(needs_license_key: bool = False):
+	banking_settings = frappe.get_single("Banking Settings")
+
+	licensee_name = banking_settings.fintech_licensee_name or None
+	license_key = None
+	with contextlib.suppress(frappe.AuthenticationError, frappe.ValidationError):
+		license_key = banking_settings.get_password("fintech_license_key")
+
+	if needs_license_key and not license_key:
+		frappe.throw(
+			_(
+				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
+			).format(get_link_to_form("Banking Settings", "Banking Settings"))
+		)
+
+	try:
+		fintech.register(
+			name=licensee_name,
+			keycode=license_key,
+		)
+	except RuntimeError as e:
+		if e.args[0] != "'register' can be called only once":
+			raise e
