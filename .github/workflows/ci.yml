@@ -14,6 +14,8 @@ on:
       - "**.md"
       - "**.html"
       - "**.csv"
+      - "**.pot"
+      - "**.po"
   pull_request:
     paths-ignore:
       - "**.css"
@@ -21,6 +23,8 @@ on:
       - "**.md"
       - "**.html"
       - "**.csv"
+      - "**.pot"
+      - "**.po"
 
 concurrency:
   group: version-14-banking-${{ github.event.number }}
