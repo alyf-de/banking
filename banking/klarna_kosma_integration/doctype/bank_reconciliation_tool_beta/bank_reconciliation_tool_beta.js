@@ -76,8 +76,13 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		});
 
 		frm.page.add_menu_item(
-			__("Upload a Bank Statement"),
+			__("Upload CSV / Excel file"),
 			() => frm.events.route_to_bank_statement_import(frm),
+		);
+
+		frm.page.add_menu_item(
+			__("Upload CAMT file"),
+			() => show_camt_uploader(frm),
 		);
 
 		frm.$reconciliation_area = frm.get_field("reconciliation_action_area").$wrapper;
@@ -244,3 +249,30 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		);
 	},
 });
+
+function show_camt_uploader(frm) {
+	if (!frm.doc.bank_account) {
+		frappe.throw(
+			{
+				message: __("Please set the 'Bank Account' filter"),
+				title: __("Filter Required")
+			}
+		);
+	}
+
+	const uploader = new frappe.ui.FileUploader({
+		method: "banking.ebics.utils.upload_camt_file",
+		doctype: "Bank Account",
+		docname: frm.doc.bank_account,
+		allow_toggle_private: false,
+		allow_take_photo: false,
+		bank_account: frm.doc.bank_account,
+		restrictions: {
+			allowed_file_types: [".xml", ".XML"],
+		},
+	});
+
+	uploader.dialog.$wrapper.on("hidden.bs.modal", () => {
+		frm.refresh();
+	});
+}

@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils.data import get_link_to_form
 
-from banking.ebics.manager import EBICSManager
+from banking.ebics.manager import EBICSManager, register_unlicensed
 
 if TYPE_CHECKING:
 	from datetime import date
@@ -123,7 +123,23 @@ def sync_ebics_transactions(
 	try:
 		for name in sorted(main_xml):
 			camt_document = CAMTDocument(xml=main_xml[name], camt54=batch_xml)
-			process_camt_document(user, camt_document)
+			bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
+			if not bank_account:
+				frappe.log_error(
+					title=_("Banking Error"),
+					message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+					reference_doctype="EBICS User",
+					reference_name=user.name,
+				)
+				continue
+
+			process_camt_document(
+				camt_document,
+				bank_account,
+				user.company,
+				user.start_date,
+				user.split_batch_transactions,
+			)
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(
@@ -171,25 +187,30 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		)
 
 
-def process_camt_document(user, camt_document):
-	bank_account = frappe.db.get_value(
+def get_bank_account(iban: str, bank: str, company: str) -> str | None:
+	return frappe.db.get_value(
 		"Bank Account",
 		{
-			"iban": camt_document.iban,
+			"iban": iban,
 			"disabled": 0,
-			"bank": user.bank,
+			"bank": bank,
 			"is_company_account": 1,
-			"company": user.company,
+			"company": company,
 		},
 	)
-	if not bank_account:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
-			reference_doctype="EBICS User",
-			reference_name=user.name,
+
+
+def process_camt_document(
+	camt_document,
+	bank_account: str,
+	company: "str | None" = None,
+	earliest_date: "date | None" = None,
+	split_batch_transactions: bool = False,
+):
+	if not company:
+		company = frappe.db.get_value(
+			"Bank Account", bank_account, "company"
 		)
-		return
 
 	if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
 		# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
@@ -202,7 +223,7 @@ def process_camt_document(user, camt_document):
 
 		if (
 			transaction.batch
-			and (user.split_batch_transactions or len(transaction) == 1)
+			and (split_batch_transactions or len(transaction) == 1)
 			and len(transaction) >= 1
 		):
 			# Split batch transactions into sub-transactions, based on info
@@ -211,12 +232,17 @@ def process_camt_document(user, camt_document):
 			for sub_transaction in transaction:
 				_create_bank_transaction(
 					bank_account,
-					user.company,
+					company,
 					sub_transaction,
-					user.start_date,
+					earliest_date,
 				)
 		else:
-			_create_bank_transaction(bank_account, user.company, transaction, user.start_date)
+			_create_bank_transaction(
+				bank_account,
+				company,
+				transaction,
+				earliest_date,
+			)
 
 
 def _create_bank_transaction(
@@ -278,3 +304,18 @@ def log_request(
 	request.requested_by = requested_by
 	request.parameters = json.dumps(parameters, indent=2)
 	return request.save(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def upload_camt_file():
+	frappe.has_permission("Bank Transaction", "create", throw=True)
+
+	file_bytes = frappe.local.uploaded_file
+	bank_account = frappe.form_dict.docname
+
+	register_unlicensed()
+
+	from fintech.sepa import CAMTDocument
+
+	camt_document = CAMTDocument(file_bytes.decode())
+	process_camt_document(camt_document, bank_account)
