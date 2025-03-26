@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils.data import get_link_to_form
 
-from banking.ebics.manager import EBICSManager, register_unlicensed
+from banking.ebics.manager import EBICSManager
 
 if TYPE_CHECKING:
 	from datetime import date
@@ -25,23 +25,9 @@ def get_ebics_manager(
 	:param ebics_user: The EBICS User record.
 	:param passphrase: The secret passphrase for uploads to the bank.
 	"""
-	banking_settings = frappe.get_single("Banking Settings")
+	register_fintech(needs_license_key=True)
 
-	license_key = None
-	try:
-		license_key = banking_settings.get_password("fintech_license_key")
-	except (frappe.AuthenticationError, frappe.ValidationError):
-		frappe.throw(
-			_(
-				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
-			).format(get_link_to_form("Banking Settings", "Banking Settings"))
-		)
-
-	manager = EBICSManager(
-		license_name=banking_settings.fintech_licensee_name,
-		license_key=license_key,
-	)
-
+	manager = EBICSManager()
 	manager.set_keyring(
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
@@ -306,6 +292,18 @@ def log_request(
 	return request.save(ignore_permissions=True)
 
 
+def get_protocol_versions(ebics_host_id: str, ebics_url: str):
+	"""Return a list of protocol versions supported by the bank."""
+	register_fintech()
+
+	from fintech.ebics import EbicsKeyRing, EbicsBank
+
+	keyring = EbicsKeyRing({})
+	bank = EbicsBank(keyring, ebics_host_id, ebics_url)
+
+	return bank.get_protocol_versions()
+
+
 @frappe.whitelist()
 def upload_camt_file():
 	frappe.has_permission("Bank Transaction", "create", throw=True)
@@ -313,9 +311,34 @@ def upload_camt_file():
 	file_bytes = frappe.local.uploaded_file
 	bank_account = frappe.form_dict.docname
 
-	register_unlicensed()
+	register_fintech()
 
 	from fintech.sepa import CAMTDocument
 
 	camt_document = CAMTDocument(file_bytes.decode())
 	process_camt_document(camt_document, bank_account)
+
+
+def register_fintech(needs_license_key: bool = False):
+	banking_settings = frappe.get_single("Banking Settings")
+
+	licensee_name = banking_settings.fintech_licensee_name or None
+	license_key = None
+	with contextlib.suppress(frappe.AuthenticationError, frappe.ValidationError):
+		license_key = banking_settings.get_password("fintech_license_key")
+
+	if needs_license_key and not license_key:
+		frappe.throw(
+			_(
+				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
+			).format(get_link_to_form("Banking Settings", "Banking Settings"))
+		)
+
+	try:
+		fintech.register(
+			name=licensee_name,
+			keycode=license_key,
+		)
+	except RuntimeError as e:
+		if e.args[0] != "'register' can be called only once":
+			raise e
