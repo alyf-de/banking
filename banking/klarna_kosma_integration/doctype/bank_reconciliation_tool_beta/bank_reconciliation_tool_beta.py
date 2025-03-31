@@ -978,6 +978,9 @@ def get_je_matching_query(
 		.select(
 			"*",
 			rank_expression.as_("rank"),
+			ref_rank.as_("reference_number_match"),
+			amount_rank.as_("amount_match"),
+			date_rank.as_("date_match"),
 		)
 		.where(amount_filter)
 		.orderby(rank_expression, order=Order.desc)
