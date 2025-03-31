@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
+from frappe.query_builder.functions import Sum
 from frappe.utils import cint, flt, sbool
 from frappe.query_builder.functions import Cast, Coalesce
 
@@ -430,7 +431,7 @@ def get_linked_payments(
 		from_reference_date,
 		to_reference_date,
 	)
-	subtract_allocations(gl_account, matching)
+	subtract_allocations(gl_account, vouchers=matching)
 
 	return matching
 
@@ -446,21 +447,30 @@ def subtract_allocations(gl_account, vouchers):
 	This does not affect "unpaid" vouchers (e.g. unpaid invoices) since they
 	are never directly allocated to a Bank Transaction.
 	"""
-	rows = get_total_allocated_amount(
+	voucher_allocated_amounts = get_total_allocated_amount(
 		[(voucher.get("doctype"), voucher.get("name")) for voucher in vouchers]
 	)
 
-	if not rows:
+	if not voucher_allocated_amounts:
 		return
 
 	for voucher in vouchers:
-		for (doctype, name), values in rows.items():
-			if doctype != voucher.get("doctype") or name != voucher.get("name"):
-				continue
+		if amount := get_allocated_amount(voucher_allocated_amounts, voucher, gl_account):
+			voucher["paid_amount"] -= amount
 
-			for value in values:
-				if value["gl_account"] == gl_account:
-					voucher["paid_amount"] -= value["total"]
+
+def get_allocated_amount(voucher_allocated_amounts, voucher, gl_account):
+	if not (
+		voucher_details := voucher_allocated_amounts.get(
+			(voucher.get("doctype"), voucher.get("name"))
+		)
+	):
+		return
+
+	if not (row := voucher_details.get(gl_account)):
+		return
+
+	return row.get("total")
 
 
 def check_matching(
@@ -921,53 +931,58 @@ def get_je_matching_query(
 	cr_or_dr = "credit" if common_filters.payment_type == "Pay" else "debit"
 	amount_field = getattr(jea, f"{cr_or_dr}_in_account_currency")
 
-	ref_rank = ref_equality_condition(je.cheque_no, common_filters.reference_no)
-	amount_rank = amount_rank_condition(amount_field, common_filters.amount)
-	amount_filter = (
-		amount_field == common_filters.amount if exact_match else amount_field > 0.0
-	)
-
 	filter_by_date = je.posting_date.between(from_date, to_date)
 	if cint(filter_by_reference_date):
 		filter_by_date = je.cheque_date.between(from_reference_date, to_reference_date)
 
-	date_condition = Coalesce(je.cheque_date, je.posting_date) == common_filters.date
-	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
-
-	rank_expression = ref_rank + amount_rank + date_rank + 1
-
-	query = (
+	subquery = (
 		frappe.qb.from_(jea)
 		.join(je)
 		.on(jea.parent == je.name)
 		.select(
-			rank_expression.as_("rank"),
+			Sum(amount_field).as_("paid_amount"),
 			ConstantColumn("Journal Entry").as_("doctype"),
 			je.name,
-			amount_field.as_("paid_amount"),
 			je.cheque_no.as_("reference_no"),
-			je.cheque_date.as_("reference_date"),
+			Coalesce(je.cheque_date, je.posting_date).as_("reference_date"),
 			je.pay_to_recd_from.as_("party"),
 			jea.party_type,
 			je.posting_date,
 			jea.account_currency.as_("currency"),
-			ref_rank.as_("reference_number_match"),
-			amount_rank.as_("amount_match"),
-			date_rank.as_("date_match"),
 		)
 		.where(je.docstatus == 1)
 		.where(je.voucher_type != "Opening Entry")
 		.where(je.clearance_date.isnull())
 		.where(jea.account == common_filters.bank_account)
-		.where(amount_filter)
-		.where(je.docstatus == 1)
 		.where(filter_by_date)
-		.orderby(rank_expression, order=Order.desc)
-		.limit(MAX_QUERY_RESULTS)
+		.groupby(je.name)
+		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
 
 	if frappe.flags.auto_reconcile_vouchers:
-		query = query.where(je.cheque_no == common_filters.reference_no)
+		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
+
+	ref_rank = ref_equality_condition(subquery.reference_no, common_filters.reference_no)
+	amount_rank = amount_rank_condition(subquery.paid_amount, common_filters.amount)
+	amount_filter = (
+		subquery.paid_amount == common_filters.amount
+		if exact_match
+		else subquery.paid_amount > 0.0
+	)
+	date_condition = subquery.reference_date == common_filters.date
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+	rank_expression = ref_rank + amount_rank + date_rank + 1
+
+	query = (
+		frappe.qb.from_(subquery)
+		.select(
+			"*",
+			rank_expression.as_("rank"),
+		)
+		.where(amount_filter)
+		.orderby(rank_expression, order=Order.desc)
+		.limit(MAX_QUERY_RESULTS)
+	)
 
 	return query
 

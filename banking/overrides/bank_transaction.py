@@ -65,13 +65,6 @@ class CustomBankTransaction(BankTransaction):
 		}
 		self.append("payment_entries", pe)
 
-	def get_outstanding_amount(self, payment_doctype, payment_name):
-		if payment_doctype not in ("Sales Invoice", "Purchase Invoice"):
-			return 0
-
-		# Check if the invoice is unpaid
-		return flt(frappe.db.get_value(payment_doctype, payment_name, "outstanding_amount"))
-
 	def reconcile_paid_vouchers(self, vouchers):
 		"""Reconcile paid vouchers with the Bank Transaction."""
 		for voucher in vouchers:
