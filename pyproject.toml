@@ -1,0 +1,52 @@
+[project]
+name = "banking"
+authors = [
+    { name = "ALYF GmbH", email = "hallo@alyf.de"}
+]
+description = "Banking Integration by ALYF GmbH"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    # frappe -- https://github.com/frappe/frappe is installed via 'bench init'
+    "fintech~=7.6.4"
+]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15.60.0,<16.0.0"
+erpnext = ">=15.57.0,<16.0.0"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "I",
+    "UP",
+    "B",
+    "RUF",
+]
+ignore = [
+    "E101", # indentation contains mixed spaces and tabs
+    "E402", # module level import not at top of file
+    "W191", # indentation contains tabs
+]
+typing-modules = ["frappe.types.DF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "tab"
+docstring-code-format = true
+
+[project.urls]
+Homepage = "https://www.alyf.de/bank-integration"
+Repository = "https://github.com/alyf-de/banking.git"
+"Bug Reports" = "https://github.com/alyf-de/banking/issues"
