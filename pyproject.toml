@@ -47,6 +47,6 @@ indent-style = "tab"
 docstring-code-format = true
 
 [project.urls]
-Homepage = "https://github.com/alyf-de/banking"
+Homepage = "https://www.alyf.de/bank-integration"
 Repository = "https://github.com/alyf-de/banking.git"
 "Bug Reports" = "https://github.com/alyf-de/banking/issues"
