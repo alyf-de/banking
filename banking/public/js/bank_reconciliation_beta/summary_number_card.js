@@ -16,7 +16,7 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 	 * - against total amount 120, we could have 140 allocated via an invoice total
 	 * - naturally 120 out of the invoice total is allocated, so 20 is unallocated
 	 * - in this case, "To Allocate" should be 0 (-20), for transparency
-	*/
+	 */
 	constructor(opts) {
 		Object.assign(this, opts);
 		this.make();
@@ -30,21 +30,31 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 			$container = this.$wrapper.find(".report-summary");
 			$container.empty();
 		} else {
-			$container = this.$wrapper.append(
-				`<div class="report-summary ${this.wrapper_class || ""}"></div>`
-			).find(".report-summary");
+			$container = this.$wrapper
+				.append(
+					`<div class="report-summary ${
+						this.wrapper_class || ""
+					}"></div>`
+				)
+				.find(".report-summary");
 		}
 
 		Object.keys(this.values).map((key) => {
 			let values = this.values[key];
 			if (values[2] && values[2] !== values[0]) {
 				// handle the case where we have two values to show
-				let df = {fieldtype: "Currency", options: "currency"};
+				let df = { fieldtype: "Currency", options: "currency" };
 				let value_1 = frappe.format(
-					values[0], df, { only_value: true }, { currency: this.currency }
+					values[0],
+					df,
+					{ only_value: true },
+					{ currency: this.currency }
 				);
 				let value_2 = frappe.format(
-					values[2], df, { only_value: true }, { currency: this.currency }
+					values[2],
+					df,
+					{ only_value: true },
+					{ currency: this.currency }
 				);
 				let visible_value = `${value_1} (${value_2})`;
 				var number_card = $(
@@ -70,4 +80,4 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 			}
 		});
 	}
-}
+};

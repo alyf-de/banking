@@ -11,7 +11,9 @@ from banking.ebics.manager import EBICSManager
 
 if TYPE_CHECKING:
 	from datetime import date
+
 	from fintech.sepa import SEPATransaction
+
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 
 
@@ -37,9 +39,7 @@ def get_ebics_manager(
 
 	manager.set_user(ebics_user.partner_id, ebics_user.user_id)
 
-	host_id, url = frappe.db.get_value(
-		"Bank", ebics_user.bank, ["ebics_host_id", "ebics_url"]
-	)
+	host_id, url = frappe.db.get_value("Bank", ebics_user.bank, ["ebics_host_id", "ebics_url"])
 	manager.set_bank(host_id, url)
 
 	return manager
@@ -58,7 +58,7 @@ def sync_ebics_transactions(
 
 	from fintech.sepa import (
 		CAMTDocument,
-	)  # import possible only after manager is initialized
+	)
 
 	permitted_types = manager.get_permitted_order_types()
 	validate_permitted_types(user, permitted_types, intraday)
@@ -76,9 +76,7 @@ def sync_ebics_transactions(
 
 	try:
 		client = manager.get_client()
-		main_xml = (
-			client.C52(start_date, end_date) if intraday else client.C53(start_date, end_date)
-		)
+		main_xml = client.C52(start_date, end_date) if intraday else client.C53(start_date, end_date)
 		batch_xml = client.C54(start_date, end_date) if with_c54 else None
 		request.db_set(
 			{
@@ -146,7 +144,8 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. "
+				"The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,
@@ -156,7 +155,8 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. "
+				"The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,
@@ -166,7 +166,8 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
+				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. "
+				"The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,
@@ -194,9 +195,7 @@ def process_camt_document(
 	split_batch_transactions: bool = False,
 ):
 	if not company:
-		company = frappe.db.get_value(
-			"Bank Account", bank_account, "company"
-		)
+		company = frappe.db.get_value("Bank Account", bank_account, "company")
 
 	if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
 		# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
@@ -235,7 +234,7 @@ def _create_bank_transaction(
 	bank_account: str,
 	company: str,
 	sepa_transaction: "SEPATransaction",
-	start_date: "date" = None,
+	start_date: "date" | None = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -243,9 +242,7 @@ def _create_bank_transaction(
 	"""
 	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 	# For our test bank, the latter is a timestamp with nanosecond accuracy.
-	transaction_id = (
-		sepa_transaction.bank_reference or sepa_transaction._xmlobj.Refs.TxId.text
-	)
+	transaction_id = sepa_transaction.bank_reference or sepa_transaction._xmlobj.Refs.TxId.text
 
 	# NOTE: This does not work for old data, this ID is different from Kosma's
 	if transaction_id and frappe.db.exists(
@@ -296,7 +293,7 @@ def get_protocol_versions(ebics_host_id: str, ebics_url: str):
 	"""Return a list of protocol versions supported by the bank."""
 	register_fintech()
 
-	from fintech.ebics import EbicsKeyRing, EbicsBank
+	from fintech.ebics import EbicsBank, EbicsKeyRing
 
 	keyring = EbicsKeyRing({})
 	bank = EbicsBank(keyring, ebics_host_id, ebics_url)
@@ -330,7 +327,8 @@ def register_fintech(needs_license_key: bool = False):
 	if needs_license_key and not license_key:
 		frappe.throw(
 			_(
-				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
+				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and "
+				"ensure that your subscription is active."
 			).format(get_link_to_form("Banking Settings", "Banking Settings"))
 		)
 

@@ -1,5 +1,3 @@
-from . import __version__ as app_version
-
 app_name = "banking"
 app_title = "ALYF Banking"
 app_publisher = "ALYF GmbH"
@@ -95,9 +93,7 @@ after_install = "banking.install.after_install"
 # ---------------
 # Override standard doctype classes
 
-override_doctype_class = {
-	"Bank Transaction": "banking.overrides.bank_transaction.CustomBankTransaction"
-}
+override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transaction.CustomBankTransaction"}
 
 # Document Events
 # ---------------
@@ -114,11 +110,17 @@ doc_events = {
 
 scheduler_events = {
 	"cron": {
-		"7 7-18 * * 1-5": [  # At minute 7 past every hour from 7 through 18 on every day-of-week from Monday through Friday.
-			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.intraday_sync_ebics",
+		"7 7-18 * * 1-5": [
+			# At minute 7 past every hour from 7 through 18
+			# on every day-of-week from Monday through Friday.
+			"banking.klarna_kosma_integration.doctype."
+			"banking_settings.banking_settings.intraday_sync_ebics",
 		],
-		"42 4 * * *": [  # Daily at 4:42 am
-			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions",
+		"42 4 * * *": [
+			# Daily at 4:42 am
+			"banking.klarna_kosma_integration.doctype."
+			"banking_settings.banking_settings."
+			"sync_all_accounts_and_transactions",
 		],
 	},
 }
@@ -221,4 +223,7 @@ alyf_banking_property_setters = {
 	]
 }
 
-get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"
+get_matching_queries = (
+	"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta"
+	".bank_reconciliation_tool_beta.get_matching_queries"
+)

@@ -5,7 +5,9 @@ frappe.ui.form.on("EBICS User", {
 	refresh(frm) {
 		if (frm.doc.initialized && !frm.doc.bank_keys_activated) {
 			frm.dashboard.set_headline(
-				__("Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys.")
+				__(
+					"Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
+				)
 			);
 		}
 
@@ -19,28 +21,34 @@ frappe.ui.form.on("EBICS User", {
 								fieldname: "passphrase",
 								label: __("Passphrase"),
 								fieldtype: "Password",
-								description: __("Set a new password for downloading bank statements from your bank.")
+								description: __(
+									"Set a new password for downloading bank statements from your bank."
+								),
 							},
 							{
 								fieldname: "store_passphrase",
 								label: __("Store Passphrase"),
 								fieldtype: "Check",
 								default: 1,
-								description: __("Store the passphrase in the ERPNext database to enable automated, regular download of bank statements.")
+								description: __(
+									"Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
+								),
 							},
 							{
 								fieldname: "signature_passphrase",
 								label: __("Signature Passphrase"),
 								fieldtype: "Password",
-								description: __("Set a new password for uploading transactions to your bank.")
+								description: __(
+									"Set a new password for uploading transactions to your bank."
+								),
 							},
 							{
 								fieldname: "info",
 								fieldtype: "HTML",
 								options: __(
 									"Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
-								)
-							}
+								),
+							},
 						],
 						(values) => {
 							frappe.call({
@@ -59,7 +67,10 @@ frappe.ui.form.on("EBICS User", {
 			);
 		}
 
-		if (frm.doc.initialized && (!frm.doc.bank_keys_activated || frappe.boot.developer_mode)) {
+		if (
+			frm.doc.initialized &&
+			(!frm.doc.bank_keys_activated || frappe.boot.developer_mode)
+		) {
 			frm.add_custom_button(
 				__("Verify Bank Keys"),
 				async () => {
@@ -68,7 +79,10 @@ frappe.ui.form.on("EBICS User", {
 						passphrase = await ask_for_passphrase();
 					}
 
-					const bank_keys = await get_bank_keys(frm.doc.name, passphrase);
+					const bank_keys = await get_bank_keys(
+						frm.doc.name,
+						passphrase
+					);
 					if (!bank_keys) {
 						return;
 					}
@@ -96,7 +110,6 @@ frappe.ui.form.on("EBICS User", {
 		}
 	},
 });
-
 
 function ask_for_passphrase() {
 	return new Promise((resolve) => {
@@ -188,8 +201,7 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 				fieldtype: "Date",
 				default: frappe.datetime.now_date(),
 			},
-			...(
-				needs_passphrase
+			...(needs_passphrase
 				? [
 						{
 							fieldname: "passphrase",
@@ -198,8 +210,7 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 							reqd: true,
 						},
 				  ]
-				: []
-			),
+				: []),
 			{
 				fieldname: "note",
 				fieldtype: "HTML",
@@ -217,7 +228,9 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 					}
 				);
 				frappe.show_alert({
-					message: __("Bank statements are being downloaded in the background."),
+					message: __(
+						"Bank statements are being downloaded in the background."
+					),
 					indicator: "blue",
 				});
 			} catch (e) {

@@ -3,13 +3,6 @@
 import json
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_field
-from frappe.utils import add_days, getdate
-from frappe.tests.utils import FrappeTestCase
-
-
-from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
-
 from erpnext.accounts.doctype.bank_transaction.test_bank_transaction import (
 	create_gl_account,
 )
@@ -19,16 +12,19 @@ from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 	create_sales_invoice,
 )
+from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
+from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+from frappe.tests.utils import FrappeTestCase
+from frappe.utils import add_days, getdate
+from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
-from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (  # noqa: E501
 	auto_reconcile_vouchers,
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,
 	create_payment_entry_bts,
 	get_linked_payments,
 )
-
-from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 
 class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
@@ -45,9 +41,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		cls.bank_account = create_bank_account(gl_account=cls.gl_account)
 		cls.customer = create_customer(customer_name="ABC Inc.")
 
-		cls.create_item(
-			cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC"
-		)
+		cls.create_item(cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC")
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	def tearDown(self) -> None:
@@ -100,9 +94,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		# Check if the PE is posted on the same date as the BT
 		self.assertEqual(
 			doc.date,
-			frappe.db.get_value(
-				"Payment Entry", doc.payment_entries[0].payment_entry, "posting_date"
-			),
+			frappe.db.get_value("Payment Entry", doc.payment_entries[0].payment_entry, "posting_date"),
 		)
 
 	def test_unpaid_invoices_less_than_transaction(self):
@@ -256,9 +248,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt2.status, "Reconciled")
 
 	def test_pe_against_transaction(self):
-		bt = create_bank_transaction(
-			deposit=100, reference_no="abcdef", bank_account=self.bank_account
-		)
+		bt = create_bank_transaction(deposit=100, reference_no="abcdef", bank_account=self.bank_account)
 		create_payment_entry_bts(
 			bank_transaction_name=bt.name,
 			party_type="Customer",
@@ -274,9 +264,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.status, "Reconciled")
 
 	def test_jv_against_transaction(self):
-		bt = create_bank_transaction(
-			deposit=200, reference_no="abcdef123", bank_account=self.bank_account
-		)
+		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
 		create_journal_entry_bts(
 			bank_transaction_name=bt.name,
 			party_type="Customer",
@@ -285,9 +273,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			reference_number=bt.reference_number,
 			reference_date=bt.date,
 			entry_type="Bank Entry",
-			second_account=frappe.db.get_value(
-				"Company", bt.company, "default_receivable_account"
-			),
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
 		)
 
 		bt.reload()
@@ -300,9 +286,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		Partially reconcile a bank transaction with an unpaid invoice and
 		create a journal entry for the remaining amount.
 		"""
-		bt = create_bank_transaction(
-			deposit=200, reference_no="abcdef123456", bank_account=self.bank_account
-		)
+		bt = create_bank_transaction(deposit=200, reference_no="abcdef123456", bank_account=self.bank_account)
 		si = create_sales_invoice(
 			rate=50,
 			warehouse="Finished Goods - _TC",
@@ -331,9 +315,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			reference_number=bt.reference_number,
 			reference_date=bt.date,
 			entry_type="Bank Entry",
-			second_account=frappe.db.get_value(
-				"Company", bt.company, "default_receivable_account"
-			),
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
 		)
 
 		bt.reload()
@@ -351,18 +333,14 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			withdrawal=300, reference_no="expense-cl-001234", bank_account=self.bank_account
 		)
 		expense_claim = make_expense_claim(
-			payable_account=frappe.db.get_value(
-				"Company", bt.company, "default_payable_account"
-			),
+			payable_account=frappe.db.get_value("Company", bt.company, "default_payable_account"),
 			amount=200,
 			sanctioned_amount=200,
 			company=bt.company,
 			account="Travel Expenses - _TC",
 		)
 		expense_claim_2 = make_expense_claim(
-			payable_account=frappe.db.get_value(
-				"Company", bt.company, "default_payable_account"
-			),
+			payable_account=frappe.db.get_value("Company", bt.company, "default_payable_account"),
 			amount=100,
 			sanctioned_amount=100,
 			company=bt.company,
@@ -381,9 +359,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		bt.reload()
 		expense_claim.reload()
 		expense_claim_2.reload()
-		self.assertEqual(
-			bt.payment_entries[0].allocated_amount, 300
-		)  # one PE against 2 expense claims
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 300)  # one PE against 2 expense claims
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.unallocated_amount, 0)
 
@@ -453,9 +429,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		# Check if the PE is posted on the same date as the BT
 		self.assertEqual(
 			doc.date,
-			frappe.db.get_value(
-				"Payment Entry", doc.payment_entries[0].payment_entry, "posting_date"
-			),
+			frappe.db.get_value("Payment Entry", doc.payment_entries[0].payment_entry, "posting_date"),
 		)
 
 	def test_auto_reconciliation(self):
@@ -571,9 +545,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	def test_configurable_reference_field(self):
 		"""Test if configured reference field is considered."""
 		settings = frappe.get_single("Banking Settings")
-		settings.append(
-			"reference_fields", {"document_type": "Sales Invoice", "field_name": "custom_ref_no"}
-		)
+		settings.append("reference_fields", {"document_type": "Sales Invoice", "field_name": "custom_ref_no"})
 		settings.save()
 
 		bt = create_bank_transaction(
@@ -669,9 +641,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		Test if a split JV shows up as a single consolidated row in the tool
 		and fully reconciles the Bank Transaction.
 		"""
-		bt = create_bank_transaction(
-			deposit=200, reference_no="abcdef123", bank_account=self.bank_account
-		)
+		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
 		journal_entry = create_journal_entry_bts(
 			bank_transaction_name=bt.name,
 			party_type="Customer",
@@ -680,9 +650,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			reference_number=bt.reference_number,
 			reference_date=bt.date,
 			entry_type="Bank Entry",
-			second_account=frappe.db.get_value(
-				"Company", bt.company, "default_receivable_account"
-			),
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
 			allow_edit=True,
 		)
 
@@ -724,20 +692,19 @@ def get_pe_references(vouchers: list):
 
 
 def create_bank_transaction(
-	date: str = None,
-	deposit: float = None,
-	withdrawal: float = None,
-	reference_no: str = None,
-	reference_date: str = None,
-	bank_account: str = None,
-	description: str = None,
+	date: str | None = None,
+	deposit: float | None = None,
+	withdrawal: float | None = None,
+	reference_no: str | None = None,
+	reference_date: str | None = None,
+	bank_account: str | None = None,
+	description: str | None = None,
 ):
 	doc = frappe.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"company": "_Test Company",
-			"description": description
-			or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
+			"description": description or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
 			"date": date or frappe.utils.nowdate(),
 			"deposit": deposit or 0.0,
 			"withdrawal": withdrawal or 0.0,

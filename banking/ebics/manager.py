@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from typing import Callable
+	from collections.abc import Callable
 
 	from fintech.ebics import (
 		EbicsBank,
@@ -14,9 +14,7 @@ if TYPE_CHECKING:
 class EBICSManager:
 	__slots__ = ["keyring", "user", "bank"]
 
-	def set_keyring(
-		self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None
-	):
+	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
 
 		class CustomKeyRing(EbicsKeyRing):
@@ -44,9 +42,7 @@ class EBICSManager:
 	def create_user_keys(self):
 		self.user.create_keys(keyversion="A005", bitlength=2048)
 
-	def create_user_certificates(
-		self, user_name: str, organization_name: str, country_code: str
-	):
+	def create_user_certificates(self, user_name: str, organization_name: str, country_code: str):
 		self.user.create_certificates(
 			commonName=user_name,
 			organizationName=organization_name,
@@ -83,9 +79,7 @@ class EBICSManager:
 		"""Return a list of individual order types for the given (or unspecified) authorisation level."""
 		client = self.get_client()
 		user_data = client.HTD(parsed=True)
-		permissions = (
-			user_data.get("HTDResponseOrderData", {}).get("UserInfo", {}).get("Permission", [])
-		)
+		permissions = user_data.get("HTDResponseOrderData", {}).get("UserInfo", {}).get("Permission", [])
 
 		# Collect all order types for the specified level
 		level_perms = []

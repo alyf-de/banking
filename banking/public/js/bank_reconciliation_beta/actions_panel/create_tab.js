@@ -23,10 +23,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		let document_type = values.document_type;
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
-		this.create_voucher_bts(
-			false,
-			(message) => me.actions_panel.after_transaction_reconcile(
-				message, true, document_type
+		this.create_voucher_bts(false, (message) =>
+			me.actions_panel.after_transaction_reconcile(
+				message,
+				true,
+				document_type
 			)
 		);
 	}
@@ -34,7 +35,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	edit_in_full_page() {
 		this.create_voucher_bts(true, (message) => {
 			const doc = frappe.model.sync(message);
-			let doctype = doc[0].doctype, docname = doc[0].name;
+			let doctype = doc[0].doctype,
+				docname = doc[0].name;
 
 			// Reconcile and update the view
 			// when the voucher is submitted in another tab
@@ -51,11 +53,12 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
-	create_voucher_bts(allow_edit=false, success_callback) {
+	create_voucher_bts(allow_edit = false, success_callback) {
 		// Create PE or JV and run `success_callback`
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
-		let method = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
+		let method =
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
 		let args = {
 			bank_transaction_name: this.transaction.name,
 			reference_number: values.reference_number,
@@ -72,15 +75,15 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			args = {
 				...args,
 				project: values.project,
-				cost_center: values.cost_center
-			}
+				cost_center: values.cost_center,
+			};
 		} else {
-			method =  method + ".create_journal_entry_bts";
+			method = method + ".create_journal_entry_bts";
 			args = {
 				...args,
 				entry_type: values.journal_entry_type,
 				second_account: values.second_account,
-			}
+			};
 		}
 
 		frappe.call({
@@ -89,16 +92,18 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			callback: (response) => {
 				if (response.exc) {
 					frappe.show_alert({
-						message: __("Failed to create {0} against {1}", [document_type, this.transaction.name]),
-						indicator: "red"
+						message: __("Failed to create {0} against {1}", [
+							document_type,
+							this.transaction.name,
+						]),
+						indicator: "red",
 					});
 					return;
 				} else if (response.message) {
 					success_callback(response.message);
 				}
-			}
-		})
-
+			},
+		});
 	}
 
 	reconcile_new_voucher(doctype, docname) {
@@ -117,27 +122,36 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			callback: (response) => {
 				if (response.exc) {
 					frappe.show_alert({
-						message: __("Failed to reconcile new {0} against {1}", [doctype, me.transaction.name]),
-						indicator: "red"
+						message: __("Failed to reconcile new {0} against {1}", [
+							doctype,
+							me.transaction.name,
+						]),
+						indicator: "red",
 					});
 					return;
-				} else if (response.message && Object.keys(response.message).length > 0) {
+				} else if (
+					response.message &&
+					Object.keys(response.message).length > 0
+				) {
 					if (response.message.deleted) {
 						frappe.realtime.off("doc_update");
 						return;
 					}
 
 					me.actions_panel.after_transaction_reconcile(
-						response.message, true, doctype
+						response.message,
+						true,
+						doctype
 					);
 				}
-			}
+			},
 		});
 	}
 
-
 	get_create_tab_fields() {
-		let party_type = this.transaction.party_type || (flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
+		let party_type =
+			this.transaction.party_type ||
+			(flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
 		return [
 			{
 				label: __("Document Type"),
@@ -146,16 +160,21 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: `Payment Entry\nJournal Entry`,
 				default: "Payment Entry",
 				onchange: () => {
-					let value = this.create_field_group.get_value("document_type");
+					let value =
+						this.create_field_group.get_value("document_type");
 					let fields = this.create_field_group;
 
-					fields.get_field("party").df.reqd = value === "Payment Entry";
-					fields.get_field("party_type").df.reqd = value === "Payment Entry";
-					fields.get_field("journal_entry_type").df.reqd = value === "Journal Entry";
-					fields.get_field("second_account").df.reqd = value === "Journal Entry";
+					fields.get_field("party").df.reqd =
+						value === "Payment Entry";
+					fields.get_field("party_type").df.reqd =
+						value === "Payment Entry";
+					fields.get_field("journal_entry_type").df.reqd =
+						value === "Journal Entry";
+					fields.get_field("second_account").df.reqd =
+						value === "Journal Entry";
 
 					this.create_field_group.refresh();
-				}
+				},
 			},
 			{
 				fieldtype: "Section Break",
@@ -166,11 +185,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldname: "reference_number",
 				fieldtype: "Data",
 				label: __("Reference Number"),
-				default: (
-					this.transaction.reference_number
-					||
-					(this.transaction.description ? this.transaction.description.slice(0, 140) : "")
-				),
+				default:
+					this.transaction.reference_number ||
+					(this.transaction.description
+						? this.transaction.description.slice(0, 140)
+						: ""),
 			},
 			{
 				fieldname: "posting_date",
@@ -208,8 +227,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				label: __("Journal Entry Type"),
 				fieldname: "journal_entry_type",
 				fieldtype: "Select",
-				options:
-				`Bank Entry\nJournal Entry\nInter Company Journal Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation\nDeferred Revenue\nDeferred Expense`,
+				options: `Bank Entry\nJournal Entry\nInter Company Journal Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation\nDeferred Revenue\nDeferred Expense`,
 				default: "Bank Entry",
 				depends_on: "eval: doc.document_type == 'Journal Entry'",
 			},
@@ -247,8 +265,9 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				},
 				onchange: () => {
 					let value = this.create_field_group.get_value("party_type");
-					this.create_field_group.get_field("party").df.options = value;
-				}
+					this.create_field_group.get_field("party").df.options =
+						value;
+				},
 			},
 			{
 				fieldname: "party",
@@ -273,23 +292,23 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				depends_on: "eval: doc.document_type == 'Payment Entry'",
 			},
 			{
-				fieldtype: "Section Break"
+				fieldtype: "Section Break",
 			},
 			{
 				label: __("Hidden field for alignment"),
 				fieldname: "hidden_field",
 				fieldtype: "Data",
-				hidden: 1
+				hidden: 1,
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Create"),
 				fieldtype: "Button",
 				primary: true,
 				click: () => this.create_voucher(),
-			}
+			},
 		];
 	}
-}
+};
