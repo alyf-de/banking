@@ -113,8 +113,7 @@ scheduler_events = {
 		"7 7-18 * * 1-5": [
 			# At minute 7 past every hour from 7 through 18
 			# on every day-of-week from Monday through Friday.
-			"banking.klarna_kosma_integration.doctype."
-			"banking_settings.banking_settings.intraday_sync_ebics",
+			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.intraday_sync_ebics",
 		],
 		"42 4 * * *": [
 			# Daily at 4:42 am
