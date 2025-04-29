@@ -18,7 +18,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
-from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (  # noqa: E501
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
 	auto_reconcile_vouchers,
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,

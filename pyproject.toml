@@ -37,6 +37,7 @@ select = [
 ignore = [
     "E101", # indentation contains mixed spaces and tabs
     "E402", # module level import not at top of file
+    "E501", # line too long
     "W191", # indentation contains tabs
 ]
 typing-modules = ["frappe.types.DF"]

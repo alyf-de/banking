@@ -117,9 +117,7 @@ scheduler_events = {
 		],
 		"42 4 * * *": [
 			# Daily at 4:42 am
-			"banking.klarna_kosma_integration.doctype."
-			"banking_settings.banking_settings."
-			"sync_all_accounts_and_transactions",
+			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions",
 		],
 	},
 }
@@ -222,7 +220,4 @@ alyf_banking_property_setters = {
 	]
 }
 
-get_matching_queries = (
-	"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta"
-	".bank_reconciliation_tool_beta.get_matching_queries"
-)
+get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"

@@ -56,10 +56,9 @@ def sync_ebics_transactions(
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 
-	# import possible only after manager is initialized
 	from fintech.sepa import (
 		CAMTDocument,
-	)
+	)  # import possible only after manager is initialized
 
 	permitted_types = manager.get_permitted_order_types()
 	validate_permitted_types(user, permitted_types, intraday)
@@ -145,8 +144,7 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. "
-				"The permitted types are: {1}."
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,
@@ -156,8 +154,7 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. "
-				"The permitted types are: {1}."
+				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,
@@ -167,8 +164,7 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. "
-				"The permitted types are: {1}."
+				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,
@@ -328,8 +324,7 @@ def register_fintech(needs_license_key: bool = False):
 	if needs_license_key and not license_key:
 		frappe.throw(
 			_(
-				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and "
-				"ensure that your subscription is active."
+				"License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 			).format(get_link_to_form("Banking Settings", "Banking Settings"))
 		)
 
