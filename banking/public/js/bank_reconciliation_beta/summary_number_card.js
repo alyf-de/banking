@@ -41,6 +41,7 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 
 		Object.keys(this.values).map((key) => {
 			let values = this.values[key];
+			let number_card;
 			if (values[2] && values[2] !== values[0]) {
 				// handle the case where we have two values to show
 				let df = { fieldtype: "Currency", options: "currency" };
@@ -57,7 +58,7 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 					{ currency: this.currency }
 				);
 				let visible_value = `${value_1} (${value_2})`;
-				var number_card = $(
+				number_card = $(
 					`<div class="summary-item">
 						<div class="summary-label">${__(key)}</div>
 						<div class="summary-value">${visible_value}</div>
@@ -70,7 +71,7 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 					datatype: "Currency",
 					currency: this.currency,
 				};
-				var number_card = frappe.utils.build_summary_item(data);
+				number_card = frappe.utils.build_summary_item(data);
 			}
 
 			$container.append(number_card);
