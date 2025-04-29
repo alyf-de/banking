@@ -56,6 +56,7 @@ def sync_ebics_transactions(
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 
+	# import possible only after manager is initialized
 	from fintech.sepa import (
 		CAMTDocument,
 	)
