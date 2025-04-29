@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import json
 from typing import TYPE_CHECKING, Literal
 
@@ -194,10 +195,6 @@ def process_camt_document(
 	if not company:
 		company = frappe.db.get_value("Bank Account", bank_account, "company")
 
-	if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
-		# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
-		camt_document._strict_batch_parsing = True
-
 	for transaction in camt_document:
 		if transaction.status and transaction.status != "BOOK":
 			# Skip PDNG and INFO transactions
@@ -239,7 +236,11 @@ def _create_bank_transaction(
 	"""
 	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 	# For our test bank, the latter is a timestamp with nanosecond accuracy.
-	transaction_id = sepa_transaction.bank_reference or sepa_transaction._xmlobj.Refs.TxId.text
+	transaction_id = (
+		sepa_transaction.bank_reference
+		or sepa_transaction._xmlobj.Refs.TxId.text
+		or get_transaction_hash(sepa_transaction)
+	)
 
 	# NOTE: This does not work for old data, this ID is different from Kosma's
 	if transaction_id and frappe.db.exists(
@@ -270,6 +271,24 @@ def _create_bank_transaction(
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
 		bt.insert()
 		bt.submit()
+
+
+def get_transaction_hash(transaction: "SEPATransaction"):
+	sha = hashlib.sha256()
+	for value in (
+		transaction.date,
+		transaction.iban,
+		transaction.name,
+		transaction.eref,
+		transaction.amount.value,
+		transaction.amount.currency,
+		transaction.info,
+		*transaction.purpose,
+	):
+		if value:
+			sha.update(frappe.safe_encode(str(value)))
+
+	return sha.hexdigest()
 
 
 def log_request(
