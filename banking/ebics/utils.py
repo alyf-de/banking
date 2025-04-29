@@ -194,13 +194,7 @@ def process_camt_document(
 	split_batch_transactions: bool = False,
 ):
 	if not company:
-		company = frappe.db.get_value(
-			"Bank Account", bank_account, "company"
-		)
-
-	if camt_document._type in ("camt.053.001.08", "camt.052.001.08"):
-		# Recognize a batch solely by the presence of the Btch element or more than one subtransaction.
-		camt_document._strict_batch_parsing = True
+		company = frappe.db.get_value("Bank Account", bank_account, "company")
 
 	for transaction in camt_document:
 		if transaction.status and transaction.status != "BOOK":
