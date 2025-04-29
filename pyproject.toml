@@ -9,7 +9,7 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # frappe -- https://github.com/frappe/frappe is installed via 'bench init'
-    "fintech~=7.6.4"
+    "fintech~=7.7.0"
 ]
 
 [build-system]
