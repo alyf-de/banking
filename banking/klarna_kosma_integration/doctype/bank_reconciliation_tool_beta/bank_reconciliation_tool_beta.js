@@ -14,16 +14,10 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	},
 
 	onload: function (frm) {
-		if (
-			!frm.doc.bank_statement_from_date &&
-			!frm.doc.bank_statement_to_date
-		) {
+		if (!frm.doc.bank_statement_from_date && !frm.doc.bank_statement_to_date) {
 			// Set default filter dates
 			let today = frappe.datetime.get_today();
-			frm.doc.bank_statement_from_date = frappe.datetime.add_months(
-				today,
-				-1
-			);
+			frm.doc.bank_statement_from_date = frappe.datetime.add_months(today, -1);
 			frm.doc.bank_statement_to_date = today;
 		}
 
@@ -50,11 +44,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		frm.page.add_action_icon("refresh", () => {
 			frm.events.get_bank_transactions(frm);
 		});
-		frm.change_custom_button_type(
-			__("Get Bank Transactions"),
-			null,
-			"primary"
-		);
+		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
 
 		frm.page.add_menu_item(__("Auto Reconcile"), function () {
 			frappe.confirm(
@@ -63,13 +53,13 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				),
 				() => {
 					frappe.call({
-						method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
+						method:
+							"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
 						args: {
 							bank_account: frm.doc.bank_account,
 							from_date: frm.doc.bank_statement_from_date,
 							to_date: frm.doc.bank_statement_to_date,
-							filter_by_reference_date:
-								frm.doc.filter_by_reference_date,
+							filter_by_reference_date: frm.doc.filter_by_reference_date,
 							from_reference_date: frm.doc.from_reference_date,
 							to_reference_date: frm.doc.to_reference_date,
 						},
@@ -122,7 +112,8 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 		// Route to saved Import Record in new tab
 		frappe.call({
-			method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.upload_bank_statement",
+			method:
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.upload_bank_statement",
 			args: {
 				dt: frm.doc.doctype,
 				dn: frm.doc.name,
@@ -146,17 +137,12 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				frm.doc.bank_account,
 				"account",
 				(r) => {
-					frappe.db.get_value(
-						"Account",
-						r.account,
-						"account_currency",
-						(r) => {
-							frm.doc.account_currency = r.account_currency;
-							frm.trigger("get_account_opening_balance");
-							frm.trigger("get_account_closing_balance");
-							frm.trigger("render_summary");
-						}
-					);
+					frappe.db.get_value("Account", r.account, "account_currency", (r) => {
+						frm.doc.account_currency = r.account_currency;
+						frm.trigger("get_account_opening_balance");
+						frm.trigger("get_account_closing_balance");
+						frm.trigger("render_summary");
+					});
 				}
 			);
 
@@ -184,7 +170,8 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	get_account_opening_balance(frm) {
 		if (frm.doc.bank_account && frm.doc.bank_statement_from_date) {
 			frappe.call({
-				method: "erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
+				method:
+					"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
 					bank_account: frm.doc.bank_account,
 					till_date: frm.doc.bank_statement_from_date,
@@ -200,7 +187,8 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	get_account_closing_balance(frm) {
 		if (frm.doc.bank_account && frm.doc.bank_statement_to_date) {
 			return frappe.call({
-				method: "erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
+				method:
+					"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
 					bank_account: frm.doc.bank_account,
 					till_date: frm.doc.bank_statement_to_date,
@@ -244,15 +232,14 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	build_reconciliation_area: function (frm) {
 		if (!frm.doc.bank_account) return;
 
-		frappe.require(
-			"bank_reconciliation_beta.bundle.js",
-			() =>
-				(frm.panel_manager =
-					new erpnext.accounts.bank_reconciliation.PanelManager({
-						doc: frm.doc,
-						$wrapper: frm.$reconciliation_area,
-					}))
-		);
+		frappe.require("bank_reconciliation_beta.bundle.js", () => {
+			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
+				{
+					doc: frm.doc,
+					$wrapper: frm.$reconciliation_area,
+				}
+			);
+		});
 	},
 });
 

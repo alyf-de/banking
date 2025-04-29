@@ -12,11 +12,7 @@ frappe.ui.form.on("Banking Settings", {
 				});
 			}
 
-			if (
-				frm.doc.customer_id &&
-				frm.doc.admin_endpoint &&
-				frm.doc.api_token
-			) {
+			if (frm.doc.customer_id && frm.doc.admin_endpoint && frm.doc.api_token) {
 				frm.trigger("get_subscription");
 			}
 
@@ -34,10 +30,7 @@ frappe.ui.form.on("Banking Settings", {
 			frm.page.add_inner_button(
 				__("Signup for Banking"),
 				() => {
-					window.open(
-						`${frm.doc.admin_endpoint}/banking-pricing`,
-						"_blank"
-					);
+					window.open(`${frm.doc.admin_endpoint}/banking-pricing`, "_blank");
 				},
 				null,
 				"primary"
@@ -153,8 +146,7 @@ function set_field_options(frm, cdt, cdn) {
 		const meta = frappe.get_meta(document_type);
 		const fields = meta.fields.filter((field) => {
 			return (
-				["Link", "Data"].includes(field.fieldtype) &&
-				field.is_virtual === 0
+				["Link", "Data"].includes(field.fieldtype) && field.is_virtual === 0
 			);
 		});
 

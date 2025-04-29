@@ -28,7 +28,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	async get_bank_transactions() {
 		let transactions = await frappe
 			.call({
-				method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
+				method:
+					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
 				args: {
 					bank_account: this.doc.bank_account,
 					from_date: this.doc.bank_statement_from_date,
@@ -216,17 +217,14 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	) {
 		// Update the transaction object's & view's unallocated_amount **OR** other details
 		let id = this.active_transaction.name;
-		let current_index = this.transactions.findIndex(
-			({ name }) => name === id
-		);
+		let current_index = this.transactions.findIndex(({ name }) => name === id);
 
 		let $current_transaction = this.$list_container.find("#" + id);
 		let transaction = this.transactions[current_index];
 
 		if (updated_amount) {
 			// update amount is > 0 always [src: `after_transaction_reconcile()`]
-			this.transactions[current_index]["unallocated_amount"] =
-				updated_amount;
+			this.transactions[current_index]["unallocated_amount"] = updated_amount;
 		} else {
 			this.transactions[current_index] = {
 				...transaction,
@@ -248,9 +246,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		// Remove the current transaction from the list and move to the next/previous one
 		let id = this.active_transaction.name;
 		let $current_transaction = this.$list_container.find("#" + id);
-		let current_index = this.transactions.findIndex(
-			({ name }) => name === id
-		);
+		let current_index = this.transactions.findIndex(({ name }) => name === id);
 
 		let next_transaction = this.transactions[current_index + 1];
 		let previous_transaction = this.transactions[current_index - 1];

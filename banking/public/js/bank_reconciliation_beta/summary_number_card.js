@@ -32,9 +32,7 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 		} else {
 			$container = this.$wrapper
 				.append(
-					`<div class="report-summary ${
-						this.wrapper_class || ""
-					}"></div>`
+					`<div class="report-summary ${this.wrapper_class || ""}"></div>`
 				)
 				.find(".report-summary");
 		}

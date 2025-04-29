@@ -24,11 +24,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
 		this.create_voucher_bts(false, (message) =>
-			me.actions_panel.after_transaction_reconcile(
-				message,
-				true,
-				document_type
-			)
+			me.actions_panel.after_transaction_reconcile(message, true, document_type)
 		);
 	}
 
@@ -112,7 +108,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		// If doc object in response, newly created doc is submitted (can be reconciled)
 		var me = this;
 		frappe.call({
-			method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
+			method:
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
 			args: {
 				transaction_name: this.transaction.name,
 				amount: this.transaction.unallocated_amount,
@@ -160,14 +157,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: `Payment Entry\nJournal Entry`,
 				default: "Payment Entry",
 				onchange: () => {
-					let value =
-						this.create_field_group.get_value("document_type");
+					let value = this.create_field_group.get_value("document_type");
 					let fields = this.create_field_group;
 
-					fields.get_field("party").df.reqd =
-						value === "Payment Entry";
-					fields.get_field("party_type").df.reqd =
-						value === "Payment Entry";
+					fields.get_field("party").df.reqd = value === "Payment Entry";
+					fields.get_field("party_type").df.reqd = value === "Payment Entry";
 					fields.get_field("journal_entry_type").df.reqd =
 						value === "Journal Entry";
 					fields.get_field("second_account").df.reqd =
@@ -256,17 +250,13 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				get_query: function () {
 					return {
 						filters: {
-							name: [
-								"in",
-								Object.keys(frappe.boot.party_account_types),
-							],
+							name: ["in", Object.keys(frappe.boot.party_account_types)],
 						},
 					};
 				},
 				onchange: () => {
 					let value = this.create_field_group.get_value("party_type");
-					this.create_field_group.get_field("party").df.options =
-						value;
+					this.create_field_group.get_field("party").df.options = value;
 				},
 			},
 			{

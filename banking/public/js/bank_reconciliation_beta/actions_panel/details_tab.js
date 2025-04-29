@@ -25,10 +25,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 		const party_type = this.details_field_group.get_value("party_type");
 
 		let diff = ["reference_number", "party", "party_type"].some((field) => {
-			return (
-				me.details_field_group.get_value(field) !==
-				me.transaction[field]
-			);
+			return me.details_field_group.get_value(field) !== me.transaction[field];
 		});
 		if (!diff) {
 			frappe.show_alert({
@@ -39,7 +36,8 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 		}
 
 		frappe.call({
-			method: "erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
+			method:
+				"erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
 			args: {
 				bank_transaction_name: me.transaction.name,
 				reference_number: reference_number,
@@ -50,9 +48,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 			freeze_message: __("Updating ..."),
 			callback: (response) => {
 				if (response.exc) {
-					frappe.show_alert(
-						__("Failed to update {0}", [me.transaction.name])
-					);
+					frappe.show_alert(__("Failed to update {0}", [me.transaction.name]));
 					return;
 				}
 
@@ -175,18 +171,13 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				get_query: function () {
 					return {
 						filters: {
-							name: [
-								"in",
-								Object.keys(frappe.boot.party_account_types),
-							],
+							name: ["in", Object.keys(frappe.boot.party_account_types)],
 						},
 					};
 				},
 				onchange: () => {
-					let value =
-						this.details_field_group.get_value("party_type");
-					this.details_field_group.get_field("party").df.options =
-						value;
+					let value = this.details_field_group.get_value("party_type");
+					this.details_field_group.get_field("party").df.options = value;
 				},
 				default: this.transaction.party_type || null,
 			},

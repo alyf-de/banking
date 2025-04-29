@@ -20,12 +20,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	}
 
 	summary_empty_state() {
-		this.render_transaction_amount_summary(
-			0,
-			0,
-			0,
-			this.transaction.currency
-		);
+		this.render_transaction_amount_summary(0, 0, 0, this.transaction.currency);
 	}
 
 	async populate_matching_vouchers(event_obj) {
@@ -71,7 +66,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	async get_matching_vouchers(document_types) {
 		let vouchers = await frappe
 			.call({
-				method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_linked_payments",
+				method:
+					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_linked_payments",
 				args: {
 					bank_transaction_name: this.transaction.name,
 					document_types: document_types,
@@ -116,23 +112,16 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 						const formatted_date = frappe.format(value, {
 							fieldtype: "Date",
 						});
-						return row.date_match
-							? formatted_date.bold()
-							: formatted_date;
+						return row.date_match ? formatted_date.bold() : formatted_date;
 					},
 				},
 				{
 					content: row.paid_amount,
 					format: (value) => {
-						let formatted_value = format_currency(
-							value,
-							row.currency
-						);
+						let formatted_value = format_currency(value, row.currency);
 						let match_condition =
 							row.amount_match || row.unallocated_amount_match;
-						return match_condition
-							? formatted_value.bold()
-							: formatted_value;
+						return match_condition ? formatted_value.bold() : formatted_value;
 					},
 				},
 				{
@@ -149,9 +138,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 							fieldtype: "Link",
 							options: row.party_type,
 						});
-						return row.party_match
-							? formatted_value.bold()
-							: formatted_value;
+						return row.party_match ? formatted_value.bold() : formatted_value;
 					},
 				},
 				{
@@ -187,9 +174,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			"click",
 			".dt-cell__content input",
 			(e) => {
-				let idx = $(e.currentTarget)
-					.closest(".dt-cell")
-					.data().rowIndex;
+				let idx = $(e.currentTarget).closest(".dt-cell").data().rowIndex;
 				let voucher_row = this.actions_table.getRows()[idx];
 
 				this.check_data_table_row(voucher_row);
@@ -303,18 +288,14 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		);
 		if (voucher_types.size > 1) {
 			frappe.show_alert({
-				message: __(
-					"Please select vouchers of the same type to reconcile"
-				),
+				message: __("Please select vouchers of the same type to reconcile"),
 				indicator: "red",
 			});
 			return;
 		}
 
 		// If the vouchers have different parties prepare a prompt to reconcile multi-party
-		let parties = new Set(
-			selected_vouchers.map((voucher) => voucher.party)
-		);
+		let parties = new Set(selected_vouchers.map((voucher) => voucher.party));
 		if (parties.size > 1) {
 			this.show_multiple_party_reconcile_prompt(selected_vouchers);
 		} else {
@@ -325,7 +306,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	bulk_reconcile_vouchers(selected_vouchers, reconcile_multi_party) {
 		let me = this;
 		frappe.call({
-			method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.bulk_reconcile_vouchers",
+			method:
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.bulk_reconcile_vouchers",
 			args: {
 				bank_transaction_name: this.transaction.name,
 				vouchers: selected_vouchers,
@@ -336,18 +318,13 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			callback: (response) => {
 				if (response.exc) {
 					frappe.show_alert({
-						message: __("Failed to reconcile {0}", [
-							this.transaction.name,
-						]),
+						message: __("Failed to reconcile {0}", [this.transaction.name]),
 						indicator: "red",
 					});
 					return;
 				}
 
-				me.actions_panel.after_transaction_reconcile(
-					response.message,
-					false
-				);
+				me.actions_panel.after_transaction_reconcile(response.message, false);
 			},
 		});
 	}
@@ -466,10 +443,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				label: __("Show Exact Party"),
 				fieldname: "exact_party_match",
 				fieldtype: "Check",
-				default:
-					this.transaction.party_type && this.transaction.party
-						? 1
-						: 0,
+				default: this.transaction.party_type && this.transaction.party ? 1 : 0,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
 				},

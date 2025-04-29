@@ -52,7 +52,8 @@ frappe.ui.form.on("EBICS User", {
 						],
 						(values) => {
 							frappe.call({
-								method: "banking.ebics.doctype.ebics_user.ebics_user.initialize",
+								method:
+									"banking.ebics.doctype.ebics_user.ebics_user.initialize",
 								args: { ebics_user: frm.doc.name, ...values },
 								freeze: true,
 								freeze_message: __("Initializing..."),
@@ -79,10 +80,7 @@ frappe.ui.form.on("EBICS User", {
 						passphrase = await ask_for_passphrase();
 					}
 
-					const bank_keys = await get_bank_keys(
-						frm.doc.name,
-						passphrase
-					);
+					const bank_keys = await get_bank_keys(frm.doc.name, passphrase);
 					if (!bank_keys) {
 						return;
 					}
