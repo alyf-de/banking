@@ -121,10 +121,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		if (unallocated_amount > 0) {
 			// if partial update this.transaction, re-click on list row
 			frappe.show_alert({
-				message: __("Bank Transaction {0} Partially {1}", [
-					this.transaction.name,
-					with_new_voucher ? "Reconciled" : "Matched",
-				]),
+				message: with_new_voucher
+					? __("Bank Transaction {0} partially reconciled.", [
+							this.transaction.name,
+					  ])
+					: __("Bank Transaction {0} partially matched.", [
+							this.transaction.name,
+					  ]),
 				indicator: "blue",
 			});
 			this.panel_manager.refresh_transaction(unallocated_amount);
@@ -133,10 +136,10 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 				this.transaction.name,
 			]);
 			if (with_new_voucher) {
-				alert_string = __(
-					"Bank Transaction {0} reconciled with a new {1}",
-					[this.transaction.name, document_type]
-				);
+				alert_string = __("Bank Transaction {0} reconciled with a new {1}", [
+					this.transaction.name,
+					document_type,
+				]);
 			}
 			frappe.show_alert({ message: alert_string, indicator: "green" });
 			this.panel_manager.move_to_next_transaction();
