@@ -259,6 +259,8 @@ function show_camt_uploader(frm) {
 	}
 
 	const uploader = new frappe.ui.FileUploader({
+		dialog_title: __("Upload XML (CAMT.053) file"),
+		upload_notes: __("to import bank transactions for {0}.", [frm.doc.bank_account]),
 		method: "banking.ebics.utils.upload_camt_file",
 		doctype: "Bank Account",
 		docname: frm.doc.bank_account,
