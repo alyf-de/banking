@@ -261,9 +261,14 @@ function show_camt_uploader(frm) {
 		docname: frm.doc.bank_account,
 		allow_toggle_private: false,
 		allow_take_photo: false,
+		allow_web_link: false,
+		allow_multiple: false,
+		allow_google_drive: false,
+		disable_file_browser: true,
 		bank_account: frm.doc.bank_account,
 		restrictions: {
 			allowed_file_types: [".xml", ".XML"],
+			max_number_of_files: 1,
 		},
 	});
 
