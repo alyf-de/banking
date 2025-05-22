@@ -12,7 +12,8 @@ class Admin:
 	def __init__(self, settings=None) -> None:
 		"""Initialize the Admin class with the necessary settings.
 
-		:param settings: Banking Settings document. Enables you to pass the most recent settings that may not be in the database yet.
+		:param settings: Banking Settings document.
+		Enables you to pass the most recent settings that may not be in the database yet.
 		"""
 		settings = settings or frappe.get_single("Banking Settings")
 		self.api_token = settings.get_password("api_token")

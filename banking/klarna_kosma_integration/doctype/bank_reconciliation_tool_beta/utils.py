@@ -1,9 +1,8 @@
 import frappe
 from frappe import _
-
+from frappe.query_builder.functions import Cast, CustomFunction
 from pypika.queries import Table
 from pypika.terms import Case, Field
-from frappe.query_builder.functions import CustomFunction, Cast
 
 Instr = CustomFunction("INSTR", ["a", "b"])
 RegExpReplace = CustomFunction("REGEXP_REPLACE", ["a", "b", "c"])
@@ -34,9 +33,7 @@ def ref_equality_condition(reference_no: Field, bank_reference_no: str) -> Case:
 	return frappe.qb.terms.Case().when(reference_no == bank_reference_no, 1).else_(0)
 
 
-def get_description_match_condition(
-	description: str, table: Table, column_name: str = "name"
-) -> Case:
+def get_description_match_condition(description: str, table: Table, column_name: str = "name") -> Case:
 	"""Get the description match condition for a column.
 
 	Args:
@@ -80,12 +77,8 @@ def get_reference_field_map() -> dict:
 	"""
 
 	def _validate_and_get_field(row: dict) -> str:
-		is_docfield = frappe.db.exists(
-			"DocField", {"fieldname": row.field_name, "parent": row.document_type}
-		)
-		is_custom = frappe.db.exists(
-			"Custom Field", {"fieldname": row.field_name, "dt": row.document_type}
-		)
+		is_docfield = frappe.db.exists("DocField", {"fieldname": row.field_name, "parent": row.document_type})
+		is_custom = frappe.db.exists("Custom Field", {"fieldname": row.field_name, "dt": row.document_type})
 		if not (is_docfield or is_custom):
 			frappe.throw(
 				title=_("Invalid Field"),
@@ -104,7 +97,4 @@ def get_reference_field_map() -> dict:
 		fields=["document_type", "field_name"],
 	)
 
-	return {
-		frappe.scrub(row.document_type): _validate_and_get_field(row)
-		for row in reference_fields
-	}
+	return {frappe.scrub(row.document_type): _validate_and_get_field(row) for row in reference_fields}

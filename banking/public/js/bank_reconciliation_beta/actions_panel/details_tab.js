@@ -19,15 +19,19 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 
 	update_bank_transaction() {
 		var me = this;
-		const reference_number = this.details_field_group.get_value("reference_number");
+		const reference_number =
+			this.details_field_group.get_value("reference_number");
 		const party = this.details_field_group.get_value("party");
 		const party_type = this.details_field_group.get_value("party_type");
 
-		let diff = ["reference_number", "party", "party_type"].some(field => {
+		let diff = ["reference_number", "party", "party_type"].some((field) => {
 			return me.details_field_group.get_value(field) !== me.transaction[field];
 		});
 		if (!diff) {
-			frappe.show_alert({message: __("No changes to update"), indicator: "yellow"});
+			frappe.show_alert({
+				message: __("No changes to update"),
+				indicator: "yellow",
+			});
 			return;
 		}
 
@@ -50,7 +54,10 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 
 				// Update transaction
 				me.panel_manager.refresh_transaction(
-					null, reference_number, party_type, party
+					null,
+					reference_number,
+					party_type,
+					party
 				);
 
 				frappe.show_alert(
@@ -61,7 +68,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 	}
 
 	get_detail_tab_fields() {
-		return  [
+		return [
 			{
 				label: __("ID"),
 				fieldname: "name",
@@ -81,6 +88,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				label: __("Deposit"),
 				fieldname: "deposit",
 				fieldtype: "Currency",
+				options: "account_currency",
 				default: this.transaction.deposit,
 				read_only: 1,
 			},
@@ -88,11 +96,12 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				label: __("Withdrawal"),
 				fieldname: "withdrawal",
 				fieldtype: "Currency",
+				options: "account_currency",
 				default: this.transaction.withdrawal,
 				read_only: 1,
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Description"),
@@ -154,7 +163,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				default: this.transaction.reference_number,
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Party Type"),
@@ -164,9 +173,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				get_query: function () {
 					return {
 						filters: {
-							name: [
-								"in", Object.keys(frappe.boot.party_account_types),
-							],
+							name: ["in", Object.keys(frappe.boot.party_account_types)],
 						},
 					};
 				},
@@ -184,16 +191,16 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				options: this.transaction.party_type || null,
 			},
 			{
-				fieldtype: "Section Break"
+				fieldtype: "Section Break",
 			},
 			{
 				label: __("Hidden field for alignment"),
 				fieldname: "hidden_field",
 				fieldtype: "Data",
-				hidden: 1
+				hidden: 1,
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Submit"),
@@ -201,7 +208,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				fieldtype: "Button",
 				primary: true,
 				click: () => this.update_bank_transaction(),
-			}
+			},
 		];
 	}
-}
+};

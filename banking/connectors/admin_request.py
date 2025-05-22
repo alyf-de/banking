@@ -34,9 +34,7 @@ class AdminRequest:
 	def get_fintech_license(self):
 		return self.request("GET", "banking_admin.ebics_api.get_fintech_license")
 
-	def register_ebics_user(
-		self, host_id: str, partner_id: str, user_id: str, remove: bool = False
-	):
+	def register_ebics_user(self, host_id: str, partner_id: str, user_id: str, remove: bool = False):
 		if remove:
 			endpoint = "banking_admin.ebics_api.remove_ebics_user"
 		else:
