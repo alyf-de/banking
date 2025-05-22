@@ -7,10 +7,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 from frappe.utils.data import getdate
+from requests import HTTPError
 
 from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
-from requests import HTTPError
 
 
 class EBICSUser(Document):
@@ -65,9 +65,7 @@ class EBICSUser(Document):
 		"""Indempotent method to remove the user from the admin backend."""
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
 		try:
-			r = Admin().request.register_ebics_user(
-				host_id, self.partner_id, self.user_id, remove=True
-			)
+			r = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id, remove=True)
 			r.raise_for_status()
 		except HTTPError:
 			title = _("Failed to remove EBICS user registration.")
@@ -91,9 +89,7 @@ class EBICSUser(Document):
 		host_id, url = frappe.db.get_value("Bank", self.bank, ["ebics_host_id", "ebics_url"])
 		if not host_id or not url:
 			frappe.throw(
-				_("Please add EBICS Host ID and URL to bank {0}").format(
-					get_link_to_form("Bank", self.bank)
-				)
+				_("Please add EBICS Host ID and URL to bank {0}").format(get_link_to_form("Bank", self.bank))
 			)
 
 	def attach_ini_letter(self, pdf_bytes: bytes):
@@ -113,15 +109,11 @@ class EBICSUser(Document):
 
 
 def on_doctype_update():
-	frappe.db.add_unique(
-		"EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user"
-	)
+	frappe.db.add_unique("EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user")
 
 
 @frappe.whitelist()
-def initialize(
-	ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int
-):
+def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
 	ensure_ebics_is_enabled()
 
 	user = frappe.get_doc("EBICS User", ebics_user)
@@ -131,9 +123,7 @@ def initialize(
 		user.passphrase = passphrase
 		user.save()
 
-	manager = get_ebics_manager(
-		ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
-	)
+	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase)
 
 	try:
 		manager.create_user_keys()

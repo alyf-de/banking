@@ -1,6 +1,5 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
-from typing import Dict
 
 from frappe.utils import formatdate, today
 
@@ -21,7 +20,7 @@ class AdminTransaction:
 		return url, offset
 
 	@staticmethod
-	def payload(account_id: str, start_date: str) -> Dict:
+	def payload(account_id: str, start_date: str) -> dict:
 		payload = {
 			"account_id": account_id,
 			"from_date": start_date,

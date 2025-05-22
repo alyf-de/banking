@@ -14,7 +14,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			body: this.actions_panel.$tab_content,
 			card_layout: true,
 		});
-		this.match_field_group.make()
+		this.match_field_group.make();
 
 		await this.populate_matching_vouchers();
 	}
@@ -36,7 +36,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.actions_table.freeze();
 
 		let filter_fields = this.match_field_group.get_values();
-		let document_types = Object.keys(filter_fields).filter(field => filter_fields[field] === 1);
+		let document_types = Object.keys(filter_fields).filter(
+			(field) => filter_fields[field] === 1
+		);
 
 		this.update_filters_in_state(document_types);
 
@@ -44,12 +46,13 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.set_table_data(vouchers);
 		this.actions_table.unfreeze();
 
-		let transaction_amount = this.transaction.withdrawal || this.transaction.deposit;
+		let transaction_amount =
+			this.transaction.withdrawal || this.transaction.deposit;
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
 			flt(this.transaction.unallocated_amount),
 			flt(this.transaction.unallocated_amount),
-			this.transaction.currency,
+			this.transaction.currency
 		);
 	}
 
@@ -57,23 +60,25 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		Object.keys(this.panel_manager.actions_filters).map((key) => {
 			let value = document_types.includes(key) ? 1 : 0;
 			this.panel_manager.actions_filters[key] = value;
-		})
+		});
 	}
 
 	async get_matching_vouchers(document_types) {
-		let vouchers = await frappe.call({
-			method:
-				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_linked_payments",
-			args: {
-				bank_transaction_name: this.transaction.name,
-				document_types: document_types,
-				from_date: this.doc.bank_statement_from_date,
-				to_date: this.doc.bank_statement_to_date,
-				filter_by_reference_date: this.doc.filter_by_reference_date,
-				from_reference_date: this.doc.from_reference_date,
-				to_reference_date: this.doc.to_reference_date
-			},
-		}).then(result => result.message);
+		let vouchers = await frappe
+			.call({
+				method:
+					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_linked_payments",
+				args: {
+					bank_transaction_name: this.transaction.name,
+					document_types: document_types,
+					from_date: this.doc.bank_statement_from_date,
+					to_date: this.doc.bank_statement_to_date,
+					filter_by_reference_date: this.doc.filter_by_reference_date,
+					from_reference_date: this.doc.from_reference_date,
+					to_reference_date: this.doc.to_reference_date,
+				},
+			})
+			.then((result) => result.message);
 		return vouchers || [];
 	}
 
@@ -104,42 +109,58 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				{
 					content: row.reference_date || row.posting_date, // Reference Date
 					format: (value) => {
-						const formatted_date = frappe.format(value, {fieldtype: "Date"});
+						const formatted_date = frappe.format(value, {
+							fieldtype: "Date",
+						});
 						return row.date_match ? formatted_date.bold() : formatted_date;
-					}
+					},
 				},
 				{
 					content: row.paid_amount,
 					format: (value) => {
 						let formatted_value = format_currency(value, row.currency);
-						let match_condition =  row.amount_match || row.unallocated_amount_match;
+						let match_condition =
+							row.amount_match || row.unallocated_amount_match;
 						return match_condition ? formatted_value.bold() : formatted_value;
-					}
+					},
 				},
 				{
 					content: row.party,
 					format: (value) => {
 						if (row.party_name) {
-							frappe.utils.add_link_title(row.party_type, row.party, row.party_name);
+							frappe.utils.add_link_title(
+								row.party_type,
+								row.party,
+								row.party_name
+							);
 						}
-						let formatted_value =  frappe.format(value, {fieldtype: "Link", options: row.party_type});
+						let formatted_value = frappe.format(value, {
+							fieldtype: "Link",
+							options: row.party_type,
+						});
 						return row.party_match ? formatted_value.bold() : formatted_value;
-					}
+					},
 				},
 				{
 					content: row.name,
 					format: (value) => {
-						let formatted_value = frappe.format(value, {fieldtype: "Link", options: row.doctype});
-						return row.name_in_desc_match ? formatted_value.bold() : formatted_value;
+						let formatted_value = frappe.format(value, {
+							fieldtype: "Link",
+							options: row.doctype,
+						});
+						return row.name_in_desc_match
+							? formatted_value.bold()
+							: formatted_value;
 					},
 					doctype: row.doctype,
 				},
 				{
-					content: row.reference_no || '',
+					content: row.reference_no || "",
 					format: (value) => {
-						let reference_match = row.reference_number_match || row.ref_in_desc_match;
+						let reference_match =
+							row.reference_number_match || row.ref_in_desc_match;
 						return reference_match ? value.bold() : value;
-					}
+					},
 				},
 			];
 		});
@@ -149,12 +170,16 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	bind_row_check_event() {
 		// Resistant to row removal on being out of view in datatable
-		$(this.actions_table.bodyScrollable).on("click", ".dt-cell__content input", (e) => {
-			let idx = $(e.currentTarget).closest(".dt-cell").data().rowIndex;
-			let voucher_row = this.actions_table.getRows()[idx];
+		$(this.actions_table.bodyScrollable).on(
+			"click",
+			".dt-cell__content input",
+			(e) => {
+				let idx = $(e.currentTarget).closest(".dt-cell").data().rowIndex;
+				let voucher_row = this.actions_table.getRows()[idx];
 
-			this.check_data_table_row(voucher_row)
-		})
+				this.check_data_table_row(voucher_row);
+			}
+		);
 	}
 
 	check_data_table_row(row) {
@@ -173,25 +198,40 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		// Total of selected row amounts in summary_data
 		// Cap total_allocated to unallocated amount
 		let total_allocated = Object.values(this.summary_data).reduce(
-			(a, b) => a + b, 0
+			(a, b) => a + b,
+			0
 		);
-		let max_allocated = Math.min(total_allocated, this.transaction.unallocated_amount);
+		let max_allocated = Math.min(
+			total_allocated,
+			this.transaction.unallocated_amount
+		);
 
 		// Deduct allocated amount from transaction's unallocated amount
 		// to show the final effect on reconciling
-		let transaction_amount = this.transaction.withdrawal || this.transaction.deposit;
-		let unallocated = flt(this.transaction.unallocated_amount) - flt(max_allocated);
-		let actual_unallocated = flt(this.transaction.unallocated_amount) - flt(total_allocated);
+		let transaction_amount =
+			this.transaction.withdrawal || this.transaction.deposit;
+		let unallocated =
+			flt(this.transaction.unallocated_amount) - flt(max_allocated);
+		let actual_unallocated =
+			flt(this.transaction.unallocated_amount) - flt(total_allocated);
 
 		this.render_transaction_amount_summary(
-			flt(transaction_amount), unallocated, actual_unallocated, this.transaction.currency,
+			flt(transaction_amount),
+			unallocated,
+			actual_unallocated,
+			this.transaction.currency
 		);
 	}
 
 	render_transaction_amount_summary(
-		total_amount, unallocated_amount, actual_unallocated, currency
+		total_amount,
+		unallocated_amount,
+		actual_unallocated,
+		currency
 	) {
-		let summary_field = this.match_field_group.get_field("transaction_amount_summary").$wrapper;
+		let summary_field = this.match_field_group.get_field(
+			"transaction_amount_summary"
+		).$wrapper;
 		summary_field.empty();
 
 		// Show the actual allocated amount
@@ -200,16 +240,20 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		new erpnext.accounts.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
 			values: {
-				"Amount": [total_amount],
+				Amount: [total_amount],
 				"Allocated Amount": [allocated_amount, ""],
 				"To Allocate": [
 					unallocated_amount,
-					(unallocated_amount < 0 ? "text-danger" : unallocated_amount > 0 ? "text-blue" : "text-success"),
+					unallocated_amount < 0
+						? "text-danger"
+						: unallocated_amount > 0
+						? "text-blue"
+						: "text-success",
 					actual_unallocated,
-				]
+				],
 			},
 			currency: currency,
-			wrapper_class: "reconciliation-summary"
+			wrapper_class: "reconciliation-summary",
 		});
 	}
 
@@ -234,22 +278,24 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		if (!selected_vouchers.length > 0) {
 			frappe.show_alert({
 				message: __("Please select at least one voucher to reconcile"),
-				indicator: "red"
+				indicator: "red",
 			});
 			return;
 		}
 
-		let voucher_types = new Set(selected_vouchers.map(voucher => voucher.payment_doctype));
+		let voucher_types = new Set(
+			selected_vouchers.map((voucher) => voucher.payment_doctype)
+		);
 		if (voucher_types.size > 1) {
 			frappe.show_alert({
 				message: __("Please select vouchers of the same type to reconcile"),
-				indicator: "red"
+				indicator: "red",
 			});
 			return;
 		}
 
 		// If the vouchers have different parties prepare a prompt to reconcile multi-party
-		let parties = new Set(selected_vouchers.map(voucher => voucher.party));
+		let parties = new Set(selected_vouchers.map((voucher) => voucher.party));
 		if (parties.size > 1) {
 			this.show_multiple_party_reconcile_prompt(selected_vouchers);
 		} else {
@@ -273,7 +319,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				if (response.exc) {
 					frappe.show_alert({
 						message: __("Failed to reconcile {0}", [this.transaction.name]),
-						indicator: "red"
+						indicator: "red",
 					});
 					return;
 				}
@@ -285,10 +331,12 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	show_multiple_party_reconcile_prompt(selected_vouchers) {
 		frappe.confirm(
-			__("Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."),
+			__(
+				"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
+			),
 			() => {
 				this.bulk_reconcile_vouchers(selected_vouchers, true);
-			},
+			}
 		);
 	}
 
@@ -302,7 +350,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.payment_entry,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
 				label: __("Journal Entry"),
@@ -311,10 +359,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.journal_entry,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Purchase Invoice"),
@@ -323,7 +371,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.purchase_invoice,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
 				label: __("Sales Invoice"),
@@ -332,10 +380,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.sales_invoice,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Loan Repayment"),
@@ -344,7 +392,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.loan_repayment,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
 				label: __("Loan Disbursement"),
@@ -353,10 +401,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.loan_disbursement,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Expense Claim"),
@@ -365,7 +413,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.expense_claim,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
 				label: __("Bank Transaction"),
@@ -374,10 +422,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.bank_transaction,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
-				fieldtype: "Section Break"
+				fieldtype: "Section Break",
 			},
 			{
 				label: __("Show Exact Amount"),
@@ -386,10 +434,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				default: filters_state.exact_match,
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
-				}
+				},
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Show Exact Party"),
@@ -399,10 +447,12 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
 				},
-				read_only: !Boolean(this.transaction.party_type && this.transaction.party)
+				read_only: !Boolean(
+					this.transaction.party_type && this.transaction.party
+				),
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Unpaid Vouchers"),
@@ -412,13 +462,14 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				onchange: (e) => {
 					this.populate_matching_vouchers(e);
 				},
-				depends_on: "eval: doc.sales_invoice || doc.purchase_invoice || doc.expense_claim",
+				depends_on:
+					"eval: doc.sales_invoice || doc.purchase_invoice || doc.expense_claim",
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
-				fieldtype: "Section Break"
+				fieldtype: "Section Break",
 			},
 			{
 				fieldname: "transaction_amount_summary",
@@ -437,10 +488,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				label: __("Hidden field for alignment"),
 				fieldname: "hidden_field_2",
 				fieldtype: "Data",
-				hidden: 1
+				hidden: 1,
 			},
 			{
-				fieldtype: "Column Break"
+				fieldtype: "Column Break",
 			},
 			{
 				label: __("Reconcile"),
@@ -449,7 +500,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				primary: true,
 				click: () => {
 					this.reconcile_selected_vouchers();
-				}
+				},
 			},
 		];
 	}
@@ -457,11 +508,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	position_of(label) {
 		// NOTE: Edit this function if the order of columns in the data table changes
 		const column_positions = {
-			"Date": 1,
-			"Outstanding": 2,
-			"Party": 3,
-			"Voucher": 4,
-			"Reference": 5,
+			Date: 1,
+			Outstanding: 2,
+			Party: 3,
+			Voucher: 4,
+			Reference: 5,
 		};
 		return column_positions[label];
 	}
@@ -496,6 +547,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	get_amount_from_row(row) {
 		const amount_position = this.position_of("Outstanding");
-		return row[amount_position].content;  // Amount
+		return row[amount_position].content; // Amount
 	}
-}
+};

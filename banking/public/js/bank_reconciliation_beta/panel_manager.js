@@ -14,26 +14,32 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.transactions = await this.get_bank_transactions();
 
 		this.$wrapper.empty();
-		this.$panel_wrapper = this.$wrapper.append(`
+		this.$panel_wrapper = this.$wrapper
+			.append(
+				`
 			<div class="panel-container d-flex"></div>
-		`).find(".panel-container");
+		`
+			)
+			.find(".panel-container");
 
-		this.render_panels()
+		this.render_panels();
 	}
 
 	async get_bank_transactions() {
-		let transactions = await frappe.call({
-			method:
-				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
-			args: {
-				bank_account: this.doc.bank_account,
-				from_date: this.doc.bank_statement_from_date,
-				to_date: this.doc.bank_statement_to_date,
-				order_by: this.order || "date asc",
-			},
-			freeze: true,
-			freeze_message: __("Fetching Bank Transactions"),
-		}).then(response => response.message);
+		let transactions = await frappe
+			.call({
+				method:
+					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
+				args: {
+					bank_account: this.doc.bank_account,
+					from_date: this.doc.bank_statement_from_date,
+					to_date: this.doc.bank_statement_to_date,
+					order_by: this.order || "date asc",
+				},
+				freeze: true,
+				freeze_message: __("Fetching Bank Transactions"),
+			})
+			.then((response) => response.message);
 		return transactions;
 	}
 
@@ -64,8 +70,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			bank_transaction: 0,
 			exact_match: 0,
 			exact_party_match: 0,
-			unpaid_invoices: 1
-		}
+			unpaid_invoices: 1,
+		};
 	}
 
 	render_no_transactions() {
@@ -91,12 +97,13 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_actions_panel() {
-		this.actions_panel =  new erpnext.accounts.bank_reconciliation.ActionsPanelManager({
-			$wrapper: this.$panel_wrapper,
-			transaction: this.active_transaction,
-			doc: this.doc,
-			panel_manager: this
-		});
+		this.actions_panel =
+			new erpnext.accounts.bank_reconciliation.ActionsPanelManager({
+				$wrapper: this.$panel_wrapper,
+				transaction: this.active_transaction,
+				doc: this.doc,
+				panel_manager: this,
+			});
 	}
 
 	render_sort_area() {
@@ -113,43 +120,50 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				sort_by: me.order_by || "date",
 				sort_order: me.order_direction || "asc",
 				options: [
-					{fieldname: "date", label: __("Date")},
-					{fieldname: "withdrawal", label: __("Withdrawal")},
-					{fieldname: "deposit", label: __("Deposit")},
-					{fieldname: "unallocated_amount", label: __("Unallocated Amount")}
-				]
+					{ fieldname: "date", label: __("Date") },
+					{ fieldname: "withdrawal", label: __("Withdrawal") },
+					{ fieldname: "deposit", label: __("Deposit") },
+					{
+						fieldname: "unallocated_amount",
+						label: __("Unallocated Amount"),
+					},
+				],
 			},
-			change: function(sort_by, sort_order) {
+			change: function (sort_by, sort_order) {
 				// Globally set the order used in the re-rendering of the list
-				me.order_by = (sort_by || me.order_by || "date");
-				me.order_direction = (sort_order || me.order_direction || "asc");
-				me.order =  me.order_by + " " + me.order_direction;
+				me.order_by = sort_by || me.order_by || "date";
+				me.order_direction = sort_order || me.order_direction || "asc";
+				me.order = me.order_by + " " + me.order_direction;
 
 				// Re-render the list
 				me.init_panels();
-			}
+			},
 		});
 	}
 
 	render_transactions_list() {
 		this.$list_container = this.$panel_wrapper.find(".list-container");
 
-		this.transactions.map(transaction => {
+		this.transactions.map((transaction) => {
 			let amount = transaction.deposit || transaction.withdrawal;
 			let symbol = transaction.withdrawal ? "-" : "+";
 
-			let $row = this.$list_container.append(`
+			let $row = this.$list_container
+				.append(
+					`
 				<div id="${transaction.name}" class="transaction-row p-10">
 					<!-- Date & Amount -->
 					<div class="d-flex">
 						<div class="w-50">
-							<span title="${__("Date")}">${frappe.format(transaction.date, {fieldtype: "Date"})}</span>
+							<span title="${__("Date")}">${frappe.format(transaction.date, {
+						fieldtype: "Date",
+					})}</span>
 						</div>
 
 						<div class="w-50 bt-amount-contianer">
 							<span
 								title="${__("Amount")}"
-								class="bt-amount ${transaction.withdrawal ? 'text-danger' : 'text-success'}"
+								class="bt-amount ${transaction.withdrawal ? "text-danger" : "text-success"}"
 							>
 								<b>${symbol} ${format_currency(amount, transaction.currency)}</b>
 							</span>
@@ -160,41 +174,50 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 					<!-- Description, Reference, Party -->
 					<div
 						title="${__("Account Holder")}"
-						class="account-holder ${transaction.bank_party_name ? '' : 'hide'}"
+						class="account-holder ${transaction.bank_party_name ? "" : "hide"}"
 					>
 						<span class="account-holder-value">${transaction.bank_party_name}</span>
 					</div>
 
 					<div
 						title="${__("Description")}"
-						class="description ${transaction.description ? '' : 'hide'}"
+						class="description ${transaction.description ? "" : "hide"}"
 					>
 						<span class="description-value">${transaction.description}</span>
 					</div>
 
 					<div
 						title="${__("Reference")}"
-						class="reference ${transaction.reference_number ? '' : 'hide'}"
+						class="reference ${transaction.reference_number ? "" : "hide"}"
 					>
 						<span class="reference-value">${transaction.reference_number}</span>
 					</div>
 				</div>
-			`).find("#" + transaction.name);
+			`
+				)
+				.find("#" + transaction.name);
 
 			$row.on("click", () => {
 				$row.addClass("active").siblings().removeClass("active");
 
 				// this.transaction's objects get updated, we want the latest values
-				this.active_transaction = this.transactions.find(({name}) => name === transaction.name);
+				this.active_transaction = this.transactions.find(
+					({ name }) => name === transaction.name
+				);
 				this.render_actions_panel();
-			})
-		})
+			});
+		});
 	}
 
-	refresh_transaction(updated_amount=null, reference_number=null, party_type=null, party=null) {
+	refresh_transaction(
+		updated_amount = null,
+		reference_number = null,
+		party_type = null,
+		party = null
+	) {
 		// Update the transaction object's & view's unallocated_amount **OR** other details
 		let id = this.active_transaction.name;
-		let current_index = this.transactions.findIndex(({name}) => name === id);
+		let current_index = this.transactions.findIndex(({ name }) => name === id);
 
 		let $current_transaction = this.$list_container.find("#" + id);
 		let transaction = this.transactions[current_index];
@@ -207,11 +230,13 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				...transaction,
 				reference_number: reference_number,
 				party_type: party_type,
-				party: party
+				party: party,
 			};
 			// Update Reference Number in List
 			$current_transaction.find(".reference").removeClass("hide");
-			$current_transaction.find(".reference-value").text(reference_number || "--");
+			$current_transaction
+				.find(".reference-value")
+				.text(reference_number || "--");
 		}
 
 		$current_transaction.click();
@@ -221,7 +246,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		// Remove the current transaction from the list and move to the next/previous one
 		let id = this.active_transaction.name;
 		let $current_transaction = this.$list_container.find("#" + id);
-		let current_index = this.transactions.findIndex(({name}) => name === id);
+		let current_index = this.transactions.findIndex(({ name }) => name === id);
 
 		let next_transaction = this.transactions[current_index + 1];
 		let previous_transaction = this.transactions[current_index - 1];
@@ -243,6 +268,5 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			this.active_transaction = null;
 			this.render_no_transactions();
 		}
-
 	}
-}
+};
