@@ -47,8 +47,7 @@ class CustomBankTransaction(BankTransaction):
 		if latest_period_close_date and getdate(self.date) <= getdate(latest_period_close_date):
 			frappe.throw(
 				_(
-					"Due to Period Closing, you cannot reconcile "
-					"unpaid vouchers with a Bank Transaction before {0}"
+					"Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
 				).format(frappe.format(latest_period_close_date, "Date"))
 			)
 
@@ -114,8 +113,7 @@ class CustomBankTransaction(BankTransaction):
 			if second_account_currency != company_currency:
 				frappe.throw(
 					_(
-						"The currency of the second account ({0}) must be "
-						"the same as of the bank account ({1})"
+						"The currency of the second account ({0}) must be the same as of the bank account ({1})"
 					).format(second_account, company_currency)
 				)
 			journal_entry.append(
