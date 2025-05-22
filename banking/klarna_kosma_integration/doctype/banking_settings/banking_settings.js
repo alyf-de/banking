@@ -1,7 +1,7 @@
 // Copyright (c) 2022, ALYF GmbH and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Banking Settings', {
+frappe.ui.form.on("Banking Settings", {
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
 			frm.trigger("get_app_health");
@@ -20,7 +20,7 @@ frappe.ui.form.on('Banking Settings', {
 				const url = await frm.call({
 					method: "get_customer_portal_url",
 					freeze: true,
-					freeze_message: __("Redirecting to Customer Portal ...")
+					freeze_message: __("Redirecting to Customer Portal ..."),
 				});
 				if (url.message) {
 					window.open(url.message, "_blank");
@@ -60,27 +60,29 @@ frappe.ui.form.on('Banking Settings', {
 					margin-bottom: 0.5rem;
 				">
 					<p style="font-weight: 700; font-size: 16px;">
-						${ __("Subscription Details") }
+						${__("Subscription Details")}
 					</p>
 					<p>
-						<b>${ __("Subscriber") }</b>:
+						<b>${__("Subscriber")}</b>:
 						${subscription.full_name}
 					</p>
 					<p>
-						<b>${ __("Status") }</b>:
+						<b>${__("Status")}</b>:
 						${subscription.subscription_status}
 					</p>
 					<p>
-						<b>${ __("Ebics Users") }</b>:
-						${subscription.ebics_usage.used} (${__("Usage")}) / ${subscription.ebics_usage.allowed} (${__("Limit")})
+						<b>${__("Ebics Users")}</b>:
+						${subscription.ebics_usage.used} (${__("Usage")}) / ${
+				subscription.ebics_usage.allowed
+			} (${__("Limit")})
 					</p>
 					<p>
-						<b>${ __("Valid Till") }</b>:
-						${frappe.format(subscription.plan_end_date, {"fieldtype": "Date"})}
+						<b>${__("Valid Till")}</b>:
+						${frappe.format(subscription.plan_end_date, { fieldtype: "Date" })}
 					</p>
 					<p>
-						<b>${ __("Last Renewed On") }</b>:
-						${frappe.format(subscription.last_paid_on, {"fieldtype": "Date"})}
+						<b>${__("Last Renewed On")}</b>:
+						${frappe.format(subscription.last_paid_on, { fieldtype: "Date" })}
 					</p>
 					<p>
 						<a
@@ -110,7 +112,7 @@ frappe.ui.form.on('Banking Settings', {
 
 		let messages = data.message;
 		if (messages) {
-			if(messages["info"]) {
+			if (messages["info"]) {
 				frm.set_intro(messages["info"], "blue");
 			}
 
@@ -125,14 +127,14 @@ frappe.ui.form.on('Banking Settings', {
 	},
 });
 
-frappe.ui.form.on('Banking Reference Mapping', {
+frappe.ui.form.on("Banking Reference Mapping", {
 	reference_fields_add: (frm, cdt, cdn) => {
 		set_field_options(frm, cdt, cdn);
 	},
 
 	document_type: (frm, cdt, cdn) => {
 		set_field_options(frm, cdt, cdn);
-	}
+	},
 });
 
 function set_field_options(frm, cdt, cdn) {
@@ -140,29 +142,29 @@ function set_field_options(frm, cdt, cdn) {
 	const document_type = doc.document_type || "Sales Invoice";
 
 	// set options for `field_name`
-	frappe.model.with_doctype(document_type,  () => {
+	frappe.model.with_doctype(document_type, () => {
 		const meta = frappe.get_meta(document_type);
 		const fields = meta.fields.filter((field) => {
 			return (
-				["Link", "Data"].includes(field.fieldtype)
-				&& field.is_virtual === 0
+				["Link", "Data"].includes(field.fieldtype) && field.is_virtual === 0
 			);
 		});
 
 		frm.fields_dict.reference_fields.grid.update_docfield_property(
 			"field_name",
 			"options",
-			fields.map((field) => {
-				return {
-					value: field.fieldname,
-					label: __(field.label),
-				}
-			}).sort((a, b) => a.label.localeCompare(b.label))
+			fields
+				.map((field) => {
+					return {
+						value: field.fieldname,
+						label: __(field.label),
+					};
+				})
+				.sort((a, b) => a.label.localeCompare(b.label))
 		);
 		frm.refresh_field("reference_fields");
 	});
 }
-
 
 function get_info_html(message) {
 	return `<div
@@ -174,7 +176,7 @@ function get_info_html(message) {
 	>
 		<span>${frappe.utils.icon("solid-info", "md")}</span>
 		<span class="small" style="padding-left: var(--padding-xs)">
-			${ message }
+			${message}
 		</span>
 	</div>`;
 }

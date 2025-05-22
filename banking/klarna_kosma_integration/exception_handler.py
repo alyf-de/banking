@@ -1,7 +1,7 @@
 import json
-import requests
 
 import frappe
+import requests
 from frappe import _
 
 
@@ -50,9 +50,7 @@ class ExceptionHandler:
 		frappe.log_error(title=_("Banking Error"), message=response.content)
 
 		content = response.json().get("message", {})
-		message = (
-			content if isinstance(content, str) else "Authorization error due to invalid access."
-		)
+		message = content if isinstance(content, str) else "Authorization error due to invalid access."
 		frappe.throw(title=_("Banking Error"), msg=_(message), exc=BankingError)
 
 	def handle_txt_html_error(self, response):
@@ -95,6 +93,4 @@ class ExceptionHandler:
 
 			frappe.throw(title=_("Banking Error"), msg=message, exc=BankingError)
 		elif error_data.get("message"):
-			frappe.throw(
-				title=_("Banking Error"), msg=self.get_msg(error_data), exc=BankingError
-			)
+			frappe.throw(title=_("Banking Error"), msg=self.get_msg(error_data), exc=BankingError)

@@ -11,7 +11,9 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		this.render_tabs();
 
 		// Default to last selected tab
-		this.$actions_container.find("#" + this.panel_manager.actions_tab).trigger("click");
+		this.$actions_container
+			.find("#" + this.panel_manager.actions_tab)
+			.trigger("click");
 	}
 
 	init_actions_container() {
@@ -19,9 +21,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 			this.$actions_container = this.$wrapper.find(".actions-panel");
 			this.$actions_container.empty();
 		} else {
-			this.$actions_container = this.$wrapper.append(`
+			this.$actions_container = this.$wrapper
+				.append(
+					`
 				<div class="actions-panel"></div>
-			`).find(".actions-panel");
+			`
+				)
+				.find(".actions-panel");
 		}
 
 		this.$actions_container.append(`
@@ -51,7 +57,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
 					});
-				}
+				},
 			},
 			{
 				tab_name: "match_voucher",
@@ -63,7 +69,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						panel_manager: this.panel_manager,
 						doc: this.doc,
 					});
-				}
+				},
 			},
 			{
 				tab_name: "create_voucher",
@@ -75,11 +81,11 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						panel_manager: this.panel_manager,
 						company: this.doc.company,
 					});
-				}
-			}
+				},
+			},
 		];
 
-		for (const {tab_name, tab_label, make_tab} of tabs) {
+		for (const { tab_name, tab_label, make_tab } of tabs) {
 			this.add_tab(tab_name, tab_label);
 
 			let $tab_link = this.tabs_list_ul.find(`#${tab_name}-tab`);
@@ -103,7 +109,11 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		`);
 	}
 
-	after_transaction_reconcile(message, with_new_voucher=false, document_type) {
+	after_transaction_reconcile(
+		message,
+		with_new_voucher = false,
+		document_type
+	) {
 		// Actions after a transaction is matched with a voucher
 		// `with_new_voucher`: If a new voucher was created and reconciled with the transaction
 		let doc = message;
@@ -111,20 +121,28 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		if (unallocated_amount > 0) {
 			// if partial update this.transaction, re-click on list row
 			frappe.show_alert({
-				message: __(
-					"Bank Transaction {0} Partially {1}",
-					[this.transaction.name, with_new_voucher ? "Reconciled" : "Matched"]
-				),
-				indicator: "blue"
+				message: with_new_voucher
+					? __("Bank Transaction {0} partially reconciled.", [
+							this.transaction.name,
+					  ])
+					: __("Bank Transaction {0} partially matched.", [
+							this.transaction.name,
+					  ]),
+				indicator: "blue",
 			});
 			this.panel_manager.refresh_transaction(unallocated_amount);
 		} else {
-			let alert_string = __("Bank Transaction {0} Matched", [this.transaction.name])
+			let alert_string = __("Bank Transaction {0} Matched", [
+				this.transaction.name,
+			]);
 			if (with_new_voucher) {
-				alert_string = __("Bank Transaction {0} reconciled with a new {1}", [this.transaction.name, document_type]);
+				alert_string = __("Bank Transaction {0} reconciled with a new {1}", [
+					this.transaction.name,
+					document_type,
+				]);
 			}
-			frappe.show_alert({message: alert_string, indicator: "green"});
+			frappe.show_alert({ message: alert_string, indicator: "green" });
 			this.panel_manager.move_to_next_transaction();
 		}
 	}
-}
+};
