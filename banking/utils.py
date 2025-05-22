@@ -1,6 +1,6 @@
 import frappe
-from frappe.utils import now_datetime
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
+from frappe.utils import now_datetime
 
 
 def before_tests():

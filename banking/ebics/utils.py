@@ -12,7 +12,9 @@ from banking.ebics.manager import EBICSManager
 
 if TYPE_CHECKING:
 	from datetime import date
+
 	from fintech.sepa import SEPATransaction
+
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 
 
@@ -38,9 +40,7 @@ def get_ebics_manager(
 
 	manager.set_user(ebics_user.partner_id, ebics_user.user_id)
 
-	host_id, url = frappe.db.get_value(
-		"Bank", ebics_user.bank, ["ebics_host_id", "ebics_url"]
-	)
+	host_id, url = frappe.db.get_value("Bank", ebics_user.bank, ["ebics_host_id", "ebics_url"])
 	manager.set_bank(host_id, url)
 
 	return manager
@@ -77,9 +77,7 @@ def sync_ebics_transactions(
 
 	try:
 		client = manager.get_client()
-		main_xml = (
-			client.C52(start_date, end_date) if intraday else client.C53(start_date, end_date)
-		)
+		main_xml = client.C52(start_date, end_date) if intraday else client.C53(start_date, end_date)
 		batch_xml = client.C54(start_date, end_date) if with_c54 else None
 		request.db_set(
 			{
@@ -230,7 +228,7 @@ def _create_bank_transaction(
 	bank_account: str,
 	company: str,
 	sepa_transaction: "SEPATransaction",
-	start_date: "date" = None,
+	start_date: "date | None" = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -311,7 +309,7 @@ def get_protocol_versions(ebics_host_id: str, ebics_url: str):
 	"""Return a list of protocol versions supported by the bank."""
 	register_fintech()
 
-	from fintech.ebics import EbicsKeyRing, EbicsBank
+	from fintech.ebics import EbicsBank, EbicsKeyRing
 
 	keyring = EbicsKeyRing({})
 	bank = EbicsBank(keyring, ebics_host_id, ebics_url)

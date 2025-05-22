@@ -2,14 +2,14 @@
 # For license information, please see license.txt
 
 from datetime import timedelta
-from requests import HTTPError
-from semantic_version import Version
-from typing import Dict
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils.data import now_datetime
+from requests import HTTPError
+from semantic_version import Version
+
 from banking.klarna_kosma_integration.admin import Admin
 
 
@@ -57,9 +57,7 @@ def daily_sync_ebics():
 
 	if frappe.conf.developer_mode:
 		frappe.throw(
-			_(
-				"Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
-			)
+			_("Developer mode is enabled. Please disable it to continue auto-syncing bank transactions.")
 		)
 
 	yesterday = (now_datetime() - timedelta(days=1)).date().isoformat()
@@ -87,9 +85,7 @@ def intraday_sync_ebics():
 
 	if frappe.conf.developer_mode:
 		frappe.throw(
-			_(
-				"Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
-			)
+			_("Developer mode is enabled. Please disable it to continue auto-syncing bank transactions.")
 		)
 
 	banking_settings = frappe.get_single("Banking Settings")
@@ -119,7 +115,7 @@ def intraday_sync_ebics():
 
 
 @frappe.whitelist()
-def fetch_subscription_data() -> Dict:
+def fetch_subscription_data() -> dict:
 	"""
 	Fetch Accounts via Flow API after XS2A App interaction.
 	"""
@@ -135,7 +131,7 @@ def get_customer_portal_url() -> str:
 
 
 @frappe.whitelist()
-def get_app_health() -> Dict:
+def get_app_health() -> dict:
 	"""
 	Returns the app health.
 	"""
@@ -170,9 +166,7 @@ def get_latest_release_for_branch(owner: str, repo: str):
 
 	branch = get_app_branch("banking")
 	try:
-		releases = requests.get(
-			f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=10"
-		)
+		releases = requests.get(f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=10")
 		releases.raise_for_status()
 
 		for release in releases.json():
