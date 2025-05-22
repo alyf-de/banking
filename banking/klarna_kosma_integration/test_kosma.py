@@ -1,9 +1,10 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase
-from banking.klarna_kosma_integration.admin import Admin
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
 	get_default_bank_cash_account,
 )
+from frappe.tests.utils import FrappeTestCase
+
+from banking.klarna_kosma_integration.admin import Admin
 
 
 class TestKosma(FrappeTestCase):
@@ -16,9 +17,7 @@ class TestKosma(FrappeTestCase):
 		doc.admin_endpoint = "http://banking-admin:8000"
 		doc.save()
 
-		default_bank_account = frappe.db.get_value(
-			"Company", "Bolt Trades", "default_bank_account"
-		)
+		default_bank_account = frappe.db.get_value("Company", "Bolt Trades", "default_bank_account")
 		if default_bank_account is None:
 			frappe.db.set_value(
 				"Company",

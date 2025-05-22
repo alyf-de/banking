@@ -1,17 +1,16 @@
-import frappe
-from frappe import _
-from frappe.core.utils import find
-from frappe.model.document import Document
-from frappe.utils import flt, getdate
+from collections.abc import Callable
 
+import frappe
 from erpnext import get_default_cost_center
+from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTransaction
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	get_payment_entry,
 	split_invoices_based_on_payment_terms,
 )
-from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTransaction
-
-from typing import Callable
+from frappe import _
+from frappe.core.utils import find
+from frappe.model.document import Document
+from frappe.utils import flt, getdate
 
 DOCTYPE, DOCNAME, AMOUNT, PARTY = 0, 1, 2, 3
 
@@ -20,9 +19,7 @@ class CustomBankTransaction(BankTransaction):
 	def add_payment_entries(self, vouchers: list, reconcile_multi_party: bool = False):
 		"Add the vouchers with zero allocation. Save() will perform the allocations and clearance"
 		if self.unallocated_amount <= 0.0:
-			frappe.throw(
-				frappe._("Bank Transaction {0} is already fully reconciled").format(self.name)
-			)
+			frappe.throw(frappe._("Bank Transaction {0} is already fully reconciled").format(self.name))
 
 		pe_length_before = len(self.payment_entries)
 		unpaid_docs = ["Sales Invoice", "Purchase Invoice", "Expense Claim"]
@@ -47,9 +44,7 @@ class CustomBankTransaction(BankTransaction):
 			"period_end_date",
 			order_by="period_end_date desc",
 		)
-		if latest_period_close_date and getdate(self.date) <= getdate(
-			latest_period_close_date
-		):
+		if latest_period_close_date and getdate(self.date) <= getdate(latest_period_close_date):
 			frappe.throw(
 				_(
 					"Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
@@ -95,9 +90,7 @@ class CustomBankTransaction(BankTransaction):
 				frappe.throw(_("Invalid Voucher Type"))
 
 			# Make PE against the unpaid invoice, link PE to Bank Transaction
-			invoices_to_bill.append(
-				(voucher_type, voucher_name, outstanding_amount, voucher.get("party"))
-			)
+			invoices_to_bill.append((voucher_type, voucher_name, outstanding_amount, voucher.get("party")))
 
 		# Make single PE against multiple invoices
 		if invoices_to_bill:
@@ -116,9 +109,7 @@ class CustomBankTransaction(BankTransaction):
 
 		def _attach_invoice(row: dict, journal_entry: "Document") -> None:
 			second_account = get_debtor_creditor_account(row)
-			second_account_currency = frappe.db.get_value(
-				"Account", second_account, "account_currency"
-			)
+			second_account_currency = frappe.db.get_value("Account", second_account, "account_currency")
 			if second_account_currency != company_currency:
 				frappe.throw(
 					_(
@@ -165,9 +156,7 @@ class CustomBankTransaction(BankTransaction):
 			{
 				"account": company_account,
 				"bank_account": self.bank_account,
-				"credit_in_account_currency": (
-					total_allocated_amount if self.withdrawal > 0 else 0.0
-				),
+				"credit_in_account_currency": (total_allocated_amount if self.withdrawal > 0 else 0.0),
 				"debit_in_account_currency": total_allocated_amount if self.deposit > 0 else 0.0,
 				"cost_center": get_default_cost_center(company),
 			},
@@ -263,19 +252,10 @@ class CustomBankTransaction(BankTransaction):
 		This will ensure that the allocated positive and negative amounts add up to the unallocated amount.
 		"""
 		sum_positive = (
-			sum(
-				invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount > 0
-			)
-			or 0.0
+			sum(invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount > 0) or 0.0
 		)
 		sum_negative = (
-			abs(
-				sum(
-					invoice.outstanding_amount
-					for invoice in invoices
-					if invoice.outstanding_amount < 0
-				)
-			)
+			abs(sum(invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount < 0))
 			or 0.0
 		)
 		self.validate_sums(sum_positive, sum_negative, invoices)
@@ -331,29 +311,21 @@ class CustomBankTransaction(BankTransaction):
 		if sum_negative > sum_positive:
 			frappe.throw(
 				title=_("Overallocated Returns"),
-				msg=_(
-					"The allocated amount cannot be negative. Please adjust the selected return vouchers."
-				),
+				msg=_("The allocated amount cannot be negative. Please adjust the selected return vouchers."),
 			)
 
-	def validate_invoices_to_bill(
-		self, invoices_to_bill: list, allow_multi_party: bool = False
-	):
+	def validate_invoices_to_bill(self, invoices_to_bill: list, allow_multi_party: bool = False):
 		"""Validate if the invoices are of the same doctype and party."""
 		unique_doctypes = {invoice[DOCTYPE] for invoice in invoices_to_bill}
 		if len(unique_doctypes) > 1:
-			frappe.throw(
-				frappe._("Cannot make Reconciliation Payment Entry against multiple doctypes")
-			)
+			frappe.throw(frappe._("Cannot make Reconciliation Payment Entry against multiple doctypes"))
 
 		if allow_multi_party:
 			return
 
 		unique_parties = {invoice[PARTY] for invoice in invoices_to_bill}
 		if len(unique_parties) > 1:
-			frappe.throw(
-				frappe._("Cannot make Reconciliation Payment Entry against multiple parties")
-			)
+			frappe.throw(frappe._("Cannot make Reconciliation Payment Entry against multiple parties"))
 
 	def is_duplicate_reference(self, voucher_type, voucher_name):
 		"""Check if the reference is already added to the Bank Transaction."""
@@ -386,9 +358,7 @@ def get_debtor_creditor_account(invoice: dict) -> str | None:
 		account_field = "credit_to"
 	else:
 		account_field = "payable_account"
-	return frappe.db.get_value(
-		invoice.get("voucher_type"), invoice.get("voucher_no"), account_field
-	)
+	return frappe.db.get_value(invoice.get("voucher_type"), invoice.get("voucher_no"), account_field)
 
 
 def on_update_after_submit(doc, event):
@@ -400,7 +370,7 @@ def on_update_after_submit(doc, event):
 			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
 			frappe.throw(
 				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(
-					frappe.bold(f"{symbol} {str(abs(to_allocate))}"), frappe.bold(entry.idx)
+					frappe.bold(f"{symbol} {abs(to_allocate)!s}"), frappe.bold(entry.idx)
 				),
 				title=_("Over Allocation"),
 			)

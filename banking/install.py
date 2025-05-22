@@ -12,9 +12,7 @@ def after_install():
 
 
 def make_property_setters():
-	for doctypes, property_setters in frappe.get_hooks(
-		"alyf_banking_property_setters", {}
-	).items():
+	for doctypes, property_setters in frappe.get_hooks("alyf_banking_property_setters", {}).items():
 		if isinstance(doctypes, str):
 			doctypes = (doctypes,)
 
@@ -24,5 +22,5 @@ def make_property_setters():
 					doctype,
 					**property_setter,
 					validate_fields_for_doctype=False,
-					for_doctype=not property_setter.get("fieldname")
+					for_doctype=not property_setter.get("fieldname"),
 				)

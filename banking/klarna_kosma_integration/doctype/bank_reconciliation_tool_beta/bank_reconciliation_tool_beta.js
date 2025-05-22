@@ -1,13 +1,13 @@
 // Copyright (c) 2023, ALYF GmbH and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Bank Reconciliation Tool Beta', {
+frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	setup: function (frm) {
 		frm.set_query("bank_account", function (doc) {
 			return {
 				filters: {
 					company: doc.company,
-					'is_company_account': 1
+					is_company_account: 1,
 				},
 			};
 		});
@@ -37,7 +37,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		}
 	},
 
-	refresh: function(frm) {
+	refresh: function (frm) {
 		frm.disable_save();
 		frm.fields_dict["filters_section"].collapse(false);
 
@@ -53,13 +53,13 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 				),
 				() => {
 					frappe.call({
-						method: "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
+						method:
+							"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
 						args: {
 							bank_account: frm.doc.bank_account,
 							from_date: frm.doc.bank_statement_from_date,
 							to_date: frm.doc.bank_statement_to_date,
-							filter_by_reference_date:
-								frm.doc.filter_by_reference_date,
+							filter_by_reference_date: frm.doc.filter_by_reference_date,
 							from_reference_date: frm.doc.from_reference_date,
 							to_reference_date: frm.doc.to_reference_date,
 						},
@@ -75,30 +75,28 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 			);
 		});
 
-		frm.page.add_menu_item(
-			__("Upload CSV / Excel file"),
-			() => frm.events.route_to_bank_statement_import(frm),
+		frm.page.add_menu_item(__("Upload CSV / Excel file"), () =>
+			frm.events.route_to_bank_statement_import(frm)
 		);
 
-		frm.page.add_menu_item(
-			__("Upload CAMT file"),
-			() => show_camt_uploader(frm),
+		frm.page.add_menu_item(__("Upload CAMT file"), () =>
+			show_camt_uploader(frm)
 		);
 
-		frm.$reconciliation_area = frm.get_field("reconciliation_action_area").$wrapper;
+		frm.$reconciliation_area = frm.get_field(
+			"reconciliation_action_area"
+		).$wrapper;
 		frm.events.setup_empty_state(frm);
 
 		frm.events.build_reconciliation_area(frm);
 	},
 
-	get_bank_transactions: function(frm) {
+	get_bank_transactions: function (frm) {
 		if (!frm.doc.bank_account) {
-			frappe.throw(
-				{
-					message: __("Please set the 'Bank Account' filter"),
-					title: __("Filter Required")
-				}
-			);
+			frappe.throw({
+				message: __("Please set the 'Bank Account' filter"),
+				title: __("Filter Required"),
+			});
 		}
 
 		frm.events.build_reconciliation_area(frm);
@@ -129,7 +127,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 					frappe.set_route("Form", doc[0].doctype, doc[0].name);
 				}
 			},
-		})
+		});
 	},
 
 	bank_account: function (frm) {
@@ -139,17 +137,12 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 				frm.doc.bank_account,
 				"account",
 				(r) => {
-					frappe.db.get_value(
-						"Account",
-						r.account,
-						"account_currency",
-						(r) => {
-							frm.doc.account_currency = r.account_currency;
-							frm.trigger("get_account_opening_balance");
-							frm.trigger("get_account_closing_balance");
-							frm.trigger("render_summary");
-						}
-					);
+					frappe.db.get_value("Account", r.account, "account_currency", (r) => {
+						frm.doc.account_currency = r.account_currency;
+						frm.trigger("get_account_opening_balance");
+						frm.trigger("get_account_closing_balance");
+						frm.trigger("render_summary");
+					});
 				}
 			);
 
@@ -208,7 +201,7 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		}
 	},
 
-	setup_empty_state: function(frm) {
+	setup_empty_state: function (frm) {
 		frm.$reconciliation_area.empty();
 		frm.$reconciliation_area.append(`
 			<div class="bank-reco-beta-empty-state">
@@ -219,13 +212,11 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		`);
 	},
 
-	render_summary: function(frm) {
+	render_summary: function (frm) {
 		// frm.get_field("reconciliation_tool_cards").$wrapper.empty();
-
 		// frappe.require("bank_reconciliation_beta.bundle.js", () => {
 		// 	let difference = flt(frm.doc.bank_statement_closing_balance) - flt(frm.cleared_balance);
 		// 	let difference_color = difference >= 0 ?  "text-success" : "text-danger";
-
 		// 	frm.summary_card = new erpnext.accounts.bank_reconciliation.SummaryCard({
 		// 		$wrapper: frm.get_field("reconciliation_tool_cards").$wrapper,
 		// 		values: {
@@ -238,31 +229,33 @@ frappe.ui.form.on('Bank Reconciliation Tool Beta', {
 		// });
 	},
 
-	build_reconciliation_area: function(frm) {
+	build_reconciliation_area: function (frm) {
 		if (!frm.doc.bank_account) return;
 
-		frappe.require("bank_reconciliation_beta.bundle.js", () =>
-			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager({
-				doc: frm.doc,
-				$wrapper: frm.$reconciliation_area,
-			})
-		);
+		frappe.require("bank_reconciliation_beta.bundle.js", () => {
+			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
+				{
+					doc: frm.doc,
+					$wrapper: frm.$reconciliation_area,
+				}
+			);
+		});
 	},
 });
 
 function show_camt_uploader(frm) {
 	if (!frm.doc.bank_account) {
-		frappe.throw(
-			{
-				message: __("Please set the 'Bank Account' filter"),
-				title: __("Filter Required")
-			}
-		);
+		frappe.throw({
+			message: __("Please set the 'Bank Account' filter"),
+			title: __("Filter Required"),
+		});
 	}
 
 	const uploader = new frappe.ui.FileUploader({
 		dialog_title: __("Upload XML (CAMT.053) file"),
-		upload_notes: __("to import bank transactions for {0}.", [frm.doc.bank_account]),
+		upload_notes: __("to import bank transactions for {0}.", [
+			frm.doc.bank_account,
+		]),
 		method: "banking.ebics.utils.upload_camt_file",
 		doctype: "Bank Account",
 		docname: frm.doc.bank_account,
