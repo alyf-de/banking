@@ -18,7 +18,7 @@ class EBICSManager:
 			def _write(self, keydict):
 				save_to_db(keydict)
 
-		self.keyring: EbicsKeyRing = CustomKeyRing(
+		self.keyring = CustomKeyRing(
 			keys=keys,
 			passphrase=passphrase,
 			sig_passphrase=sig_passphrase,
@@ -27,14 +27,12 @@ class EBICSManager:
 	def set_user(self, partner_id: str, user_id: str):
 		from fintech.ebics import EbicsUser
 
-		self.user: EbicsUser = EbicsUser(
-			keyring=self.keyring, partnerid=partner_id, userid=user_id, transport_only=True
-		)
+		self.user = EbicsUser(keyring=self.keyring, partnerid=partner_id, userid=user_id, transport_only=True)
 
 	def set_bank(self, host_id: str, url: str):
 		from fintech.ebics import EbicsBank
 
-		self.bank: EbicsBank = EbicsBank(keyring=self.keyring, hostid=host_id, url=url)
+		self.bank = EbicsBank(keyring=self.keyring, hostid=host_id, url=url)
 
 	def create_user_keys(self):
 		self.user.create_keys(keyversion="A005", bitlength=2048)
