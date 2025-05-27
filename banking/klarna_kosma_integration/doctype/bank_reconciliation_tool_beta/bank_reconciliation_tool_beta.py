@@ -102,8 +102,10 @@ def create_journal_entry_bts(
 	bank_debit_amount = bank_transaction.unallocated_amount if bank_transaction.deposit > 0.0 else 0.0
 	bank_credit_amount = bank_transaction.unallocated_amount if bank_transaction.withdrawal > 0.0 else 0.0
 
-	company_account = frappe.get_value("Bank Account", bank_transaction.bank_account, "account")
-	company, company_currency = frappe.get_value("Account", company_account, ["company", "account_currency"])
+	bank_gl_account = frappe.get_value("Bank Account", bank_transaction.bank_account, "account")
+	company, bank_account_currency = frappe.get_value(
+		"Account", bank_gl_account, ["company", "account_currency"]
+	)
 
 	second_account_type, second_account_currency = frappe.db.get_value(
 		"Account", second_account, ["account_type", "account_currency"]
@@ -113,11 +115,11 @@ def create_journal_entry_bts(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
 		)
 
-	if second_account_currency != company_currency:
+	if second_account_currency != bank_account_currency:
 		frappe.throw(
 			_(
-				"The currency of the second account ({0}) must be the same as of the bank account ({1})"
-			).format(second_account, company_currency)
+				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
+			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
 		)
 
 	journal_entry = frappe.new_doc("Journal Entry")
@@ -143,7 +145,7 @@ def create_journal_entry_bts(
 				"cost_center": get_default_cost_center(company),
 			},
 			{
-				"account": company_account,
+				"account": bank_gl_account,
 				"bank_account": bank_transaction.bank_account,
 				"credit_in_account_currency": bank_credit_amount,
 				"debit_in_account_currency": bank_debit_amount,
@@ -151,6 +153,12 @@ def create_journal_entry_bts(
 			},
 		],
 	)
+
+	company_currency = get_company_currency(company)
+	journal_entry.multi_currency = (
+		0 if company_currency == bank_account_currency == second_account_currency else 1
+	)
+
 	journal_entry.insert()
 
 	if allow_edit:
