@@ -155,8 +155,8 @@ def create_journal_entry_bts(
 	)
 
 	company_currency = get_company_currency(company)
-	journal_entry.multi_currency = any(
-		currency != company_currency for currency in [bank_account_currency, second_account_currency]
+	journal_entry.multi_currency = (
+		0 if company_currency == bank_account_currency == second_account_currency else 1
 	)
 
 	journal_entry.insert()
