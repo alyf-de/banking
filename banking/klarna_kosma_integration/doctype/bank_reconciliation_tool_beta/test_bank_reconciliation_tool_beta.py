@@ -633,8 +633,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["amount_match"], 1)
 		self.assertEqual(first_match["ref_in_desc_match"], 0)
 
-<<<<<<< HEAD
-=======
 	def test_split_jv_match_against_transaction(self):
 		"""
 		Test if a split JV shows up as a single consolidated row in the tool
@@ -728,7 +726,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
 
->>>>>>> 5327b7e (fix: Allow Multi Currency JV from Tool)
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
