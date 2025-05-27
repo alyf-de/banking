@@ -83,6 +83,10 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 			show_camt_uploader(frm)
 		);
 
+		frm.page.add_menu_item(__("Upload MT940 file"), () =>
+			show_mt940_uploader(frm)
+		);
+
 		frm.$reconciliation_area = frm.get_field(
 			"reconciliation_action_area"
 		).$wrapper;
@@ -268,6 +272,40 @@ function show_camt_uploader(frm) {
 		bank_account: frm.doc.bank_account,
 		restrictions: {
 			allowed_file_types: [".xml", ".XML"],
+			max_number_of_files: 1,
+		},
+	});
+
+	uploader.dialog.$wrapper.on("hidden.bs.modal", () => {
+		frm.refresh();
+	});
+}
+
+function show_mt940_uploader(frm) {
+	if (!frm.doc.bank_account) {
+		frappe.throw({
+			message: __("Please set the 'Bank Account' filter"),
+			title: __("Filter Required"),
+		});
+	}
+
+	const uploader = new frappe.ui.FileUploader({
+		dialog_title: __("Upload MT940 file"),
+		upload_notes: __("to import bank transactions for {0}.", [
+			frm.doc.bank_account,
+		]),
+		method: "banking.ebics.utils.upload_mt940_file",
+		doctype: "Bank Account",
+		docname: frm.doc.bank_account,
+		allow_toggle_private: false,
+		allow_take_photo: false,
+		allow_web_link: false,
+		allow_multiple: false,
+		allow_google_drive: false,
+		disable_file_browser: true,
+		bank_account: frm.doc.bank_account,
+		restrictions: {
+			allowed_file_types: [".sta", ".mt940", ".txt", ".STA", ".MT940", ".940", ".TXT"],
 			max_number_of_files: 1,
 		},
 	});
