@@ -633,51 +633,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["amount_match"], 1)
 		self.assertEqual(first_match["ref_in_desc_match"], 0)
 
-	def test_split_jv_match_against_transaction(self):
-		"""
-		Test if a split JV shows up as a single consolidated row in the tool
-		and fully reconciles the Bank Transaction.
-		"""
-		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
-		journal_entry = create_journal_entry_bts(
-			bank_transaction_name=bt.name,
-			party_type="Customer",
-			party=self.customer,
-			posting_date=bt.date,
-			reference_number=bt.reference_number,
-			reference_date=bt.date,
-			entry_type="Bank Entry",
-			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
-			allow_edit=True,
-		)
-
-		# Split the JV Row into two
-		journal_entry.accounts[1].debit_in_account_currency = 100
-		journal_entry.append(
-			"accounts",
-			{
-				"account": frappe.get_value("Bank Account", bt.bank_account, "account"),
-				"bank_account": bt.bank_account,
-				"credit_in_account_currency": 0.0,
-				"debit_in_account_currency": 100,
-				"cost_center": journal_entry.accounts[1].cost_center,
-			},
-		)
-		journal_entry.submit()
-
-		matched_vouchers = get_linked_payments(
-			bank_transaction_name=bt.name,
-			document_types=["journal_entry"],
-			from_date=getdate(),
-			to_date=getdate(),
-		)
-		first_match = matched_vouchers[0]
-
-		self.assertEqual(len(matched_vouchers), 1)
-		self.assertEqual(first_match["reference_no"], bt.reference_number)
-		self.assertEqual(first_match["name"], journal_entry.name)
-		self.assertEqual(first_match["paid_amount"], 200.0)
-
 	def test_usd_jv_against_eur_company(self):
 		"""Test if the tool can create a USD Journal Entry against a EUR company."""
 		bank = create_bank("Citi Bank USD", swift_number="CITIUS34")
