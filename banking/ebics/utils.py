@@ -332,6 +332,83 @@ def upload_camt_file():
 	process_camt_document(camt_document, bank_account)
 
 
+@frappe.whitelist()
+def upload_mt940_file():
+	frappe.has_permission("Bank Transaction", "create", throw=True)
+
+	file_bytes = frappe.local.uploaded_file
+	bank_account = frappe.form_dict.docname
+
+	register_fintech()
+
+	from fintech.swift import parse_mt940
+
+	mt940_data = file_bytes.decode()
+	statements = parse_mt940(mt940_data)
+
+	for statement in statements:
+		process_mt940_statement(statement, bank_account)
+
+
+def process_mt940_statement(statement, bank_account: str):
+	"""Process a single MT940 statement and create bank transactions"""
+
+	company = frappe.db.get_value("Bank Account", bank_account, "company")
+	currency = statement["balance_open"]["currency"]
+	for transaction in statement["transactions"]:
+		create_mt940_bank_transaction(bank_account, company, transaction, currency)
+
+
+def create_mt940_bank_transaction(bank_account: str, company: str, transaction: dict, currency: str):
+	"""Create a bank transaction from MT940 transaction data"""
+
+	amount = transaction["amount"] or 0
+	description = transaction["description"] or transaction["sepa"]["SVWZ"] or ""
+	transaction_hash = get_mt940_transaction_hash(transaction)
+
+	if frappe.db.exists(
+		"Bank Transaction",
+		{"transaction_id": transaction_hash, "bank_account": bank_account},
+	):
+		return
+
+	bt = frappe.new_doc("Bank Transaction")
+	bt.bank_account = bank_account
+	bt.company = company
+	bt.currency = currency
+	bt.description = description[:500]
+	bt.transaction_id = transaction_hash
+	bt.deposit = max(amount, 0)
+	bt.withdrawal = abs(min(amount, 0))
+
+	bt.transaction_type = transaction["booking_text"] or ""
+	bt.date = transaction["date"] or transaction["valuta"]
+	bt.reference_number = transaction["reference"] or transaction["bank_reference"] or ""
+	bt.bank_party_name = " ".join(transaction["name"])
+	bt.bank_party_iban = transaction["iban"] or transaction["account"] or ""
+
+	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
+		bt.insert()
+		bt.submit()
+
+
+def get_mt940_transaction_hash(transaction: dict) -> str:
+	"""Generate a unique hash for MT940 transaction to prevent duplicates"""
+	sha = hashlib.sha256()
+	for value in (
+		transaction["date"],
+		transaction["account"],
+		transaction["name"],
+		transaction["amount"],
+		transaction["reference"],
+		transaction["iban"],
+	):
+		if value:
+			sha.update(frappe.safe_encode(str(value)))
+
+	return sha.hexdigest()
+
+
 def register_fintech(needs_license_key: bool = False):
 	banking_settings = frappe.get_single("Banking Settings")
 
