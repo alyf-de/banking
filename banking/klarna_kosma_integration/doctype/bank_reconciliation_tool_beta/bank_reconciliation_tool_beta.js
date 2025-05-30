@@ -305,7 +305,15 @@ function show_mt940_uploader(frm) {
 		disable_file_browser: true,
 		bank_account: frm.doc.bank_account,
 		restrictions: {
-			allowed_file_types: [".sta", ".mt940", ".txt", ".STA", ".MT940", ".940", ".TXT"],
+			allowed_file_types: [
+				".sta",
+				".mt940",
+				".txt",
+				".STA",
+				".MT940",
+				".940",
+				".TXT",
+			],
 			max_number_of_files: 1,
 		},
 	});
