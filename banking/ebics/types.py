@@ -1,6 +1,6 @@
-from typing import TypedDict, List, Optional
 from datetime import date
 from decimal import Decimal
+from typing import TypedDict
 
 
 class BalanceInfo(TypedDict):
@@ -14,8 +14,9 @@ class SumInfo(TypedDict):
 	currency: str
 	count: int
 
+
 class CurrencyAmount(TypedDict):
-	amount:   Decimal
+	amount: Decimal
 	currency: str
 
 
@@ -27,39 +28,39 @@ class MT940SepaInfo(TypedDict):
 
 
 class MT940Transaction(TypedDict):
-	description: Optional[str]
+	description: str | None
 	valuta: date
-	date: Optional[date]
+	date: date | None
 	amount: Decimal
 	reversal: bool
 	booking_key: str
-	booking_text: Optional[str]
+	booking_text: str | None
 	reference: str
-	bank_reference: Optional[str]
+	bank_reference: str | None
 	gvcode: str
-	primanota: Optional[str]
-	bankcode: Optional[str]
-	account: Optional[str]
-	iban: Optional[str]
-	amount_original: Optional[CurrencyAmount]
-	charges: Optional[CurrencyAmount]
-	textkey: Optional[int]
-	name: List[str]
-	purpose: List[str]
+	primanota: str | None
+	bankcode: str | None
+	account: str | None
+	iban: str | None
+	amount_original: CurrencyAmount | None
+	charges: CurrencyAmount | None
+	textkey: int | None
+	name: list[str]
+	purpose: list[str]
 	sepa: MT940SepaInfo
 
 
 class MT940Statement(TypedDict):
 	order_reference: str
-	reference: Optional[str]
+	reference: str | None
 	bankcode: str
 	account: str
 	number: str
 	balance_open: BalanceInfo
 	balance_close: BalanceInfo
-	balance_booked: Optional[BalanceInfo]
-	balance_noted: Optional[BalanceInfo]
-	sum_credits: Optional[SumInfo]
-	sum_debits: Optional[SumInfo]
+	balance_booked: BalanceInfo | None
+	balance_noted: BalanceInfo | None
+	sum_credits: SumInfo | None
+	sum_debits: SumInfo | None
 	count: int
-	transactions: List[MT940Transaction]
+	transactions: list[MT940Transaction]
