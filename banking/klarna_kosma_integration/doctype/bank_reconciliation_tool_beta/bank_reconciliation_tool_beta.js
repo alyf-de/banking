@@ -46,7 +46,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		});
 		frm.change_custom_button_type(__("Get Bank Transactions"), null, "primary");
 
-		frm.page.add_menu_item(__("Auto Reconcile"), function () {
+		frm.add_custom_button(__("Auto Reconcile"), function () {
 			frappe.confirm(
 				__(
 					"Auto reconcile bank transactions based on matching reference numbers?"
@@ -75,12 +75,16 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 			);
 		});
 
-		frm.page.add_menu_item(__("Upload CSV / Excel file"), () =>
-			frm.events.route_to_bank_statement_import(frm)
+		frm.add_custom_button(
+			__("Upload CSV / Excel file"),
+			() => frm.events.route_to_bank_statement_import(frm),
+			__("Upload Files")
 		);
 
-		frm.page.add_menu_item(__("Upload CAMT file"), () =>
-			show_camt_uploader(frm)
+		frm.add_custom_button(
+			__("Upload CAMT file"),
+			() => show_camt_uploader(frm),
+			__("Upload Files")
 		);
 
 		frm.$reconciliation_area = frm.get_field(
