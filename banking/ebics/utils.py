@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager
+from banking.ebics.types import MT940Statement, MT940Transaction
 
 if TYPE_CHECKING:
 	from datetime import date
@@ -344,13 +345,13 @@ def upload_mt940_file():
 	from fintech.swift import parse_mt940
 
 	mt940_data = file_bytes.decode()
-	statements = parse_mt940(mt940_data)
+	statements: list[MT940Statement] = parse_mt940(mt940_data)
 
 	for statement in statements:
 		process_mt940_statement(statement, bank_account)
 
 
-def process_mt940_statement(statement, bank_account: str):
+def process_mt940_statement(statement: MT940Statement, bank_account: str):
 	"""Process a single MT940 statement and create bank transactions"""
 
 	company = frappe.db.get_value("Bank Account", bank_account, "company")
@@ -359,7 +360,9 @@ def process_mt940_statement(statement, bank_account: str):
 		create_mt940_bank_transaction(bank_account, company, transaction, currency)
 
 
-def create_mt940_bank_transaction(bank_account: str, company: str, transaction: dict, currency: str):
+def create_mt940_bank_transaction(
+	bank_account: str, company: str, transaction: MT940Transaction, currency: str
+):
 	"""Create a bank transaction from MT940 transaction data"""
 
 	amount = transaction["amount"] or 0
@@ -392,7 +395,7 @@ def create_mt940_bank_transaction(bank_account: str, company: str, transaction: 
 		bt.submit()
 
 
-def get_mt940_transaction_hash(transaction: dict) -> str:
+def get_mt940_transaction_hash(transaction: MT940Transaction) -> str:
 	"""Generate a unique hash for MT940 transaction to prevent duplicates"""
 	sha = hashlib.sha256()
 	for value in (
