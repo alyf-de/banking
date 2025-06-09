@@ -3,9 +3,6 @@
 import json
 
 import frappe
-from erpnext.accounts.doctype.bank_transaction.test_bank_transaction import (
-	create_gl_account,
-)
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
 	create_payment_entry,
 )
@@ -37,7 +34,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		)  # commits to db internally
 
 		create_bank()
-		cls.gl_account = create_gl_account("_Test Bank Reco Tool")
+		cls.gl_account = create_bank_gl_account("_Test Bank Reco Tool")
 		cls.bank_account = create_bank_account(gl_account=cls.gl_account)
 		cls.customer = create_customer(customer_name="ABC Inc.")
 
@@ -636,6 +633,54 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["amount_match"], 1)
 		self.assertEqual(first_match["ref_in_desc_match"], 0)
 
+	def test_usd_jv_against_eur_company(self):
+		"""Test if the tool can create a USD Journal Entry against a EUR company."""
+		bank = create_bank("Citi Bank USD", swift_number="CITIUS34")
+		gl_account = create_bank_gl_account("_Test USD Bank Reco Tool", "USD")
+		usd_receivable_account = frappe.get_doc(
+			{
+				"doctype": "Account",
+				"company": "_Test Company",
+				"parent_account": "Accounts Receivable - _TC",
+				"account_type": "Receivable",
+				"is_group": 0,
+				"account_name": "USD Receivable - _TC",
+				"account_currency": "USD",
+			}
+		).insert()
+		bank_account = create_bank_account(bank.name, gl_account, "USD Account")
+		customer = create_customer(customer_name="USD Inc.", currency="USD")
+
+		bt = create_bank_transaction(
+			date=getdate(),
+			deposit=200,
+			reference_no="usd-jv-001",
+			bank_account=bank_account,
+			currency="USD",
+			description="USD Inc.",
+		)
+
+		create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=customer,
+			posting_date=bt.date,
+			reference_number=bt.reference_number,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=usd_receivable_account.name,
+		)
+
+		bt.reload()
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+
+		journal_entry = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+
+		self.assertTrue(journal_entry.multi_currency)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
@@ -654,6 +699,7 @@ def create_bank_transaction(
 	reference_date: str | None = None,
 	bank_account: str | None = None,
 	description: str | None = None,
+	currency: str = "INR",
 ):
 	doc = frappe.get_doc(
 		{
@@ -663,7 +709,7 @@ def create_bank_transaction(
 			"date": date or frappe.utils.nowdate(),
 			"deposit": deposit or 0.0,
 			"withdrawal": withdrawal or 0.0,
-			"currency": "INR",
+			"currency": currency,
 			"bank_account": bank_account,
 			"reference_number": reference_no,
 		}
@@ -720,12 +766,27 @@ def create_bank_account(
 	return bank_account.name
 
 
-def create_bank(bank_name="Citi Bank"):
+def create_bank(bank_name: str = "Citi Bank", swift_number: str = "CITIUS33"):
 	if not frappe.db.exists("Bank", bank_name):
 		bank = frappe.new_doc("Bank")
 		bank.bank_name = bank_name
-		bank.swift_number = "CITIUS33"
+		bank.swift_number = swift_number
 		bank.insert()
 	else:
 		bank = frappe.get_doc("Bank", bank_name)
 	return bank
+
+
+def create_bank_gl_account(account_name: str = "_Test Bank - _TC", currency: str = "INR") -> str:
+	gl_account = frappe.get_doc(
+		{
+			"doctype": "Account",
+			"company": "_Test Company",
+			"parent_account": "Current Assets - _TC",
+			"account_type": "Bank",
+			"is_group": 0,
+			"account_name": account_name,
+			"account_currency": currency,
+		}
+	).insert()
+	return gl_account.name
