@@ -366,7 +366,18 @@ def create_mt940_bank_transaction(
 	"""Create a bank transaction from MT940 transaction data"""
 
 	amount = transaction["amount"] or 0
-	description = transaction["description"] or transaction["sepa"]["SVWZ"] or ""
+	description = (
+		transaction["description"]
+		or transaction.get("sepa", {}).get("SVWZ")
+		or " ".join(transaction.get("purpose", []))
+	)
+	ref = (
+		transaction.get("sepa", {}).get("EREF")
+		or transaction["reference"]
+		or transaction["bank_reference"]
+		or ""
+	)
+
 	transaction_hash = get_mt940_transaction_hash(transaction)
 
 	if frappe.db.exists(
@@ -379,15 +390,15 @@ def create_mt940_bank_transaction(
 	bt.bank_account = bank_account
 	bt.company = company
 	bt.currency = currency
-	bt.description = description[:500]
+	bt.description = description
 	bt.transaction_id = transaction_hash
 	bt.deposit = max(amount, 0)
 	bt.withdrawal = abs(min(amount, 0))
 
 	bt.transaction_type = transaction["booking_text"] or ""
 	bt.date = transaction["date"] or transaction["valuta"]
-	bt.reference_number = transaction["reference"] or transaction["bank_reference"] or ""
-	bt.bank_party_name = " ".join(transaction["name"])
+	bt.reference_number = "" if ref == "NONREF" else ref
+	bt.bank_party_name = transaction.get("sepa", {}).get("ABWA") or "".join(transaction["name"])
 	bt.bank_party_iban = transaction["iban"] or transaction["account"] or ""
 
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):

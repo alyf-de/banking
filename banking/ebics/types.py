@@ -21,10 +21,10 @@ class CurrencyAmount(TypedDict):
 
 
 class MT940SepaInfo(TypedDict):
-	EREF: str
-	MREF: str
-	CRED: str
-	SVWZ: str
+	EREF: str | None
+	MREF: str | None
+	CRED: str | None
+	SVWZ: str | None
 
 
 class MT940Transaction(TypedDict):
