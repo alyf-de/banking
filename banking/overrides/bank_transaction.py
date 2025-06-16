@@ -144,6 +144,7 @@ class CustomBankTransaction(BankTransaction):
 		journal_entry.cheque_date = self.date
 		journal_entry.cheque_no = self.reference_number
 		journal_entry.title = self.name
+		journal_entry.user_remark = self.description
 
 		invoices = split_invoices_based_on_payment_terms(
 			self.prepare_invoices_to_split(invoices_to_bill), self.company
