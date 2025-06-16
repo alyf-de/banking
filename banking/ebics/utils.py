@@ -237,10 +237,22 @@ def _create_bank_transaction(
 	"""
 	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 	# For our test bank, the latter is a timestamp with nanosecond accuracy.
+
+	values_to_hash = [
+		sepa_transaction.date,
+		sepa_transaction.iban,
+		sepa_transaction.name,
+		sepa_transaction.eref,
+		sepa_transaction.amount.value,
+		sepa_transaction.amount.currency,
+		sepa_transaction.info,
+		*sepa_transaction.purpose,
+	]
+
 	transaction_id = (
 		sepa_transaction.bank_reference
 		or sepa_transaction._xmlobj.Refs.TxId.text
-		or get_transaction_hash(sepa_transaction)
+		or get_transaction_hash(values_to_hash)
 	)
 
 	# NOTE: This does not work for old data, this ID is different from Kosma's
@@ -274,18 +286,9 @@ def _create_bank_transaction(
 		bt.submit()
 
 
-def get_transaction_hash(transaction: "SEPATransaction"):
+def get_transaction_hash(transaction: list):
 	sha = hashlib.sha256()
-	for value in (
-		transaction.date,
-		transaction.iban,
-		transaction.name,
-		transaction.eref,
-		transaction.amount.value,
-		transaction.amount.currency,
-		transaction.info,
-		*transaction.purpose,
-	):
+	for value in transaction:
 		if value:
 			sha.update(frappe.safe_encode(str(value)))
 
@@ -378,7 +381,16 @@ def create_mt940_bank_transaction(
 		or ""
 	)
 
-	transaction_hash = get_mt940_transaction_hash(transaction)
+	values_to_hash = [
+		transaction["date"],
+		transaction["account"],
+		transaction["name"],
+		transaction["amount"],
+		transaction["reference"],
+		transaction["iban"],
+	]
+
+	transaction_hash = get_transaction_hash(values_to_hash)
 
 	if frappe.db.exists(
 		"Bank Transaction",
@@ -404,23 +416,6 @@ def create_mt940_bank_transaction(
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
 		bt.insert()
 		bt.submit()
-
-
-def get_mt940_transaction_hash(transaction: MT940Transaction) -> str:
-	"""Generate a unique hash for MT940 transaction to prevent duplicates"""
-	sha = hashlib.sha256()
-	for value in (
-		transaction["date"],
-		transaction["account"],
-		transaction["name"],
-		transaction["amount"],
-		transaction["reference"],
-		transaction["iban"],
-	):
-		if value:
-			sha.update(frappe.safe_encode(str(value)))
-
-	return sha.hexdigest()
 
 
 def register_fintech(needs_license_key: bool = False):
