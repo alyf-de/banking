@@ -381,16 +381,11 @@ def create_mt940_bank_transaction(
 		or ""
 	)
 
-	values_to_hash = [
-		transaction["date"],
-		transaction["account"],
-		transaction["name"],
-		transaction["amount"],
-		transaction["reference"],
-		transaction["iban"],
-	]
+	date = transaction["date"] or transaction["valuta"]
+	account = transaction["iban"] or transaction["account"] or ""
+	bank_name = transaction.get("sepa", {}).get("ABWA") or "".join(transaction["name"])
 
-	transaction_hash = get_transaction_hash(values_to_hash)
+	transaction_hash = get_transaction_hash([date, account, bank_name, amount, ref])
 
 	if frappe.db.exists(
 		"Bank Transaction",
@@ -406,12 +401,11 @@ def create_mt940_bank_transaction(
 	bt.transaction_id = transaction_hash
 	bt.deposit = max(amount, 0)
 	bt.withdrawal = abs(min(amount, 0))
-
 	bt.transaction_type = transaction["booking_text"] or ""
-	bt.date = transaction["date"] or transaction["valuta"]
+	bt.date = date
 	bt.reference_number = "" if ref == "NONREF" else ref
-	bt.bank_party_name = transaction.get("sepa", {}).get("ABWA") or "".join(transaction["name"])
-	bt.bank_party_iban = transaction["iban"] or transaction["account"] or ""
+	bt.bank_party_name = bank_name
+	bt.bank_party_iban = account
 
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
 		bt.insert()
