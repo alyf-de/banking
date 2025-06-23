@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager
+from banking.ebics.types import MT940Statement, MT940Transaction
 
 if TYPE_CHECKING:
 	from datetime import date
@@ -209,14 +210,14 @@ def process_camt_document(
 			# from camt.054 that is sometimes available.
 			# If that's not possible, create a single transaction
 			for sub_transaction in transaction:
-				_create_bank_transaction(
+				create_sepa_bank_transaction(
 					bank_account,
 					company,
 					sub_transaction,
 					earliest_date,
 				)
 		else:
-			_create_bank_transaction(
+			create_sepa_bank_transaction(
 				bank_account,
 				company,
 				transaction,
@@ -224,7 +225,7 @@ def process_camt_document(
 			)
 
 
-def _create_bank_transaction(
+def create_sepa_bank_transaction(
 	bank_account: str,
 	company: str,
 	sepa_transaction: "SEPATransaction",
@@ -234,57 +235,47 @@ def _create_bank_transaction(
 
 	https://www.joonis.de/en/fintech/doc/sepa/#fintech.sepa.SEPATransaction
 	"""
-	# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
-	# For our test bank, the latter is a timestamp with nanosecond accuracy.
-	transaction_id = (
-		sepa_transaction.bank_reference
-		or sepa_transaction._xmlobj.Refs.TxId.text
-		or get_transaction_hash(sepa_transaction)
-	)
-
-	# NOTE: This does not work for old data, this ID is different from Kosma's
-	if transaction_id and frappe.db.exists(
-		"Bank Transaction",
-		{"transaction_id": transaction_id, "bank_account": bank_account},
-	):
-		return
-
 	if start_date and sepa_transaction.date < start_date:
 		return
 
-	bt = frappe.new_doc("Bank Transaction")
-	bt.date = sepa_transaction.date
-	bt.bank_account = bank_account
-	bt.company = company
+	values_to_hash = [
+		sepa_transaction.date,
+		sepa_transaction.iban,
+		sepa_transaction.name,
+		sepa_transaction.eref,
+		sepa_transaction.amount.value,
+		sepa_transaction.amount.currency,
+		sepa_transaction.info,
+		*sepa_transaction.purpose,
+	]
 
 	amount = float(sepa_transaction.amount.value)
-	bt.deposit = max(amount, 0)
-	bt.withdrawal = abs(min(amount, 0))
-	bt.currency = sepa_transaction.amount.currency
+	create_bank_transaction(
+		bank_account=bank_account,
+		transaction_id=(
+			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
+			# For our test bank, the latter is a timestamp with nanosecond accuracy.
+			# sepa_transaction.bank_reference
+			# or sepa_transaction._xmlobj.Refs.TxId.text
+			# or
+			get_transaction_hash(values_to_hash)
+		),
+		company=company,
+		currency=sepa_transaction.amount.currency,
+		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
+		deposit=max(amount, 0),
+		withdrawal=abs(min(amount, 0)),
+		transaction_type=sepa_transaction.info,
+		date=sepa_transaction.date,
+		reference_number=sepa_transaction.eref,
+		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
+		bank_party_iban=sepa_transaction.iban,
+	)
 
-	bt.description = "\n".join(sepa_transaction.purpose) or sepa_transaction.info
-	bt.reference_number = sepa_transaction.eref
-	bt.transaction_id = transaction_id
-	bt.bank_party_iban = sepa_transaction.iban
-	bt.bank_party_name = sepa_transaction.name
 
-	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
-		bt.insert()
-		bt.submit()
-
-
-def get_transaction_hash(transaction: "SEPATransaction"):
+def get_transaction_hash(transaction: list):
 	sha = hashlib.sha256()
-	for value in (
-		transaction.date,
-		transaction.iban,
-		transaction.name,
-		transaction.eref,
-		transaction.amount.value,
-		transaction.amount.currency,
-		transaction.info,
-		*transaction.purpose,
-	):
+	for value in transaction:
 		if value:
 			sha.update(frappe.safe_encode(str(value)))
 
@@ -330,6 +321,104 @@ def upload_camt_file():
 
 	camt_document = CAMTDocument(file_bytes.decode())
 	process_camt_document(camt_document, bank_account)
+
+
+@frappe.whitelist()
+def upload_mt940_file():
+	frappe.has_permission("Bank Transaction", "create", throw=True)
+
+	file_bytes = frappe.local.uploaded_file
+	bank_account = frappe.form_dict.docname
+
+	register_fintech()
+
+	from fintech.swift import parse_mt940
+
+	mt940_data = file_bytes.decode()
+	statements: list[MT940Statement] = parse_mt940(mt940_data)
+
+	for statement in statements:
+		process_mt940_statement(statement, bank_account)
+
+
+def process_mt940_statement(statement: MT940Statement, bank_account: str):
+	"""Process a single MT940 statement and create bank transactions"""
+
+	company = frappe.db.get_value("Bank Account", bank_account, "company")
+	currency = statement["balance_open"]["currency"]
+	for transaction in statement["transactions"]:
+		create_mt940_bank_transaction(bank_account, company, transaction, currency)
+
+
+def create_mt940_bank_transaction(
+	bank_account: str, company: str, transaction: MT940Transaction, currency: str
+):
+	"""Create a bank transaction from MT940 transaction data"""
+	transaction_date = transaction.get("date") or transaction["valuta"]
+	party_iban = transaction.get("iban") or transaction.get("account")
+	party_name = transaction.get("sepa", {}).get("ABWA") or "".join(transaction.get("name", []))
+	reference = (
+		transaction.get("sepa", {}).get("EREF")
+		or transaction["reference"]
+		or transaction["bank_reference"]
+		or ""
+	)
+	transaction_type = transaction.get("booking_text")
+	amount = transaction["amount"]
+	description = (
+		transaction.get("description")
+		or transaction.get("sepa", {}).get("SVWZ")
+		or " ".join(transaction.get("purpose", []))
+	)
+
+	values_to_hash = [
+		transaction_date,
+		party_iban,
+		party_name,
+		reference,
+		amount,
+		currency,
+		transaction_type,
+		description,
+	]
+
+	create_bank_transaction(
+		bank_account=bank_account,
+		transaction_id=get_transaction_hash(values_to_hash),
+		company=company,
+		currency=currency,
+		description=description,
+		deposit=max(amount, 0),
+		withdrawal=abs(min(amount, 0)),
+		transaction_type=transaction_type,
+		date=transaction_date,
+		reference_number="" if reference == "NONREF" else reference,
+		bank_party_name=party_name,
+		bank_party_iban=party_iban,
+	)
+
+
+def create_bank_transaction(
+	bank_account: str,
+	transaction_id: str,
+	**kwargs,
+):
+	"""Create a bank transaction from the given kwargs."""
+	# NOTE: This does not work for old data, this ID is different from Kosma's.
+	if frappe.db.exists(
+		"Bank Transaction",
+		{"transaction_id": transaction_id, "bank_account": bank_account},
+	):
+		return
+
+	bt = frappe.new_doc("Bank Transaction")
+	bt.bank_account = bank_account
+	bt.transaction_id = transaction_id
+	bt.update(kwargs)
+
+	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
+		bt.insert()
+		bt.submit()
 
 
 def register_fintech(needs_license_key: bool = False):
