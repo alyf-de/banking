@@ -131,6 +131,7 @@ def create_journal_entry_bts(
 			"cheque_date": reference_date,
 			"cheque_no": reference_number,
 			"mode_of_payment": mode_of_payment,
+			"user_remark": bank_transaction.description,
 		}
 	)
 	journal_entry.set(
