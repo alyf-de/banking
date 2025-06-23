@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-05-22 17:33+0053\n"
+"POT-Creation-Date: 2025-06-23 21:33+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -94,7 +94,7 @@ msgstr "Erreur d'authentification due à des identifiants invalides."
 msgid "Auto Reconcile"
 msgstr "Rapprochement automatique"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:375
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:383
 msgid "Auto Reconciliation Complete"
 msgstr "Rapprochement automatique terminé"
 
@@ -116,7 +116,7 @@ msgstr ""
 msgid "Bank Account"
 msgstr ""
 
-#: banking/ebics/utils.py:115
+#: banking/ebics/utils.py:116
 msgid "Bank Account not found for IBAN {0}"
 msgstr "Compte bancaire introuvable pour IBAN {0}"
 
@@ -194,10 +194,10 @@ msgstr "L'action Banking a échoué en raison des erreurs suivantes :"
 #: banking/ebics/doctype/ebics_user/ebics_user.py:44
 #: banking/ebics/doctype/ebics_user/ebics_user.py:47
 #: banking/ebics/doctype/ebics_user/ebics_user.py:54
-#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:97
-#: banking/ebics/utils.py:114 banking/ebics/utils.py:131
-#: banking/ebics/utils.py:146 banking/ebics/utils.py:156
-#: banking/ebics/utils.py:166
+#: banking/ebics/doctype/ebics_user/ebics_user.py:57 banking/ebics/utils.py:98
+#: banking/ebics/utils.py:115 banking/ebics/utils.py:132
+#: banking/ebics/utils.py:147 banking/ebics/utils.py:157
+#: banking/ebics/utils.py:167
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:176
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
@@ -359,7 +359,7 @@ msgstr "Utilisateur EBICS"
 msgid "EBICS User limit exceeded."
 msgstr "Limite d'utilisateurs EBICS dépassée."
 
-#: banking/ebics/utils.py:167
+#: banking/ebics/utils.py:168
 msgid "EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
 msgstr "L'utilisateur EBICS {0} n'a pas de permission 'C54' pour diviser les transactions par lots. Les types autorisés sont : {1}."
 
@@ -454,8 +454,9 @@ msgstr "Nom du champ"
 msgid "Field {} does not exist in {}. Please check the configuration in Banking Settings."
 msgstr "Le champ {} n'existe pas dans {}. Veuillez vérifier la configuration dans les paramètres Banking."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:98
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:250
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:102
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:254
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:288
 msgid "Filter Required"
 msgstr "Filtre requis"
 
@@ -555,11 +556,11 @@ msgstr "Champ invalide"
 msgid "Invalid Voucher Type"
 msgstr "Type de chèque invalide"
 
-#: banking/ebics/utils.py:157
+#: banking/ebics/utils.py:158
 msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
 msgstr "Il semble que l'utilisateur EBICS {0} n'ait pas la permission 'C52' pour télécharger les états bancaires enregistrés. Les types autorisés sont : {1}."
 
-#: banking/ebics/utils.py:147
+#: banking/ebics/utils.py:148
 msgid "It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
 msgstr "Il semble que l'utilisateur EBICS {0} n'ait pas la permission 'C52' pour télécharger les transactions intraday. Les types autorisés sont : {1}."
 
@@ -584,7 +585,7 @@ msgstr ""
 msgid "Last Renewed On"
 msgstr "Dernier renouvellement le"
 
-#: banking/ebics/utils.py:345
+#: banking/ebics/utils.py:434
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr "Clé de licence non trouvée. Veuillez activer la case à cocher 'Activer EBICS' dans le {0} et vérifier que votre abonnement est actif."
 
@@ -630,7 +631,7 @@ msgstr "Aucune transaction trouvée pour les filtres actuels."
 msgid "No changes to update"
 msgstr "Aucun changement à mettre à jour"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:356
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:364
 msgid "No matches occurred via Auto Reconciliation"
 msgstr "Aucun rapprochement automatique n'a eu lieu"
 
@@ -666,7 +667,7 @@ msgstr "Retours alloués en trop"
 msgid "Parameters"
 msgstr "Paramètres"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:371
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:379
 msgid "Partially Reconciled"
 msgstr "Partiellement rapproché"
 
@@ -692,7 +693,7 @@ msgstr ""
 msgid "Party Type"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:113
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:115
 msgid "Party Type and Party is required for Receivable / Payable account {0}"
 msgstr "Le type de partenaire et le partenaire sont requis pour le compte Receivable / Payable {0}"
 
@@ -738,7 +739,7 @@ msgstr "Veuillez entrer les valeurs fournies par votre banque."
 msgid "Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
 msgstr "Veuillez imprimer la lettre INI jointe, l'envoyer à votre banque et attendre la confirmation. Ensuite, vérifiez les clés de la banque."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:206
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:210
 msgid "Please select a Bank Account to start reconciling."
 msgstr "Veuillez sélectionner un compte bancaire pour commencer le rapprochement."
 
@@ -750,8 +751,9 @@ msgstr "Veuillez sélectionner au moins un chèque à rapprocher"
 msgid "Please select vouchers of the same type to reconcile"
 msgstr "Veuillez sélectionner des chèques du même type à rapprocher"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:97
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:249
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:101
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:253
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:287
 msgid "Please set the 'Bank Account' filter"
 msgstr "Veuillez définir le filtre 'Compte bancaire'"
 
@@ -775,7 +777,7 @@ msgstr ""
 msgid "Reconcile"
 msgstr "Rapprocher"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:362
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:370
 msgid "Reconciled"
 msgstr "Rapproché"
 
@@ -926,7 +928,10 @@ msgstr "La transaction bancaire est sur-allouée de {0} à la ligne {1}."
 msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
 msgstr "Le montant alloué ne peut pas être négatif. Veuillez ajuster les chèques de retour sélectionnés."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:118
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:120
+msgid "The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
+msgstr "La devise du second compte ({0} : {1}) doit être la même que celle du compte bancaire ({2} : {3})"
+
 #: banking/overrides/bank_transaction.py:115
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
 msgstr "La devise du second compte ({0}) doit être la même que celle du compte bancaire ({1})"
@@ -954,13 +959,13 @@ msgstr ""
 msgid "To Reference Date"
 msgstr "Date de référence"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:361
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:370
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:369
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:378
 msgid "Transaction"
 msgstr "Transaction"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:361
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:370
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:369
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:378
 msgid "Transactions"
 msgstr "Transactions"
 
@@ -988,7 +993,12 @@ msgstr "Télécharger le fichier CAMT"
 msgid "Upload CSV / Excel file"
 msgstr "Télécharger le fichier CSV / Excel"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:255
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:86
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:293
+msgid "Upload MT940 file"
+msgstr "Télécharger le fichier MT940"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:259
 msgid "Upload XML (CAMT.053) file"
 msgstr "Télécharger le fichier XML (CAMT.053)"
 
@@ -1039,12 +1049,13 @@ msgstr "Nous essaierons de télécharger les nouvelles transactions du jour, en 
 msgid "Withdrawal"
 msgstr "Retrait"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:256
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:260
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:294
 msgid "to import bank transactions for {0}."
 msgstr "pour importer les transactions bancaires pour {0}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:359
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:368
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:367
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:376
 msgid "{0} {1} {2}"
 msgstr "{0} {1} {2}"
 
