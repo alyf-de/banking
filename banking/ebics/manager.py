@@ -89,3 +89,85 @@ class EBICSManager:
 					level_perms.extend(order_types.split())
 
 		return level_perms
+
+	def download_c52(self, start_date: str | None = None, end_date: str | None = None):
+		"""Download Bank to Customer Account Reports (camt.052) - Intraday statements.
+
+		Returns:
+			tuple: (xml_data, transaction_id) where xml_data is the downloaded files
+			and transaction_id is used for confirming the download.
+		"""
+		client = self.get_client()
+
+		if client.version == "H005":
+			from fintech.ebics import BusinessTransactionFormat
+
+			c52_btf = BusinessTransactionFormat(
+				service="STM",  # Statement service
+				msg_name="camt.052",
+				scope="DE",
+				container="ZIP",
+			)
+			xml_data = client.BTD(c52_btf, start_date, end_date)
+		else:
+			xml_data = client.C52(start_date, end_date)
+
+		return xml_data, client.last_trans_id
+
+	def download_c53(self, start_date: str | None = None, end_date: str | None = None):
+		"""Download Bank to Customer Statements (camt.053) - End of period statements.
+
+		Returns:
+			tuple: (xml_data, transaction_id) where xml_data is the downloaded files
+			and transaction_id is used for confirming the download.
+		"""
+		client = self.get_client()
+
+		if client.version == "H005":
+			from fintech.ebics import BusinessTransactionFormat
+
+			c53_btf = BusinessTransactionFormat(
+				service="EOP",  # End of Period service
+				msg_name="camt.053",
+				scope="DE",
+				container="ZIP",
+			)
+			xml_data = client.BTD(c53_btf, start_date, end_date)
+		else:
+			xml_data = client.C53(start_date, end_date)
+
+		return xml_data, client.last_trans_id
+
+	def download_c54(self, start_date: str | None = None, end_date: str | None = None):
+		"""Download Bank to Customer Debit Credit Notifications (camt.054) - Batch transaction details.
+
+		Returns:
+			tuple: (xml_data, transaction_id) where xml_data is the downloaded files
+			and transaction_id is used for confirming the download.
+		"""
+		client = self.get_client()
+
+		if client.version == "H005":
+			from fintech.ebics import BusinessTransactionFormat
+
+			c54_btf = BusinessTransactionFormat(
+				service="NCR",  # Notification Credit/Debit service
+				msg_name="camt.054",
+				scope="DE",
+				container="ZIP",
+			)
+			xml_data = client.BTD(c54_btf, start_date, end_date)
+		else:
+			xml_data = client.C54(start_date, end_date)
+
+		return xml_data, client.last_trans_id
+
+	def confirm_download(self, transaction_id: str | None = None, success: bool = True):
+		"""Confirm the receipt of previously executed downloads.
+
+		Args:
+			transaction_id: The transaction ID to confirm. If None, confirms all unconfirmed downloads.
+			success: Whether the download was successfully processed.
+		"""
+		client = self.get_client()
+		return client.confirm_download(trans_id=transaction_id, success=success)
