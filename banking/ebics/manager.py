@@ -163,12 +163,11 @@ class EBICSManager:
 
 		return xml_data, client.last_trans_id
 
-	def confirm_download(self, transaction_id: str | None = None, success: bool = True):
+	def confirm_download(self, success: bool = True):
 		"""Confirm the receipt of previously executed downloads.
 
 		Args:
-			transaction_id: The transaction ID to confirm. If None, confirms all unconfirmed downloads.
 			success: Whether the download was successfully processed.
 		"""
 		client = self.get_client()
-		return client.confirm_download(trans_id=transaction_id, success=success)
+		return client.confirm_download(success=success)

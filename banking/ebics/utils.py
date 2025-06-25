@@ -78,17 +78,16 @@ def sync_ebics_transactions(
 			"end_date": end_date,
 		},
 	)
-	main_trans_id, batch_trans_id = None, None
 	main_xml, batch_xml = None, None
 	try:
 		# Use the manager's download methods which handle protocol version automatically
 		if intraday:
-			main_xml, main_trans_id = manager.download_c52(start_date, end_date)
+			main_xml = manager.download_c52(start_date, end_date)
 		else:
-			main_xml, main_trans_id = manager.download_c53(start_date, end_date)
+			main_xml = manager.download_c53(start_date, end_date)
 
 		if with_c54:
-			batch_xml, batch_trans_id = manager.download_c54(start_date, end_date)
+			batch_xml = manager.download_c54(start_date, end_date)
 
 		request.db_set(
 			{
@@ -143,18 +142,9 @@ def sync_ebics_transactions(
 			reference_doctype="EBICS Request",
 			reference_name=request.name,
 		)
-		# Confirm downloads with failure for all transaction IDs we have
-		if main_trans_id:
-			manager.confirm_download(transaction_id=main_trans_id, success=False)
-		if batch_trans_id:
-			manager.confirm_download(transaction_id=batch_trans_id, success=False)
-		return
+		manager.confirm_download(success=False)
 
-	# Confirm downloads with success for all transaction IDs we have
-	if main_trans_id:
-		manager.confirm_download(transaction_id=main_trans_id, success=True)
-	if batch_trans_id:
-		manager.confirm_download(transaction_id=batch_trans_id, success=True)
+	manager.confirm_download(success=True)
 
 
 def validate_permitted_types(user, permitted_types, intraday: bool):
