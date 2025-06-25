@@ -219,6 +219,26 @@ def download_bank_statements(
 	)
 
 
+@frappe.whitelist(methods=["PUT"])
+def change_protocol_version(ebics_user: str, protocol_version: str, passphrase: str | None = None):
+	ensure_ebics_is_enabled()
+
+	user = frappe.get_doc("EBICS User", ebics_user)
+	user.check_permission("write")
+
+	user.protocol_version = protocol_version
+	user.bank_keys_activated = 0
+
+	if protocol_version == "H005":
+		user.needs_certificates = 1
+
+	user.save()
+
+	if user.needs_certificates:
+		manager = get_ebics_manager(user, passphrase=passphrase)
+		manager.create_user_certificates(user.full_name, user.company)
+
+
 def ensure_ebics_is_enabled():
 	if not frappe.db.get_single_value("Banking Settings", "enabled"):
 		frappe.throw(

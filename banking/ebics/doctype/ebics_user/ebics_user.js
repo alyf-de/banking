@@ -105,6 +105,60 @@ frappe.ui.form.on("EBICS User", {
 			frm.add_custom_button(__("Download Bank Statements"), () => {
 				download_bank_statements(frm.doc.name, !frm.doc.passphrase);
 			});
+
+			frm.add_custom_button(
+				__("Change Protocol Version"),
+				() => {
+					const options = [
+						{
+							label: __("Ebics 2.5 (H004)"),
+							value: "H004",
+						},
+						{
+							label: __("Ebics 3.0 (H005)"),
+							value: "H005",
+						},
+					].filter((option) => option.value !== frm.doc.protocol_version);
+
+					frappe.prompt(
+						[
+							{
+								fieldname: "protocol_version",
+								label: __("Protocol Version"),
+								fieldtype: "Select",
+								options: options,
+								default: options.length == 1 ? options[0].value : null,
+								reqd: true,
+							},
+							...(frm.doc.passphrase
+								? []
+								: [
+										{
+											fieldname: "passphrase",
+											label: __("Passphrase"),
+											fieldtype: "Password",
+											reqd: true,
+										},
+								  ]),
+						],
+						(values) => {
+							frappe.call({
+								type: "PUT",
+								method:
+									"banking.ebics.doctype.ebics_user.ebics_user.change_protocol_version",
+								args: {
+									ebics_user: frm.doc.name,
+									protocol_version: values.protocol_version,
+								},
+								callback: () => frm.reload_doc(),
+							});
+						},
+						__("Change Protocol Version"),
+						__("Change")
+					);
+				},
+				__("Actions")
+			);
 		}
 	},
 });
