@@ -151,7 +151,7 @@ class EBICSManager:
 			from fintech.ebics import BusinessTransactionFormat
 
 			c54_btf = BusinessTransactionFormat(
-				service="NCR",  # Notification Credit/Debit service
+				service="STM",  # Statement service
 				msg_name="camt.054",
 				scope="DE",
 				container="ZIP",
