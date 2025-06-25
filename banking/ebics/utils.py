@@ -39,7 +39,7 @@ def get_ebics_manager(
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
 		sig_passphrase=sig_passphrase,
-		passphrase=passphrase or ebics_user.get_password("passphrase"),
+		passphrase=passphrase or ebics_user.get_passphrase(),
 	)
 
 	manager.set_user(ebics_user.partner_id, ebics_user.user_id)

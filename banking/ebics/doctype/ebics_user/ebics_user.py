@@ -119,6 +119,18 @@ class EBICSUser(Document):
 		code = frappe.db.get_value("Country", self.country, "code")
 		return code.upper() if code else None
 
+	def get_passphrase(self) -> str | None:
+		"""Return the passphrase if it is set and valid, otherwise None."""
+		if not self.passphrase:
+			return None
+
+		try:
+			passphrase = self.get_password("passphrase")
+		except (frappe.exceptions.AuthenticationError, frappe.exceptions.ValidationError):
+			return None
+
+		return passphrase or None
+
 	def attach_ini_letter(self, pdf_bytes: bytes):
 		file = frappe.new_doc("File")
 		file.file_name = f"ini_letter_{self.name}.pdf"
