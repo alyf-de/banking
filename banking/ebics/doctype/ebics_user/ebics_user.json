@@ -60,12 +60,14 @@
   {
    "fieldname": "partner_id",
    "fieldtype": "Data",
-   "label": "Partner ID"
+   "label": "Partner ID",
+   "read_only_depends_on": "initialized"
   },
   {
    "fieldname": "user_id",
    "fieldtype": "Data",
-   "label": "User ID"
+   "label": "User ID",
+   "read_only_depends_on": "initialized"
   },
   {
    "fieldname": "bank",
@@ -80,7 +82,8 @@
    "description": "Enable this for EBICS accounts whose key management is based on certificates.",
    "fieldname": "needs_certificates",
    "fieldtype": "Check",
-   "label": "Needs Certificate"
+   "label": "Needs Certificate",
+   "read_only_depends_on": "initialized"
   },
   {
    "default": "0",
@@ -147,7 +150,8 @@
    "fieldname": "protocol_version",
    "fieldtype": "Select",
    "label": "Protocol Version",
-   "options": "H004\nH005"
+   "options": "H004\nH005",
+   "read_only_depends_on": "initialized"
   }
  ],
  "links": [
@@ -156,7 +160,7 @@
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2025-06-25 16:51:33.167549",
+ "modified": "2025-06-25 19:33:58.402007",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
