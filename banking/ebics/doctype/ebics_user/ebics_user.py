@@ -6,10 +6,10 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
-from frappe.utils.data import getdate
+from frappe.utils.data import comma_and, getdate
 from requests import HTTPError
 
-from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
+from banking.ebics.utils import get_ebics_manager, get_protocol_versions, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
 
 
@@ -20,6 +20,8 @@ class EBICSUser(Document):
 
 		if self.bank:
 			self.validate_bank()
+
+		self.validate_protocol_version()
 
 	def before_insert(self):
 		self.register_user()
@@ -90,6 +92,26 @@ class EBICSUser(Document):
 		if not host_id or not url:
 			frappe.throw(
 				_("Please add EBICS Host ID and URL to bank {0}").format(get_link_to_form("Bank", self.bank))
+			)
+
+		try:
+			supported_protocol_versions = get_protocol_versions(host_id, url)
+		except Exception:
+			supported_protocol_versions = {}
+
+		if supported_protocol_versions and self.protocol_version not in supported_protocol_versions:
+			frappe.throw(
+				_("You selected protocol version {0}, but the bank {1} only supports {2}.").format(
+					self.protocol_version,
+					get_link_to_form("Bank", self.bank),
+					comma_and(supported_protocol_versions.keys()),
+				)
+			)
+
+	def validate_protocol_version(self):
+		if self.protocol_version == "H005" and not self.needs_certificates:
+			frappe.throw(
+				_("To use protocol version H005, please activate the checkbox 'Needs Certificates'.")
 			)
 
 	def attach_ini_letter(self, pdf_bytes: bytes):

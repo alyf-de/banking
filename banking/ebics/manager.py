@@ -9,7 +9,10 @@ if TYPE_CHECKING:
 
 
 class EBICSManager:
-	__slots__ = ["bank", "keyring", "user"]
+	__slots__ = ["bank", "keyring", "protocol_version", "user"]
+
+	def __init__(self, protocol_version: str | None = None):
+		self.protocol_version = protocol_version or "H004"
 
 	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
@@ -47,7 +50,7 @@ class EBICSManager:
 	def get_client(self) -> "EbicsClient":
 		from fintech.ebics import EbicsClient
 
-		return EbicsClient(self.bank, self.user)
+		return EbicsClient(self.bank, self.user, self.protocol_version)
 
 	def send_keys_to_bank(self):
 		client = self.get_client()

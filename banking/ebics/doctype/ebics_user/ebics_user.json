@@ -18,6 +18,8 @@
   "section_break_qjlc",
   "partner_id",
   "user_id",
+  "column_break_nybv",
+  "protocol_version",
   "needs_certificates",
   "section_break_juzm",
   "passphrase",
@@ -75,7 +77,7 @@
   },
   {
    "default": "0",
-   "description": "Enable this for EBICS accounts whose key management is based on certificates (eg. French banks).",
+   "description": "Enable this for EBICS accounts whose key management is based on certificates.",
    "fieldname": "needs_certificates",
    "fieldtype": "Check",
    "label": "Needs Certificate"
@@ -135,6 +137,17 @@
    "fieldname": "split_batch_transactions",
    "fieldtype": "Check",
    "label": "Split Batch Transactions"
+  },
+  {
+   "fieldname": "column_break_nybv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "H004",
+   "fieldname": "protocol_version",
+   "fieldtype": "Select",
+   "label": "Protocol Version",
+   "options": "H004\nH005"
   }
  ],
  "links": [
@@ -143,7 +156,7 @@
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2025-03-12 17:59:35.346499",
+ "modified": "2025-06-25 16:51:33.167549",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
@@ -174,6 +187,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "full_name,bank,company",
  "sort_field": "modified",
  "sort_order": "DESC",
