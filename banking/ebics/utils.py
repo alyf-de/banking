@@ -143,6 +143,7 @@ def sync_ebics_transactions(
 			reference_name=request.name,
 		)
 		manager.confirm_download(success=False)
+		return
 
 	manager.confirm_download(success=True)
 
