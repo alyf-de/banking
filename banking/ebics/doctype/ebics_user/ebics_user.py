@@ -79,7 +79,7 @@ class EBICSUser(Document):
 			frappe.throw(title)
 
 	def validate_country_code(self):
-		country_code = frappe.db.get_value("Country", self.country, "code")
+		country_code = self.get_country_code()
 		if not country_code or len(country_code) != 2:
 			frappe.throw(
 				_("Please add a two-letter country code to country {0}").format(
@@ -113,6 +113,11 @@ class EBICSUser(Document):
 			frappe.throw(
 				_("To use protocol version H005, please activate the checkbox 'Needs Certificates'.")
 			)
+
+	def get_country_code(self) -> str | None:
+		"""Return the ISO-3166 ALPHA 2 country code."""
+		code = frappe.db.get_value("Country", self.country, "code")
+		return code.upper() if code else None
 
 	def attach_ini_letter(self, pdf_bytes: bytes):
 		file = frappe.new_doc("File")
@@ -154,8 +159,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 			raise e
 
 	if user.needs_certificates:
-		country_code = frappe.db.get_value("Country", user.country, "code")
-		manager.create_user_certificates(user.full_name, user.company, country_code.upper())
+		manager.create_user_certificates(user.full_name, user.company)
 
 	manager.send_keys_to_bank()
 

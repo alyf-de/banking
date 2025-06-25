@@ -9,10 +9,11 @@ if TYPE_CHECKING:
 
 
 class EBICSManager:
-	__slots__ = ["bank", "keyring", "protocol_version", "user"]
+	__slots__ = ["bank", "country_code", "keyring", "protocol_version", "user"]
 
-	def __init__(self, protocol_version: str | None = None):
+	def __init__(self, protocol_version: str | None = None, country_code: str | None = None):
 		self.protocol_version = protocol_version or "H004"
+		self.country_code = country_code
 
 	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
@@ -40,11 +41,11 @@ class EBICSManager:
 	def create_user_keys(self):
 		self.user.create_keys(keyversion="A005", bitlength=2048)
 
-	def create_user_certificates(self, user_name: str, organization_name: str, country_code: str):
+	def create_user_certificates(self, user_name: str, organization_name: str):
 		self.user.create_certificates(
 			commonName=user_name,
 			organizationName=organization_name,
-			countryName=country_code,
+			countryName=self.country_code,
 		)
 
 	def get_client(self) -> "EbicsClient":
@@ -105,7 +106,7 @@ class EBICSManager:
 			c52_btf = BusinessTransactionFormat(
 				service="STM",  # Statement service
 				msg_name="camt.052",
-				scope="DE",
+				scope=self.country_code,
 				container="ZIP",
 			)
 			xml_data = client.BTD(c52_btf, start_date, end_date)
@@ -129,7 +130,7 @@ class EBICSManager:
 			c53_btf = BusinessTransactionFormat(
 				service="EOP",  # End of Period service
 				msg_name="camt.053",
-				scope="DE",
+				scope=self.country_code,
 				container="ZIP",
 			)
 			xml_data = client.BTD(c53_btf, start_date, end_date)
@@ -153,7 +154,7 @@ class EBICSManager:
 			c54_btf = BusinessTransactionFormat(
 				service="STM",  # Statement service
 				msg_name="camt.054",
-				scope="DE",
+				scope=self.country_code,
 				container="ZIP",
 			)
 			xml_data = client.BTD(c54_btf, start_date, end_date)

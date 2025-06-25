@@ -31,7 +31,10 @@ def get_ebics_manager(
 	"""
 	register_fintech(needs_license_key=True)
 
-	manager = EBICSManager(protocol_version=ebics_user.protocol_version)
+	manager = EBICSManager(
+		protocol_version=ebics_user.protocol_version,
+		country_code=ebics_user.get_country_code(),
+	)
 	manager.set_keyring(
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
