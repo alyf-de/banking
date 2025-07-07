@@ -31,12 +31,15 @@ def get_ebics_manager(
 	"""
 	register_fintech(needs_license_key=True)
 
-	manager = EBICSManager()
+	manager = EBICSManager(
+		protocol_version=ebics_user.protocol_version,
+		country_code=ebics_user.get_country_code(),
+	)
 	manager.set_keyring(
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
 		sig_passphrase=sig_passphrase,
-		passphrase=passphrase or ebics_user.get_password("passphrase"),
+		passphrase=passphrase or ebics_user.get_passphrase(),
 	)
 
 	manager.set_user(ebics_user.partner_id, ebics_user.user_id)
@@ -75,11 +78,17 @@ def sync_ebics_transactions(
 			"end_date": end_date,
 		},
 	)
-
+	main_xml, batch_xml = None, None
 	try:
-		client = manager.get_client()
-		main_xml = client.C52(start_date, end_date) if intraday else client.C53(start_date, end_date)
-		batch_xml = client.C54(start_date, end_date) if with_c54 else None
+		# Use the manager's download methods which handle protocol version automatically
+		if intraday:
+			main_xml = manager.download_c52(start_date, end_date)
+		else:
+			main_xml = manager.download_c53(start_date, end_date)
+
+		if with_c54:
+			batch_xml = manager.download_c54(start_date, end_date)
+
 		request.db_set(
 			{
 				"status": "Successful",
@@ -133,10 +142,10 @@ def sync_ebics_transactions(
 			reference_doctype="EBICS Request",
 			reference_name=request.name,
 		)
-		client.confirm_download(success=False)
+		manager.confirm_download(success=False)
 		return
 
-	client.confirm_download(success=True)
+	manager.confirm_download(success=True)
 
 
 def validate_permitted_types(user, permitted_types, intraday: bool):
