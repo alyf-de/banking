@@ -149,6 +149,7 @@ frappe.ui.form.on("EBICS User", {
 								args: {
 									ebics_user: frm.doc.name,
 									protocol_version: values.protocol_version,
+									passphrase: values.passphrase,
 								},
 								callback: () => frm.reload_doc(),
 							});
