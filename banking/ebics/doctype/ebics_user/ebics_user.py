@@ -6,10 +6,10 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
-from frappe.utils.data import getdate
+from frappe.utils.data import comma_and, getdate
 from requests import HTTPError
 
-from banking.ebics.utils import get_ebics_manager, sync_ebics_transactions
+from banking.ebics.utils import get_ebics_manager, get_protocol_versions, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
 
 
@@ -20,6 +20,8 @@ class EBICSUser(Document):
 
 		if self.bank:
 			self.validate_bank()
+
+		self.validate_protocol_version()
 
 	def before_insert(self):
 		self.register_user()
@@ -77,7 +79,7 @@ class EBICSUser(Document):
 			frappe.throw(title)
 
 	def validate_country_code(self):
-		country_code = frappe.db.get_value("Country", self.country, "code")
+		country_code = self.get_country_code()
 		if not country_code or len(country_code) != 2:
 			frappe.throw(
 				_("Please add a two-letter country code to country {0}").format(
@@ -91,6 +93,43 @@ class EBICSUser(Document):
 			frappe.throw(
 				_("Please add EBICS Host ID and URL to bank {0}").format(get_link_to_form("Bank", self.bank))
 			)
+
+		try:
+			supported_protocol_versions = get_protocol_versions(host_id, url)
+		except Exception:
+			supported_protocol_versions = {}
+
+		if supported_protocol_versions and self.protocol_version not in supported_protocol_versions:
+			frappe.throw(
+				_("You selected protocol version {0}, but the bank {1} only supports {2}.").format(
+					self.protocol_version,
+					get_link_to_form("Bank", self.bank),
+					comma_and(supported_protocol_versions.keys()),
+				)
+			)
+
+	def validate_protocol_version(self):
+		if self.protocol_version == "H005" and not self.needs_certificates:
+			frappe.throw(
+				_("To use protocol version H005, please activate the checkbox 'Needs Certificates'.")
+			)
+
+	def get_country_code(self) -> str | None:
+		"""Return the ISO-3166 ALPHA 2 country code."""
+		code = frappe.db.get_value("Country", self.country, "code")
+		return code.upper() if code else None
+
+	def get_passphrase(self) -> str | None:
+		"""Return the passphrase if it is set and valid, otherwise None."""
+		if not self.passphrase:
+			return None
+
+		try:
+			passphrase = self.get_password("passphrase")
+		except (frappe.exceptions.AuthenticationError, frappe.exceptions.ValidationError):
+			return None
+
+		return passphrase or None
 
 	def attach_ini_letter(self, pdf_bytes: bytes):
 		file = frappe.new_doc("File")
@@ -132,8 +171,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 			raise e
 
 	if user.needs_certificates:
-		country_code = frappe.db.get_value("Country", user.country, "code")
-		manager.create_user_certificates(user.full_name, user.company, country_code.upper())
+		manager.create_user_certificates(user.full_name, user.company)
 
 	manager.send_keys_to_bank()
 
@@ -191,6 +229,26 @@ def download_bank_statements(
 		intraday=getdate(from_date) == getdate(),
 		now=frappe.conf.developer_mode,
 	)
+
+
+@frappe.whitelist(methods=["PUT"])
+def change_protocol_version(ebics_user: str, protocol_version: str, passphrase: str | None = None):
+	ensure_ebics_is_enabled()
+
+	user = frappe.get_doc("EBICS User", ebics_user)
+	user.check_permission("write")
+
+	user.protocol_version = protocol_version
+	user.bank_keys_activated = 0
+
+	if protocol_version == "H005":
+		user.needs_certificates = 1
+
+	user.save()
+
+	if user.needs_certificates:
+		manager = get_ebics_manager(user, passphrase=passphrase)
+		manager.create_user_certificates(user.full_name, user.company)
 
 
 def ensure_ebics_is_enabled():
