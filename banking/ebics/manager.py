@@ -91,12 +91,11 @@ class EBICSManager:
 
 		return level_perms
 
-	def download_c52(self, start_date: str | None = None, end_date: str | None = None):
+	def download_c52(self, start_date: str | None = None, end_date: str | None = None) -> dict:
 		"""Download Bank to Customer Account Reports (camt.052) - Intraday statements.
 
 		Returns:
-			tuple: (xml_data, transaction_id) where xml_data is the downloaded files
-			and transaction_id is used for confirming the download.
+			dict: The downloaded files.
 		"""
 		client = self.get_client()
 
@@ -113,14 +112,13 @@ class EBICSManager:
 		else:
 			xml_data = client.C52(start_date, end_date)
 
-		return xml_data, client.last_trans_id
+		return xml_data
 
-	def download_c53(self, start_date: str | None = None, end_date: str | None = None):
+	def download_c53(self, start_date: str | None = None, end_date: str | None = None) -> dict:
 		"""Download Bank to Customer Statements (camt.053) - End of period statements.
 
 		Returns:
-			tuple: (xml_data, transaction_id) where xml_data is the downloaded files
-			and transaction_id is used for confirming the download.
+			dict: The downloaded files.
 		"""
 		client = self.get_client()
 
@@ -137,14 +135,13 @@ class EBICSManager:
 		else:
 			xml_data = client.C53(start_date, end_date)
 
-		return xml_data, client.last_trans_id
+		return xml_data
 
-	def download_c54(self, start_date: str | None = None, end_date: str | None = None):
+	def download_c54(self, start_date: str | None = None, end_date: str | None = None) -> dict:
 		"""Download Bank to Customer Debit Credit Notifications (camt.054) - Batch transaction details.
 
 		Returns:
-			tuple: (xml_data, transaction_id) where xml_data is the downloaded files
-			and transaction_id is used for confirming the download.
+			dict: The downloaded files.
 		"""
 		client = self.get_client()
 
@@ -161,7 +158,7 @@ class EBICSManager:
 		else:
 			xml_data = client.C54(start_date, end_date)
 
-		return xml_data, client.last_trans_id
+		return xml_data
 
 	def confirm_download(self, success: bool = True):
 		"""Confirm the receipt of previously executed downloads.
