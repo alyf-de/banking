@@ -264,10 +264,9 @@ def create_sepa_bank_transaction(
 		transaction_id=(
 			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 			# For our test bank, the latter is a timestamp with nanosecond accuracy.
-			# sepa_transaction.bank_reference
-			# or sepa_transaction._xmlobj.Refs.TxId.text
-			# or
-			get_transaction_hash(values_to_hash)
+			sepa_transaction.bank_reference
+			or sepa_transaction._xmlobj.Refs.TxId.text
+			or get_transaction_hash(values_to_hash)
 		),
 		company=company,
 		currency=sepa_transaction.amount.currency,
