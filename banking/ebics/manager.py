@@ -9,7 +9,11 @@ if TYPE_CHECKING:
 
 
 class EBICSManager:
-	__slots__ = ["bank", "keyring", "user"]
+	__slots__ = ["bank", "country_code", "keyring", "protocol_version", "user"]
+
+	def __init__(self, protocol_version: str | None = None, country_code: str | None = None):
+		self.protocol_version = protocol_version or "H004"
+		self.country_code = country_code
 
 	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
@@ -37,17 +41,17 @@ class EBICSManager:
 	def create_user_keys(self):
 		self.user.create_keys(keyversion="A005", bitlength=2048)
 
-	def create_user_certificates(self, user_name: str, organization_name: str, country_code: str):
+	def create_user_certificates(self, user_name: str, organization_name: str):
 		self.user.create_certificates(
 			commonName=user_name,
 			organizationName=organization_name,
-			countryName=country_code,
+			countryName=self.country_code,
 		)
 
 	def get_client(self) -> "EbicsClient":
 		from fintech.ebics import EbicsClient
 
-		return EbicsClient(self.bank, self.user)
+		return EbicsClient(self.bank, self.user, self.protocol_version)
 
 	def send_keys_to_bank(self):
 		client = self.get_client()
@@ -86,3 +90,81 @@ class EBICSManager:
 					level_perms.extend(order_types.split())
 
 		return level_perms
+
+	def download_c52(self, start_date: str | None = None, end_date: str | None = None) -> dict:
+		"""Download Bank to Customer Account Reports (camt.052) - Intraday statements.
+
+		Returns:
+			dict: The downloaded files.
+		"""
+		client = self.get_client()
+
+		if client.version == "H005":
+			from fintech.ebics import BusinessTransactionFormat
+
+			c52_btf = BusinessTransactionFormat(
+				service="STM",  # Statement service
+				msg_name="camt.052",
+				scope=self.country_code,
+				container="ZIP",
+			)
+			xml_data = client.BTD(c52_btf, start_date, end_date)
+		else:
+			xml_data = client.C52(start_date, end_date)
+
+		return xml_data
+
+	def download_c53(self, start_date: str | None = None, end_date: str | None = None) -> dict:
+		"""Download Bank to Customer Statements (camt.053) - End of period statements.
+
+		Returns:
+			dict: The downloaded files.
+		"""
+		client = self.get_client()
+
+		if client.version == "H005":
+			from fintech.ebics import BusinessTransactionFormat
+
+			c53_btf = BusinessTransactionFormat(
+				service="EOP",  # End of Period service
+				msg_name="camt.053",
+				scope=self.country_code,
+				container="ZIP",
+			)
+			xml_data = client.BTD(c53_btf, start_date, end_date)
+		else:
+			xml_data = client.C53(start_date, end_date)
+
+		return xml_data
+
+	def download_c54(self, start_date: str | None = None, end_date: str | None = None) -> dict:
+		"""Download Bank to Customer Debit Credit Notifications (camt.054) - Batch transaction details.
+
+		Returns:
+			dict: The downloaded files.
+		"""
+		client = self.get_client()
+
+		if client.version == "H005":
+			from fintech.ebics import BusinessTransactionFormat
+
+			c54_btf = BusinessTransactionFormat(
+				service="STM",  # Statement service
+				msg_name="camt.054",
+				scope=self.country_code,
+				container="ZIP",
+			)
+			xml_data = client.BTD(c54_btf, start_date, end_date)
+		else:
+			xml_data = client.C54(start_date, end_date)
+
+		return xml_data
+
+	def confirm_download(self, success: bool = True):
+		"""Confirm the receipt of previously executed downloads.
+
+		Args:
+			success: Whether the download was successfully processed.
+		"""
+		client = self.get_client()
+		return client.confirm_download(success=success)
