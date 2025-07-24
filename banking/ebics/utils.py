@@ -274,7 +274,6 @@ def create_sepa_bank_transaction(
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
 		deposit=max(amount, 0),
 		withdrawal=abs(min(amount, 0)),
-		transaction_type=sepa_transaction.info,
 		date=sepa_transaction.date,
 		reference_number=sepa_transaction.eref,
 		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
