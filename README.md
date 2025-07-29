@@ -37,13 +37,3 @@ Install [via Frappe Cloud](https://frappecloud.com/marketplace/apps/banking) or 
 bench get-app https://github.com/alyf-de/banking.git
 bench --site <sitename> install-app banking
 ```
-
-If you want to use ebics on Apple Silicon, the runtime library must be signed manually:
-
-```bash
-# python3.11
-sudo codesign --force --deep --sign - env/lib/python3.11/site-packages/fintech/runtime/darwin/aarch64/pyarmor_runtime.so
-
-# python3.10
-sudo codesign --force --deep --sign - env/lib/python3.10/site-packages/fintech/pytransform/platforms/darwin/aarch64/_pytransform.dylib
-```
