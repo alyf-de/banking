@@ -38,8 +38,8 @@ def get_ebics_manager(
 	manager.set_keyring(
 		keys=ebics_user.get_keyring(),
 		save_to_db=ebics_user.store_keyring,
-		sig_passphrase=sig_passphrase,
 		passphrase=passphrase or ebics_user.get_passphrase(),
+		sig_passphrase=sig_passphrase,
 	)
 
 	manager.set_user(ebics_user.partner_id, ebics_user.user_id)
