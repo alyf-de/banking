@@ -36,6 +36,7 @@
    "label": "SWIFT Number"
   },
   {
+   "columns": 3,
    "fieldname": "iban",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -75,7 +76,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-05 00:29:50.079668",
+ "modified": "2025-08-05 21:22:03.989732",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment",
