@@ -1,5 +1,6 @@
 # Copyright (c) 2025, ALYF GmbH and contributors
 # For license information, please see license.txt
+import contextlib
 from typing import TYPE_CHECKING
 
 import frappe
@@ -15,6 +16,18 @@ if TYPE_CHECKING:
 
 
 class SEPAPaymentOrder(Document):
+	def before_validate(self):
+		kontocheck.lut_load()
+
+		for payment in self.payments:
+			if payment.iban and payment.iban.startswith("DE"):
+				if not payment.swift_number:
+					with contextlib.suppress(Exception):
+						payment.swift_number = kontocheck.get_bic(payment.iban)
+				if not payment.bank_name and payment.swift_number:
+					with contextlib.suppress(Exception):
+						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
+
 	def validate(self):
 		kontocheck.lut_load()
 

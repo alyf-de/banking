@@ -9,6 +9,7 @@
   "recipient",
   "purpose",
   "swift_number",
+  "bank_name",
   "iban",
   "amount",
   "currency",
@@ -70,13 +71,19 @@
    "fieldtype": "Select",
    "label": "Charges",
    "options": "SHAR\nDEBT\nCRED"
+  },
+  {
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-05 21:22:03.989732",
+ "modified": "2025-08-06 19:49:57.384915",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment",
