@@ -3,6 +3,8 @@
 from typing import TYPE_CHECKING
 
 import frappe
+import kontocheck
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils.data import nowdate
 
@@ -14,7 +16,14 @@ if TYPE_CHECKING:
 
 class SEPAPaymentOrder(Document):
 	def validate(self):
-		pass
+		kontocheck.lut_load()
+
+		if not kontocheck.check_iban(self.iban):
+			frappe.throw(_("IBAN {0} is invalid.").format(self.iban))
+
+		for payment in self.payments:
+			if not kontocheck.check_iban(payment.iban):
+				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
 
 	def on_submit(self):
 		pass
