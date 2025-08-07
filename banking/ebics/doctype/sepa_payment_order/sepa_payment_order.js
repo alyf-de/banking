@@ -14,7 +14,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 	},
 
 	refresh(frm) {
-		if (frm.doc.docstatus === 1) {
+		if (frm.doc.docstatus === 1 && frm.has_perm("submit")) {
 			frm.add_custom_button(
 				__("Download as XML"),
 				() => {
@@ -33,11 +33,11 @@ frappe.ui.form.on("SEPA Payment Order", {
 	},
 
 	download_xml_file(frm) {
-		window.open(
-			`/api/method/banking.ebics.doctype.sepa_payment_order.sepa_payment_order.download_xml_file?sepa_payment_order=${encodeURIComponent(
-				frm.doc.name
-			)}`,
-			"_blank"
+		open_url_post(
+			"/api/method/banking.ebics.doctype.sepa_payment_order.sepa_payment_order.download_xml_file",
+			{
+				sepa_payment_order: frm.doc.name,
+			}
 		);
 	},
 

@@ -74,10 +74,10 @@ class SEPAPaymentOrder(Document):
 		return transfer
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def download_xml_file(sepa_payment_order: str):
 	payment_order: SEPAPaymentOrder = frappe.get_doc("SEPA Payment Order", sepa_payment_order)
-	payment_order.check_permission("read")
+	payment_order.check_permission("submit")
 
 	register_fintech()
 
@@ -87,6 +87,10 @@ def download_xml_file(sepa_payment_order: str):
 	frappe.response["filename"] = f"{payment_order.name}.xml"
 	frappe.response["filecontent"] = xml
 	frappe.response["type"] = "binary"
+
+	payment_order.transmission_date = nowdate()
+	payment_order.transmission_type = "DOWNLOADED"
+	payment_order.save(ignore_permissions=True)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -108,4 +112,7 @@ def send_to_bank(
 	transfer = payment_order.to_sepa_credit_transfer()
 	ebics_order_id = transfer.send(ebics_client=ebics_manager.get_client())
 
-	payment_order.db_set({"transmission_date": nowdate(), "ebics_order_id": ebics_order_id})
+	payment_order.transmission_date = nowdate()
+	payment_order.ebics_order_id = ebics_order_id
+	payment_order.transmission_type = "SENT_VIA_EBICS"
+	payment_order.save(ignore_permissions=True)
