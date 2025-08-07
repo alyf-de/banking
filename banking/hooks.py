@@ -177,6 +177,8 @@ before_tests = "banking.utils.before_tests"
 # 	"banking.auth.validate"
 # ]
 
+export_python_type_annotations = True
+
 alyf_banking_custom_fields = {
 	"Bank": [
 		dict(
