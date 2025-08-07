@@ -7,7 +7,7 @@
  "field_order": [
   "section_break_bbg2",
   "company",
-  "transmission_date",
+  "transmission_datetime",
   "transmission_type",
   "ebics_order_id",
   "column_break_owmw",
@@ -120,14 +120,6 @@
   },
   {
    "allow_on_submit": 1,
-   "fieldname": "transmission_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Transmission Date",
-   "read_only": 1
-  },
-  {
-   "allow_on_submit": 1,
    "fieldname": "ebics_order_id",
    "fieldtype": "Data",
    "label": "EBICS Order ID",
@@ -141,12 +133,20 @@
    "label": "Transmission Type",
    "options": "DOWNLOADED\nSENT_VIA_EBICS",
    "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "transmission_datetime",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Transmission Datetime",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-08 01:26:40.167558",
+ "modified": "2025-08-08 01:33:30.736200",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",

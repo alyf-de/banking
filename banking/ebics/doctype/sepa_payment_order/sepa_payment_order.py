@@ -7,7 +7,7 @@ import frappe
 import kontocheck
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils.data import nowdate
+from frappe.utils.data import now_datetime
 
 from banking.ebics.utils import get_ebics_manager, register_fintech
 
@@ -37,7 +37,7 @@ class SEPAPaymentOrder(Document):
 		payments: DF.Table[SEPAPayment]
 		reference_number: DF.Data | None
 		swift_number: DF.Data | None
-		transmission_date: DF.Date | None
+		transmission_datetime: DF.Datetime | None
 		transmission_type: DF.Literal["DOWNLOADED", "SENT_VIA_EBICS"]
 	# end: auto-generated types
 
@@ -113,7 +113,7 @@ def download_xml_file(sepa_payment_order: str):
 	frappe.response["filecontent"] = xml
 	frappe.response["type"] = "binary"
 
-	payment_order.transmission_date = nowdate()
+	payment_order.transmission_datetime = now_datetime()
 	payment_order.transmission_type = "DOWNLOADED"
 	payment_order.save(ignore_permissions=True)
 
@@ -137,7 +137,7 @@ def send_to_bank(
 	transfer = payment_order.to_sepa_credit_transfer()
 	ebics_order_id = transfer.send(ebics_client=ebics_manager.get_client())
 
-	payment_order.transmission_date = nowdate()
+	payment_order.transmission_datetime = now_datetime()
 	payment_order.ebics_order_id = ebics_order_id
 	payment_order.transmission_type = "SENT_VIA_EBICS"
 	payment_order.save(ignore_permissions=True)
