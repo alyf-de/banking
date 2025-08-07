@@ -1,6 +1,6 @@
 frappe.ui.form.on("Purchase Invoice", {
 	refresh(frm) {
-		if (flt(frm.doc.outstanding_amount, 2) > 0.0) {
+		if (frm.doc.status !== "Paid" && frm.doc.docstatus === 1) {
 			frm.add_custom_button(
 				__("SEPA Payment Order"),
 				() => {
