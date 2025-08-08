@@ -54,6 +54,10 @@ class SEPAPaymentOrder(Document):
 						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
 
 	def validate(self):
+		self.validate_ibans()
+		self.validate_account_currency()
+
+	def validate_ibans(self):
 		kontocheck.lut_load()
 
 		if not kontocheck.check_iban(self.iban):
@@ -62,6 +66,18 @@ class SEPAPaymentOrder(Document):
 		for payment in self.payments:
 			if not kontocheck.check_iban(payment.iban):
 				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
+
+	def validate_account_currency(self):
+		"""Validate that each payment currency is the same as the account currency."""
+		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
+		account_currency = frappe.db.get_value("Account", account_name, "account_currency")
+		for payment in self.payments:
+			if payment.currency != account_currency:
+				frappe.throw(
+					_("Row {0}: Currency {1} does not match bank account currency {2}.").format(
+						payment.idx, payment.currency, account_currency
+					)
+				)
 
 	def on_submit(self):
 		pass
