@@ -68,7 +68,7 @@ after_install = "banking.install.after_install"
 # Uninstallation
 # ------------
 
-# before_uninstall = "banking.uninstall.before_uninstall"
+before_uninstall = "banking.uninstall.before_uninstall"
 # after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
@@ -223,3 +223,16 @@ alyf_banking_property_setters = {
 }
 
 get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"
+
+alyf_banking_custom_records = [
+	{
+		"doctype": "DocType Link",
+		"parent": "Purchase Invoice",
+		"parentfield": "links",
+		"parenttype": "Customize Form",
+		"group": "Payment",
+		"link_doctype": "SEPA Payment Order",
+		"link_fieldname": "reference_name",
+		"custom": 1,
+	},
+]

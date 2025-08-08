@@ -6,4 +6,27 @@ from frappe.model.document import Document
 
 
 class SEPAPayment(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		amount: DF.Currency
+		bank_name: DF.Data | None
+		charges: DF.Literal["SHAR", "DEBT", "CRED"]
+		currency: DF.Link
+		eref: DF.Data | None
+		iban: DF.Data
+		parent: DF.Data
+		parentfield: DF.Data
+		parenttype: DF.Data
+		purpose: DF.Data
+		recipient: DF.Data
+		reference_doctype: DF.Link | None
+		reference_name: DF.DynamicLink | None
+		swift_number: DF.Data | None
+	# end: auto-generated types
 	pass

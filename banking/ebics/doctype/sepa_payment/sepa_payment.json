@@ -14,7 +14,10 @@
   "amount",
   "currency",
   "eref",
-  "charges"
+  "charges",
+  "reference_section",
+  "reference_doctype",
+  "reference_name"
  ],
  "fields": [
   {
@@ -77,13 +80,30 @@
    "fieldtype": "Data",
    "label": "Bank Name",
    "read_only": 1
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "Reference"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "reference_doctype"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-06 19:49:57.384915",
+ "modified": "2025-08-08 01:45:18.838990",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment",

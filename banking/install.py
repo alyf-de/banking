@@ -9,6 +9,7 @@ def after_install():
 
 	create_custom_fields(frappe.get_hooks("alyf_banking_custom_fields"))
 	make_property_setters()
+	insert_custom_records()
 
 
 def make_property_setters():
@@ -24,3 +25,15 @@ def make_property_setters():
 					validate_fields_for_doctype=False,
 					for_doctype=not property_setter.get("fieldname"),
 				)
+
+
+def insert_custom_records():
+	for custom_record in frappe.get_hooks("alyf_banking_custom_records"):
+		filters = custom_record.copy()
+		# Clean up filters. They need to be a plain dict without nested dicts or lists.
+		for key, value in custom_record.items():
+			if isinstance(value, list | dict):
+				del filters[key]
+
+		if not frappe.db.exists(filters):
+			frappe.get_doc(custom_record).insert(ignore_if_duplicate=True)
