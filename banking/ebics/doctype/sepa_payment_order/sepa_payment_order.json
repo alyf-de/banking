@@ -131,7 +131,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Transmission Type",
-   "options": "DOWNLOADED\nSENT_VIA_EBICS",
+   "options": "\nDOWNLOADED\nSENT_VIA_EBICS",
    "read_only": 1
   },
   {
@@ -146,7 +146,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-08 01:33:30.736200",
+ "modified": "2025-08-10 15:13:41.024700",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",

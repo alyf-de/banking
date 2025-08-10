@@ -38,7 +38,7 @@ class SEPAPaymentOrder(Document):
 		reference_number: DF.Data | None
 		swift_number: DF.Data | None
 		transmission_datetime: DF.Datetime | None
-		transmission_type: DF.Literal["DOWNLOADED", "SENT_VIA_EBICS"]
+		transmission_type: DF.Literal["", "DOWNLOADED", "SENT_VIA_EBICS"]
 	# end: auto-generated types
 
 	def before_validate(self):
