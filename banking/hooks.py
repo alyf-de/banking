@@ -203,6 +203,21 @@ alyf_banking_custom_fields = {
 			translatable=0,
 		),
 	],
+	"Purchase Invoice": [
+		dict(
+			fieldname="banking_section",
+			label="Banking",
+			fieldtype="Section Break",
+			insert_after="payments_tab",
+		),
+		dict(
+			fieldname="supplier_bank_account",
+			label="Supplier Bank Account",
+			fieldtype="Link",
+			options="Bank Account",
+			insert_after="banking_section",
+		),
+	],
 }
 
 alyf_banking_property_setters = {

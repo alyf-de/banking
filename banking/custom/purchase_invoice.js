@@ -4,6 +4,15 @@ frappe.ui.form.on("Purchase Invoice", {
 		frm.make_methods["SEPA Payment Order"] = () => {
 			frm.trigger("make_sepa_payment_order");
 		};
+
+		frm.set_query("supplier_bank_account", (doc) => {
+			return {
+				filters: {
+					party_type: "Supplier",
+					party: doc.supplier,
+				},
+			};
+		});
 	},
 
 	refresh(frm) {

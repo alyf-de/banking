@@ -22,13 +22,25 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target.recipient = source_parent.supplier_name
 		target.purpose = source_parent.bill_no
 		target.currency = source_parent.currency
-		bank_account = frappe.db.get_value(
-			"Bank Account",
-			{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
-			["iban", "bank"],
-			order_by="is_default DESC",
-			as_dict=True,
-		)
+
+		if source_parent.supplier_bank_account:
+			# Prefer the Supplier Bank Account set on the Purchase Invoice
+			bank_account = frappe.db.get_value(
+				"Bank Account",
+				source_parent.supplier_bank_account,
+				["iban", "bank"],
+				as_dict=True,
+			)
+		else:
+			# Fallback to the (default) Bank Account linked to the Supplier
+			bank_account = frappe.db.get_value(
+				"Bank Account",
+				{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
+				["iban", "bank"],
+				order_by="is_default DESC",
+				as_dict=True,
+			)
+
 		if bank_account:
 			if bank_account.get("bank"):
 				target.swift_number = frappe.db.get_value("Bank", bank_account["bank"], "swift_number")
