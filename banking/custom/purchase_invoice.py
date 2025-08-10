@@ -22,6 +22,8 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target.recipient = source_parent.supplier_name
 		target.purpose = source_parent.bill_no
 		target.currency = source_parent.currency
+		target.reference_doctype = "Purchase Invoice"
+		target.reference_name = source_parent.name
 
 		if source_parent.supplier_bank_account:
 			# Prefer the Supplier Bank Account set on the Purchase Invoice
