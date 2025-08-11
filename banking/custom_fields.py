@@ -1,3 +1,4 @@
+from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 from banking.utils import identity as _
 
 
@@ -39,6 +40,19 @@ def get_custom_fields():
 				fieldtype="Link",
 				options="Bank Account",
 				insert_after="banking_section",
+			),
+		],
+		"Payment Schedule": [
+			dict(
+				fieldname="sepa_payment_order_status",
+				label=_("SEPA Payment Order Status"),
+				fieldtype="Select",
+				options="\n".join(PaymentOrderStatus),
+				insert_after="due_date",
+				depends_on="eval:doc.parenttype === 'Purchase Invoice'",
+				no_copy=1,
+				read_only=1,
+				allow_on_submit=1,
 			),
 		],
 	}

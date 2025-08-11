@@ -102,7 +102,10 @@ override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transactio
 doc_events = {
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
-	}
+	},
+	"Purchase Invoice": {
+		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
+	},
 }
 
 # Scheduled Tasks

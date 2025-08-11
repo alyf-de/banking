@@ -1,5 +1,12 @@
+from typing import TYPE_CHECKING
+
 import frappe
 from frappe.model.mapper import get_mapped_doc
+
+from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
+
+if TYPE_CHECKING:
+	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
 
 
 @frappe.whitelist()
@@ -82,3 +89,15 @@ def make_bulk_sepa_payment_order(source_names: str):
 		target_doc = make_sepa_payment_order(source_name, target_doc)
 
 	return target_doc
+
+
+def sepa_payment_order_status_changed(
+	doc: "PurchaseInvoice", method: str, payment_schedule_row_name: str, status: PaymentOrderStatus
+):
+	"""Called via hooks when a linked SEPA Payment Order changes."""
+	for scheduled_payment in doc.payment_schedule:
+		if scheduled_payment.name == payment_schedule_row_name:
+			scheduled_payment.sepa_payment_order_status = status.value
+			break
+
+	doc.save(ignore_permissions=True)

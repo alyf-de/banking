@@ -16,7 +16,15 @@ frappe.ui.form.on("Purchase Invoice", {
 	},
 
 	refresh(frm) {
-		if (frm.doc.status !== "Paid" && frm.doc.docstatus === 1) {
+		const has_unpaid_payments = () =>
+			frm.doc.payment_schedule.filter((x) => !x.sepa_payment_order_status)
+				.length > 0;
+
+		if (
+			frm.doc.status !== "Paid" &&
+			frm.doc.docstatus === 1 &&
+			has_unpaid_payments()
+		) {
 			frm.add_custom_button(
 				__("SEPA Payment Order"),
 				() => frm.trigger("make_sepa_payment_order"),
