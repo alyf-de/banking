@@ -27,6 +27,7 @@ class SEPAPayment(Document):
 		recipient: DF.Data
 		reference_doctype: DF.Link | None
 		reference_name: DF.DynamicLink | None
+		reference_row_name: DF.Data | None
 		swift_number: DF.Data | None
 	# end: auto-generated types
 	pass

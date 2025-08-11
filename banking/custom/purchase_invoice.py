@@ -22,8 +22,7 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target.recipient = source_parent.supplier_name
 		target.purpose = source_parent.bill_no
 		target.currency = source_parent.currency
-		target.reference_doctype = "Purchase Invoice"
-		target.reference_name = source_parent.name
+		target.eref = target.reference_name
 
 		if source_parent.supplier_bank_account:
 			# Prefer the Supplier Bank Account set on the Purchase Invoice
@@ -60,7 +59,9 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				"doctype": "SEPA Payment",
 				"field_map": {
 					"outstanding": "amount",
-					"parent": "eref",
+					"name": "reference_row_name",
+					"parent": "reference_name",
+					"parenttype": "reference_doctype",
 				},
 				"condition": lambda payment: round(payment.outstanding, 2) > 0,
 				"postprocess": process_payment,
