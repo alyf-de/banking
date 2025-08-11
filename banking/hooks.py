@@ -179,47 +179,6 @@ before_tests = "banking.utils.before_tests"
 
 export_python_type_annotations = True
 
-alyf_banking_custom_fields = {
-	"Bank": [
-		dict(
-			fieldname="ebics_section",
-			label="EBICS",
-			fieldtype="Section Break",
-			insert_after="plaid_access_token",
-		),
-		dict(
-			fieldname="ebics_host_id",
-			label="EBICS Host ID",
-			fieldtype="Data",
-			insert_after="ebics_section",
-			translatable=0,
-		),
-		dict(
-			fieldname="ebics_url",
-			label="EBICS URL",
-			fieldtype="Data",
-			options="URL",
-			insert_after="ebics_host_id",
-			translatable=0,
-		),
-	],
-	"Purchase Invoice": [
-		dict(
-			fieldname="banking_section",
-			label="Banking",
-			fieldtype="Section Break",
-			insert_after="payments_tab",
-		),
-		dict(
-			fieldname="supplier_bank_account",
-			label="Supplier Bank Account",
-			fieldtype="Link",
-			options="Bank Account",
-			insert_after="banking_section",
-		),
-	],
-}
-
 alyf_banking_property_setters = {
 	"Bank Account": [
 		dict(
