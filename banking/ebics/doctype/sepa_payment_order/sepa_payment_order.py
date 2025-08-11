@@ -1,6 +1,7 @@
 # Copyright (c) 2025, ALYF GmbH and contributors
 # For license information, please see license.txt
 import contextlib
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 import frappe
@@ -13,6 +14,19 @@ from banking.ebics.utils import get_ebics_manager, register_fintech
 
 if TYPE_CHECKING:
 	from fintech.sepa import SEPACreditTransfer
+
+
+class PaymentOrderStatus(StrEnum):
+	"""
+	Single source of truth for payment order status values.
+	Used to determine select field options and communicate changes via hooks.
+	The patch to recreate custom fields must run if this enum changes.
+	"""
+
+	CANCELLED = ""  # empty must come first, for select option order
+	DRAFT = "Draft"
+	APPROVED = "Approved"
+	TRANSMITTED = "Transmitted"
 
 
 class SEPAPaymentOrder(Document):
@@ -79,8 +93,27 @@ class SEPAPaymentOrder(Document):
 					)
 				)
 
+	def after_insert(self):
+		self.notify_reference_docs(status=PaymentOrderStatus.DRAFT)
+
 	def on_submit(self):
-		pass
+		self.notify_reference_docs(status=PaymentOrderStatus.APPROVED)
+
+	def on_update_after_submit(self):
+		if self.transmission_datetime:
+			self.notify_reference_docs(status=PaymentOrderStatus.TRANSMITTED)
+
+	def on_cancel(self):
+		self.notify_reference_docs(status=PaymentOrderStatus.CANCELLED)
+
+	def on_trash(self):
+		self.notify_reference_docs(status=PaymentOrderStatus.CANCELLED)
+
+	def notify_reference_docs(self, status: PaymentOrderStatus):
+		for payment in self.payments:
+			if payment.reference_doctype and payment.reference_name:
+				doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
+				doc.run_method("sepa_payment_order_status_changed", payment.reference_row_name, status)
 
 	def to_sepa_credit_transfer(self) -> "SEPACreditTransfer":
 		"""
