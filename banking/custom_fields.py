@@ -41,6 +41,13 @@ def get_custom_fields():
 				options="Bank Account",
 				insert_after="banking_section",
 			),
+			dict(
+				fieldname="create_supplier_bank_account",
+				label=_("Create Supplier Bank Account"),
+				fieldtype="Button",
+				insert_after="supplier_bank_account",
+				depends_on="eval:doc.docstatus === 0 && doc.supplier_name && !doc.supplier_bank_account",
+			),
 		],
 		"Payment Schedule": [
 			dict(

@@ -40,4 +40,56 @@ frappe.ui.form.on("Purchase Invoice", {
 			freeze_message: __("Creating SEPA Payment Order ..."),
 		});
 	},
+
+	create_supplier_bank_account(frm) {
+		const GERMAN_IBAN_PREFIX = "DE";
+		const GERMAN_IBAN_LENGTH = 22;
+
+		const dialog = frappe.prompt(
+			[
+				{
+					fieldname: "iban",
+					label: __("IBAN"),
+					fieldtype: "Data",
+					reqd: 1,
+					onchange: () => {
+						const iban = dialog.get_value("iban");
+
+						if (
+							iban?.trim().startsWith(GERMAN_IBAN_PREFIX) &&
+							iban?.replaceAll(" ", "").length === GERMAN_IBAN_LENGTH
+						) {
+							dialog.set_df_property("bank", "hidden", true);
+							dialog.set_df_property("bank", "reqd", false);
+							dialog.set_value("bank", null);
+						} else {
+							dialog.set_df_property("bank", "hidden", false);
+							dialog.set_df_property("bank", "reqd", true);
+						}
+					},
+				},
+				{
+					fieldname: "bank",
+					label: __("Bank"),
+					fieldtype: "Link",
+					options: "Bank",
+				},
+			],
+			(values) => {
+				frappe
+					.xcall(
+						"banking.custom.purchase_invoice.create_supplier_bank_account",
+						{
+							iban: values.iban,
+							bank: values.bank,
+							supplier: frm.doc.supplier,
+							supplier_name: frm.doc.supplier_name,
+						}
+					)
+					.then((bank_account) => {
+						frm.set_value("supplier_bank_account", bank_account);
+					});
+			}
+		);
+	},
 });
