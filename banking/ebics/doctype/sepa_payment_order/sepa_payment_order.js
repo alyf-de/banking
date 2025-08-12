@@ -42,7 +42,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 	},
 
 	send_to_bank(frm) {
-		frappe.prompt(
+		const dialog = frappe.prompt(
 			[
 				{
 					fieldname: "ebics_user",
@@ -59,6 +59,28 @@ frappe.ui.form.on("SEPA Payment Order", {
 								bank_keys_activated: 1,
 							},
 						};
+					},
+					/**
+					 * If the passphrase is stored in the EBICS User, hide the
+					 * passphrase field and set it to not required.
+					 */
+					onchange: () => {
+						const ebics_user = dialog.get_value("ebics_user");
+						if (!ebics_user) {
+							dialog.set_df_property("passphrase", "reqd", 1);
+							dialog.set_df_property("passphrase", "hidden", 0);
+							return;
+						}
+
+						frappe.db.get_value("EBICS User", ebics_user, "passphrase", (r) => {
+							if (r.passphrase) {
+								dialog.set_df_property("passphrase", "reqd", 0);
+								dialog.set_df_property("passphrase", "hidden", 1);
+							} else {
+								dialog.set_df_property("passphrase", "reqd", 1);
+								dialog.set_df_property("passphrase", "hidden", 0);
+							}
+						});
 					},
 				},
 				{
