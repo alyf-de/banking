@@ -184,7 +184,7 @@ def send_to_bank(
 	)
 
 	transfer = payment_order.to_sepa_credit_transfer()
-	ebics_order_id = transfer.send(ebics_client=ebics_manager.get_client())
+	ebics_order_id = transfer.send(ebics_client=ebics_manager.get_client(), use_ful=True)
 
 	payment_order.transmission_datetime = now_datetime()
 	payment_order.ebics_order_id = ebics_order_id
