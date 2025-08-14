@@ -123,7 +123,7 @@ class SEPAPaymentOrder(Document):
 		from fintech.sepa import Account, Amount, SEPACreditTransfer
 
 		debtor_account = Account(
-			iban=self.iban,
+			iban=self.iban.replace(" ", ""),
 			name=self.company,
 		)
 		transfer = SEPACreditTransfer(
@@ -133,7 +133,7 @@ class SEPAPaymentOrder(Document):
 		for payment in self.payments:
 			transfer.add_transaction(
 				account=Account(
-					iban=payment.iban,
+					iban=payment.iban.replace(" ", ""),
 					name=payment.recipient,
 				),
 				amount=Amount(
