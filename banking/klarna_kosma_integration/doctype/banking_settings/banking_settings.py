@@ -89,7 +89,7 @@ def intraday_sync_ebics():
 		)
 
 	banking_settings = frappe.get_single("Banking Settings")
-	if (not banking_settings.enabled and not banking_settings.enable_ebics) or frappe.conf.get(
+	if (not banking_settings.enabled or not banking_settings.enable_ebics) or frappe.conf.get(
 		"disable_ebics", False
 	):
 		return
