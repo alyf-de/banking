@@ -48,7 +48,7 @@ def sync_all_accounts_and_transactions():
 	if not banking_settings.enabled:
 		return
 
-	if banking_settings.enable_ebics:
+	if banking_settings.enable_ebics and not frappe.conf.get("disable_ebics", False):
 		daily_sync_ebics()
 
 
@@ -89,7 +89,9 @@ def intraday_sync_ebics():
 		)
 
 	banking_settings = frappe.get_single("Banking Settings")
-	if not banking_settings.enabled or not banking_settings.enable_ebics:
+	if (not banking_settings.enabled or not banking_settings.enable_ebics) or frappe.conf.get(
+		"disable_ebics", False
+	):
 		return
 
 	today = now_datetime().date().isoformat()
