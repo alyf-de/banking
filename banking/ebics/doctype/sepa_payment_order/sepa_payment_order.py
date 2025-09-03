@@ -30,31 +30,6 @@ class PaymentOrderStatus(str, Enum):
 
 
 class SEPAPaymentOrder(Document):
-	# begin: auto-generated types
-	# This code is auto-generated. Do not modify anything in this block.
-
-	from typing import TYPE_CHECKING
-
-	if TYPE_CHECKING:
-		from frappe.types import DF
-
-		from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
-
-		amended_from: DF.Link | None
-		bank: DF.Link | None
-		bank_account: DF.Link
-		batch_booking: DF.Literal["Process individually", "Process as batch"]
-		company: DF.Link
-		ebics_order_id: DF.Data | None
-		execution_date: DF.Date | None
-		iban: DF.Data
-		payments: DF.Table[SEPAPayment]
-		reference_number: DF.Data | None
-		swift_number: DF.Data | None
-		transmission_datetime: DF.Datetime | None
-		transmission_type: DF.Literal["", "DOWNLOADED", "SENT_VIA_EBICS"]
-	# end: auto-generated types
-
 	def before_validate(self):
 		kontocheck.lut_load()
 
