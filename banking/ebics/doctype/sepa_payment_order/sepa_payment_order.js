@@ -22,13 +22,13 @@ frappe.ui.form.on("SEPA Payment Order", {
 				},
 				__("Actions")
 			);
-			frm.add_custom_button(
-				__("Send to Bank"),
-				() => {
-					frm.trigger("send_to_bank");
-				},
-				__("Actions")
-			);
+			// frm.add_custom_button(
+			// 	__("Send to Bank"),
+			// 	() => {
+			// 		frm.trigger("send_to_bank");
+			// 	},
+			// 	__("Actions")
+			// );
 		}
 	},
 
