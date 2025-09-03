@@ -27,3 +27,8 @@ def before_tests():
 		)
 
 	frappe.db.commit()  # nosemgrep
+
+
+def identity(x):
+	"""For dummy translations."""
+	return x
