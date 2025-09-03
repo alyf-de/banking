@@ -103,6 +103,9 @@ doc_events = {
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
 	},
+	"Bank Account": {
+		"before_validate": "banking.overrides.bank_account.before_validate",
+	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
 	},

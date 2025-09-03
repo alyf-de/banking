@@ -15,7 +15,7 @@ class EBICSManager:
 		self.protocol_version = protocol_version or "H004"
 		self.country_code = country_code
 
-	def set_keyring(self, keys: dict, save_to_db: "Callable", sig_passphrase: str, passphrase: str | None):
+	def set_keyring(self, keys: dict, save_to_db: "Callable", passphrase: str, sig_passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
 
 		class CustomKeyRing(EbicsKeyRing):
