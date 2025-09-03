@@ -28,8 +28,8 @@ app_include_css = "bank_reconciliation_beta.bundle.css"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Bank": "custom/bank.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_js = {"Bank": "custom/bank.js", "Purchase Invoice": "custom/purchase_invoice.js"}
+doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -68,7 +68,7 @@ after_install = "banking.install.after_install"
 # Uninstallation
 # ------------
 
-# before_uninstall = "banking.uninstall.before_uninstall"
+before_uninstall = "banking.uninstall.before_uninstall"
 # after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
@@ -102,7 +102,13 @@ override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transactio
 doc_events = {
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
-	}
+	},
+	"Bank Account": {
+		"before_validate": "banking.overrides.bank_account.before_validate",
+	},
+	"Purchase Invoice": {
+		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
+	},
 }
 
 # Scheduled Tasks
@@ -177,31 +183,7 @@ before_tests = "banking.utils.before_tests"
 # 	"banking.auth.validate"
 # ]
 
-alyf_banking_custom_fields = {
-	"Bank": [
-		dict(
-			fieldname="ebics_section",
-			label="EBICS",
-			fieldtype="Section Break",
-			insert_after="plaid_access_token",
-		),
-		dict(
-			fieldname="ebics_host_id",
-			label="EBICS Host ID",
-			fieldtype="Data",
-			insert_after="ebics_section",
-			translatable=0,
-		),
-		dict(
-			fieldname="ebics_url",
-			label="EBICS URL",
-			fieldtype="Data",
-			options="URL",
-			insert_after="ebics_host_id",
-			translatable=0,
-		),
-	],
-}
+export_python_type_annotations = True
 
 alyf_banking_property_setters = {
 	"Bank Account": [
@@ -221,3 +203,16 @@ alyf_banking_property_setters = {
 }
 
 get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"
+
+alyf_banking_custom_records = [
+	{
+		"doctype": "DocType Link",
+		"parent": "Purchase Invoice",
+		"parentfield": "links",
+		"parenttype": "Customize Form",
+		"group": "Payment",
+		"link_doctype": "SEPA Payment Order",
+		"link_fieldname": "reference_name",
+		"custom": 1,
+	},
+]
