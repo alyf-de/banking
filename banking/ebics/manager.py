@@ -99,20 +99,21 @@ class EBICSManager:
 		"""
 		client = self.get_client()
 
-		if client.version == "H005":
-			from fintech.ebics import BusinessTransactionFormat
+		if client.version != "H005":
+			if self.country_code == "CH":
+				return client.Z52(start_date, end_date)
 
-			c52_btf = BusinessTransactionFormat(
-				service="STM",  # Statement service
-				msg_name="camt.052",
-				scope=self.country_code,
-				container="ZIP",
-			)
-			xml_data = client.BTD(c52_btf, start_date, end_date)
-		else:
-			xml_data = client.C52(start_date, end_date)
+			return client.C52(start_date, end_date)
 
-		return xml_data
+		from fintech.ebics import BusinessTransactionFormat
+
+		c52_btf = BusinessTransactionFormat(
+			service="STM",  # Statement service
+			msg_name="camt.052",
+			scope=self.country_code,
+			container="ZIP",
+		)
+		return client.BTD(c52_btf, start_date, end_date)
 
 	def download_c53(self, start_date: str | None = None, end_date: str | None = None) -> dict:
 		"""Download Bank to Customer Statements (camt.053) - End of period statements.
@@ -122,20 +123,21 @@ class EBICSManager:
 		"""
 		client = self.get_client()
 
-		if client.version == "H005":
-			from fintech.ebics import BusinessTransactionFormat
+		if client.version != "H005":
+			if self.country_code == "CH":
+				return client.Z53(start_date, end_date)
 
-			c53_btf = BusinessTransactionFormat(
-				service="EOP",  # End of Period service
-				msg_name="camt.053",
-				scope=self.country_code,
-				container="ZIP",
-			)
-			xml_data = client.BTD(c53_btf, start_date, end_date)
-		else:
-			xml_data = client.C53(start_date, end_date)
+			return client.C53(start_date, end_date)
 
-		return xml_data
+		from fintech.ebics import BusinessTransactionFormat
+
+		c53_btf = BusinessTransactionFormat(
+			service="EOP",  # End of Period service
+			msg_name="camt.053",
+			scope=self.country_code,
+			container="ZIP",
+		)
+		return client.BTD(c53_btf, start_date, end_date)
 
 	def download_c54(self, start_date: str | None = None, end_date: str | None = None) -> dict:
 		"""Download Bank to Customer Debit Credit Notifications (camt.054) - Batch transaction details.
@@ -145,20 +147,21 @@ class EBICSManager:
 		"""
 		client = self.get_client()
 
-		if client.version == "H005":
-			from fintech.ebics import BusinessTransactionFormat
+		if client.version != "H005":
+			if self.country_code == "CH":
+				return client.Z54(start_date, end_date)
 
-			c54_btf = BusinessTransactionFormat(
-				service="STM",  # Statement service
-				msg_name="camt.054",
-				scope=self.country_code,
-				container="ZIP",
-			)
-			xml_data = client.BTD(c54_btf, start_date, end_date)
-		else:
-			xml_data = client.C54(start_date, end_date)
+			return client.C54(start_date, end_date)
 
-		return xml_data
+		from fintech.ebics import BusinessTransactionFormat
+
+		c54_btf = BusinessTransactionFormat(
+			service="STM",  # Statement service
+			msg_name="camt.054",
+			scope=self.country_code,
+			container="ZIP",
+		)
+		return client.BTD(c54_btf, start_date, end_date)
 
 	def confirm_download(self, success: bool = True):
 		"""Confirm the receipt of previously executed downloads.
