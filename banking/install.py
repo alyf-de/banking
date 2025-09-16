@@ -3,12 +3,15 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 
+from banking.custom_fields import get_custom_fields
+
 
 def after_install():
 	click.echo("Installing Banking Customizations ...")
 
-	create_custom_fields(frappe.get_hooks("alyf_banking_custom_fields"))
+	create_custom_fields(get_custom_fields())
 	make_property_setters()
+	insert_custom_records()
 
 
 def make_property_setters():
@@ -24,3 +27,15 @@ def make_property_setters():
 					validate_fields_for_doctype=False,
 					for_doctype=not property_setter.get("fieldname"),
 				)
+
+
+def insert_custom_records():
+	for custom_record in frappe.get_hooks("alyf_banking_custom_records"):
+		filters = custom_record.copy()
+		# Clean up filters. They need to be a plain dict without nested dicts or lists.
+		for key, value in custom_record.items():
+			if isinstance(value, list | dict):
+				del filters[key]
+
+		if not frappe.db.exists(filters):
+			frappe.get_doc(custom_record).insert(ignore_if_duplicate=True)
