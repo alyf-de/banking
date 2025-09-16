@@ -176,7 +176,8 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 	manager.send_keys_to_bank()
 
 	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
-	ini_bytes = manager.create_ini_letter(bank_name, language=frappe.local.lang)
+	language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
+	ini_bytes = manager.create_ini_letter(bank_name, language=language)
 	user.attach_ini_letter(ini_bytes)
 	user.db_set("initialized", 1)
 
