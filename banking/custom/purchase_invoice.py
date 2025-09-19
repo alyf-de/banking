@@ -34,23 +34,43 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target.currency = source_parent.currency
 		target.eref = target.reference_name
 
-		if source_parent.supplier_bank_account:
-			# Prefer the Supplier Bank Account set on the Purchase Invoice
+		is_employee_advance_paid = (
+			hasattr(source_parent, "business_trip") and source_parent.business_trip and
+			hasattr(source_parent, "business_trip_employee") and source_parent.business_trip_employee and
+			hasattr(source_parent, "advance_paid_by_employee") and source_parent.advance_paid_by_employee
+		)
+
+		if is_employee_advance_paid:
+			# Get the Bank Account linked to the Employee
 			bank_account = frappe.db.get_value(
 				"Bank Account",
-				source_parent.supplier_bank_account,
-				["iban", "bank"],
-				as_dict=True,
-			)
-		else:
-			# Fallback to the (default) Bank Account linked to the Supplier
-			bank_account = frappe.db.get_value(
-				"Bank Account",
-				{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
+				{"party_type": "Employee", "party": source_parent.business_trip_employee, "disabled": 0},
 				["iban", "bank"],
 				order_by="is_default DESC",
 				as_dict=True,
 			)
+			# If employee advance paid but no employee bank account found, leave empty
+			# Do not fall back to supplier account as employee should receive the payment
+		else:
+			# Regular supplier logic
+			if source_parent.supplier_bank_account:
+				# Prefer the Supplier Bank Account set on the Purchase Invoice
+				bank_account = frappe.db.get_value(
+					"Bank Account",
+					source_parent.supplier_bank_account,
+					["iban", "bank"],
+					as_dict=True,
+				)
+
+			if not bank_account:
+				# Fallback to the (default) Bank Account linked to the Supplier
+				bank_account = frappe.db.get_value(
+					"Bank Account",
+					{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
+					["iban", "bank"],
+					order_by="is_default DESC",
+					as_dict=True,
+				)
 
 		if bank_account:
 			if bank_account.get("bank"):
