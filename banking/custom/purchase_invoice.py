@@ -29,8 +29,6 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.bank = bank_account.get("bank")
 
 	def process_payment(source, target, source_parent):
-		target.recipient = source_parent.supplier_name
-		target.purpose = source_parent.bill_no
 		target.currency = source_parent.currency
 		target.eref = target.reference_name
 
@@ -51,6 +49,9 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 			)
 			# If employee advance paid but no employee bank account found, leave empty
 			# Do not fall back to supplier account as employee should receive the payment
+
+			target.recipient = frappe.db.get_value("Employee", source_parent.business_trip_employee, "employee_name")
+			target.purpose = source_parent.bill_no + " (" + source_parent.business_trip + ")"
 		else:
 			# Regular supplier logic
 			if source_parent.supplier_bank_account:
@@ -61,8 +62,7 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 					["iban", "bank"],
 					as_dict=True,
 				)
-
-			if not bank_account:
+			else:
 				# Fallback to the (default) Bank Account linked to the Supplier
 				bank_account = frappe.db.get_value(
 					"Bank Account",
@@ -71,6 +71,9 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 					order_by="is_default DESC",
 					as_dict=True,
 				)
+
+			target.recipient = source_parent.supplier_name
+			target.purpose = source_parent.bill_no
 
 		if bank_account:
 			if bank_account.get("bank"):
