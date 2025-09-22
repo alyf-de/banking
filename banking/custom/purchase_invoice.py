@@ -39,14 +39,13 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		)
 
 		target.recipient = (
-			frappe.db.get_value(
-				"Employee", source_parent.business_trip_employee, "employee_name"
-			)
+			frappe.db.get_value("Employee", source_parent.business_trip_employee, "employee_name")
 			if is_employee_advance_paid
 			else source_parent.supplier_name
 		)
 		target.purpose = (
-			source_parent.bill_no if not is_employee_advance_paid
+			source_parent.bill_no
+			if not is_employee_advance_paid
 			else source_parent.bill_no + " (" + source_parent.business_trip + ")"
 		)
 
