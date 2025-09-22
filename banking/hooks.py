@@ -106,6 +106,9 @@ doc_events = {
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
 	},
+	"Employee": {
+		"validate": "banking.custom.employee.validate",
+	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
 	},

@@ -1373,3 +1373,13 @@ msgstr ""
 msgid "{} Unreconciled"
 msgstr "{} Nicht abgeglichen"
 
+#. Warning message when IBAN is changed on Employee
+#: banking/custom/employee.py
+msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
+msgstr "IBAN auf Mitarbeiter wird nicht in SEPA-Zahlungsaufträgen verwendet. Bitte verwenden Sie stattdessen Bankkonto für die Zahlungsabwicklung."
+
+#. Warning title for IBAN on Employee
+#: banking/custom/employee.py
+msgid "IBAN Warning: Not used in SEPA Payment Orders"
+msgstr "IBAN-Warnung: Nicht in SEPA-Zahlungsaufträgen verwendet"
+
