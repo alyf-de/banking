@@ -29,9 +29,6 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.bank = bank_account.get("bank")
 
 	def process_payment(source, target, source_parent):
-		target.currency = source_parent.currency
-		target.eref = target.reference_name
-
 		is_employee_advance_paid = (
 			hasattr(source_parent, "business_trip")
 			and source_parent.business_trip
@@ -41,49 +38,26 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 			and source_parent.advance_paid_by_employee
 		)
 
-		if is_employee_advance_paid:
-			# Get the Bank Account linked to the Employee
-			bank_account = frappe.db.get_value(
-				"Bank Account",
-				{"party_type": "Employee", "party": source_parent.business_trip_employee, "disabled": 0},
-				["iban", "bank"],
-				order_by="is_default DESC",
-				as_dict=True,
-			)
-			# If employee advance paid but no employee bank account found, leave empty
-			# Do not fall back to supplier account as employee should receive the payment
-
-			target.recipient = frappe.db.get_value(
+		target.recipient = (
+			frappe.db.get_value(
 				"Employee", source_parent.business_trip_employee, "employee_name"
 			)
-			target.purpose = source_parent.bill_no + " (" + source_parent.business_trip + ")"
-		else:
-			# Regular supplier logic
-			if source_parent.supplier_bank_account:
-				# Prefer the Supplier Bank Account set on the Purchase Invoice
-				bank_account = frappe.db.get_value(
-					"Bank Account",
-					source_parent.supplier_bank_account,
-					["iban", "bank"],
-					as_dict=True,
-				)
-			else:
-				# Fallback to the (default) Bank Account linked to the Supplier
-				bank_account = frappe.db.get_value(
-					"Bank Account",
-					{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
-					["iban", "bank"],
-					order_by="is_default DESC",
-					as_dict=True,
-				)
+			if is_employee_advance_paid
+			else source_parent.supplier_name
+		)
+		target.purpose = (
+			source_parent.bill_no if not is_employee_advance_paid
+			else source_parent.bill_no + " (" + source_parent.business_trip + ")"
+		)
 
-			target.recipient = source_parent.supplier_name
-			target.purpose = source_parent.bill_no
-
+		bank_account = _get_recipients_bank_account(source_parent, is_employee_advance_paid)
 		if bank_account:
 			if bank_account.get("bank"):
 				target.swift_number = frappe.db.get_value("Bank", bank_account["bank"], "swift_number")
 			target.iban = bank_account.get("iban")
+
+		target.currency = source_parent.currency
+		target.eref = target.reference_name
 
 	return get_mapped_doc(
 		"Purchase Invoice",
@@ -108,6 +82,41 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target_doc,
 		postprocess=set_missing_values,
 	)
+
+
+def _get_recipients_bank_account(source_parent, is_employee_advance_paid: bool):
+	"""
+	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
+	"""
+	if is_employee_advance_paid:
+		# Get the Bank Account linked to the Employee
+		# If employee advance paid but no employee bank account found, leave empty
+		return frappe.db.get_value(
+			"Bank Account",
+			{"party_type": "Employee", "party": source_parent.business_trip_employee, "disabled": 0},
+			["iban", "bank"],
+			order_by="is_default DESC",
+			as_dict=True,
+		)
+	else:
+		# Regular supplier logic
+		if source_parent.supplier_bank_account:
+			# Prefer the Supplier Bank Account set on the Purchase Invoice
+			return frappe.db.get_value(
+				"Bank Account",
+				source_parent.supplier_bank_account,
+				["iban", "bank"],
+				as_dict=True,
+			)
+		else:
+			# Fallback to the (default) Bank Account linked to the Supplier
+			return frappe.db.get_value(
+				"Bank Account",
+				{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
+				["iban", "bank"],
+				order_by="is_default DESC",
+				as_dict=True,
+			)
 
 
 @frappe.whitelist()
