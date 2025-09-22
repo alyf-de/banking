@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-09-03 19:11+0053\n"
+"POT-Creation-Date: 2025-09-22 15:08+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -619,7 +619,7 @@ msgstr "Fintech-Lizenzschlüssel"
 msgid "Fintech Licensee Name"
 msgstr "Fintech-Lizenznehmername"
 
-#: banking/custom/purchase_invoice.py:123
+#: banking/custom/purchase_invoice.py:150
 msgid "For non-German IBANs, a Bank must be provided."
 msgstr "Für Nicht-Deutsche IBANs muss eine Bank angegeben werden."
 
@@ -666,6 +666,14 @@ msgstr "Verstecktes Feld für Ausrichtung"
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
 msgid "IBAN"
 msgstr ""
+
+#: banking/custom/employee.py:11
+msgid "IBAN Warning: Not used in SEPA Payment Orders"
+msgstr "IBAN-Warnung: Nicht in SEPA-Zahlungsaufträgen verwendet"
+
+#: banking/custom/employee.py:8
+msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
+msgstr "IBAN auf Mitarbeiter wird nicht in SEPA-Zahlungsaufträgen verwendet. Bitte verwenden Sie stattdessen Bankkonto für die Zahlungsabwicklung."
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:78
 msgid "IBAN {0} is invalid."
@@ -889,11 +897,11 @@ msgstr "Überweisung wurde nicht an die Bank gesendet."
 msgid "Payments"
 msgstr "Zahlungen"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:264
+#: banking/ebics/doctype/ebics_user/ebics_user.py:265
 msgid "Please activate the checkbox 'Enable EBICS' in the {0}."
 msgstr "Bitte aktivieren Sie das Kontrollkästchen 'EBICS aktivieren' in den {0}."
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:257
+#: banking/ebics/doctype/ebics_user/ebics_user.py:258
 msgid "Please activate the checkbox 'Enabled' in the {0}."
 msgstr "Bitte aktivieren Sie das Kontrollkästchen 'Aktiviert' in den {0}."
 
@@ -1372,14 +1380,4 @@ msgstr ""
 #: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
 msgid "{} Unreconciled"
 msgstr "{} Nicht abgeglichen"
-
-#. Warning message when IBAN is changed on Employee
-#: banking/custom/employee.py
-msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
-msgstr "IBAN auf Mitarbeiter wird nicht in SEPA-Zahlungsaufträgen verwendet. Bitte verwenden Sie stattdessen Bankkonto für die Zahlungsabwicklung."
-
-#. Warning title for IBAN on Employee
-#: banking/custom/employee.py
-msgid "IBAN Warning: Not used in SEPA Payment Orders"
-msgstr "IBAN-Warnung: Nicht in SEPA-Zahlungsaufträgen verwendet"
 
