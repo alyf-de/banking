@@ -90,32 +90,23 @@ def _get_recipients_bank_account(source_parent, is_employee_advance_paid: bool):
 	if is_employee_advance_paid:
 		# Get the Bank Account linked to the Employee
 		# If employee advance paid but no employee bank account found, leave empty
-		return frappe.db.get_value(
-			"Bank Account",
-			{"party_type": "Employee", "party": source_parent.business_trip_employee, "disabled": 0},
-			["iban", "bank"],
-			order_by="is_default DESC",
-			as_dict=True,
-		)
+		filters = {"party_type": "Employee", "party": source_parent.business_trip_employee, "disabled": 0}
 	else:
 		# Regular supplier logic
 		if source_parent.supplier_bank_account:
 			# Prefer the Supplier Bank Account set on the Purchase Invoice
-			return frappe.db.get_value(
-				"Bank Account",
-				source_parent.supplier_bank_account,
-				["iban", "bank"],
-				as_dict=True,
-			)
+			filters = source_parent.supplier_bank_account
 		else:
 			# Fallback to the (default) Bank Account linked to the Supplier
-			return frappe.db.get_value(
-				"Bank Account",
-				{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
-				["iban", "bank"],
-				order_by="is_default DESC",
-				as_dict=True,
-			)
+			filters = {"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0}
+
+	return frappe.db.get_value(
+		"Bank Account",
+		filters,
+		["iban", "bank"],
+		order_by="is_default DESC",
+		as_dict=True,
+	)
 
 
 @frappe.whitelist()
