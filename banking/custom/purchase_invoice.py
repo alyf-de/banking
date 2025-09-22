@@ -33,9 +33,12 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target.eref = target.reference_name
 
 		is_employee_advance_paid = (
-			hasattr(source_parent, "business_trip") and source_parent.business_trip and
-			hasattr(source_parent, "business_trip_employee") and source_parent.business_trip_employee and
-			hasattr(source_parent, "advance_paid_by_employee") and source_parent.advance_paid_by_employee
+			hasattr(source_parent, "business_trip")
+			and source_parent.business_trip
+			and hasattr(source_parent, "business_trip_employee")
+			and source_parent.business_trip_employee
+			and hasattr(source_parent, "advance_paid_by_employee")
+			and source_parent.advance_paid_by_employee
 		)
 
 		if is_employee_advance_paid:
@@ -50,7 +53,9 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 			# If employee advance paid but no employee bank account found, leave empty
 			# Do not fall back to supplier account as employee should receive the payment
 
-			target.recipient = frappe.db.get_value("Employee", source_parent.business_trip_employee, "employee_name")
+			target.recipient = frappe.db.get_value(
+				"Employee", source_parent.business_trip_employee, "employee_name"
+			)
 			target.purpose = source_parent.bill_no + " (" + source_parent.business_trip + ")"
 		else:
 			# Regular supplier logic
