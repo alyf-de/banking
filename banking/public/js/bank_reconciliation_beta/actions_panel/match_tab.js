@@ -10,7 +10,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.panel_manager.actions_tab = "match_voucher-tab";
 
 		this.match_field_group = new frappe.ui.FieldGroup({
-			fields: this.get_match_tab_fields(),
+			fields: await this.get_match_tab_fields(),
 			body: this.actions_panel.$tab_content,
 			card_layout: true,
 		});
@@ -340,90 +340,32 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		);
 	}
 
-	get_match_tab_fields() {
+	async get_match_tab_fields() {
 		const filters_state = this.panel_manager.actions_filters;
+		const document_types = await frappe.xcall(
+			"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_doctypes_for_bank_reconciliation"
+		);
+		const document_types_fields = [];
+		document_types.forEach((type, index) => {
+			document_types_fields.push({
+				label: __(type),
+				fieldname: frappe.scrub(type),
+				fieldtype: "Check",
+				default: filters_state[frappe.scrub(type)],
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
+				},
+			});
+
+			// Add column break after every 2 fields
+			if ((index + 1) % 2 === 0 && index !== document_types.length - 1) {
+				document_types_fields.push({
+					fieldtype: "Column Break",
+				});
+			}
+		});
 		return [
-			{
-				label: __("Payment Entry"),
-				fieldname: "payment_entry",
-				fieldtype: "Check",
-				default: filters_state.payment_entry,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				label: __("Journal Entry"),
-				fieldname: "journal_entry",
-				fieldtype: "Check",
-				default: filters_state.journal_entry,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				fieldtype: "Column Break",
-			},
-			{
-				label: __("Purchase Invoice"),
-				fieldname: "purchase_invoice",
-				fieldtype: "Check",
-				default: filters_state.purchase_invoice,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				label: __("Sales Invoice"),
-				fieldname: "sales_invoice",
-				fieldtype: "Check",
-				default: filters_state.sales_invoice,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				fieldtype: "Column Break",
-			},
-			{
-				label: __("Loan Repayment"),
-				fieldname: "loan_repayment",
-				fieldtype: "Check",
-				default: filters_state.loan_repayment,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				label: __("Loan Disbursement"),
-				fieldname: "loan_disbursement",
-				fieldtype: "Check",
-				default: filters_state.loan_disbursement,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				fieldtype: "Column Break",
-			},
-			{
-				label: __("Expense Claim"),
-				fieldname: "expense_claim",
-				fieldtype: "Check",
-				default: filters_state.expense_claim,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
-			{
-				label: __("Bank Transaction"),
-				fieldname: "bank_transaction",
-				fieldtype: "Check",
-				default: filters_state.bank_transaction,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-			},
+			...document_types_fields,
 			{
 				fieldtype: "Section Break",
 			},

@@ -202,6 +202,11 @@ alyf_banking_property_setters = {
 	]
 }
 
+# Bank Reconciliation Doctypes are defined in the respective apps.
+# We only add "Bank Transaction" since thats not supported by ERPNext natively.
+bank_reconciliation_doctypes = [
+	"Bank Transaction",
+]
 get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"
 
 alyf_banking_custom_records = [
