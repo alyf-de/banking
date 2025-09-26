@@ -452,7 +452,6 @@ def subtract_allocations(gl_account, vouchers):
 
 
 def check_matching(
-<<<<<<< HEAD
 	bank_account,
 	company,
 	transaction,
@@ -462,17 +461,6 @@ def check_matching(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
-=======
-	bank_account: str,
-	company: str,
-	transaction: "CustomBankTransaction",
-	document_types: list,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
->>>>>>> 19a29a4 (chore: improve type hints for Bank Transaction (#275))
 ):
 	# combine all types of vouchers
 	subquery = get_queries(
@@ -525,7 +513,6 @@ def check_matching(
 
 
 def get_queries(
-<<<<<<< HEAD
 	bank_account,
 	company,
 	transaction,
@@ -535,18 +522,6 @@ def get_queries(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
-=======
-	bank_account: str,
-	company: str,
-	transaction: "CustomBankTransaction",
-	document_types: list,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
-	common_filters: frappe._dict = None,
->>>>>>> 19a29a4 (chore: improve type hints for Bank Transaction (#275))
 ):
 	# get queries to get matching vouchers
 	account_from_to = "paid_to" if transaction.deposit > 0.0 else "paid_from"
@@ -576,7 +551,6 @@ def get_queries(
 
 
 def get_matching_queries(
-<<<<<<< HEAD
 	bank_account,
 	company,
 	transaction,
@@ -588,20 +562,6 @@ def get_matching_queries(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
-=======
-	bank_account: str,
-	company: str,
-	transaction: "CustomBankTransaction",
-	document_types: list,
-	exact_match: bool = False,
-	account_from_to: str | None = None,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
-	common_filters: frappe._dict = None,
->>>>>>> 19a29a4 (chore: improve type hints for Bank Transaction (#275))
 ):
 	queries = []
 	exact_party_match = "exact_party_match" in document_types
