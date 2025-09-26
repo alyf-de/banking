@@ -1,12 +1,11 @@
 # Copyright (c) 2023, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
-	BankTransaction,
 	get_total_allocated_amount,
 )
 from erpnext.accounts.utils import get_account_currency
@@ -24,6 +23,9 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.util
 	get_reference_field_map,
 	ref_equality_condition,
 )
+
+if TYPE_CHECKING:
+	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
 
@@ -93,7 +95,7 @@ def create_journal_entry_bts(
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
-	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	bank_transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	bank_transaction.check_permission("read")
 
 	if bank_transaction.deposit and bank_transaction.withdrawal:
@@ -192,7 +194,7 @@ def create_payment_entry_bts(
 		allow_edit = sbool(allow_edit)
 
 	# Create a new payment entry based on the bank transaction
-	bank_transaction = frappe.db.get_values(
+	bank_transaction: CustomBankTransaction = frappe.db.get_values(
 		"Bank Transaction",
 		bank_transaction_name,
 		fieldname=["name", "unallocated_amount", "deposit", "bank_account"],
@@ -245,7 +247,7 @@ def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
 	reconcile_multi_party: bool = False,
-) -> "BankTransaction":
+) -> "CustomBankTransaction":
 	"""
 	Reconcile multiple vouchers with a bank transaction.
 
@@ -257,7 +259,7 @@ def bulk_reconcile_vouchers(
 
 	reconcile_multi_party = sbool(reconcile_multi_party)
 
-	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	transaction.add_payment_entries(vouchers, reconcile_multi_party)
 	transaction.validate_duplicate_references()
 	transaction.allocate_payment_entries()
@@ -271,7 +273,7 @@ def bulk_reconcile_vouchers(
 @frappe.whitelist()
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
-) -> Union[dict, "BankTransaction"]:
+) -> Union[dict, "CustomBankTransaction"]:
 	"""Reconcile a entry with a bank transaction. Called on `doc_update` websocket event."""
 
 	# Newly created voucher was deleted
@@ -397,7 +399,7 @@ def get_linked_payments(
 	to_reference_date: str | None = None,
 ) -> list:
 	"""Get all matching payments for a bank transaction"""
-	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	transaction.check_permission("read")
 
 	gl_account, company = frappe.db.get_value(
@@ -450,6 +452,7 @@ def subtract_allocations(gl_account, vouchers):
 
 
 def check_matching(
+<<<<<<< HEAD
 	bank_account,
 	company,
 	transaction,
@@ -459,6 +462,17 @@ def check_matching(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
+=======
+	bank_account: str,
+	company: str,
+	transaction: "CustomBankTransaction",
+	document_types: list,
+	from_date: str | datetime.date | None = None,
+	to_date: str | datetime.date | None = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date | None = None,
+	to_reference_date: str | datetime.date | None = None,
+>>>>>>> 19a29a4 (chore: improve type hints for Bank Transaction (#275))
 ):
 	# combine all types of vouchers
 	subquery = get_queries(
@@ -511,6 +525,7 @@ def check_matching(
 
 
 def get_queries(
+<<<<<<< HEAD
 	bank_account,
 	company,
 	transaction,
@@ -520,6 +535,18 @@ def get_queries(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
+=======
+	bank_account: str,
+	company: str,
+	transaction: "CustomBankTransaction",
+	document_types: list,
+	from_date: str | datetime.date | None = None,
+	to_date: str | datetime.date | None = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date | None = None,
+	to_reference_date: str | datetime.date | None = None,
+	common_filters: frappe._dict = None,
+>>>>>>> 19a29a4 (chore: improve type hints for Bank Transaction (#275))
 ):
 	# get queries to get matching vouchers
 	account_from_to = "paid_to" if transaction.deposit > 0.0 else "paid_from"
@@ -549,6 +576,7 @@ def get_queries(
 
 
 def get_matching_queries(
+<<<<<<< HEAD
 	bank_account,
 	company,
 	transaction,
@@ -560,6 +588,20 @@ def get_matching_queries(
 	filter_by_reference_date,
 	from_reference_date,
 	to_reference_date,
+=======
+	bank_account: str,
+	company: str,
+	transaction: "CustomBankTransaction",
+	document_types: list,
+	exact_match: bool = False,
+	account_from_to: str | None = None,
+	from_date: str | datetime.date | None = None,
+	to_date: str | datetime.date | None = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date | None = None,
+	to_reference_date: str | datetime.date | None = None,
+	common_filters: frappe._dict = None,
+>>>>>>> 19a29a4 (chore: improve type hints for Bank Transaction (#275))
 ):
 	queries = []
 	exact_party_match = "exact_party_match" in document_types
