@@ -34,8 +34,8 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 			and purchase_invoice.business_trip
 			and hasattr(purchase_invoice, "business_trip_employee")
 			and purchase_invoice.business_trip_employee
-			and hasattr(purchase_invoice, "advance_paid_by_employee")
-			and purchase_invoice.advance_paid_by_employee
+			and hasattr(purchase_invoice, "pay_to_employee")
+			and purchase_invoice.pay_to_employee
 		)
 
 		target.recipient = (
