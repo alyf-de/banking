@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 	from fintech.sepa import SEPATransaction
 
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
+	from banking.overrides.bank_transaction import CustomBankTransaction
 
 
 def get_ebics_manager(
@@ -418,7 +419,7 @@ def create_bank_transaction(
 	):
 		return
 
-	bt = frappe.new_doc("Bank Transaction")
+	bt: CustomBankTransaction = frappe.new_doc("Bank Transaction")
 	bt.bank_account = bank_account
 	bt.transaction_id = transaction_id
 	bt.update(kwargs)
