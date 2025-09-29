@@ -27,9 +27,12 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 
 	def process_payment(source, target, purchase_invoice):
 		pay_to_employee = all(
-			hasattr(purchase_invoice, "business_trip") and purchase_invoice.business_trip,
-			hasattr(purchase_invoice, "business_trip_employee") and purchase_invoice.business_trip_employee,
-			hasattr(purchase_invoice, "pay_to_employee") and purchase_invoice.pay_to_employee,
+			(
+				hasattr(purchase_invoice, "business_trip") and purchase_invoice.business_trip,
+				hasattr(purchase_invoice, "business_trip_employee")
+				and purchase_invoice.business_trip_employee,
+				hasattr(purchase_invoice, "pay_to_employee") and purchase_invoice.pay_to_employee,
+			)
 		)
 
 		target.recipient = (
