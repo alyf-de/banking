@@ -41,9 +41,9 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 			else purchase_invoice.supplier_name
 		)
 		target.purpose = (
-			purchase_invoice.bill_no
-			if not pay_to_employee
-			else f"{purchase_invoice.bill_no} ({purchase_invoice.business_trip})"
+			f"{purchase_invoice.bill_no} ({purchase_invoice.business_trip})"
+			if pay_to_employee
+			else purchase_invoice.bill_no
 		)
 
 		bank_account = _get_recipients_bank_account(purchase_invoice, pay_to_employee)
@@ -88,14 +88,12 @@ def _get_recipients_bank_account(purchase_invoice, pay_to_employee: bool):
 		# Get the Bank Account linked to the Employee
 		# If employee advance paid but no employee bank account found, leave empty
 		filters = {"party_type": "Employee", "party": purchase_invoice.business_trip_employee, "disabled": 0}
+	elif purchase_invoice.supplier_bank_account:
+		# Prefer the Supplier Bank Account set on the Purchase Invoice
+		filters = purchase_invoice.supplier_bank_account
 	else:
-		# Regular supplier logic
-		if purchase_invoice.supplier_bank_account:
-			# Prefer the Supplier Bank Account set on the Purchase Invoice
-			filters = purchase_invoice.supplier_bank_account
-		else:
-			# Fallback to the (default) Bank Account linked to the Supplier
-			filters = {"party_type": "Supplier", "party": purchase_invoice.supplier, "disabled": 0}
+		# Fallback to the (default) Bank Account linked to the Supplier
+		filters = {"party_type": "Supplier", "party": purchase_invoice.supplier, "disabled": 0}
 
 	return frappe.db.get_value(
 		"Bank Account",
