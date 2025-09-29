@@ -1,15 +1,15 @@
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe import _
 from frappe.model.mapper import get_mapped_doc
 
 from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 
 if TYPE_CHECKING:
-	from erpnext.accounts.doctype.bank.bank import Bank
-	from erpnext.accounts.doctype.bank_account.bank_account import BankAccount
+	from erpnext.accounts.doctype.payment_schedule.payment_schedule import PaymentSchedule
 	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
+
+	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
 
 @frappe.whitelist()
@@ -28,34 +28,35 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
-	def process_payment(source, target, source_parent):
-		target.recipient = source_parent.supplier_name
-		target.purpose = source_parent.bill_no
-		target.currency = source_parent.currency
-		target.eref = target.reference_name
-
-		if source_parent.supplier_bank_account:
-			# Prefer the Supplier Bank Account set on the Purchase Invoice
-			bank_account = frappe.db.get_value(
-				"Bank Account",
-				source_parent.supplier_bank_account,
-				["iban", "bank"],
-				as_dict=True,
+	def process_payment(source: "PaymentSchedule", target: "SEPAPayment", source_parent: "PurchaseInvoice"):
+		pi = source_parent
+		pay_to_employee = all(
+			(
+				hasattr(pi, "business_trip") and pi.business_trip,
+				hasattr(pi, "business_trip_employee") and pi.business_trip_employee,
+				hasattr(pi, "pay_to_employee") and pi.pay_to_employee,
 			)
-		else:
-			# Fallback to the (default) Bank Account linked to the Supplier
-			bank_account = frappe.db.get_value(
-				"Bank Account",
-				{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
-				["iban", "bank"],
-				order_by="is_default DESC",
-				as_dict=True,
-			)
+		)
 
+		target.recipient = (
+			frappe.db.get_value("Employee", pi.business_trip_employee, "employee_name")
+			if pay_to_employee
+			else pi.supplier_name
+		)
+		target.purpose = _get_employee_purpose(pi) if pay_to_employee else pi.bill_no
+
+		bank_account = _get_recipients_bank_account(pi, pay_to_employee)
 		if bank_account:
 			if bank_account.get("bank"):
-				target.swift_number = frappe.db.get_value("Bank", bank_account["bank"], "swift_number")
+				swift_number, bank_name = frappe.db.get_value(
+					"Bank", bank_account["bank"], ["swift_number", "bank_name"]
+				)
+				target.swift_number = swift_number
+				target.bank_name = bank_name
 			target.iban = bank_account.get("iban")
+
+		target.currency = pi.currency
+		target.eref = target.reference_name
 
 	return get_mapped_doc(
 		"Purchase Invoice",
@@ -82,6 +83,49 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 	)
 
 
+def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
+	"""Return the bank transfer purpose for an invoice reimbursed to an employee.
+
+	Example: "Example AG, 123456, 2025-01-01 (BT-0001)"
+	"""
+	invoice_reference = ", ".join(
+		str(ref).strip()
+		for ref in [purchase_invoice.supplier_name, purchase_invoice.bill_no, purchase_invoice.bill_date]
+		if ref
+	)
+	return f"{invoice_reference} ({purchase_invoice.business_trip})".strip()
+
+
+def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
+	"""
+	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
+	"""
+	if pay_to_employee:
+		# Prefer the Employee Bank Account set on the Purchase Invoice
+		# Fallback to the (default) Bank Account linked to the Employee
+		filters = purchase_invoice.employee_bank_account or {
+			"party_type": "Employee",
+			"party": purchase_invoice.business_trip_employee,
+			"disabled": 0,
+		}
+	else:
+		# Prefer the Supplier Bank Account set on the Purchase Invoice
+		# Fallback to the (default) Bank Account linked to the Supplier
+		filters = purchase_invoice.supplier_bank_account or {
+			"party_type": "Supplier",
+			"party": purchase_invoice.supplier,
+			"disabled": 0,
+		}
+
+	return frappe.db.get_value(
+		"Bank Account",
+		filters,
+		["iban", "bank"],
+		order_by="is_default DESC",
+		as_dict=True,
+	)
+
+
 @frappe.whitelist()
 def make_bulk_sepa_payment_order(source_names: str):
 	target_doc = None
@@ -104,50 +148,3 @@ def sepa_payment_order_status_changed(
 			break
 
 	doc.save(ignore_permissions=True)
-
-
-@frappe.whitelist(methods=["POST"])
-def create_supplier_bank_account(
-	iban: str, supplier: str, supplier_name: str, bank: str | None = None
-) -> str:
-	_iban = iban.replace(" ", "").upper()
-
-	existing_bank_account = frappe.db.exists("Bank Account", {"iban": _iban})
-	if existing_bank_account:
-		return existing_bank_account
-
-	if not bank:
-		if _iban.startswith("DE"):
-			bank = create_bank(_iban)
-		else:
-			frappe.throw(_("For non-German IBANs, a Bank must be provided."))
-
-	doc: BankAccount = frappe.new_doc("Bank Account")
-	doc.iban = _iban
-	doc.bank = bank
-	doc.party_type = "Supplier"
-	doc.party = supplier
-	doc.account_name = supplier_name
-	doc.save()
-
-	return doc.name
-
-
-def create_bank(iban: str) -> str:
-	import kontocheck
-
-	kontocheck.lut_load()
-
-	bank_name = kontocheck.get_bankname(iban)
-	swift_number = kontocheck.get_bic(iban)
-
-	existing_bank = frappe.db.exists("Bank", {"swift_number": swift_number})
-	if existing_bank:
-		return existing_bank
-
-	doc: Bank = frappe.new_doc("Bank")
-	doc.bank_name = bank_name
-	doc.swift_number = swift_number
-	doc.insert()
-
-	return doc.name

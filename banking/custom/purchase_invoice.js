@@ -13,6 +13,15 @@ frappe.ui.form.on("Purchase Invoice", {
 				},
 			};
 		});
+
+		frm.set_query("employee_bank_account", (doc) => {
+			return {
+				filters: {
+					party_type: "Employee",
+					party: doc.business_trip_employee,
+				},
+			};
+		});
 	},
 
 	refresh(frm) {
@@ -42,54 +51,42 @@ frappe.ui.form.on("Purchase Invoice", {
 	},
 
 	create_supplier_bank_account(frm) {
-		const GERMAN_IBAN_PREFIX = "DE";
-		const GERMAN_IBAN_LENGTH = 22;
+		banking.utils
+			.create_party_bank_account(
+				"Supplier",
+				frm.doc.supplier,
+				frm.doc.supplier_name
+			)
+			.then((bank_account) => {
+				frm.set_value("supplier_bank_account", bank_account);
+				frappe.show_alert({
+					message: __("Supplier Bank Account was created."),
+					indicator: "green",
+				});
+			})
+			.catch(() => {
+				frappe.show_alert({
+					message: __("Supplier Bank Account was not created."),
+					indicator: "yellow",
+				});
+			});
+	},
 
-		const dialog = frappe.prompt(
-			[
-				{
-					fieldname: "iban",
-					label: __("IBAN"),
-					fieldtype: "Data",
-					reqd: 1,
-					onchange: () => {
-						const iban = dialog.get_value("iban");
-
-						if (
-							iban?.trim().startsWith(GERMAN_IBAN_PREFIX) &&
-							iban?.replaceAll(" ", "").length === GERMAN_IBAN_LENGTH
-						) {
-							dialog.set_df_property("bank", "hidden", true);
-							dialog.set_df_property("bank", "reqd", false);
-							dialog.set_value("bank", null);
-						} else {
-							dialog.set_df_property("bank", "hidden", false);
-							dialog.set_df_property("bank", "reqd", true);
-						}
-					},
-				},
-				{
-					fieldname: "bank",
-					label: __("Bank"),
-					fieldtype: "Link",
-					options: "Bank",
-				},
-			],
-			(values) => {
-				frappe
-					.xcall(
-						"banking.custom.purchase_invoice.create_supplier_bank_account",
-						{
-							iban: values.iban,
-							bank: values.bank,
-							supplier: frm.doc.supplier,
-							supplier_name: frm.doc.supplier_name,
-						}
-					)
-					.then((bank_account) => {
-						frm.set_value("supplier_bank_account", bank_account);
-					});
-			}
-		);
+	create_employee_bank_account(frm) {
+		banking.utils
+			.create_party_bank_account("Employee", frm.doc.business_trip_employee)
+			.then((bank_account) => {
+				frm.set_value("employee_bank_account", bank_account);
+				frappe.show_alert({
+					message: __("Employee Bank Account was created."),
+					indicator: "green",
+				});
+			})
+			.catch(() => {
+				frappe.show_alert({
+					message: __("Employee Bank Account was not created."),
+					indicator: "yellow",
+				});
+			});
 	},
 });
