@@ -29,27 +29,24 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.bank = bank_account.get("bank")
 
 	def process_payment(source, target, purchase_invoice):
-		is_employee_advance_paid = (
-			hasattr(purchase_invoice, "business_trip")
-			and purchase_invoice.business_trip
-			and hasattr(purchase_invoice, "business_trip_employee")
-			and purchase_invoice.business_trip_employee
-			and hasattr(purchase_invoice, "pay_to_employee")
-			and purchase_invoice.pay_to_employee
+		pay_to_employee = all(
+			hasattr(purchase_invoice, "business_trip") and purchase_invoice.business_trip,
+			hasattr(purchase_invoice, "business_trip_employee") and purchase_invoice.business_trip_employee,
+			hasattr(purchase_invoice, "pay_to_employee") and purchase_invoice.pay_to_employee,
 		)
 
 		target.recipient = (
 			frappe.db.get_value("Employee", purchase_invoice.business_trip_employee, "employee_name")
-			if is_employee_advance_paid
+			if pay_to_employee
 			else purchase_invoice.supplier_name
 		)
 		target.purpose = (
 			purchase_invoice.bill_no
-			if not is_employee_advance_paid
+			if not pay_to_employee
 			else purchase_invoice.bill_no + " (" + purchase_invoice.business_trip + ")"
 		)
 
-		bank_account = _get_recipients_bank_account(purchase_invoice, is_employee_advance_paid)
+		bank_account = _get_recipients_bank_account(purchase_invoice, pay_to_employee)
 		if bank_account:
 			if bank_account.get("bank"):
 				target.swift_number = frappe.db.get_value("Bank", bank_account["bank"], "swift_number")
@@ -83,11 +80,11 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 	)
 
 
-def _get_recipients_bank_account(purchase_invoice, is_employee_advance_paid: bool):
+def _get_recipients_bank_account(purchase_invoice, pay_to_employee: bool):
 	"""
 	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
 	"""
-	if is_employee_advance_paid:
+	if pay_to_employee:
 		# Get the Bank Account linked to the Employee
 		# If employee advance paid but no employee bank account found, leave empty
 		filters = {"party_type": "Employee", "party": purchase_invoice.business_trip_employee, "disabled": 0}
