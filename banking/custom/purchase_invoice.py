@@ -6,7 +6,10 @@ from frappe.model.mapper import get_mapped_doc
 from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 
 if TYPE_CHECKING:
+	from erpnext.accounts.doctype.payment_schedule.payment_schedule import PaymentSchedule
 	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
+
+	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
 
 @frappe.whitelist()
@@ -25,34 +28,35 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
-	def process_payment(source, target, source_parent):
-		target.recipient = source_parent.supplier_name
-		target.purpose = source_parent.bill_no
-		target.currency = source_parent.currency
-		target.eref = target.reference_name
-
-		if source_parent.supplier_bank_account:
-			# Prefer the Supplier Bank Account set on the Purchase Invoice
-			bank_account = frappe.db.get_value(
-				"Bank Account",
-				source_parent.supplier_bank_account,
-				["iban", "bank"],
-				as_dict=True,
+	def process_payment(source: "PaymentSchedule", target: "SEPAPayment", source_parent: "PurchaseInvoice"):
+		pi = source_parent
+		pay_to_employee = all(
+			(
+				hasattr(pi, "business_trip") and pi.business_trip,
+				hasattr(pi, "business_trip_employee") and pi.business_trip_employee,
+				hasattr(pi, "pay_to_employee") and pi.pay_to_employee,
 			)
-		else:
-			# Fallback to the (default) Bank Account linked to the Supplier
-			bank_account = frappe.db.get_value(
-				"Bank Account",
-				{"party_type": "Supplier", "party": source_parent.supplier, "disabled": 0},
-				["iban", "bank"],
-				order_by="is_default DESC",
-				as_dict=True,
-			)
+		)
 
+		target.recipient = (
+			frappe.db.get_value("Employee", pi.business_trip_employee, "employee_name")
+			if pay_to_employee
+			else pi.supplier_name
+		)
+		target.purpose = _get_employee_purpose(pi) if pay_to_employee else pi.bill_no
+
+		bank_account = _get_recipients_bank_account(pi, pay_to_employee)
 		if bank_account:
 			if bank_account.get("bank"):
-				target.swift_number = frappe.db.get_value("Bank", bank_account["bank"], "swift_number")
+				swift_number, bank_name = frappe.db.get_value(
+					"Bank", bank_account["bank"], ["swift_number", "bank_name"]
+				)
+				target.swift_number = swift_number
+				target.bank_name = bank_name
 			target.iban = bank_account.get("iban")
+
+		target.currency = pi.currency
+		target.eref = target.reference_name
 
 	return get_mapped_doc(
 		"Purchase Invoice",
@@ -76,6 +80,49 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		},
 		target_doc,
 		postprocess=set_missing_values,
+	)
+
+
+def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
+	"""Return the bank transfer purpose for an invoice reimbursed to an employee.
+
+	Example: "Example AG, 123456, 2025-01-01 (BT-0001)"
+	"""
+	invoice_reference = ", ".join(
+		str(ref).strip()
+		for ref in [purchase_invoice.supplier_name, purchase_invoice.bill_no, purchase_invoice.bill_date]
+		if ref
+	)
+	return f"{invoice_reference} ({purchase_invoice.business_trip})".strip()
+
+
+def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
+	"""
+	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
+	"""
+	if pay_to_employee:
+		# Prefer the Employee Bank Account set on the Purchase Invoice
+		# Fallback to the (default) Bank Account linked to the Employee
+		filters = purchase_invoice.employee_bank_account or {
+			"party_type": "Employee",
+			"party": purchase_invoice.business_trip_employee,
+			"disabled": 0,
+		}
+	else:
+		# Prefer the Supplier Bank Account set on the Purchase Invoice
+		# Fallback to the (default) Bank Account linked to the Supplier
+		filters = purchase_invoice.supplier_bank_account or {
+			"party_type": "Supplier",
+			"party": purchase_invoice.supplier,
+			"disabled": 0,
+		}
+
+	return frappe.db.get_value(
+		"Bank Account",
+		filters,
+		["iban", "bank"],
+		order_by="is_default DESC",
+		as_dict=True,
 	)
 
 

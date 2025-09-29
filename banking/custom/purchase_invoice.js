@@ -13,6 +13,15 @@ frappe.ui.form.on("Purchase Invoice", {
 				},
 			};
 		});
+
+		frm.set_query("employee_bank_account", (doc) => {
+			return {
+				filters: {
+					party_type: "Employee",
+					party: doc.business_trip_employee,
+				},
+			};
+		});
 	},
 
 	refresh(frm) {
@@ -58,6 +67,24 @@ frappe.ui.form.on("Purchase Invoice", {
 			.catch(() => {
 				frappe.show_alert({
 					message: __("Supplier Bank Account was not created."),
+					indicator: "yellow",
+				});
+			});
+	},
+
+	create_employee_bank_account(frm) {
+		banking.utils
+			.create_party_bank_account("Employee", frm.doc.business_trip_employee)
+			.then((bank_account) => {
+				frm.set_value("employee_bank_account", bank_account);
+				frappe.show_alert({
+					message: __("Employee Bank Account was created."),
+					indicator: "green",
+				});
+			})
+			.catch(() => {
+				frappe.show_alert({
+					message: __("Employee Bank Account was not created."),
 					indicator: "yellow",
 				});
 			});
