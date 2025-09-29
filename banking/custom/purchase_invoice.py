@@ -84,15 +84,21 @@ def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_emp
 	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
 	"""
 	if pay_to_employee:
-		# Get the Bank Account linked to the Employee
-		# If employee advance paid but no employee bank account found, leave empty
-		filters = {"party_type": "Employee", "party": purchase_invoice.business_trip_employee, "disabled": 0}
-	elif purchase_invoice.supplier_bank_account:
-		# Prefer the Supplier Bank Account set on the Purchase Invoice
-		filters = purchase_invoice.supplier_bank_account
+		# Prefer the Employee Bank Account set on the Purchase Invoice
+		# Fallback to the (default) Bank Account linked to the Employee
+		filters = purchase_invoice.employee_bank_account or {
+			"party_type": "Employee",
+			"party": purchase_invoice.business_trip_employee,
+			"disabled": 0,
+		}
 	else:
+		# Prefer the Supplier Bank Account set on the Purchase Invoice
 		# Fallback to the (default) Bank Account linked to the Supplier
-		filters = {"party_type": "Supplier", "party": purchase_invoice.supplier, "disabled": 0}
+		filters = purchase_invoice.supplier_bank_account or {
+			"party_type": "Supplier",
+			"party": purchase_invoice.supplier,
+			"disabled": 0,
+		}
 
 	return frappe.db.get_value(
 		"Bank Account",
