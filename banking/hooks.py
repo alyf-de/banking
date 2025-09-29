@@ -11,7 +11,7 @@ notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
 # include js, css files in header of desk.html
 app_include_css = "bank_reconciliation_beta.bundle.css"
-# app_include_js = "/assets/banking/js/banking.js"
+app_include_js = "/assets/banking/js/utils.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/banking/css/banking.css"
