@@ -43,7 +43,7 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target.purpose = (
 			purchase_invoice.bill_no
 			if not pay_to_employee
-			else purchase_invoice.bill_no + " (" + purchase_invoice.business_trip + ")"
+			else f"{purchase_invoice.bill_no} ({purchase_invoice.business_trip})"
 		)
 
 		bank_account = _get_recipients_bank_account(purchase_invoice, pay_to_employee)
