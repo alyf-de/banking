@@ -43,7 +43,7 @@ def identity(x):
 
 @frappe.whitelist(methods=["POST"])
 def create_party_bank_account(
-	party_type: str, party: str, iban: str, account_name: str, bank: str | None = None
+	party_type: str, party: str, iban: str, account_name: str | None = None, bank: str | None = None
 ) -> str:
 	_iban = iban.replace(" ", "").upper()
 
@@ -56,6 +56,10 @@ def create_party_bank_account(
 			bank = create_bank(_iban)
 		else:
 			frappe.throw(_("For non-German IBANs, a Bank must be provided."))
+
+	if not account_name:
+		party_doc = frappe.get_doc(party_type, party)
+		account_name = party_doc.get_title()
 
 	doc: BankAccount = frappe.new_doc("Bank Account")
 	doc.iban = _iban
