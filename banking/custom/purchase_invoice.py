@@ -6,7 +6,10 @@ from frappe.model.mapper import get_mapped_doc
 from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 
 if TYPE_CHECKING:
+	from erpnext.accounts.doctype.payment_schedule.payment_schedule import PaymentSchedule
 	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
+
+	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
 
 @frappe.whitelist()
@@ -25,34 +28,30 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
-	def process_payment(source, target, purchase_invoice):
+	def process_payment(source: "PaymentSchedule", target: "SEPAPayment", source_parent: "PurchaseInvoice"):
+		pi = source_parent
 		pay_to_employee = all(
 			(
-				hasattr(purchase_invoice, "business_trip") and purchase_invoice.business_trip,
-				hasattr(purchase_invoice, "business_trip_employee")
-				and purchase_invoice.business_trip_employee,
-				hasattr(purchase_invoice, "pay_to_employee") and purchase_invoice.pay_to_employee,
+				hasattr(pi, "business_trip") and pi.business_trip,
+				hasattr(pi, "business_trip_employee") and pi.business_trip_employee,
+				hasattr(pi, "pay_to_employee") and pi.pay_to_employee,
 			)
 		)
 
 		target.recipient = (
-			frappe.db.get_value("Employee", purchase_invoice.business_trip_employee, "employee_name")
+			frappe.db.get_value("Employee", pi.business_trip_employee, "employee_name")
 			if pay_to_employee
-			else purchase_invoice.supplier_name
+			else pi.supplier_name
 		)
-		target.purpose = (
-			f"{purchase_invoice.bill_no} ({purchase_invoice.business_trip})"
-			if pay_to_employee
-			else purchase_invoice.bill_no
-		)
+		target.purpose = f"{pi.bill_no} ({pi.business_trip})" if pay_to_employee else pi.bill_no
 
-		bank_account = _get_recipients_bank_account(purchase_invoice, pay_to_employee)
+		bank_account = _get_recipients_bank_account(pi, pay_to_employee)
 		if bank_account:
 			if bank_account.get("bank"):
 				target.swift_number = frappe.db.get_value("Bank", bank_account["bank"], "swift_number")
 			target.iban = bank_account.get("iban")
 
-		target.currency = purchase_invoice.currency
+		target.currency = pi.currency
 		target.eref = target.reference_name
 
 	return get_mapped_doc(
@@ -80,7 +79,7 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 	)
 
 
-def _get_recipients_bank_account(purchase_invoice, pay_to_employee: bool):
+def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
 	"""
 	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
 	"""
