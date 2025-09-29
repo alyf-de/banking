@@ -25,6 +25,7 @@
 	},
 	"root": true,
 	"globals": {
+		"banking": true,
 		"frappe": true,
 		"erpnext": true,
 		"Vue": true,

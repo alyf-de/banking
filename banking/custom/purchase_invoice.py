@@ -1,14 +1,11 @@
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe import _
 from frappe.model.mapper import get_mapped_doc
 
 from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 
 if TYPE_CHECKING:
-	from erpnext.accounts.doctype.bank.bank import Bank
-	from erpnext.accounts.doctype.bank_account.bank_account import BankAccount
 	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
 
 
@@ -128,50 +125,3 @@ def sepa_payment_order_status_changed(
 			break
 
 	doc.save(ignore_permissions=True)
-
-
-@frappe.whitelist(methods=["POST"])
-def create_supplier_bank_account(
-	iban: str, supplier: str, supplier_name: str, bank: str | None = None
-) -> str:
-	_iban = iban.replace(" ", "").upper()
-
-	existing_bank_account = frappe.db.exists("Bank Account", {"iban": _iban})
-	if existing_bank_account:
-		return existing_bank_account
-
-	if not bank:
-		if _iban.startswith("DE"):
-			bank = create_bank(_iban)
-		else:
-			frappe.throw(_("For non-German IBANs, a Bank must be provided."))
-
-	doc: BankAccount = frappe.new_doc("Bank Account")
-	doc.iban = _iban
-	doc.bank = bank
-	doc.party_type = "Supplier"
-	doc.party = supplier
-	doc.account_name = supplier_name
-	doc.save()
-
-	return doc.name
-
-
-def create_bank(iban: str) -> str:
-	import kontocheck
-
-	kontocheck.lut_load()
-
-	bank_name = kontocheck.get_bankname(iban)
-	swift_number = kontocheck.get_bic(iban)
-
-	existing_bank = frappe.db.exists("Bank", {"swift_number": swift_number})
-	if existing_bank:
-		return existing_bank
-
-	doc: Bank = frappe.new_doc("Bank")
-	doc.bank_name = bank_name
-	doc.swift_number = swift_number
-	doc.insert()
-
-	return doc.name
