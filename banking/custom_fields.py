@@ -34,19 +34,36 @@ def get_custom_fields():
 				fieldtype="Section Break",
 				insert_after="payments_tab",
 			),
+			# NOTE: pay_to_employee is a field provided by erpnext_germany
 			dict(
 				fieldname="supplier_bank_account",
 				label=_("Supplier Bank Account"),
 				fieldtype="Link",
 				options="Bank Account",
 				insert_after="banking_section",
+				depends_on="eval:!doc.pay_to_employee",
 			),
 			dict(
 				fieldname="create_supplier_bank_account",
 				label=_("Create Supplier Bank Account"),
 				fieldtype="Button",
 				insert_after="supplier_bank_account",
-				depends_on="eval:doc.docstatus === 0 && doc.supplier_name && !doc.supplier_bank_account",
+				depends_on="eval:doc.docstatus === 0 && doc.supplier_name && !doc.supplier_bank_account && !doc.pay_to_employee && frappe.model.can_create('Bank Account')",
+			),
+			dict(
+				fieldname="employee_bank_account",
+				label=_("Employee Bank Account"),
+				fieldtype="Link",
+				options="Bank Account",
+				insert_after="supplier_bank_account",
+				depends_on="eval:doc.pay_to_employee",
+			),
+			dict(
+				fieldname="create_employee_bank_account",
+				label=_("Create Employee Bank Account"),
+				fieldtype="Button",
+				insert_after="employee_bank_account",
+				depends_on="eval:doc.docstatus === 0 && doc.business_trip_employee && !doc.employee_bank_account && doc.pay_to_employee && frappe.model.can_create('Bank Account')",
 			),
 		],
 		"Payment Schedule": [
