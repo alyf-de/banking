@@ -43,7 +43,7 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 			if pay_to_employee
 			else pi.supplier_name
 		)
-		target.purpose = f"{pi.bill_no} ({pi.business_trip})" if pay_to_employee else pi.bill_no
+		target.purpose = _get_employee_purpose(pi) if pay_to_employee else pi.bill_no
 
 		bank_account = _get_recipients_bank_account(pi, pay_to_employee)
 		if bank_account:
@@ -77,6 +77,19 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		target_doc,
 		postprocess=set_missing_values,
 	)
+
+
+def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
+	"""Return the bank transfer purpose for an invoice reimbursed to an employee.
+
+	Example: "Example AG, 123456, 2025-01-01 (BT-0001)"
+	"""
+	invoice_reference = ", ".join(
+		str(ref).strip()
+		for ref in [purchase_invoice.supplier_name, purchase_invoice.bill_no, purchase_invoice.bill_date]
+		if ref
+	)
+	return f"{invoice_reference} ({purchase_invoice.business_trip})".strip()
 
 
 def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
