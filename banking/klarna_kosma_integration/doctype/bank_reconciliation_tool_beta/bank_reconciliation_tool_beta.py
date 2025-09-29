@@ -260,6 +260,10 @@ def bulk_reconcile_vouchers(
 	reconcile_multi_party = sbool(reconcile_multi_party)
 
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+
+	for hook in frappe.get_hooks("get_payment_entries"):
+		vouchers = frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party) or vouchers
+
 	transaction.add_payment_entries(vouchers, reconcile_multi_party)
 	transaction.validate_duplicate_references()
 	transaction.allocate_payment_entries()
