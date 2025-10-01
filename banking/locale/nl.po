@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-09-29 23:38+0053\n"
+"POT-Creation-Date: 2025-10-01 23:54+0053\n"
 "PO-Revision-Date: 2025-09-29 23:38+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language: nl\n"
@@ -391,6 +391,10 @@ msgstr ""
 msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
 msgstr "Ontwikkelaarsmodus is ingeschakeld. Schakel deze uit om automatische synchronisatie van banktransacties voort te zetten."
 
+#: banking/custom/bank_reconciliation_tool.js:8
+msgid "Did you mean {0}?"
+msgstr "Meent u {0}?"
+
 #. Label of a Select field in DocType 'Banking Reference Mapping'
 #: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:154
@@ -507,11 +511,11 @@ msgstr ""
 msgid "Employee Bank Account"
 msgstr "Werknemersbankrekening"
 
-#: banking/custom/purchase_invoice.js:81
+#: banking/custom/employee.js:11 banking/custom/purchase_invoice.js:81
 msgid "Employee Bank Account was created."
 msgstr "Werknemersbankrekening is aangemaakt."
 
-#: banking/custom/purchase_invoice.js:87
+#: banking/custom/employee.js:17 banking/custom/purchase_invoice.js:87
 msgid "Employee Bank Account was not created."
 msgstr "Werknemersbankrekening is niet aangemaakt."
 
@@ -1194,11 +1198,11 @@ msgstr ""
 msgid "Supplier Bank Account"
 msgstr "Leveranciersbankrekening"
 
-#: banking/custom/purchase_invoice.js:63
+#: banking/custom/purchase_invoice.js:63 banking/custom/supplier.js:11
 msgid "Supplier Bank Account was created."
 msgstr "Leveranciersbankrekening is aangemaakt."
 
-#: banking/custom/purchase_invoice.js:69
+#: banking/custom/purchase_invoice.js:69 banking/custom/supplier.js:17
 msgid "Supplier Bank Account was not created."
 msgstr "Leveranciersbankrekening is niet aangemaakt."
 

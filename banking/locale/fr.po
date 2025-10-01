@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-09-29 23:38+0053\n"
+"POT-Creation-Date: 2025-10-01 23:54+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -389,6 +389,10 @@ msgstr ""
 msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
 msgstr "Le mode développeur est activé. Veuillez le désactiver pour continuer à synchroniser les transactions bancaires automatiquement."
 
+#: banking/custom/bank_reconciliation_tool.js:8
+msgid "Did you mean {0}?"
+msgstr "Voulez-vous dire {0}?"
+
 #. Label of a Select field in DocType 'Banking Reference Mapping'
 #: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:154
@@ -505,11 +509,11 @@ msgstr "Exemple : https://banking.alyf.de"
 msgid "Employee Bank Account"
 msgstr "Compte bancaire employé"
 
-#: banking/custom/purchase_invoice.js:81
+#: banking/custom/employee.js:11 banking/custom/purchase_invoice.js:81
 msgid "Employee Bank Account was created."
 msgstr "Le compte bancaire employé a été créé."
 
-#: banking/custom/purchase_invoice.js:87
+#: banking/custom/employee.js:17 banking/custom/purchase_invoice.js:87
 msgid "Employee Bank Account was not created."
 msgstr "Le compte bancaire employé n'a pas été créé."
 
@@ -1192,11 +1196,11 @@ msgstr "Succès"
 msgid "Supplier Bank Account"
 msgstr "Compte bancaire fournisseur"
 
-#: banking/custom/purchase_invoice.js:63
+#: banking/custom/purchase_invoice.js:63 banking/custom/supplier.js:11
 msgid "Supplier Bank Account was created."
 msgstr "Le compte bancaire fournisseur a été créé."
 
-#: banking/custom/purchase_invoice.js:69
+#: banking/custom/purchase_invoice.js:69 banking/custom/supplier.js:17
 msgid "Supplier Bank Account was not created."
 msgstr "Le compte bancaire fournisseur n'a pas été créé."
 
