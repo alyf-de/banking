@@ -32,7 +32,6 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 		pi = source_parent
 		pay_to_employee = all(
 			(
-				hasattr(pi, "business_trip") and pi.business_trip,
 				hasattr(pi, "business_trip_employee") and pi.business_trip_employee,
 				hasattr(pi, "pay_to_employee") and pi.pay_to_employee,
 			)
@@ -93,7 +92,9 @@ def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
 		for ref in [purchase_invoice.supplier_name, purchase_invoice.bill_no, purchase_invoice.bill_date]
 		if ref
 	)
-	return f"{invoice_reference} ({purchase_invoice.business_trip})".strip()
+	if purchase_invoice.business_trip:
+		invoice_reference += f" ({purchase_invoice.business_trip})"
+	return invoice_reference
 
 
 def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
