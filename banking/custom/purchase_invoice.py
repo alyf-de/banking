@@ -94,7 +94,7 @@ def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
 	)
 	if purchase_invoice.business_trip:
 		invoice_reference += f" ({purchase_invoice.business_trip})"
-	return invoice_reference
+	return invoice_reference.strip()
 
 
 def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
