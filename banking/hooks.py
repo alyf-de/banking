@@ -28,7 +28,12 @@ app_include_js = "/assets/banking/js/utils.js"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Bank": "custom/bank.js", "Purchase Invoice": "custom/purchase_invoice.js"}
+doctype_js = {
+	"Bank": "custom/bank.js",
+	"Purchase Invoice": "custom/purchase_invoice.js",
+	"Employee": "custom/employee.js",
+	"Supplier": "custom/supplier.js",
+}
 doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
