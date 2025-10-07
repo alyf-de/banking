@@ -36,13 +36,13 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.actions_table.freeze();
 
 		let filter_fields = this.match_field_group.get_values();
-		let document_types = Object.keys(filter_fields).filter(
+		let new_filters = Object.keys(filter_fields).filter(
 			(field) => filter_fields[field] === 1
 		);
 
-		this.update_filters_in_state(document_types);
+		this.update_filters_in_state(new_filters);
 
-		let vouchers = await this.get_matching_vouchers(document_types);
+		let vouchers = await this.get_matching_vouchers(new_filters);
 		this.set_table_data(vouchers);
 		this.actions_table.unfreeze();
 
@@ -56,9 +56,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		);
 	}
 
-	update_filters_in_state(document_types) {
+	update_filters_in_state(new_filters) {
 		Object.keys(this.panel_manager.actions_filters).map((key) => {
-			let value = document_types.includes(key) ? 1 : 0;
+			let value = new_filters.includes(key) ? 1 : 0;
 			this.panel_manager.actions_filters[key] = value;
 		});
 	}
@@ -342,9 +342,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	async get_match_tab_fields() {
 		const filters_state = this.panel_manager.actions_filters;
-		const document_types = await frappe.xcall(
-			"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_doctypes_for_bank_reconciliation"
-		);
+		const document_types = Object.keys(this.panel_manager.document_types);
 		const document_types_fields = [];
 		document_types.forEach((type, index) => {
 			document_types_fields.push({
