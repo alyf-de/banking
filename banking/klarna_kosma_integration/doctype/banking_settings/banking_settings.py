@@ -14,6 +14,32 @@ from banking.klarna_kosma_integration.admin import Admin
 
 
 class BankingSettings(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		from banking.klarna_kosma_integration.doctype.banking_reference_mapping.banking_reference_mapping import (
+			BankingReferenceMapping,
+		)
+		from banking.klarna_kosma_integration.doctype.voucher_matching_default.voucher_matching_default import (
+			VoucherMatchingDefault,
+		)
+
+		admin_endpoint: DF.Data | None
+		api_token: DF.Password | None
+		customer_id: DF.Data | None
+		enable_ebics: DF.Check
+		enabled: DF.Check
+		fintech_license_key: DF.Password | None
+		fintech_licensee_name: DF.Data | None
+		reference_fields: DF.Table[BankingReferenceMapping]
+		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
+
+	# end: auto-generated types
 	def before_validate(self):
 		self.update_fintech_license()
 
