@@ -127,6 +127,10 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		});
 	},
 
+	company: function (frm) {
+		frm.events.get_bank_transactions(frm);
+	},
+
 	bank_account: function (frm) {
 		if (frm.doc.bank_account) {
 			frappe.db.get_value(

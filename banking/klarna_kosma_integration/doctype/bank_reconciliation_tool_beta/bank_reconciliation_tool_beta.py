@@ -55,6 +55,7 @@ class BankReconciliationToolBeta(Document):
 
 @frappe.whitelist()
 def get_bank_transactions(
+	company: str | None = None,
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
@@ -72,6 +73,9 @@ def get_bank_transactions(
 
 	if from_date:
 		filters.append(["date", ">=", from_date])
+
+	if company:
+		filters.append(["company", "=", company])
 
 	return frappe.get_list(
 		"Bank Transaction",
