@@ -63,10 +63,14 @@ def get_bank_transactions(
 ):
 	"""Return bank transactions for a bank account"""
 	filters = [
-		["bank_account", "=", bank_account] if bank_account else ["bank_account", "is", "not set"],
 		["docstatus", "=", 1],
 		["unallocated_amount", ">", 0.001],
 	]
+
+	if bank_account:
+		filters.append(["bank_account", "=", bank_account])
+	else:
+		filters.append(["bank_account", "is", "not set"])
 
 	if to_date:
 		filters.append(["date", "<=", to_date])
