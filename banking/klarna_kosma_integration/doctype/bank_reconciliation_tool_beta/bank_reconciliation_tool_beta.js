@@ -96,13 +96,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	},
 
 	get_bank_transactions: function (frm) {
-		if (!frm.doc.bank_account) {
-			frappe.throw({
-				message: __("Please set the 'Bank Account' filter"),
-				title: __("Filter Required"),
-			});
-		}
-
 		frm.events.build_reconciliation_area(frm);
 	},
 
@@ -234,8 +227,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	},
 
 	build_reconciliation_area: function (frm) {
-		if (!frm.doc.bank_account) return;
-
 		frappe.require("bank_reconciliation_beta.bundle.js", () => {
 			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
 				{

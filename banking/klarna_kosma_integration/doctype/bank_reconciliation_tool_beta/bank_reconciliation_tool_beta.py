@@ -31,19 +31,38 @@ MAX_QUERY_RESULTS = 150
 
 
 class BankReconciliationToolBeta(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		account_currency: DF.Link | None
+		account_opening_balance: DF.Currency
+		bank_account: DF.Link | None
+		bank_statement_closing_balance: DF.Currency
+		bank_statement_from_date: DF.Date | None
+		bank_statement_to_date: DF.Date | None
+		company: DF.Link | None
+		filter_by_reference_date: DF.Check
+		from_reference_date: DF.Date | None
+		to_reference_date: DF.Date | None
+	# end: auto-generated types
 	pass
 
 
 @frappe.whitelist()
 def get_bank_transactions(
-	bank_account: str,
+	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
 	order_by: str | datetime.date | None = "date asc",
 ):
 	"""Return bank transactions for a bank account"""
 	filters = [
-		["bank_account", "=", bank_account],
+		["bank_account", "=", bank_account] if bank_account else ["bank_account", "is", "not set"],
 		["docstatus", "=", 1],
 		["unallocated_amount", ">", 0.001],
 	]
@@ -406,9 +425,12 @@ def get_linked_payments(
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	transaction.check_permission("read")
 
-	gl_account, company = frappe.db.get_value(
-		"Bank Account", transaction.bank_account, ["account", "company"]
-	)
+	if transaction.bank_account:
+		gl_account, company = frappe.db.get_value(
+			"Bank Account", transaction.bank_account, ["account", "company"]
+		)
+	else:
+		gl_account, company = None, None
 
 	if isinstance(document_types, str):
 		document_types = json.loads(document_types)

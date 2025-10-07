@@ -40,8 +40,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Bank Account",
-   "options": "Bank Account",
-   "reqd": 1
+   "options": "Bank Account"
   },
   {
    "fieldname": "account_currency",
@@ -70,13 +69,13 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval: doc.bank_account && !doc.filter_by_reference_date",
+   "depends_on": "eval: !doc.filter_by_reference_date",
    "fieldname": "bank_statement_from_date",
    "fieldtype": "Date",
    "label": "From Date"
   },
   {
-   "depends_on": "eval: doc.bank_account && !doc.filter_by_reference_date",
+   "depends_on": "eval: !doc.filter_by_reference_date",
    "fieldname": "bank_statement_to_date",
    "fieldtype": "Date",
    "label": "To Date"
@@ -95,7 +94,6 @@
   },
   {
    "default": "0",
-   "depends_on": "bank_account",
    "fieldname": "filter_by_reference_date",
    "fieldtype": "Check",
    "label": "Filter by Reference Date"
@@ -113,11 +111,12 @@
    "fieldtype": "HTML"
   }
  ],
+ "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-09-11 19:10:17.108955",
+ "modified": "2025-10-07 20:00:00.617187",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Tool Beta",
@@ -147,6 +146,7 @@
   }
  ],
  "quick_entry": 1,
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []
