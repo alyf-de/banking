@@ -203,3 +203,14 @@ def get_latest_release_for_branch(owner: str, repo: str):
 	except Exception:
 		frappe.log_error(title=_("Banking Error"), message=_("Error while fetching releases"))
 		return None
+
+
+@frappe.whitelist()
+def get_doctypes_for_bank_reconciliation() -> dict[str, bool]:
+	"""Get Bank Reconciliation doctypes from all the apps and check if they are in the default doctypes"""
+	frappe.has_permission("Bank Reconciliation Tool Beta", throw=True)
+
+	all_doctypes = frappe.get_hooks("bank_reconciliation_doctypes")
+	settings: BankingSettings = frappe.get_single("Banking Settings")
+	default_doctypes = [row.document_type for row in settings.voucher_matching_defaults]
+	return {dt: dt in default_doctypes for dt in all_doctypes}

@@ -342,10 +342,19 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	get_match_tab_fields() {
 		const filters_state = this.panel_manager.actions_filters;
+<<<<<<< HEAD
 		return [
 			{
 				label: __("Payment Entry"),
 				fieldname: "payment_entry",
+=======
+		const document_types = Object.keys(this.panel_manager.document_types);
+		const document_types_fields = [];
+		document_types.forEach((type, index) => {
+			document_types_fields.push({
+				label: __(type),
+				fieldname: frappe.scrub(type),
+>>>>>>> 4f745bc (feat(Bank Reconciliation Tool): use new Voucher Matching Defaults)
 				fieldtype: "Check",
 				default: filters_state.payment_entry,
 				onchange: (e) => {
