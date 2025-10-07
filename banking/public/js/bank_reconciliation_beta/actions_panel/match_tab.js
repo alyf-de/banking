@@ -342,9 +342,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	async get_match_tab_fields() {
 		const filters_state = this.panel_manager.actions_filters;
-		const document_types = await frappe.xcall(
-			"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_doctypes_for_bank_reconciliation"
-		);
+		const document_types = Object.keys(this.panel_manager.document_types);
 		const document_types_fields = [];
 		document_types.forEach((type, index) => {
 			document_types_fields.push({
