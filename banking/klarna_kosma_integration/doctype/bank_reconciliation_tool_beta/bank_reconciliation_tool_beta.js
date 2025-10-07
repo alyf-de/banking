@@ -142,11 +142,9 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 					});
 				}
 			);
-
-			frm.events.get_bank_transactions(frm);
-		} else {
-			frm.events.setup_empty_state(frm);
 		}
+
+		frm.events.get_bank_transactions(frm);
 	},
 
 	bank_statement_from_date: function (frm) {
