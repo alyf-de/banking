@@ -31,6 +31,9 @@ def download_files(name: str):
 	except json.JSONDecodeError:
 		frappe.throw(_("No data available for download."))
 
+	if not isinstance(data, dict):
+		frappe.throw(_("Invalid data available for download."))
+
 	zip_buffer = BytesIO()
 
 	with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
