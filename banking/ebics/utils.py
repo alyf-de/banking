@@ -69,7 +69,7 @@ def sync_ebics_transactions(
 	permitted_types = manager.get_permitted_order_types()
 	validate_permitted_types(user, permitted_types, intraday)
 
-	with_c54 = user.split_batch_transactions and "C54" in permitted_types
+	with_c54 = user.download_batch_transactions and "C54" in permitted_types
 	request = log_request(
 		ebics_user,
 		"C52" if intraday else "C53",
@@ -172,11 +172,11 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 			reference_name=user.name,
 		)
 
-	if not intraday and user.split_batch_transactions and "C54" not in permitted_types:
+	if not intraday and user.download_batch_transactions and "C54" not in permitted_types:
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
-				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
+				"EBICS User {0} lacks permission 'C54' for downloading batch transactions. The permitted types are: {1}."
 			).format(user.name, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=user.name,

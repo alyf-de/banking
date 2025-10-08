@@ -45,3 +45,5 @@ Please select a Bank Account to start reconciling.,Selezionare un conto bancario
 Fetching older transactions will count against your limit in the current billing period.,Il recupero di transazioni più vecchie verrà conteggiato nel limite del periodo di fatturazione corrente.,
 Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry.,Stai cercando di conciliare ricevute di parti diverse? Questa azione concilierà le ricevute utilizzando un movimento contabile.,
 Multiple Party Reconciliation, Conciliazione di più parti,
+Download Batch Transactions,Scarica transazioni batch,
+"If enabled, <code>camt.054</code> files are downloaded and merged with <code>camt.052</code> or <code>camt.053</code> files.","Se abilitato, i file <code>camt.054</code> vengono scaricati e uniti con i file <code>camt.052</code> o <code>camt.053</code>.",
