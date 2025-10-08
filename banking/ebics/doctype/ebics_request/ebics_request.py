@@ -50,7 +50,7 @@ def download_files(name: str):
 
 	try:
 		data = json.loads(doc.response)
-	except json.JSONDecodeError:
+	except (json.JSONDecodeError, TypeError):
 		frappe.throw(_("No data available for download."))
 
 	if not isinstance(data, dict):
