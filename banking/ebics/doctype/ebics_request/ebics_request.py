@@ -9,6 +9,28 @@ class EBICSRequest(Document):
 	pass
 
 
+def sanitize_filename(filename: str) -> str:
+	"""
+	Sanitize a filename for use in zip files by removing path components.
+
+	Args:
+		filename: The original filename from user input
+
+	Returns:
+		A sanitized filename that's safe to use
+	"""
+	from os.path import basename
+
+	if not filename or not isinstance(filename, str):
+		return "unnamed_file"
+
+	# Remove any path components to get just the basename
+	filename = basename(filename).strip()
+
+	# Fallback if filename becomes empty after sanitization
+	return filename or "unnamed_file"
+
+
 @frappe.whitelist()
 def download_files(name: str):
 	"""
@@ -38,7 +60,8 @@ def download_files(name: str):
 
 	with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
 		for file_name, file_data in data.items():
-			zip_file.writestr(file_name, file_data)
+			safe_filename = sanitize_filename(file_name)
+			zip_file.writestr(safe_filename, file_data)
 
 	frappe.response["filecontent"] = zip_buffer.getvalue()
 	frappe.response["filename"] = f"{name}.zip"
