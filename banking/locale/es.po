@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-10-01 23:54+0053\n"
+"POT-Creation-Date: 2025-10-08 16:14+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -27,7 +27,7 @@ msgstr "<span class=\"h4\">Bancario</span>"
 msgid "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>"
 msgstr "<ul><li>Almacena el mapeo por DocType de campos que deben considerarse como campos de 'número de referencia' en la Herramienta de Conciliación Bancaria Beta</li><li>Se admiten campos de enlace y datos</li><li>El campo debe tener un número de referencia singular para coincidir con las transacciones bancarias</li></ul>"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:150
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:176
 msgid "A new version of the Banking app is available ({0}). Please update your instance."
 msgstr "Es está disponible una nueva versión de la aplicación Banking ({0}). Por favor, actualice su instancia."
 
@@ -218,14 +218,14 @@ msgstr "Bancario"
 msgid "Banking Action has failed due to the following error(s):"
 msgstr "La acción de Banking ha fallado debido a los siguientes errores:"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:46
-#: banking/ebics/doctype/ebics_user/ebics_user.py:49
-#: banking/ebics/doctype/ebics_user/ebics_user.py:56
-#: banking/ebics/doctype/ebics_user/ebics_user.py:59 banking/ebics/utils.py:108
+#: banking/ebics/doctype/ebics_user/ebics_user.py:72
+#: banking/ebics/doctype/ebics_user/ebics_user.py:75
+#: banking/ebics/doctype/ebics_user/ebics_user.py:82
+#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:108
 #: banking/ebics/utils.py:125 banking/ebics/utils.py:142
 #: banking/ebics/utils.py:157 banking/ebics/utils.py:167
 #: banking/ebics/utils.py:177
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:178
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:204
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
 #: banking/klarna_kosma_integration/exception_handler.py:41
@@ -366,13 +366,13 @@ msgid "DOWNLOADED"
 msgstr "DESCARGADO"
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:81
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:465
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:123
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:463
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:126
 msgid "Date"
 msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:88
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:125
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:128
 msgid "Deposit"
 msgstr "Depósito"
 
@@ -384,8 +384,8 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:60
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:88
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:86
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:114
 msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
 msgstr "El modo desarrollador está activado. Por favor, desactívelo para continuar sincronizando transacciones bancarias automáticamente."
 
@@ -394,7 +394,9 @@ msgid "Did you mean {0}?"
 msgstr "¿Me refieres a {0}?"
 
 #. Label of a Select field in DocType 'Banking Reference Mapping'
+#. Label of a Link field in DocType 'Voucher Matching Default'
 #: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+#: banking/klarna_kosma_integration/doctype/voucher_matching_default/voucher_matching_default.json
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:154
 msgid "Document Type"
 msgstr ""
@@ -407,6 +409,11 @@ msgstr ""
 #: banking/ebics/doctype/ebics_user/ebics_user.js:296
 msgid "Download Bank Statements"
 msgstr "Descargar extractos bancarios"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Download Batch Transactions"
+msgstr "Descargar transacciones por lotes"
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:19
 msgid "Download as XML"
@@ -466,13 +473,13 @@ msgstr "URL EBICS"
 msgid "EBICS User"
 msgstr "Usuario de EBICS"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:47
+#: banking/ebics/doctype/ebics_user/ebics_user.py:73
 msgid "EBICS User limit exceeded."
 msgstr "Se ha excedido el límite de usuarios de EBICS"
 
 #: banking/ebics/utils.py:178
-msgid "EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
-msgstr "El usuario de EBICS {0} carece de permiso 'C54' para dividir transacciones por lotes. Los tipos permitidos son: {1}"
+msgid "EBICS User {0} lacks permission 'C54' for downloading batch transactions. The permitted types are: {1}."
+msgstr "El usuario de EBICS {0} no tiene permiso 'C54' para descargar transacciones por lotes. Los tipos permitidos son: {1}"
 
 #. Label of a Link in the ALYF Banking Workspace
 #: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
@@ -492,7 +499,7 @@ msgstr ""
 msgid "Ebics 3.0 (H005)"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
 msgid "Ebics Users"
 msgstr "Usuarios de EBICS"
 
@@ -555,7 +562,7 @@ msgstr "Ingrese su contraseña para habilitar la sincronización automática, re
 msgid "Enter your signature passphrase"
 msgstr "Ingrese su frase de contraseña de firma"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:178
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:204
 msgid "Error while fetching releases"
 msgstr "Error al obtener las versiones"
 
@@ -587,7 +594,7 @@ msgstr "No se pudo conciliar el nuevo {0} contra {1}"
 msgid "Failed to reconcile {0}"
 msgstr "No se pudo conciliar {0}"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:73
+#: banking/ebics/doctype/ebics_user/ebics_user.py:99
 msgid "Failed to remove EBICS user registration."
 msgstr "No se pudo eliminar el registro de usuario de EBICS."
 
@@ -595,7 +602,7 @@ msgstr "No se pudo eliminar el registro de usuario de EBICS."
 msgid "Failed to update {0}"
 msgstr "No se pudo actualizar {0}"
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:40
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:48
 msgid "Fetching Bank Transactions"
 msgstr "Descargando transacciones bancarias"
 
@@ -670,7 +677,7 @@ msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:288
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:197
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:430
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:428
 msgid "Hidden field for alignment"
 msgstr ""
 
@@ -702,6 +709,12 @@ msgstr ""
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 msgid "If enabled, <code>camt.052</code> transactions are downloaded four times a day. Otherwise <code>camt.053</code> transactions are downloaded once a day."
 msgstr "Si está habilitado, las transacciones <code>camt.052</code> se descargan cuatro veces al día. De lo contrario, las transacciones <code>camt.053</code> se descargan una vez al día."
+
+#. Description of the 'Download Batch Transactions' (Check) field in DocType
+#. 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "If enabled, <code>camt.054</code> files are downloaded and merged with <code>camt.052</code> or <code>camt.053</code> files."
+msgstr "Si está habilitado, se descargan y fusionan los archivos <code>camt.054</code> con los archivos <code>camt.052</code> o <code>camt.053</code>."
 
 #. Description of the 'Split Batch Transactions' (Check) field in DocType
 #. 'EBICS User'
@@ -761,7 +774,7 @@ msgstr "Cajón de llaves"
 msgid "Klarna Kosma Integration"
 msgstr "Integración de Klarna Kosma"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:57
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
 msgid "Last Renewed On"
 msgstr "Última renovación en"
 
@@ -769,7 +782,7 @@ msgstr "Última renovación en"
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr "No se encontró la clave de licencia. Por favor, active el campo 'Habilitar EBICS' en {0} y asegúrese de que su suscripción esté activa."
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:57
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
 msgid "Limit"
 msgstr "Límite"
 
@@ -795,7 +808,7 @@ msgstr "Necesita certificado"
 msgid "No Data Available"
 msgstr "No hay datos disponibles"
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:79
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:82
 msgid "No Transactions found for the current filters."
 msgstr "No se encontraron transacciones para los filtros actuales."
 
@@ -811,9 +824,9 @@ msgstr "No se encontraron coincidencias mediante conciliación automática"
 msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
 msgstr "Nota: Cuando pierda estas contraseñas, tendrá que pasar por el proceso de inicialización con su banco de nuevo."
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:19
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:57
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:101
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:34
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:116
 msgid "Open Billing Portal"
 msgstr "Abrir portal de facturación"
 
@@ -822,7 +835,7 @@ msgstr "Abrir portal de facturación"
 msgid "Order Type"
 msgstr "Tipo de pedido"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:469
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:467
 msgid "Outstanding"
 msgstr ""
 
@@ -849,7 +862,7 @@ msgid "Partner ID"
 msgstr "ID del socio"
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:187
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:473
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:471
 msgid "Party"
 msgstr ""
 
@@ -892,19 +905,19 @@ msgstr "La orden de pago no ha sido enviada al banco."
 msgid "Payments"
 msgstr "Pagos"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:265
+#: banking/ebics/doctype/ebics_user/ebics_user.py:291
 msgid "Please activate the checkbox 'Enable EBICS' in the {0}."
 msgstr "Por favor, active el campo 'Habilitar EBICS' en {0}."
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:258
+#: banking/ebics/doctype/ebics_user/ebics_user.py:284
 msgid "Please activate the checkbox 'Enabled' in the {0}."
 msgstr "Por favor, active el campo 'Habilitado' en {0}."
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:94
+#: banking/ebics/doctype/ebics_user/ebics_user.py:120
 msgid "Please add EBICS Host ID and URL to bank {0}"
 msgstr "Por favor, agregue el ID de host de EBICS y la URL del banco {0}"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:85
+#: banking/ebics/doctype/ebics_user/ebics_user.py:111
 msgid "Please add a two-letter country code to country {0}"
 msgstr "Por favor, agregue un código de país de dos letras al país {0}"
 
@@ -983,7 +996,7 @@ msgstr "Propósito"
 msgid "Recipient"
 msgstr "Destinatario"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:439
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:437
 msgid "Reconcile"
 msgstr "Conciliar"
 
@@ -995,13 +1008,13 @@ msgstr "Conciliado"
 msgid "Reconciling ..."
 msgstr "Conciliando..."
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:23
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:38
 msgid "Redirecting to Customer Portal ..."
 msgstr "Redirigiendo al portal del cliente ..."
 
 #. Label of a Section Break field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:483
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:481
 msgid "Reference"
 msgstr "Referencia"
 
@@ -1117,11 +1130,11 @@ msgstr "Establezca una nueva contraseña para cargar transacciones a su banco."
 msgid "Setup"
 msgstr "Configuración"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:373
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:371
 msgid "Show Exact Amount"
 msgstr "Mostrar cantidad exacta"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:385
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:383
 msgid "Show Exact Party"
 msgstr "Mostrar parte exacta"
 
@@ -1134,7 +1147,7 @@ msgstr "Mostrar versiones de protocolo"
 msgid "Signature Passphrase"
 msgstr "Contraseña de firma"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:31
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:46
 msgid "Signup for Banking"
 msgstr "Registro para Banking"
 
@@ -1142,7 +1155,7 @@ msgstr "Registro para Banking"
 msgid "Something went wrong. Please retry in a while."
 msgstr "Algo salió mal. Por favor, inténtelo de nuevo en un momento."
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:111
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:114
 msgid "Sort By"
 msgstr "Ordenar por"
 
@@ -1158,7 +1171,7 @@ msgstr ""
 
 #. Label of a Select field in DocType 'EBICS Request'
 #: banking/ebics/doctype/ebics_request/ebics_request.json
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
 msgid "Status"
 msgstr "Estado"
 
@@ -1174,7 +1187,7 @@ msgstr "Almacene la contraseña en la base de datos de ERPNext para habilitar la
 msgid "Submit"
 msgstr "Enviar"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
 msgid "Subscriber"
 msgstr "Suscriptor"
 
@@ -1183,7 +1196,7 @@ msgstr "Suscriptor"
 msgid "Subscription"
 msgstr "Suscripción"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
 msgid "Subscription Details"
 msgstr "Detalles de suscripción"
 
@@ -1234,13 +1247,19 @@ msgstr "El tipo de cambio de la cuenta bancaria ({0} : {1}) debe ser el mismo qu
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
 msgstr "El tipo de cambio de la cuenta bancaria ({0}) debe ser el mismo que el de la cuenta bancaria ({1})"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:155
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:181
 msgid "The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
 msgstr "El programador está inactivo. Por favor, actívelo para continuar sincronizando transacciones bancarias automáticamente."
 
 #: banking/klarna_kosma_integration/exception_handler.py:76
 msgid "The server has errored. Please retry in some time."
 msgstr "El servidor ha generado un error. Por favor, inténtelo de nuevo en un momento."
+
+#. Description of the 'Voucher Matching Defaults' (Table MultiSelect) field in
+#. DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "These DocTypes are pre-enabled in the 'Match Voucher' tab."
+msgstr "Estos tipos de documentos están habilitados por defecto en la pestaña 'Conciliación de comprobante'."
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:114
 msgid "To Allocate"
@@ -1257,7 +1276,7 @@ msgstr ""
 msgid "To Reference Date"
 msgstr ""
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:114
+#: banking/ebics/doctype/ebics_user/ebics_user.py:140
 msgid "To use protocol version H005, please activate the checkbox 'Needs Certificates'."
 msgstr "Para usar la versión del protocolo H005, por favor active la casilla 'Necesita certificados'."
 
@@ -1283,11 +1302,11 @@ msgstr "Fecha y hora de transmisión"
 msgid "Transmission Type"
 msgstr "Tipo de transmisión"
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:128
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:131
 msgid "Unallocated Amount"
 msgstr "Cantidad no asignada"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:400
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:398
 msgid "Unpaid Vouchers"
 msgstr "Comprobantes sin pagar"
 
@@ -1316,7 +1335,7 @@ msgstr "Cargar archivo MT940"
 msgid "Upload XML (CAMT.053) file"
 msgstr "Cargar archivo XML (CAMT.053)"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:55
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
 msgid "Usage"
 msgstr "Uso"
 
@@ -1330,11 +1349,11 @@ msgstr ""
 msgid "User ID"
 msgstr "ID de usuario"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:57
+#: banking/ebics/doctype/ebics_user/ebics_user.py:83
 msgid "User ID not available."
 msgstr "No se encontró el ID de usuario."
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:57
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
 msgid "Valid Till"
 msgstr "Válido hasta"
 
@@ -1342,13 +1361,23 @@ msgstr "Válido hasta"
 msgid "Verify Bank Keys"
 msgstr "Verificar claves del banco"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:10
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:25
 msgid "View EBICS Users"
 msgstr "Ver usuarios de EBICS"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:478
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:476
 msgid "Voucher"
 msgstr "Comprobante"
+
+#. Name of a DocType
+#: banking/klarna_kosma_integration/doctype/voucher_matching_default/voucher_matching_default.json
+msgid "Voucher Matching Default"
+msgstr "Conciliación de comprobante por defecto"
+
+#. Label of a Table MultiSelect field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Voucher Matching Defaults"
+msgstr "Conciliaciones de comprobante por defecto"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:244
 msgid "We'll try to download all transactions of completed days in the selected period, using <code>camt.053</code>."
@@ -1359,11 +1388,11 @@ msgid "We'll try to download new transactions from today, using <code>camt.052</
 msgstr "Intentaremos descargar las nuevas transacciones desde hoy, utilizando <code>camt.052</code>."
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:96
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:124
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:127
 msgid "Withdrawal"
 msgstr "Retiro"
 
-#: banking/ebics/doctype/ebics_user/ebics_user.py:104
+#: banking/ebics/doctype/ebics_user/ebics_user.py:130
 msgid "You selected protocol version {0}, but the bank {1} only supports {2}."
 msgstr "Seleccionó la versión del protocolo {0}, pero el banco {1} solo admite {2}."
 
