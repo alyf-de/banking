@@ -14,32 +14,6 @@ from banking.klarna_kosma_integration.admin import Admin
 
 
 class EBICSUser(Document):
-	# begin: auto-generated types
-	# This code is auto-generated. Do not modify anything in this block.
-
-	from typing import TYPE_CHECKING
-
-	if TYPE_CHECKING:
-		from frappe.types import DF
-
-		bank: DF.Link | None
-		bank_keys_activated: DF.Check
-		company: DF.Link | None
-		country: DF.Link | None
-		download_batch_transactions: DF.Check
-		full_name: DF.Data | None
-		initialized: DF.Check
-		intraday_sync: DF.Check
-		keyring: DF.Code | None
-		needs_certificates: DF.Check
-		partner_id: DF.Data | None
-		passphrase: DF.Password | None
-		protocol_version: DF.Literal["H004", "H005"]
-		split_batch_transactions: DF.Check
-		start_date: DF.Date | None
-		user_id: DF.Data | None
-
-	# end: auto-generated types
 	def validate(self):
 		if self.country:
 			self.validate_country_code()
