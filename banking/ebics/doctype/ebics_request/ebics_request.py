@@ -33,11 +33,9 @@ def download_files(name: str):
 
 	zip_buffer = BytesIO()
 
-	zip_file = zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED)
-	for file_name, file_data in data.items():
-		zip_file.writestr(file_name, file_data)
-
-	zip_file.close()
+	with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+		for file_name, file_data in data.items():
+			zip_file.writestr(file_name, file_data)
 
 	frappe.response["filecontent"] = zip_buffer.getvalue()
 	frappe.response["filename"] = f"{name}.zip"
