@@ -247,6 +247,7 @@ def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
 	reconcile_multi_party: bool = False,
+	extra_params: dict | None = None,
 ) -> "CustomBankTransaction":
 	"""
 	Reconcile multiple vouchers with a bank transaction.
@@ -257,12 +258,17 @@ def bulk_reconcile_vouchers(
 	if isinstance(vouchers, str):
 		vouchers = json.loads(vouchers)
 
+	if isinstance(extra_params, str):
+		extra_params = json.loads(extra_params)
+
 	reconcile_multi_party = sbool(reconcile_multi_party)
 
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 
 	for hook in frappe.get_hooks("get_payment_entries"):
-		vouchers = frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party) or vouchers
+		vouchers = (
+			frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party, extra_params) or vouchers
+		)
 
 	transaction.add_payment_entries(vouchers, reconcile_multi_party)
 	transaction.validate_duplicate_references()

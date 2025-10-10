@@ -257,7 +257,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		});
 	}
 
-	reconcile_selected_vouchers() {
+	async reconcile_selected_vouchers() {
 		const me = this;
 		let selected_vouchers = [];
 		let selected_map = this.actions_table.rowmanager.checkMap;
@@ -294,18 +294,34 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			return;
 		}
 
+		const handlers = await cur_frm.script_manager.get_handlers(
+			"before_reconcile",
+			"Bank Reconciliation Tool Beta"
+		);
+		let extra_params = {};
+		for (const handler of handlers.new_style) {
+			let result = await handler(this.transaction, selected_vouchers);
+			if (result) {
+				extra_params = { ...extra_params, ...result };
+			}
+		}
+
 		// If the vouchers have different parties prepare a prompt to reconcile multi-party
 		let parties = new Set(selected_vouchers.map((voucher) => voucher.party));
 		if (parties.size > 1) {
 			this.show_multiple_party_reconcile_prompt().then(() => {
-				this.bulk_reconcile_vouchers(selected_vouchers, true);
+				this.bulk_reconcile_vouchers(selected_vouchers, true, extra_params);
 			});
 		} else {
-			this.bulk_reconcile_vouchers(selected_vouchers, false);
+			this.bulk_reconcile_vouchers(selected_vouchers, false, extra_params);
 		}
 	}
 
-	bulk_reconcile_vouchers(selected_vouchers, reconcile_multi_party) {
+	bulk_reconcile_vouchers(
+		selected_vouchers,
+		reconcile_multi_party,
+		extra_params
+	) {
 		let me = this;
 		frappe.call({
 			method:
@@ -314,6 +330,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				bank_transaction_name: this.transaction.name,
 				vouchers: selected_vouchers,
 				reconcile_multi_party: reconcile_multi_party,
+				extra_params: extra_params,
 			},
 			freeze: true,
 			freeze_message: __("Reconciling ..."),
