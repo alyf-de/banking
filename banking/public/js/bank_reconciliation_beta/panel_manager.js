@@ -39,9 +39,9 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				method:
 					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
 				args: {
-					bank_account: this.doc.bank_account,
-					from_date: this.doc.bank_statement_from_date,
-					to_date: this.doc.bank_statement_to_date,
+					bank_account: this.frm.doc.bank_account,
+					from_date: this.frm.doc.bank_statement_from_date,
+					to_date: this.frm.doc.bank_statement_to_date,
 					order_by: this.order || "date asc",
 				},
 				freeze: true,
@@ -104,7 +104,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			new erpnext.accounts.bank_reconciliation.ActionsPanelManager({
 				$wrapper: this.$panel_wrapper,
 				transaction: this.active_transaction,
-				doc: this.doc,
+				frm: this.frm,
 				panel_manager: this,
 			});
 	}

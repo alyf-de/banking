@@ -71,11 +71,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				args: {
 					bank_transaction_name: this.transaction.name,
 					document_types: document_types,
-					from_date: this.doc.bank_statement_from_date,
-					to_date: this.doc.bank_statement_to_date,
-					filter_by_reference_date: this.doc.filter_by_reference_date,
-					from_reference_date: this.doc.from_reference_date,
-					to_reference_date: this.doc.to_reference_date,
+					from_date: this.frm.doc.bank_statement_from_date,
+					to_date: this.frm.doc.bank_statement_to_date,
+					filter_by_reference_date: this.frm.doc.filter_by_reference_date,
+					from_reference_date: this.frm.doc.from_reference_date,
+					to_reference_date: this.frm.doc.to_reference_date,
 				},
 			})
 			.then((result) => result.message);
