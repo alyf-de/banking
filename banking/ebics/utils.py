@@ -69,10 +69,12 @@ def sync_ebics_transactions(
 	permitted_types = manager.get_permitted_order_types()
 	validate_permitted_types(user, permitted_types, intraday)
 
-	with_c54 = user.download_batch_transactions and "C54" in permitted_types
+	with_c54 = user.download_batch_transactions and set(permitted_types).intersection({"C54", "Z54"})
 	request = log_request(
 		ebics_user,
-		"C52" if intraday else "C53",
+		("Z52" if manager.country_code == "CH" else "C52")
+		if intraday
+		else ("Z53" if manager.country_code == "CH" else "C53"),
 		requested_by,
 		{
 			"start_date": start_date,
@@ -152,7 +154,7 @@ def sync_ebics_transactions(
 def validate_permitted_types(user, permitted_types, intraday: bool):
 	# Not sure yet, how reliable permitted types are. For now, we just log an error
 	# instead of raising an exception or returning.
-	if intraday and "C52" not in permitted_types:
+	if intraday and not set(permitted_types).intersection({"C52", "Z52"}):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
@@ -162,7 +164,7 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 			reference_name=user.name,
 		)
 
-	if not intraday and "C53" not in permitted_types:
+	if not intraday and not set(permitted_types).intersection({"C53", "Z53"}):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
@@ -172,7 +174,11 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 			reference_name=user.name,
 		)
 
-	if not intraday and user.download_batch_transactions and "C54" not in permitted_types:
+	if (
+		not intraday
+		and user.download_batch_transactions
+		and not set(permitted_types).intersection({"C54", "Z54"})
+	):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
