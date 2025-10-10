@@ -1258,8 +1258,6 @@ def get_unpaid_pi_matching_query(
 
 	rank_expression = ref_rank + party_match + amount_rank + date_rank + name_match + ref_match + 1
 
-	# We skip date rank as the date of an unpaid bill is mostly
-	# earlier than the date of the bank transaction
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(
