@@ -20,7 +20,12 @@ DOCTYPE, DOCNAME, AMOUNT, PARTY = 0, 1, 2, 3
 
 
 def get_payment_entries(
-	bt: "CustomBankTransaction", vouchers: list, reconcile_multi_party: bool = False, *args, **kwargs
+	bt: "CustomBankTransaction",
+	vouchers: list,
+	reconcile_multi_party: bool = False,
+	extra_params: dict | None = None,
+	*args,
+	**kwargs,
 ):
 	"""Reconcile unpaid invoices with the Bank Transaction."""
 	if any(
