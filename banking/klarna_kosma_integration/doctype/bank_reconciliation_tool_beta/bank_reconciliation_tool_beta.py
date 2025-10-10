@@ -267,7 +267,8 @@ def bulk_reconcile_vouchers(
 
 	for hook in frappe.get_hooks("get_payment_entries"):
 		vouchers = (
-			frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party, extra_params) or vouchers
+			frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party, extra_params=extra_params)
+			or vouchers
 		)
 
 	transaction.add_payment_entries(vouchers, reconcile_multi_party)
