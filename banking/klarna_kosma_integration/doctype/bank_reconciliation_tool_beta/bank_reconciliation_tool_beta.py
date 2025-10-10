@@ -247,7 +247,7 @@ def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
 	reconcile_multi_party: bool = False,
-	extra_params: dict | None = None,
+	extra_params: str | dict | None = None,
 ) -> "CustomBankTransaction":
 	"""
 	Reconcile multiple vouchers with a bank transaction.
