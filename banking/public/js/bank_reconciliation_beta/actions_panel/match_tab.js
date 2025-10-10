@@ -297,7 +297,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		// If the vouchers have different parties prepare a prompt to reconcile multi-party
 		let parties = new Set(selected_vouchers.map((voucher) => voucher.party));
 		if (parties.size > 1) {
-			this.show_multiple_party_reconcile_prompt(selected_vouchers);
+			this.show_multiple_party_reconcile_prompt().then(() => {
+				this.bulk_reconcile_vouchers(selected_vouchers, true);
+			});
 		} else {
 			this.bulk_reconcile_vouchers(selected_vouchers, false);
 		}
@@ -329,15 +331,20 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		});
 	}
 
-	show_multiple_party_reconcile_prompt(selected_vouchers) {
-		frappe.confirm(
-			__(
-				"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
-			),
-			() => {
-				this.bulk_reconcile_vouchers(selected_vouchers, true);
-			}
-		);
+	show_multiple_party_reconcile_prompt() {
+		return new Promise((resolve, reject) => {
+			frappe.confirm(
+				__(
+					"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
+				),
+				() => {
+					resolve();
+				},
+				() => {
+					reject();
+				}
+			);
+		});
 	}
 
 	async get_match_tab_fields() {
