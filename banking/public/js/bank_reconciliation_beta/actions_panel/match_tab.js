@@ -416,6 +416,15 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldtype: "Column Break",
 			},
 			{
+				label: __("Multi-Currency"),
+				fieldname: "multi_currency",
+				fieldtype: "Check",
+				default: filters_state.multi_currency,
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
+				},
+			},
+			{
 				fieldtype: "Section Break",
 			},
 			{

@@ -164,9 +164,15 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
 	adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
 
-	payment_entry.paid_amount = abs(
-		sum(row.allocated_amount for row in payment_entry.references)
-	)  # should not be negative
+	# Payment Entry automatically does the exchange rate conversion
+	if payment_entry.payment_type == "Pay":
+		payment_entry.received_amount = abs(
+			sum(row.allocated_amount for row in payment_entry.references)
+		)  # should not be negative
+	else:
+		payment_entry.paid_amount = abs(
+			sum(row.allocated_amount for row in payment_entry.references)
+		)  # should not be negative
 	payment_entry.submit()
 	return payment_entry
 
