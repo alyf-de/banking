@@ -294,7 +294,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			return;
 		}
 
-		const handlers = await cur_frm.script_manager.get_handlers(
+		const handlers = await this.frm.script_manager.get_handlers(
 			"before_reconcile",
 			"Bank Reconciliation Tool Beta"
 		);
