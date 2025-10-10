@@ -71,11 +71,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				args: {
 					bank_transaction_name: this.transaction.name,
 					document_types: document_types,
-					from_date: this.doc.bank_statement_from_date,
-					to_date: this.doc.bank_statement_to_date,
-					filter_by_reference_date: this.doc.filter_by_reference_date,
-					from_reference_date: this.doc.from_reference_date,
-					to_reference_date: this.doc.to_reference_date,
+					from_date: this.frm.doc.bank_statement_from_date,
+					to_date: this.frm.doc.bank_statement_to_date,
+					filter_by_reference_date: this.frm.doc.filter_by_reference_date,
+					from_reference_date: this.frm.doc.from_reference_date,
+					to_reference_date: this.frm.doc.to_reference_date,
 				},
 			})
 			.then((result) => result.message);
@@ -297,7 +297,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		// If the vouchers have different parties prepare a prompt to reconcile multi-party
 		let parties = new Set(selected_vouchers.map((voucher) => voucher.party));
 		if (parties.size > 1) {
-			this.show_multiple_party_reconcile_prompt(selected_vouchers);
+			this.show_multiple_party_reconcile_prompt().then(() => {
+				this.bulk_reconcile_vouchers(selected_vouchers, true);
+			});
 		} else {
 			this.bulk_reconcile_vouchers(selected_vouchers, false);
 		}
@@ -329,15 +331,20 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		});
 	}
 
-	show_multiple_party_reconcile_prompt(selected_vouchers) {
-		frappe.confirm(
-			__(
-				"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
-			),
-			() => {
-				this.bulk_reconcile_vouchers(selected_vouchers, true);
-			}
-		);
+	show_multiple_party_reconcile_prompt() {
+		return new Promise((resolve, reject) => {
+			frappe.confirm(
+				__(
+					"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
+				),
+				() => {
+					resolve();
+				},
+				() => {
+					reject();
+				}
+			);
+		});
 	}
 
 	async get_match_tab_fields() {
