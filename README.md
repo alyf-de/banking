@@ -67,7 +67,14 @@ Use the extra values in the `get_payment_entries` hook:
 from banking.overrides.bank_transaction import CustomBankTransaction
 
 
-def get_payment_entries(bt: CustomBankTransaction, vouchers: list, reconcile_multi_party: bool = False, extra_params: dict | None = None, *args, **kwargs,):
+def get_payment_entries(
+	bt: CustomBankTransaction,
+	vouchers: list,
+	reconcile_multi_party: bool = False,
+	extra_params: dict | None = None,
+	*args,
+	**kwargs,
+):
 	"""Reconcile vouchers with the Bank Transaction.
 
 	Accepts a bank transaction and a list of (unpaid) vouchers to reconcile.
