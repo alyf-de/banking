@@ -300,7 +300,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		);
 		let extra_params = {};
 		for (const handler of handlers.new_style) {
-			let result = await handler(this.transaction, selected_vouchers);
+			let result = await handler(this.frm, this.transaction, selected_vouchers);
 			if (result) {
 				extra_params = { ...extra_params, ...result };
 			}
