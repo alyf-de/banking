@@ -84,6 +84,7 @@ def execute_ebics_download(
 	ebics_user: str,
 	ebics_request: EbicsRequest,
 	requested_by: Literal["User", "System"],
+	permitted_types: list[str],
 ) -> dict | None:
 	"""Execute a single EBICS download request with logging and error handling.
 
@@ -92,13 +93,11 @@ def execute_ebics_download(
 		ebics_user: The EBICS User name
 		ebics_request: The request to execute
 		requested_by: Who initiated the request
+		permitted_types: List of permitted order types for validation
 
 	Returns:
 		dict: The downloaded XML files, or None if failed or no data available
 	"""
-	permitted_types = manager.get_permitted_order_types()
-
-	# Validate permissions based on protocol version
 	if manager.protocol_version == "H004":
 		validated_perms(ebics_user, permitted_types, ebics_request.order_type)
 	elif manager.protocol_version == "H005":
@@ -162,8 +161,11 @@ def sync_ebics_transactions(
 	request_map = get_request_map(manager.country_code, start_date, end_date)
 	main_request = request_map["intraday"] if intraday else request_map["statement"]
 
+	# Get permitted types once - they don't change across downloads
+	permitted_types = manager.get_permitted_order_types()
+
 	# Download main statements
-	main_xml = execute_ebics_download(manager, user.name, main_request, requested_by)
+	main_xml = execute_ebics_download(manager, user.name, main_request, requested_by, permitted_types)
 	if not main_xml:
 		return
 
@@ -171,7 +173,7 @@ def sync_ebics_transactions(
 	batch_xml = None
 	if user.download_batch_transactions:
 		batch_request = request_map["batch"]
-		batch_xml = execute_ebics_download(manager, user.name, batch_request, requested_by)
+		batch_xml = execute_ebics_download(manager, user.name, batch_request, requested_by, permitted_types)
 		# Continue even if batch download fails - main_xml is what matters
 
 	# Keep the request logs, no matter what happens next.
