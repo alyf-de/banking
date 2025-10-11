@@ -13,7 +13,7 @@ from erpnext.accounts.utils import get_account_currency
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Cast, Coalesce, Sum, Abs
+from frappe.query_builder.functions import Cast, Coalesce, Sum
 from frappe.utils import cint, flt, sbool
 from pypika import Order
 
@@ -1121,7 +1121,9 @@ def get_unpaid_si_matching_query(
 	if not common_filters.multi_currency:
 		query = query.where(sales_invoice.currency == currency)
 	elif currency != company_currency:
-		query = query.where((sales_invoice.currency == currency) | (sales_invoice.currency == company_currency))
+		query = query.where(
+			(sales_invoice.currency == currency) | (sales_invoice.currency == company_currency)
+		)
 	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
 	if currency != company_currency:
 		query = query.where(sales_invoice.outstanding_amount == sales_invoice.base_grand_total)
@@ -1307,7 +1309,9 @@ def get_unpaid_pi_matching_query(
 	if not common_filters.multi_currency:
 		query = query.where(purchase_invoice.currency == currency)
 	elif currency != company_currency:
-		query = query.where((purchase_invoice.currency == currency) | (purchase_invoice.currency == company_currency))
+		query = query.where(
+			(purchase_invoice.currency == currency) | (purchase_invoice.currency == company_currency)
+		)
 	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
 	if currency != company_currency:
 		query = query.where(purchase_invoice.outstanding_amount == purchase_invoice.base_grand_total)

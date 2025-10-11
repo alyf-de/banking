@@ -9,14 +9,11 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	get_payment_entry,
 	split_invoices_based_on_payment_terms,
 )
-from erpnext.accounts.doctype.bank_transaction.bank_transaction import get_clearance_details
+from erpnext.accounts.utils import get_currency_precision
+from erpnext.setup.utils import get_exchange_rate
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
-
-from erpnext.setup.utils import get_exchange_rate
-
-from erpnext.accounts.utils import get_currency_precision
 
 if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
@@ -186,8 +183,8 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 		frappe.msgprint(str(bt.__dict__))
 		payment_entry.received_amount = bt.allocated_amount
 		payment_entry.target_exchange_rate = get_exchange_rate(bt.currency, company_currency, bt.date)
-	#frappe.msgprint(payment_entry.__dict__)
-	#frappe.throw(str(payment_entry.as_dict()))
+	# frappe.msgprint(payment_entry.__dict__)
+	# frappe.throw(str(payment_entry.as_dict()))
 	payment_entry.submit()
 	return payment_entry
 
@@ -225,19 +222,23 @@ def prepare_invoices_to_split(invoices):
 	return invoices_to_split
 
 
-def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, invoices: list, bt_company_currency_match):
+def get_positive_and_negative_sums(
+	bt_deposit: float, bt_unallocated: float, invoices: list, bt_company_currency_match
+):
 	"""
 	Calculate a permissible positive and negative upper limit sum for the allocation.
 	This will ensure that the allocated positive and negative amounts add up to the unallocated amount.
 	"""
-	
+
 	sum_positive = 0.0
 	sum_negative = 0.0
 	for invoice in invoices:
 		if bt_company_currency_match:
 			conversion_rate = 1.0
 		else:
-			conversion_rate = frappe.get_value(invoice.voucher_type, invoice.voucher_no, "conversion_rate") or 1.0
+			conversion_rate = (
+				frappe.get_value(invoice.voucher_type, invoice.voucher_no, "conversion_rate") or 1.0
+			)
 
 		if invoice.outstanding_amount > 0:
 			sum_positive = sum_positive + (invoice.outstanding_amount / conversion_rate)
@@ -266,14 +267,16 @@ def adjust_and_allocate_invoices(
 	The `payment_voucher` object is mutated by param:action.
 	Only same currency allocations are supported: BT Currency == Invoice Currency
 	"""
-	
+
 	company_currency = frappe.get_value("Company", bt.company, "default_currency")
 	if bt.currency == company_currency:
 		bt_company_currency_match = True
 	else:
 		bt_company_currency_match = False
 
-	sum_positive, sum_negative = get_positive_and_negative_sums(bt.deposit, bt.unallocated_amount, invoices, bt_company_currency_match)
+	sum_positive, sum_negative = get_positive_and_negative_sums(
+		bt.deposit, bt.unallocated_amount, invoices, bt_company_currency_match
+	)
 	currency_precision = get_currency_precision() or 2
 
 	for row in invoices:
