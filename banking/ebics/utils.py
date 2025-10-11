@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils.data import get_link_to_form
 
-from banking.ebics.manager import EBICSManager
+from banking.ebics.manager import EBICSManager, EbicsRequest
 from banking.ebics.types import MT940Statement, MT940Transaction
 
 if TYPE_CHECKING:
@@ -51,13 +51,31 @@ def get_ebics_manager(
 	return manager
 
 
-def get_order_types(country_code: str):
-	"""Get order types for the given country. Switzerland uses Z-types, others use C-types."""
+def get_request_map(country_code: str, start_date: str, end_date: str):
+	"""Get EbicsRequest for the given country. Switzerland uses Z-types, others use C-types."""
 	prefix = "Z" if country_code == "CH" else "C"
 	return {
-		"intraday": f"{prefix}52",
-		"statement": f"{prefix}53",
-		"batch": f"{prefix}54",
+		"intraday": EbicsRequest(
+			order_type=f"{prefix}52",
+			camt_msg="camt.052",
+			service="STM",
+			start_date=start_date,
+			end_date=end_date,
+		),
+		"statement": EbicsRequest(
+			order_type=f"{prefix}53",
+			camt_msg="camt.053",
+			service="EOP",
+			start_date=start_date,
+			end_date=end_date,
+		),
+		"batch": EbicsRequest(
+			order_type=f"{prefix}54",
+			camt_msg="camt.054",
+			service="STM",
+			start_date=start_date,
+			end_date=end_date,
+		),
 	}
 
 
@@ -76,12 +94,12 @@ def sync_ebics_transactions(
 		CAMTDocument,
 	)  # import possible only after manager is initialized
 
-	order_types = get_order_types(manager.country_code)
-	main_order_type = order_types["intraday"] if intraday else order_types["statement"]
+	request_map = get_request_map(manager.country_code, start_date, end_date)
+	main_request = request_map["intraday"] if intraday else request_map["statement"]
 
 	request = log_request(
 		ebics_user,
-		main_order_type,
+		main_request.order_type,
 		requested_by,
 		{
 			"start_date": start_date,
@@ -92,16 +110,13 @@ def sync_ebics_transactions(
 	permitted_types = manager.get_permitted_order_types()
 	main_xml, batch_xml = None, None
 	try:
-		validated_perms(user.name, permitted_types, main_order_type)
-
-		if intraday:
-			main_xml = manager.download_c52(start_date, end_date)
-		else:
-			main_xml = manager.download_c53(start_date, end_date)
+		validated_perms(user.name, permitted_types, main_request.order_type)
+		main_xml = manager.download(main_request)
 
 		if user.download_batch_transactions:
-			validated_perms(user.name, permitted_types, order_types["batch"])
-			batch_xml = manager.download_c54(start_date, end_date)
+			batch_request = request_map["batch"]
+			validated_perms(user.name, permitted_types, batch_request.order_type)
+			batch_xml = manager.download(batch_request)
 
 		request.db_set(
 			{
