@@ -75,7 +75,6 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.actions_filters.exact_match = 0;
 		this.actions_filters.exact_party_match = 0;
 		this.actions_filters.unpaid_invoices = 1;
-		this.actions_filters.multi_currency = 0;
 	}
 
 	render_no_transactions() {

@@ -213,7 +213,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		let unallocated =
 			flt(this.transaction.unallocated_amount) - flt(max_allocated);
 		let actual_unallocated =
-			flt(this.transaction.unallocated_amount) - flt(total_allocated);
+			flt(this.transaction.unallocated_amount) - Math.abs(flt(total_allocated));
 
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
@@ -414,15 +414,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			},
 			{
 				fieldtype: "Column Break",
-			},
-			{
-				label: __("Multi-Currency"),
-				fieldname: "multi_currency",
-				fieldtype: "Check",
-				default: filters_state.multi_currency,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
 			},
 			{
 				fieldtype: "Section Break",

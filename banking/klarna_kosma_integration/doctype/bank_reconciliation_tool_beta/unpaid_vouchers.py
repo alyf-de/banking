@@ -9,9 +9,14 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	get_payment_entry,
 	split_invoices_based_on_payment_terms,
 )
+from erpnext.accounts.doctype.bank_transaction.bank_transaction import get_clearance_details
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
+
+from erpnext.setup.utils import get_exchange_rate
+
+from erpnext.accounts.utils import get_currency_precision
 
 if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
@@ -164,15 +169,25 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
 	adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
 
+	company_currency = frappe.get_value("Company", bt.company, "default_currency")
+
 	# Payment Entry automatically does the exchange rate conversion
 	if payment_entry.payment_type == "Pay":
 		payment_entry.received_amount = abs(
 			sum(row.allocated_amount for row in payment_entry.references)
 		)  # should not be negative
+		frappe.msgprint(str(bt.__dict__))
+		payment_entry.paid_amount = bt.allocated_amount
+		payment_entry.source_exchange_rate = get_exchange_rate(bt.currency, company_currency, bt.date)
 	else:
 		payment_entry.paid_amount = abs(
 			sum(row.allocated_amount for row in payment_entry.references)
 		)  # should not be negative
+		frappe.msgprint(str(bt.__dict__))
+		payment_entry.received_amount = bt.allocated_amount
+		payment_entry.target_exchange_rate = get_exchange_rate(bt.currency, company_currency, bt.date)
+	#frappe.msgprint(payment_entry.__dict__)
+	#frappe.throw(str(payment_entry.as_dict()))
 	payment_entry.submit()
 	return payment_entry
 
@@ -215,12 +230,16 @@ def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, inv
 	Calculate a permissible positive and negative upper limit sum for the allocation.
 	This will ensure that the allocated positive and negative amounts add up to the unallocated amount.
 	"""
-	sum_positive = (
-		sum(invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount > 0) or 0.0
-	)
-	sum_negative = (
-		abs(sum(invoice.outstanding_amount for invoice in invoices if invoice.outstanding_amount < 0)) or 0.0
-	)
+	
+	sum_positive = 0.0
+	sum_negative = 0.0
+	for invoice in invoices:
+		conversion_rate = frappe.get_value(invoice.voucher_type, invoice.voucher_no, "conversion_rate") or 1.0
+		if invoice.outstanding_amount > 0:
+			sum_positive = sum_positive + (invoice.outstanding_amount / conversion_rate)
+		else:
+			sum_negative = sum_negative + abs(invoice.outstanding_amount / conversion_rate)
+
 	validate_sums(bt_deposit, sum_positive, sum_negative, invoices)
 
 	# Adjust the positive sum (trim it) if overallocated
@@ -241,22 +260,30 @@ def adjust_and_allocate_invoices(
 	Adjust and allocate the invoicees to the payment voucher based on
 	the unallocated amount.
 	The `payment_voucher` object is mutated by param:action.
+	Only same currency allocations are supported: BT Currency == Invoice Currency
 	"""
-	sum_postive, sum_negative = get_positive_and_negative_sums(bt.deposit, bt.unallocated_amount, invoices)
+
+	sum_positive, sum_negative = get_positive_and_negative_sums(bt.deposit, bt.unallocated_amount, invoices)
+	currency_precision = get_currency_precision() or 2
+
 	for row in invoices:
+		conversion_rate = frappe.get_value(row.voucher_type, row.voucher_no, "conversion_rate") or 1.0
 		if row.outstanding_amount > 0:
-			if sum_postive <= 0:
+			if sum_positive <= 0:
 				continue
-			row_allocated_amount = min(row.outstanding_amount, sum_postive)
-			sum_postive -= row_allocated_amount
+			row_allocated_amount = min(row.outstanding_amount / conversion_rate, sum_positive)
+			bt.allocated_amount += row_allocated_amount
+			sum_positive -= row_allocated_amount
 		else:
 			if sum_negative <= 0:
 				continue
-			can_allocate = min(abs(row.outstanding_amount), sum_negative)
+			can_allocate = min(abs(row.outstanding_amount / (conversion_rate or 1.0)), sum_negative)
+			bt.allocated_amount += can_allocate
 			row_allocated_amount = -1 * can_allocate
 			sum_negative -= can_allocate
 
-		row.allocated_amount = row_allocated_amount
+		row.allocated_amount = flt(row_allocated_amount * conversion_rate, currency_precision)
+
 		# Attach the invoice to/Mutate the payment voucher
 		action(row, payment_voucher)
 
