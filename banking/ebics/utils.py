@@ -69,7 +69,6 @@ def sync_ebics_transactions(
 	permitted_types = manager.get_permitted_order_types()
 	validate_permitted_types(user, permitted_types, intraday)
 
-	with_c54 = user.download_batch_transactions and set(permitted_types).intersection({"C54", "Z54"})
 	request = log_request(
 		ebics_user,
 		("Z52" if manager.country_code == "CH" else "C52")
@@ -89,7 +88,7 @@ def sync_ebics_transactions(
 		else:
 			main_xml = manager.download_c53(start_date, end_date)
 
-		if with_c54:
+		if user.download_batch_transactions:
 			batch_xml = manager.download_c54(start_date, end_date)
 
 		request.db_set(
@@ -174,11 +173,7 @@ def validate_permitted_types(user, permitted_types, intraday: bool):
 			reference_name=user.name,
 		)
 
-	if (
-		not intraday
-		and user.download_batch_transactions
-		and not set(permitted_types).intersection({"C54", "Z54"})
-	):
+	if user.download_batch_transactions and not set(permitted_types).intersection({"C54", "Z54"}):
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_(
