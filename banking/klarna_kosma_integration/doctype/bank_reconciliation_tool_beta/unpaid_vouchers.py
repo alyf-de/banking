@@ -173,18 +173,14 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 		payment_entry.received_amount = abs(
 			sum(row.allocated_amount for row in payment_entry.references)
 		)  # should not be negative
-		frappe.msgprint(str(bt.__dict__))
 		payment_entry.paid_amount = bt.allocated_amount
 		payment_entry.source_exchange_rate = get_exchange_rate(bt.currency, company_currency, bt.date)
 	else:
 		payment_entry.paid_amount = abs(
 			sum(row.allocated_amount for row in payment_entry.references)
 		)  # should not be negative
-		frappe.msgprint(str(bt.__dict__))
 		payment_entry.received_amount = bt.allocated_amount
 		payment_entry.target_exchange_rate = get_exchange_rate(bt.currency, company_currency, bt.date)
-	# frappe.msgprint(payment_entry.__dict__)
-	# frappe.throw(str(payment_entry.as_dict()))
 	payment_entry.submit()
 	return payment_entry
 
