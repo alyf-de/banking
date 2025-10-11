@@ -95,7 +95,16 @@ class EBICSManager:
 		# Collect all order types for the specified level
 		level_perms = []
 		for permission in permissions:
-			if permission.get("@AuthorisationLevel", level) == level:
+			if self.protocol_version == "H005":
+				if permission.get("AdminOrderType") == "BTD":
+					level_perms.append(
+						(
+							"BTD",
+							permission.get("Service", {}).get("ServiceName"),
+							permission.get("Service", {}).get("MsgName"),
+						)
+					)
+			elif permission.get("@AuthorisationLevel", level) == level:
 				order_types = permission.get("OrderTypes")
 				if isinstance(order_types, str):
 					# Split if it's a space-separated string

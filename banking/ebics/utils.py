@@ -110,12 +110,21 @@ def sync_ebics_transactions(
 	permitted_types = manager.get_permitted_order_types()
 	main_xml, batch_xml = None, None
 	try:
-		validated_perms(user.name, permitted_types, main_request.order_type)
+		if manager.protocol_version == "H004":
+			# TODO: implement logic for H004
+			validated_perms(user.name, permitted_types, main_request.order_type)
+		elif manager.protocol_version == "H005":
+			validated_perms(user.name, permitted_types, ("BTD", main_request.service, main_request.camt_msg))
 		main_xml = manager.download(main_request)
 
 		if user.download_batch_transactions:
 			batch_request = request_map["batch"]
-			validated_perms(user.name, permitted_types, batch_request.order_type)
+			if manager.protocol_version == "H004":
+				validated_perms(user.name, permitted_types, batch_request.order_type)
+			elif manager.protocol_version == "H005":
+				validated_perms(
+					user.name, permitted_types, ("BTD", batch_request.service, batch_request.camt_msg)
+				)
 			batch_xml = manager.download(batch_request)
 
 		request.db_set(
@@ -185,7 +194,7 @@ def validated_perms(ebis_user, permitted_types, required_type):
 			title=_("Banking Warning"),
 			message=_(
 				"It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
-			).format(required_type, ", ".join(permitted_types)),
+			).format(required_type, ", ".join(str(t) for t in permitted_types)),
 			reference_doctype="EBICS User",
 			reference_name=ebis_user,
 		)
