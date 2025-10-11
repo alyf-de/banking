@@ -51,6 +51,16 @@ def get_ebics_manager(
 	return manager
 
 
+def get_order_types(country_code: str):
+	"""Get order types for the given country. Switzerland uses Z-types, others use C-types."""
+	prefix = "Z" if country_code == "CH" else "C"
+	return {
+		"intraday": f"{prefix}52",
+		"statement": f"{prefix}53",
+		"batch": f"{prefix}54",
+	}
+
+
 def sync_ebics_transactions(
 	ebics_user: str,
 	requested_by: Literal["User", "System"],
@@ -66,29 +76,31 @@ def sync_ebics_transactions(
 		CAMTDocument,
 	)  # import possible only after manager is initialized
 
-	permitted_types = manager.get_permitted_order_types()
-	validate_permitted_types(user, permitted_types, intraday)
+	order_types = get_order_types(manager.country_code)
+	main_order_type = order_types["intraday"] if intraday else order_types["statement"]
 
 	request = log_request(
 		ebics_user,
-		("Z52" if manager.country_code == "CH" else "C52")
-		if intraday
-		else ("Z53" if manager.country_code == "CH" else "C53"),
+		main_order_type,
 		requested_by,
 		{
 			"start_date": start_date,
 			"end_date": end_date,
 		},
 	)
+
+	permitted_types = manager.get_permitted_order_types()
 	main_xml, batch_xml = None, None
 	try:
-		# Use the manager's download methods which handle protocol version automatically
+		validated_perms(user.name, permitted_types, main_order_type)
+
 		if intraday:
 			main_xml = manager.download_c52(start_date, end_date)
 		else:
 			main_xml = manager.download_c53(start_date, end_date)
 
 		if user.download_batch_transactions:
+			validated_perms(user.name, permitted_types, order_types["batch"])
 			batch_xml = manager.download_c54(start_date, end_date)
 
 		request.db_set(
@@ -150,37 +162,17 @@ def sync_ebics_transactions(
 	manager.confirm_download(success=True)
 
 
-def validate_permitted_types(user, permitted_types, intraday: bool):
+def validated_perms(ebis_user, permitted_types, required_type):
 	# Not sure yet, how reliable permitted types are. For now, we just log an error
 	# instead of raising an exception or returning.
-	if intraday and not set(permitted_types).intersection({"C52", "Z52"}):
+	if required_type not in permitted_types:
 		frappe.log_error(
-			title=_("Banking Error"),
+			title=_("Banking Warning"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
-			).format(user.name, ", ".join(permitted_types)),
+				"It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
+			).format(required_type, ", ".join(permitted_types)),
 			reference_doctype="EBICS User",
-			reference_name=user.name,
-		)
-
-	if not intraday and not set(permitted_types).intersection({"C53", "Z53"}):
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
-			).format(user.name, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=user.name,
-		)
-
-	if user.download_batch_transactions and not set(permitted_types).intersection({"C54", "Z54"}):
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"EBICS User {0} lacks permission 'C54' for downloading batch transactions. The permitted types are: {1}."
-			).format(user.name, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=user.name,
+			reference_name=ebis_user,
 		)
 
 
