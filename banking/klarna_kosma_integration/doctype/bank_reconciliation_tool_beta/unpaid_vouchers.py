@@ -225,7 +225,7 @@ def prepare_invoices_to_split(invoices):
 	return invoices_to_split
 
 
-def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, invoices: list):
+def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, invoices: list, bt_company_currency_match):
 	"""
 	Calculate a permissible positive and negative upper limit sum for the allocation.
 	This will ensure that the allocated positive and negative amounts add up to the unallocated amount.
@@ -234,7 +234,11 @@ def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, inv
 	sum_positive = 0.0
 	sum_negative = 0.0
 	for invoice in invoices:
-		conversion_rate = frappe.get_value(invoice.voucher_type, invoice.voucher_no, "conversion_rate") or 1.0
+		if bt_company_currency_match:
+			conversion_rate = 1.0
+		else:
+			conversion_rate = frappe.get_value(invoice.voucher_type, invoice.voucher_no, "conversion_rate") or 1.0
+
 		if invoice.outstanding_amount > 0:
 			sum_positive = sum_positive + (invoice.outstanding_amount / conversion_rate)
 		else:
@@ -262,12 +266,21 @@ def adjust_and_allocate_invoices(
 	The `payment_voucher` object is mutated by param:action.
 	Only same currency allocations are supported: BT Currency == Invoice Currency
 	"""
+	
+	company_currency = frappe.get_value("Company", bt.company, "default_currency")
+	if bt.currency == company_currency:
+		bt_company_currency_match = True
+	else:
+		bt_company_currency_match = False
 
-	sum_positive, sum_negative = get_positive_and_negative_sums(bt.deposit, bt.unallocated_amount, invoices)
+	sum_positive, sum_negative = get_positive_and_negative_sums(bt.deposit, bt.unallocated_amount, invoices, bt_company_currency_match)
 	currency_precision = get_currency_precision() or 2
 
 	for row in invoices:
-		conversion_rate = frappe.get_value(row.voucher_type, row.voucher_no, "conversion_rate") or 1.0
+		if bt_company_currency_match:
+			conversion_rate = 1.0
+		else:
+			conversion_rate = frappe.get_value(row.voucher_type, row.voucher_no, "conversion_rate") or 1.0
 		if row.outstanding_amount > 0:
 			if sum_positive <= 0:
 				continue

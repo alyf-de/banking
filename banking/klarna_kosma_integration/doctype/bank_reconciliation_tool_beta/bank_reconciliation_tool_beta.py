@@ -13,7 +13,7 @@ from erpnext.accounts.utils import get_account_currency
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Cast, Coalesce, Sum
+from frappe.query_builder.functions import Cast, Coalesce, Sum, Abs
 from frappe.utils import cint, flt, sbool
 from pypika import Order
 
@@ -582,6 +582,7 @@ def get_matching_queries(
 	is_deposit = transaction.deposit > 0.0
 
 	common_filters.exact_party_match = "exact_party_match" in (document_types or [])
+	common_filters.multi_currency = "multi_currency" in (document_types or [])
 	common_filters.description = transaction.description
 
 	if "payment_entry" in document_types:
@@ -1079,8 +1080,10 @@ def get_unpaid_si_matching_query(
 	company_currency = frappe.get_value("Company", company, "default_currency")
 	if currency == company_currency:
 		paid_amount_field = sales_invoice.outstanding_amount
+		currency_field = ConstantColumn(company_currency).as_("currency")
 	else:
 		paid_amount_field = sales_invoice.grand_total
+		currency_field = sales_invoice.currency
 
 	query = (
 		frappe.qb.from_(sales_invoice)
@@ -1095,7 +1098,7 @@ def get_unpaid_si_matching_query(
 			ConstantColumn("Customer").as_("party_type"),
 			sales_invoice.customer_name.as_("party_name"),
 			sales_invoice.posting_date,
-			sales_invoice.currency,
+			currency_field,
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			name_match.as_("name_in_desc_match"),
@@ -1105,7 +1108,6 @@ def get_unpaid_si_matching_query(
 		.where(sales_invoice.docstatus == 1)
 		.where(sales_invoice.company == company)  # because we do not have bank account check
 		.where(sales_invoice.outstanding_amount != 0.0)
-		.where(sales_invoice.currency == currency)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1116,6 +1118,10 @@ def get_unpaid_si_matching_query(
 		query = query.where(sales_invoice.outstanding_amount == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
+	if not common_filters.multi_currency:
+		query = query.where(sales_invoice.currency == currency)
+	elif currency != company_currency:
+		query = query.where((sales_invoice.currency == currency) | (sales_invoice.currency == company_currency))
 	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
 	if currency != company_currency:
 		query = query.where(sales_invoice.outstanding_amount == sales_invoice.base_grand_total)
@@ -1257,8 +1263,10 @@ def get_unpaid_pi_matching_query(
 	company_currency = frappe.get_value("Company", company, "default_currency")
 	if currency == company_currency:
 		paid_amount_field = purchase_invoice.outstanding_amount
+		currency_field = ConstantColumn(company_currency).as_("currency")
 	else:
 		paid_amount_field = purchase_invoice.grand_total
+		currency_field = purchase_invoice.currency
 
 	# We skip date rank as the date of an unpaid bill is mostly
 	# earlier than the date of the bank transaction
@@ -1275,7 +1283,7 @@ def get_unpaid_pi_matching_query(
 			ConstantColumn("Supplier").as_("party_type"),
 			purchase_invoice.supplier_name.as_("party_name"),
 			purchase_invoice.posting_date,
-			purchase_invoice.currency,
+			currency_field,
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			name_match.as_("name_in_desc_match"),
@@ -1286,7 +1294,6 @@ def get_unpaid_pi_matching_query(
 		.where(purchase_invoice.company == company)
 		.where(purchase_invoice.outstanding_amount != 0.0)
 		.where(purchase_invoice.is_paid == 0)
-		.where(purchase_invoice.currency == currency)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1297,6 +1304,10 @@ def get_unpaid_pi_matching_query(
 		query = query.where(purchase_invoice.outstanding_amount == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
+	if not common_filters.multi_currency:
+		query = query.where(purchase_invoice.currency == currency)
+	elif currency != company_currency:
+		query = query.where((purchase_invoice.currency == currency) | (purchase_invoice.currency == company_currency))
 	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
 	if currency != company_currency:
 		query = query.where(purchase_invoice.outstanding_amount == purchase_invoice.base_grand_total)
