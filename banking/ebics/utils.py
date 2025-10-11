@@ -132,11 +132,8 @@ def execute_ebics_download(
 			}
 		)
 		return xml_files
-
 	except fintech.ebics.EbicsNoDataAvailable:
 		request.db_set({"status": "Successful", "response": "No Data Available"})
-		return None
-
 	except Exception as e:
 		request.db_set({"status": "Failed", "response": str(e)})
 		frappe.log_error(
@@ -144,7 +141,8 @@ def execute_ebics_download(
 			reference_doctype="EBICS User",
 			reference_name=ebics_user,
 		)
-		return None
+
+	return None
 
 
 def sync_ebics_transactions(
