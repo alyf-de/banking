@@ -79,6 +79,74 @@ def get_request_map(country_code: str, start_date: str, end_date: str):
 	}
 
 
+def execute_ebics_download(
+	manager: EBICSManager,
+	ebics_user: str,
+	ebics_request: EbicsRequest,
+	requested_by: Literal["User", "System"],
+) -> dict | None:
+	"""Execute a single EBICS download request with logging and error handling.
+
+	Args:
+		manager: The EBICS manager instance
+		ebics_user: The EBICS User name
+		ebics_request: The request to execute
+		requested_by: Who initiated the request
+
+	Returns:
+		dict: The downloaded XML files, or None if failed or no data available
+	"""
+	permitted_types = manager.get_permitted_order_types()
+
+	# Validate permissions based on protocol version
+	if manager.protocol_version == "H004":
+		validated_perms(ebics_user, permitted_types, ebics_request.order_type)
+	elif manager.protocol_version == "H005":
+		validated_perms(
+			ebics_user,
+			permitted_types,
+			("BTD", ebics_request.service, ebics_request.camt_msg),
+		)
+
+	# Log the request
+	request = log_request(
+		ebics_user,
+		ebics_request.order_type,
+		requested_by,
+		{
+			"start_date": ebics_request.start_date,
+			"end_date": ebics_request.end_date,
+		},
+	)
+
+	try:
+		xml_files = manager.download(ebics_request)
+
+		request.db_set(
+			{
+				"status": "Successful",
+				"response": json.dumps(
+					{file_name: file.decode() for file_name, file in xml_files.items()},
+					indent=2,
+				),
+			}
+		)
+		return xml_files
+
+	except fintech.ebics.EbicsNoDataAvailable:
+		request.db_set({"status": "Successful", "response": "No Data Available"})
+		return None
+
+	except Exception as e:
+		request.db_set({"status": "Failed", "response": str(e)})
+		frappe.log_error(
+			title=_("Banking Error"),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
+		)
+		return None
+
+
 def sync_ebics_transactions(
 	ebics_user: str,
 	requested_by: Literal["User", "System"],
@@ -97,58 +165,19 @@ def sync_ebics_transactions(
 	request_map = get_request_map(manager.country_code, start_date, end_date)
 	main_request = request_map["intraday"] if intraday else request_map["statement"]
 
-	request = log_request(
-		ebics_user,
-		main_request.order_type,
-		requested_by,
-		{
-			"start_date": start_date,
-			"end_date": end_date,
-		},
-	)
-
-	permitted_types = manager.get_permitted_order_types()
-	main_xml, batch_xml = None, None
-	try:
-		if manager.protocol_version == "H004":
-			# TODO: implement logic for H004
-			validated_perms(user.name, permitted_types, main_request.order_type)
-		elif manager.protocol_version == "H005":
-			validated_perms(user.name, permitted_types, ("BTD", main_request.service, main_request.camt_msg))
-		main_xml = manager.download(main_request)
-
-		if user.download_batch_transactions:
-			batch_request = request_map["batch"]
-			if manager.protocol_version == "H004":
-				validated_perms(user.name, permitted_types, batch_request.order_type)
-			elif manager.protocol_version == "H005":
-				validated_perms(
-					user.name, permitted_types, ("BTD", batch_request.service, batch_request.camt_msg)
-				)
-			batch_xml = manager.download(batch_request)
-
-		request.db_set(
-			{
-				"status": "Successful",
-				"response": json.dumps(
-					{file_name: file.decode() for file_name, file in main_xml.items()},
-					indent=2,
-				),
-			}
-		)
-	except fintech.ebics.EbicsNoDataAvailable:
-		request.db_set({"status": "Successful", "response": "No Data Available"})
-		return
-	except Exception as e:
-		request.db_set({"status": "Failed", "response": str(e)})
-		frappe.log_error(
-			title=_("Banking Error"),
-			reference_doctype="EBICS User",
-			reference_name=ebics_user,
-		)
+	# Download main statements
+	main_xml = execute_ebics_download(manager, user.name, main_request, requested_by)
+	if not main_xml:
 		return
 
-	# Keep the request log, no matter what happens next.
+	# Download batch transactions if enabled
+	batch_xml = None
+	if user.download_batch_transactions:
+		batch_request = request_map["batch"]
+		batch_xml = execute_ebics_download(manager, user.name, batch_request, requested_by)
+		# Continue even if batch download fails - main_xml is what matters
+
+	# Keep the request logs, no matter what happens next.
 	frappe.db.commit()
 
 	# We want to process either all documents or none. If we fail to process one, we
@@ -177,8 +206,8 @@ def sync_ebics_transactions(
 		frappe.db.rollback()
 		frappe.log_error(
 			title=_("Banking Error"),
-			reference_doctype="EBICS Request",
-			reference_name=request.name,
+			reference_doctype="EBICS User",
+			reference_name=user.name,
 		)
 		manager.confirm_download(success=False)
 		return
