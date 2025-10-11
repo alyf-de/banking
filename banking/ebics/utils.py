@@ -108,8 +108,7 @@ def execute_ebics_download(
 			("BTD", ebics_request.service, ebics_request.camt_msg),
 		)
 
-	# Log the request
-	request = log_request(
+	request_log = log_request(
 		ebics_user,
 		ebics_request.order_type,
 		requested_by,
@@ -122,7 +121,7 @@ def execute_ebics_download(
 	try:
 		xml_files = manager.download(ebics_request)
 
-		request.db_set(
+		request_log.db_set(
 			{
 				"status": "Successful",
 				"response": json.dumps(
@@ -133,9 +132,9 @@ def execute_ebics_download(
 		)
 		return xml_files
 	except fintech.ebics.EbicsNoDataAvailable:
-		request.db_set({"status": "Successful", "response": "No Data Available"})
+		request_log.db_set({"status": "Successful", "response": "No Data Available"})
 	except Exception as e:
-		request.db_set({"status": "Failed", "response": str(e)})
+		request_log.db_set({"status": "Failed", "response": str(e)})
 		frappe.log_error(
 			title=_("Banking Error"),
 			reference_doctype="EBICS User",
