@@ -51,7 +51,9 @@ def get_ebics_manager(
 	return manager
 
 
-def get_request_map(country_code: str, start_date: str, end_date: str):
+def get_request_map(
+	country_code: str | None = None, start_date: str | None = None, end_date: str | None = None
+) -> dict[str, EbicsRequest]:
 	"""Get EbicsRequest for the given country. Switzerland uses Z-types, others use C-types."""
 	prefix = "Z" if country_code == "CH" else "C"
 	return {
