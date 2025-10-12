@@ -216,7 +216,7 @@ def sync_ebics_transactions(
 	manager.confirm_download(success=True)
 
 
-def validated_perms(ebis_user, permitted_types, required_type):
+def validated_perms(ebics_user, permitted_types, required_type):
 	# Not sure yet, how reliable permitted types are. For now, we just log an error
 	# instead of raising an exception or returning.
 	if required_type not in permitted_types:
@@ -226,7 +226,7 @@ def validated_perms(ebis_user, permitted_types, required_type):
 				"It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
 			).format(required_type, ", ".join(str(t) for t in permitted_types)),
 			reference_doctype="EBICS User",
-			reference_name=ebis_user,
+			reference_name=ebics_user,
 		)
 
 
