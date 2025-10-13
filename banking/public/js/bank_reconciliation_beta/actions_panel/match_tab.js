@@ -271,6 +271,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 					payment_name: row[this.position_of("Voucher")].content,
 					amount: this.get_amount_from_row(row),
 					party: row[this.position_of("Party")].content,
+					reference_no: row[this.position_of("Reference")].content,
 				});
 			}
 		});
