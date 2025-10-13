@@ -11,7 +11,7 @@ notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
 # include js, css files in header of desk.html
 app_include_css = "bank_reconciliation_beta.bundle.css"
-# app_include_js = "/assets/banking/js/banking.js"
+app_include_js = "/assets/banking/js/utils.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/banking/css/banking.css"
@@ -28,7 +28,13 @@ app_include_css = "bank_reconciliation_beta.bundle.css"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Bank": "custom/bank.js", "Purchase Invoice": "custom/purchase_invoice.js"}
+doctype_js = {
+	"Bank": "custom/bank.js",
+	"Purchase Invoice": "custom/purchase_invoice.js",
+	"Employee": "custom/employee.js",
+	"Supplier": "custom/supplier.js",
+	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
+}
 doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
