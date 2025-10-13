@@ -1082,7 +1082,12 @@ def get_unpaid_si_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_rank + amount_rank + name_match + ref_match + 1
+	date_condition = (sales_invoice.posting_date == common_filters.date) | (
+		sales_invoice.due_date == common_filters.date
+	)
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
+	rank_expression = ref_rank + party_rank + amount_rank + date_rank + name_match + ref_match + 1
 
 	company_currency = frappe.get_value("Company", company, "default_currency")
 	if currency == company_currency:
@@ -1267,7 +1272,14 @@ def get_unpaid_pi_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_match + amount_rank + name_match + ref_match + 1
+	date_condition = (
+		(purchase_invoice.posting_date == common_filters.date)
+		| (purchase_invoice.due_date == common_filters.date)
+		| (purchase_invoice.bill_date == common_filters.date)
+	)
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
+	rank_expression = ref_rank + party_match + amount_rank + date_rank + name_match + ref_match + 1
 
 	company_currency = frappe.get_value("Company", company, "default_currency")
 	if currency == company_currency:
@@ -1277,8 +1289,6 @@ def get_unpaid_pi_matching_query(
 		paid_amount_field = purchase_invoice.grand_total
 		currency_field = purchase_invoice.currency
 
-	# We skip date rank as the date of an unpaid bill is mostly
-	# earlier than the date of the bank transaction
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(

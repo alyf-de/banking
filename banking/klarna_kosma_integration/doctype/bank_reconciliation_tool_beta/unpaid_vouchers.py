@@ -276,6 +276,7 @@ def adjust_and_allocate_invoices(
 		bt_company_currency_match = True
 	else:
 		bt_company_currency_match = False
+	bt.allocated_amount = 0
 
 	sum_positive, sum_negative = get_positive_and_negative_sums(
 		bt.deposit, bt.unallocated_amount, invoices, bt_company_currency_match
@@ -296,7 +297,7 @@ def adjust_and_allocate_invoices(
 		else:
 			if sum_negative <= 0:
 				continue
-			can_allocate = min(abs(row.outstanding_amount / (conversion_rate or 1.0)), sum_negative)
+			can_allocate = min(abs(row.outstanding_amount / conversion_rate), sum_negative)
 			bt.allocated_amount += can_allocate
 			row_allocated_amount = -1 * can_allocate
 			sum_negative -= can_allocate
