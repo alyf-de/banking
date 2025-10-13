@@ -37,3 +37,62 @@ Install [via Frappe Cloud](https://frappecloud.com/marketplace/apps/banking) or 
 bench get-app https://github.com/alyf-de/banking.git
 bench --site <sitename> install-app banking
 ```
+
+## Customize
+
+Ask the user for extra values before reconciling:
+
+```js
+frappe.ui.form.on("Bank Reconciliation Tool Beta", {
+	before_reconcile: function (frm, transaction, selected_vouchers) {
+		return new Promise((resolve, reject) => {
+			frappe.prompt([
+				{
+					label: __("My Fieldname"),
+					fieldname: "my_fieldname",
+					fieldtype: "Data",
+				},
+			], (values) => {
+				// {my_fieldname: "My Value"}
+				resolve(values);
+			});
+		});
+	},
+});
+```
+
+Use the extra values in the `get_payment_entries` hook:
+
+```python
+from banking.overrides.bank_transaction import CustomBankTransaction
+
+
+def get_payment_entries(
+	bt: CustomBankTransaction,
+	vouchers: list,
+	reconcile_multi_party: bool = False,
+	extra_params: dict | None = None,
+	*args,
+	**kwargs,
+):
+	"""Reconcile vouchers with the Bank Transaction.
+
+	Accepts a bank transaction and a list of (unpaid) vouchers to reconcile.
+
+	Returns a list of (paid) vouchers to add to the bank transaction.
+	"""
+	assert extra_params["my_fieldname"] == "My Value"
+
+	return [
+		{
+			"payment_doctype": "Journal Entry",
+			"payment_name": "JE-123",
+			"amount": 100,
+		},
+		{
+			"payment_doctype": "Payment Entry",
+			"payment_name": "PE-123",
+			"amount": 100,
+		},
+	]
+```
