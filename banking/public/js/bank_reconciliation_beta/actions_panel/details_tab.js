@@ -147,6 +147,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				label: __("Party IBAN"),
 				fieldname: "iban",
 				fieldtype: "Data",
+				options: "IBAN",
 				default: this.transaction.bank_party_iban,
 				read_only: 1,
 				hidden: this.transaction.bank_party_iban ? 0 : 1,
