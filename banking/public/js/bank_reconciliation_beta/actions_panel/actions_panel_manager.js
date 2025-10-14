@@ -30,8 +30,10 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 				.find(".actions-panel");
 		}
 
+		// Reduce z-index from 5 to 3 so it doesn't overlap Link dropdowns from
+		// the filter area above.
 		this.$actions_container.append(`
-			<div class="form-tabs-list">
+			<div class="form-tabs-list" style="z-index: 3;">
 				<ul class="nav form-tabs" role="tablist" aria-label="Action Tabs">
 				</ul>
 			</div>
