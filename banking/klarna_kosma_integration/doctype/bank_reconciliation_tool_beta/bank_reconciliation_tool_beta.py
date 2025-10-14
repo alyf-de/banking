@@ -450,12 +450,9 @@ def get_linked_payments(
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	transaction.check_permission("read")
 
-	if transaction.bank_account:
-		gl_account, company = frappe.db.get_value(
-			"Bank Account", transaction.bank_account, ["account", "company"]
-		)
-	else:
-		gl_account, company = None, None
+	gl_account, company = frappe.db.get_value(
+		"Bank Account", transaction.bank_account, ["account", "company"]
+	)
 
 	if isinstance(document_types, str):
 		document_types = json.loads(document_types)
