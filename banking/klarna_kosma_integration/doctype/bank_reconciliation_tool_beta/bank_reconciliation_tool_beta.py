@@ -41,6 +41,7 @@ class BankReconciliationToolBeta(Document):
 
 		account_currency: DF.Link | None
 		account_opening_balance: DF.Currency
+		bank: DF.Link | None
 		bank_account: DF.Link | None
 		bank_statement_closing_balance: DF.Currency
 		bank_statement_from_date: DF.Date | None
@@ -56,6 +57,7 @@ class BankReconciliationToolBeta(Document):
 @frappe.whitelist()
 def get_bank_transactions(
 	company: str | None = None,
+	bank: str | None = None,
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
@@ -80,6 +82,10 @@ def get_bank_transactions(
 
 	if company:
 		filters.append(["company", "=", company])
+
+	if bank:
+		bank_accounts = frappe.get_list("Bank Account", filters={"bank": bank}, pluck="name")
+		filters.append(["bank_account", "in", bank_accounts])
 
 	return frappe.get_list(
 		"Bank Transaction",

@@ -8,6 +8,7 @@
  "field_order": [
   "filters_section",
   "company",
+  "bank",
   "bank_account",
   "account_currency",
   "account_opening_balance",
@@ -109,6 +110,12 @@
   {
    "fieldname": "reconciliation_action_area",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "label": "Bank",
+   "options": "Bank"
   }
  ],
  "grid_page_length": 50,
@@ -116,7 +123,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-07 20:00:00.617187",
+ "modified": "2025-10-14 17:12:13.850366",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Tool Beta",

@@ -8,6 +8,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				filters: {
 					company: doc.company,
 					is_company_account: 1,
+					bank: doc.bank,
 				},
 			};
 		});
@@ -128,6 +129,10 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	},
 
 	company: function (frm) {
+		frm.events.get_bank_transactions(frm);
+	},
+
+	bank: function (frm) {
 		frm.events.get_bank_transactions(frm);
 	},
 
