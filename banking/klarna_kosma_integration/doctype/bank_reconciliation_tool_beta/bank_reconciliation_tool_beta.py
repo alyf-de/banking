@@ -361,7 +361,9 @@ def upload_bank_statement(**args):
 
 @frappe.whitelist()
 def auto_reconcile_vouchers(
-	bank_account: str,
+	company: str | None = None,
+	bank: str | None = None,
+	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
 	filter_by_reference_date: str | bool = False,
@@ -372,7 +374,9 @@ def auto_reconcile_vouchers(
 	frappe.flags.auto_reconcile_vouchers = True
 	reconciled, partially_reconciled = set(), set()
 
-	bank_transactions = get_bank_transactions(bank_account, from_date, to_date)
+	bank_transactions = get_bank_transactions(
+		company=company, bank=bank, bank_account=bank_account, from_date=from_date, to_date=to_date
+	)
 	for transaction in bank_transactions:
 		linked_payments = get_linked_payments(
 			transaction.name,
