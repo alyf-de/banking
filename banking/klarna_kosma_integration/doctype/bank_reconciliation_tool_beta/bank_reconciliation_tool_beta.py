@@ -45,7 +45,7 @@ def get_bank_transactions(
 	filters = [
 		["bank_account", "=", bank_account],
 		["docstatus", "=", 1],
-		["unallocated_amount", ">", 0.001],
+		["status", "not in", ["Reconciled", "Cancelled"]],
 	]
 
 	if to_date:
