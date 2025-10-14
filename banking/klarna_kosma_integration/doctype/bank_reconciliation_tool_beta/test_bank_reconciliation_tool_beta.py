@@ -33,9 +33,12 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			"Sales Invoice", dict(fieldname="custom_ref_no", label="Ref No", fieldtype="Data")
 		)  # commits to db internally
 
-		create_bank()
+		# Create a single shared bank for all tests
+		cls.test_bank = create_bank("Test Bank Shared", "TESTBANK01")
+
+		# Create default INR bank account
 		cls.gl_account = create_bank_gl_account("_Test Bank Reco Tool")
-		cls.bank_account = create_bank_account(gl_account=cls.gl_account)
+		cls.bank_account = create_bank_account(bank_name=cls.test_bank.name, gl_account=cls.gl_account)
 		cls.customer = create_customer(customer_name="ABC Inc.")
 
 		cls.create_item(cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC")
@@ -680,7 +683,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 	def test_usd_jv_against_eur_company(self):
 		"""Test if the tool can create a USD Journal Entry against a EUR company."""
-		bank = create_bank("Citi Bank USD", swift_number="CITIUS34")
 		gl_account = create_bank_gl_account("_Test USD Bank Reco Tool", "USD")
 		usd_receivable_account = frappe.get_doc(
 			{
@@ -693,7 +695,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 				"account_currency": "USD",
 			}
 		).insert()
-		bank_account = create_bank_account(bank.name, gl_account, "USD Account")
+		bank_account = create_bank_account(self.test_bank.name, gl_account, "USD Account")
 		customer = create_customer(customer_name="USD Inc.", currency="USD")
 
 		bt = create_bank_transaction(
@@ -725,6 +727,583 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+
+	def test_usd_invoice_usd_bank_same_currency(self):
+		"""Test USD invoice + USD bank transaction (same currency baseline)."""
+		# Create USD bank setup (reuse shared bank)
+		usd_gl_account = create_bank_gl_account("_Test USD Bank Account", "USD")
+		usd_bank_account = create_bank_account(self.test_bank.name, usd_gl_account, "USD Account")
+		usd_customer = create_customer("USD Customer", currency="USD")
+
+		# Create USD invoice and USD bank transaction
+		si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			conversion_rate=90,
+		)
+
+		self.assertEqual(si.grand_total, 100.0)  # USD
+		self.assertEqual(si.base_grand_total, 9000.0)  # INR
+
+		bt = create_bank_transaction(
+			deposit=100,
+			currency="USD",
+			bank_account=usd_bank_account,
+			reference_no="usd-same-001",
+		)
+
+		# Reconcile using existing bulk_reconcile_vouchers pattern
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 100)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		# Verify Payment Entry structure and amounts for same currency
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.payment_type, "Receive")
+		self.assertEqual(len(pe.references), 1)
+		self.assertEqual(pe.references[0].reference_name, si.name)
+
+		# Verify Payment Entry amounts depend on account currencies
+		self.assertEqual(pe.paid_amount, si.base_grand_total)
+		self.assertEqual(pe.received_amount, si.grand_total)
+		self.assertEqual(pe.references[0].allocated_amount, si.base_grand_total)
+
+		# Verify Payment Entry account currencies
+		self.assertEqual(pe.paid_from_account_currency, si.party_account_currency)
+		self.assertEqual(pe.paid_to_account_currency, "USD")
+
+		# Bank transaction allocated amount matches bank currency
+		self.assertEqual(bt.payment_entries[0].allocated_amount, si.grand_total)
+
+	def test_usd_invoice_inr_bank_cross_currency_pe(self):
+		"""Test USD invoice + INR bank transaction via Payment Entry."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Account", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Account")
+		usd_customer = create_customer("USD Customer Cross", currency="USD")
+
+		si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=si.base_grand_total,
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="inr-cross-001",
+		)
+
+		# Reconcile and verify PE creation
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		# Verify Payment Entry has multi-currency setup and correct amounts
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.payment_type, "Receive")
+		self.assertTrue(len(pe.references) > 0)
+		self.assertEqual(pe.references[0].reference_name, si.name)
+
+		# Verify Payment Entry amounts are in company currency
+		self.assertEqual(pe.paid_amount, si.base_grand_total)
+		self.assertEqual(pe.received_amount, si.base_grand_total)
+		self.assertEqual(pe.references[0].allocated_amount, si.base_grand_total)
+
+		# Verify Bank Transaction allocation
+		self.assertEqual(bt.payment_entries[0].allocated_amount, si.base_grand_total)
+
+		# Verify Payment Entry account currencies
+		self.assertEqual(pe.paid_from_account_currency, si.party_account_currency)
+		self.assertEqual(pe.paid_to_account_currency, "INR")
+
+		# Verify conversion calculations
+		self.assertEqual(si.grand_total, 100.0)
+		self.assertEqual(si.base_grand_total, 9000.0)
+		self.assertEqual(pe.paid_amount, 9000.0)
+		self.assertEqual(pe.received_amount, 9000.0)
+		self.assertEqual(pe.references[0].allocated_amount, 9000.0)
+
+	def test_multi_currency_flag_in_get_linked_payments(self):
+		"""Test multi_currency flag behavior in get_linked_payments.
+
+		Without multi_currency flag, query filters to same currency only.
+		With multi_currency flag, allows cross-currency matches (with constraint).
+		"""
+		# Setup cross-currency scenario: USD invoice, INR bank
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Flag", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Flag Account")
+		usd_customer = create_customer("USD Customer Flag", currency="USD")
+
+		si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,  # 1 USD = 90 INR
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=si.base_grand_total,  # 9000 INR
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="flag-test-001",
+		)
+
+		# Test without multi_currency flag
+		matches_without = get_linked_payments(
+			bt.name,
+			["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+
+		# Test with multi_currency flag
+		matches_with = get_linked_payments(
+			bt.name,
+			["sales_invoice", "unpaid_invoices", "multi_currency"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+
+		# Verify results
+		self.assertIsInstance(matches_without, list)
+		self.assertIsInstance(matches_with, list)
+
+		# Verify behavior difference
+		invoice_found_without = any(match["name"] == si.name for match in matches_without)
+		invoice_found_with = any(match["name"] == si.name for match in matches_with)
+
+		# Without flag: USD invoice should NOT be found for INR bank
+		self.assertFalse(
+			invoice_found_without, "USD invoice should NOT be found for INR bank without multi_currency flag"
+		)
+
+		# With flag: USD invoice SHOULD be found for INR bank
+		self.assertTrue(
+			invoice_found_with, "USD invoice SHOULD be found for INR bank with multi_currency flag"
+		)
+
+		# Verify matched invoice has correct amount
+		if invoice_found_with:
+			matched_invoice = next(match for match in matches_with if match["name"] == si.name)
+			self.assertEqual(matched_invoice["paid_amount"], si.base_grand_total)
+
+	def test_multiple_usd_invoices_inr_bank_pe(self):
+		"""Test multiple USD invoices + INR bank transaction."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Multi", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Multi Account")
+		usd_customer = create_customer("USD Customer Multi", currency="USD")
+
+		si1 = create_sales_invoice(
+			rate=60,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		si2 = create_sales_invoice(
+			rate=40,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		total_base_amount = si1.base_grand_total + si2.base_grand_total
+		bt = create_bank_transaction(
+			deposit=total_base_amount,
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="multi-usd-001",
+		)
+
+		# Reconcile both invoices against single INR transaction
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{"payment_doctype": "Sales Invoice", "payment_name": si1.name},
+					{"payment_doctype": "Sales Invoice", "payment_name": si2.name},
+				]
+			),
+		)
+
+		bt.reload()
+		si1.reload()
+		si2.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si1.outstanding_amount, 0)
+		self.assertEqual(si2.outstanding_amount, 0)
+
+		# Verify Payment Entry references both invoices with correct amounts
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(len(pe.references), 2)
+		reference_names = [ref.reference_name for ref in pe.references]
+		self.assertIn(si1.name, reference_names)
+		self.assertIn(si2.name, reference_names)
+
+		# Verify Payment Entry amounts are in company currency
+		total_base_amount = si1.base_grand_total + si2.base_grand_total
+		self.assertEqual(pe.paid_amount, total_base_amount)
+		self.assertEqual(pe.received_amount, total_base_amount)
+		self.assertEqual(pe.paid_amount, 9000.0)
+		self.assertEqual(pe.received_amount, 9000.0)
+
+		# Verify individual allocations
+		for ref in pe.references:
+			if ref.reference_name == si1.name:
+				self.assertEqual(ref.allocated_amount, si1.base_grand_total)
+				self.assertEqual(ref.allocated_amount, 5400.0)
+			elif ref.reference_name == si2.name:
+				self.assertEqual(ref.allocated_amount, si2.base_grand_total)
+				self.assertEqual(ref.allocated_amount, 3600.0)
+
+		# Verify invoice base amounts
+		self.assertEqual(si1.base_grand_total, 5400.0)
+		self.assertEqual(si2.base_grand_total, 3600.0)
+
+	def test_usd_return_invoice_inr_bank(self):
+		"""Test USD return invoice + INR bank transaction."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Return", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Return Account")
+		usd_customer = create_customer("USD Customer Return", currency="USD")
+
+		return_si = create_sales_invoice(
+			rate=100,
+			qty=-1,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			is_return=1,
+		)
+		bt = create_bank_transaction(
+			withdrawal=abs(return_si.base_grand_total),
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="return-usd-001",
+		)
+
+		# Reconcile and verify negative amounts handled correctly
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": return_si.name}]),
+		)
+
+		bt.reload()
+		return_si.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(return_si.outstanding_amount, 0)
+
+		# Verify Payment Entry handles negative amounts correctly
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.payment_type, "Pay")  # Should be Pay for return/refund
+		self.assertEqual(len(pe.references), 1)
+		self.assertEqual(pe.references[0].reference_name, return_si.name)
+
+		# Verify multi-currency amounts for return invoice
+		# For Pay type: received_amount = abs(sum(allocated_amount)), paid_amount = bt.allocated_amount
+		# The abs() function ensures PE amounts are positive even though allocated_amount is negative
+		self.assertEqual(pe.received_amount, abs(return_si.base_grand_total))
+		self.assertEqual(pe.paid_amount, abs(return_si.base_grand_total))
+		self.assertEqual(pe.references[0].allocated_amount, return_si.base_grand_total)
+
+		# Verify return invoice amounts are negative
+		self.assertLess(return_si.grand_total, 0)
+		self.assertLess(return_si.base_grand_total, 0)
+		self.assertLess(pe.references[0].allocated_amount, 0)
+
+		# Verify Payment Entry amounts are in company currency and positive
+		self.assertEqual(pe.paid_amount, 9000.0)
+		self.assertEqual(pe.received_amount, 9000.0)
+
+	def test_cross_currency_full_amount_constraint(self):
+		"""Test outstanding_amount == base_grand_total constraint for cross-currency.
+
+		The constraint 'outstanding_amount == base_grand_total' is applied when:
+		  bank_currency != company_currency
+		This ensures only full invoice amounts are matched for cross-currency scenarios
+		to avoid exchange rate issues.
+		"""
+		eur_gl_account = create_bank_gl_account("_Test EUR Bank Constraint", "EUR")
+		eur_bank_account = create_bank_account(self.test_bank.name, eur_gl_account, "EUR Constraint Account")
+		usd_customer = create_customer("USD Customer Constraint", currency="USD")
+
+		si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		# Verify initial state: constraint satisfied
+		si.reload()
+		self.assertEqual(si.outstanding_amount, si.base_grand_total)
+
+		# Make partial payment to violate constraint
+		# This will make outstanding_amount != base_grand_total
+		inr_gl_temp = create_bank_gl_account("_Test INR Temp", "INR")
+		create_bank_account(self.test_bank.name, inr_gl_temp, "INR Temp Account")
+
+		# Create and submit partial payment entry linked to the invoice
+		pe_partial = create_payment_entry(
+			payment_type="Receive",
+			party_type="Customer",
+			party=usd_customer,
+			paid_from="Debtors - _TC",
+			paid_to=inr_gl_temp,
+			paid_amount=4500,
+			received_amount=4500,
+		)
+		pe_partial.append(
+			"references",
+			{
+				"reference_doctype": "Sales Invoice",
+				"reference_name": si.name,
+				"allocated_amount": 4500,
+			},
+		)
+		pe_partial.insert()
+		pe_partial.submit()
+
+		si.reload()
+		# Verify constraint is now violated after partial payment
+		self.assertLess(si.outstanding_amount, si.base_grand_total)
+		self.assertEqual(si.outstanding_amount, 4500.0)
+		self.assertEqual(si.base_grand_total, 9000.0)
+
+		# Create EUR bank transaction
+		bt = create_bank_transaction(
+			deposit=50.0,
+			currency="EUR",
+			bank_account=eur_bank_account,
+			reference_no="constraint-test-001",
+		)
+
+		# Test get_linked_payments with multi_currency flag
+		# The invoice should NOT be found due to constraint violation
+		matches = get_linked_payments(
+			bt.name,
+			["sales_invoice", "unpaid_invoices", "multi_currency"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+
+		# Verify the partially paid invoice is NOT matched due to constraint
+		invoice_found = any(match["name"] == si.name for match in matches)
+		self.assertFalse(
+			invoice_found,
+			"Partially paid invoice should NOT be matched when bank_currency != company_currency",
+		)
+
+	def test_mixed_currency_invoices_inr_bank(self):
+		"""Test mixed currency invoices (USD + GBP) with INR bank.
+
+		Note: A single Payment Entry can only be created against invoices from the same customer.
+		For multiple customers, use multi-party Journal Entry reconciliation instead.
+		This test uses the same customer with multiple currency invoices.
+		"""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Mixed", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Mixed Account")
+
+		mixed_customer = create_customer("Mixed Currency Customer")
+
+		usd_si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=mixed_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		gbp_si = create_sales_invoice(
+			rate=80,
+			currency="GBP",
+			conversion_rate=100,
+			warehouse="Finished Goods - _TC",
+			customer=mixed_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		# Verify invoice amounts after creation
+		self.assertEqual(usd_si.grand_total, 100.0)
+		self.assertEqual(usd_si.base_grand_total, 9000.0)
+		self.assertEqual(gbp_si.grand_total, 80.0)
+		self.assertEqual(gbp_si.base_grand_total, 8000.0)
+
+		total_base_amount = usd_si.base_grand_total + gbp_si.base_grand_total
+		bt = create_bank_transaction(
+			deposit=total_base_amount,
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="mixed-curr-001",
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{"payment_doctype": "Sales Invoice", "payment_name": usd_si.name},
+					{"payment_doctype": "Sales Invoice", "payment_name": gbp_si.name},
+				]
+			),
+		)
+
+		bt.reload()
+		usd_si.reload()
+		gbp_si.reload()
+
+		self.assertGreater(len(bt.payment_entries), 0)
+		self.assertEqual(usd_si.outstanding_amount, 0)
+		self.assertEqual(gbp_si.outstanding_amount, 0)
+
+		# Verify Payment Entry amounts
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		expected_total_base = usd_si.base_grand_total + gbp_si.base_grand_total
+
+		self.assertEqual(pe.received_amount, expected_total_base)
+		self.assertEqual(pe.received_amount, 17000.0)
+		self.assertEqual(len(pe.references), 2)
+
+	def test_multi_party_multi_currency_jv(self):
+		"""Test multi-party Journal Entry with different currency invoices."""
+		inr_gl_account = create_bank_gl_account("_Test INR Multi Party", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Multi Party Account")
+
+		usd_customer = create_customer("USD Customer Party", currency="USD")
+		eur_customer = create_customer("EUR Customer Party", currency="EUR")
+
+		usd_si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		eur_si = create_sales_invoice(
+			rate=50,
+			currency="EUR",
+			conversion_rate=100,
+			warehouse="Finished Goods - _TC",
+			customer=eur_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		# Verify invoice amounts after creation
+		self.assertEqual(usd_si.grand_total, 100.0)
+		self.assertEqual(usd_si.base_grand_total, 9000.0)
+		self.assertEqual(eur_si.grand_total, 50.0)
+		self.assertEqual(eur_si.base_grand_total, 5000.0)
+
+		total_base_amount = usd_si.base_grand_total + eur_si.base_grand_total
+		bt = create_bank_transaction(
+			deposit=total_base_amount,
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="multi-party-curr-001",
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{
+						"payment_doctype": "Sales Invoice",
+						"payment_name": usd_si.name,
+						"party": usd_customer,
+					},
+					{
+						"payment_doctype": "Sales Invoice",
+						"payment_name": eur_si.name,
+						"party": eur_customer,
+					},
+				]
+			),
+			reconcile_multi_party=True,
+		)
+
+		bt.reload()
+		usd_si.reload()
+		eur_si.reload()
+
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+		self.assertEqual(bt.status, "Reconciled")
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.voucher_type, "Bank Entry")
+		self.assertGreaterEqual(len(je.accounts), 3)
+
+		# Verify multi_currency flag is False
+		# All JE accounts are in company currency even though invoices are USD/EUR
+		self.assertFalse(je.multi_currency)
+
+		# Verify Journal Entry totals
+		expected_total = usd_si.base_grand_total + eur_si.base_grand_total
+		self.assertEqual(je.total_debit, expected_total)
+		self.assertEqual(je.total_credit, expected_total)
+		self.assertEqual(je.total_debit, 14000.0)
+		self.assertEqual(je.total_credit, 14000.0)
+
+		# Verify individual account entries
+		bank_account_found = False
+		usd_account_found = False
+		eur_account_found = False
+
+		for account in je.accounts:
+			if account.account == inr_gl_account:
+				self.assertEqual(account.debit_in_account_currency, 14000.0)
+				bank_account_found = True
+			elif account.reference_name == usd_si.name:
+				self.assertEqual(account.credit_in_account_currency, 9000.0)
+				usd_account_found = True
+			elif account.reference_name == eur_si.name:
+				self.assertEqual(account.credit_in_account_currency, 5000.0)
+				eur_account_found = True
+
+		self.assertTrue(bank_account_found)
+		self.assertTrue(usd_account_found)
+		self.assertTrue(eur_account_found)
 
 
 def get_pe_references(vouchers: list):
