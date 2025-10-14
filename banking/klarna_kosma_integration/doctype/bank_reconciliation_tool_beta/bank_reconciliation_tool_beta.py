@@ -70,7 +70,7 @@ def get_bank_transactions(
 	if bank_account:
 		filters.append(["bank_account", "=", bank_account])
 	else:
-		filters.append(["bank_account", "is", "not set"])
+		filters.append(["bank_account", "is", "set"])
 
 	if to_date:
 		filters.append(["date", "<=", to_date])
