@@ -20,7 +20,8 @@
   "fintech_license_key",
   "bank_reconciliation_tab",
   "advanced_section",
-  "reference_fields"
+  "reference_fields",
+  "voucher_matching_defaults"
  ],
  "fields": [
   {
@@ -107,12 +108,20 @@
    "fieldname": "advanced_section",
    "fieldtype": "Section Break",
    "label": "Advanced"
+  },
+  {
+   "description": "These DocTypes are pre-enabled in the 'Match Voucher' tab.",
+   "fieldname": "voucher_matching_defaults",
+   "fieldtype": "Table MultiSelect",
+   "label": "Voucher Matching Defaults",
+   "options": "Voucher Matching Default"
   }
  ],
+ "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-29 17:04:19.776579",
+ "modified": "2025-10-07 18:44:07.181312",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",
@@ -129,6 +138,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

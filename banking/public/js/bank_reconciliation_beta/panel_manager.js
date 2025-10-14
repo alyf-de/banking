@@ -11,7 +11,15 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	async init_panels() {
-		this.transactions = await this.get_bank_transactions();
+		const [transactions, document_types] = await Promise.all([
+			this.get_bank_transactions(),
+			frappe.xcall(
+				"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
+			),
+		]);
+
+		this.transactions = transactions;
+		this.document_types = document_types;
 
 		this.$wrapper.empty();
 		this.$panel_wrapper = this.$wrapper
@@ -31,10 +39,10 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				method:
 					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
 				args: {
-					company: this.doc.company,
-					bank_account: this.doc.bank_account,
-					from_date: this.doc.bank_statement_from_date,
-					to_date: this.doc.bank_statement_to_date,
+          company: this.frm.doc.company,
+					bank_account: this.frm.doc.bank_account,
+					from_date: this.frm.doc.bank_statement_from_date,
+					to_date: this.frm.doc.bank_statement_to_date,
 					order_by: this.order || "date asc",
 				},
 				freeze: true,
@@ -45,11 +53,10 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_panels() {
-		this.set_actions_panel_default_states();
-
 		if (!this.transactions || !this.transactions.length) {
 			this.render_no_transactions();
 		} else {
+			this.set_actions_panel_default_states();
 			this.render_list_panel();
 
 			let first_transaction = this.transactions[0];
@@ -60,19 +67,15 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	set_actions_panel_default_states() {
 		// Init actions panel states to store for persistent views
 		this.actions_tab = "match_voucher-tab";
-		this.actions_filters = {
-			payment_entry: 0,
-			journal_entry: 0,
-			purchase_invoice: 1,
-			sales_invoice: 1,
-			loan_repayment: 0,
-			loan_disbursement: 0,
-			expense_claim: 0,
-			bank_transaction: 0,
-			exact_match: 0,
-			exact_party_match: 0,
-			unpaid_invoices: 1,
-		};
+		this.actions_filters = Object.fromEntries(
+			Object.entries(this.document_types).map(([key, value]) => [
+				frappe.scrub(key),
+				value ? 1 : 0,
+			])
+		);
+		this.actions_filters.exact_match = 0;
+		this.actions_filters.exact_party_match = 0;
+		this.actions_filters.unpaid_invoices = 1;
 	}
 
 	render_no_transactions() {
@@ -102,7 +105,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			new erpnext.accounts.bank_reconciliation.ActionsPanelManager({
 				$wrapper: this.$panel_wrapper,
 				transaction: this.active_transaction,
-				doc: this.doc,
+				frm: this.frm,
 				panel_manager: this,
 			});
 	}

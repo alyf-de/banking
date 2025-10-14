@@ -13,8 +13,9 @@
   "company",
   "country",
   "bank",
-  "split_batch_transactions",
   "intraday_sync",
+  "download_batch_transactions",
+  "split_batch_transactions",
   "section_break_qjlc",
   "partner_id",
   "user_id",
@@ -152,6 +153,13 @@
    "label": "Protocol Version",
    "options": "H004\nH005",
    "read_only_depends_on": "initialized"
+  },
+  {
+   "default": "0",
+   "description": "If enabled, <code>camt.054</code> files are downloaded and merged with <code>camt.052</code> or <code>camt.053</code> files.",
+   "fieldname": "download_batch_transactions",
+   "fieldtype": "Check",
+   "label": "Download Batch Transactions"
   }
  ],
  "links": [
@@ -160,7 +168,7 @@
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2025-06-25 19:33:58.402007",
+ "modified": "2025-10-08 15:37:25.273496",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",

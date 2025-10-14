@@ -274,6 +274,7 @@ def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
 	reconcile_multi_party: bool = False,
+	extra_params: str | dict | None = None,
 ) -> "CustomBankTransaction":
 	"""
 	Reconcile multiple vouchers with a bank transaction.
@@ -284,12 +285,18 @@ def bulk_reconcile_vouchers(
 	if isinstance(vouchers, str):
 		vouchers = json.loads(vouchers)
 
+	if isinstance(extra_params, str):
+		extra_params = json.loads(extra_params)
+
 	reconcile_multi_party = sbool(reconcile_multi_party)
 
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 
 	for hook in frappe.get_hooks("get_payment_entries"):
-		vouchers = frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party) or vouchers
+		vouchers = (
+			frappe.get_attr(hook)(transaction, vouchers, reconcile_multi_party, extra_params=extra_params)
+			or vouchers
+		)
 
 	transaction.add_payment_entries(vouchers, reconcile_multi_party)
 	transaction.validate_duplicate_references()
@@ -1104,7 +1111,12 @@ def get_unpaid_si_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_rank + amount_rank + name_match + ref_match + 1
+	date_condition = (sales_invoice.posting_date == common_filters.date) | (
+		sales_invoice.due_date == common_filters.date
+	)
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
+
+	rank_expression = ref_rank + party_rank + amount_rank + date_rank + name_match + ref_match + 1
 
 	query = (
 		frappe.qb.from_(sales_invoice)
@@ -1122,6 +1134,7 @@ def get_unpaid_si_matching_query(
 			sales_invoice.currency,
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
+			date_rank.as_("date_match"),
 			name_match.as_("name_in_desc_match"),
 			(ref_match).as_("ref_in_desc_match"),
 			(ref_rank).as_("reference_number_match"),
@@ -1273,10 +1286,15 @@ def get_unpaid_pi_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_match + amount_rank + name_match + ref_match + 1
+	date_condition = (
+		(purchase_invoice.posting_date == common_filters.date)
+		| (purchase_invoice.due_date == common_filters.date)
+		| (purchase_invoice.bill_date == common_filters.date)
+	)
+	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	# We skip date rank as the date of an unpaid bill is mostly
-	# earlier than the date of the bank transaction
+	rank_expression = ref_rank + party_match + amount_rank + date_rank + name_match + ref_match + 1
+
 	query = (
 		frappe.qb.from_(purchase_invoice)
 		.select(
@@ -1293,6 +1311,7 @@ def get_unpaid_pi_matching_query(
 			purchase_invoice.currency,
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
+			date_rank.as_("date_match"),
 			name_match.as_("name_in_desc_match"),
 			ref_match.as_("ref_in_desc_match"),
 			ref_rank.as_("reference_number_match"),

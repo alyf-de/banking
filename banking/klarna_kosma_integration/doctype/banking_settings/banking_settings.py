@@ -14,6 +14,32 @@ from banking.klarna_kosma_integration.admin import Admin
 
 
 class BankingSettings(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		from banking.klarna_kosma_integration.doctype.banking_reference_mapping.banking_reference_mapping import (
+			BankingReferenceMapping,
+		)
+		from banking.klarna_kosma_integration.doctype.voucher_matching_default.voucher_matching_default import (
+			VoucherMatchingDefault,
+		)
+
+		admin_endpoint: DF.Data | None
+		api_token: DF.Password | None
+		customer_id: DF.Data | None
+		enable_ebics: DF.Check
+		enabled: DF.Check
+		fintech_license_key: DF.Password | None
+		fintech_licensee_name: DF.Data | None
+		reference_fields: DF.Table[BankingReferenceMapping]
+		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
+
+	# end: auto-generated types
 	def before_validate(self):
 		self.update_fintech_license()
 
@@ -177,3 +203,14 @@ def get_latest_release_for_branch(owner: str, repo: str):
 	except Exception:
 		frappe.log_error(title=_("Banking Error"), message=_("Error while fetching releases"))
 		return None
+
+
+@frappe.whitelist()
+def get_doctypes_for_bank_reconciliation() -> dict[str, bool]:
+	"""Get Bank Reconciliation doctypes from all the apps and check if they are in the default doctypes"""
+	frappe.has_permission("Bank Reconciliation Tool Beta", throw=True)
+
+	all_doctypes = frappe.get_hooks("bank_reconciliation_doctypes")
+	settings: BankingSettings = frappe.get_single("Banking Settings")
+	default_doctypes = [row.document_type for row in settings.voucher_matching_defaults]
+	return {dt: dt in default_doctypes for dt in all_doctypes}

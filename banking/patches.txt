@@ -9,3 +9,5 @@ execute:frappe.delete_doc_if_exists("DocType", "Klarna Kosma Session")
 execute:frappe.delete_doc_if_exists("Custom Field", "Bank Account-kosma_account_id")
 execute:frappe.delete_doc_if_exists("Custom Field", "Bank Transaction-kosma_party_name")
 execute:from banking.install import insert_custom_records; insert_custom_records()
+banking.patches.set_voucher_matching_defaults
+banking.patches.download_batch_transactions

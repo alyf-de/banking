@@ -2,6 +2,21 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Banking Settings", {
+	setup: (frm) => {
+		frm.trigger("set_voucher_matching_defaults_query");
+	},
+	set_voucher_matching_defaults_query: async (frm) => {
+		const document_types = await frappe.xcall(
+			"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_doctypes_for_bank_reconciliation"
+		);
+		frm.set_query("voucher_matching_defaults", (doc) => {
+			return {
+				filters: {
+					name: ["in", document_types],
+				},
+			};
+		});
+	},
 	refresh: (frm) => {
 		if (frm.doc.enabled) {
 			frm.trigger("get_app_health");

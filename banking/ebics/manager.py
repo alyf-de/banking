@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -6,6 +7,17 @@ if TYPE_CHECKING:
 	from fintech.ebics import (
 		EbicsClient,
 	)
+
+
+@dataclass
+class EbicsRequest:
+	"""Parameters for an EBICS download request."""
+
+	order_type: str  # e.g., "C52", "Z53", "C54"
+	camt_msg: str  # e.g., "camt.052", "camt.053", "camt.054"
+	service: str  # "STM" for statements, "EOP" for end-of-period
+	start_date: str | None = None
+	end_date: str | None = None
 
 
 class EBICSManager:
@@ -83,7 +95,16 @@ class EBICSManager:
 		# Collect all order types for the specified level
 		level_perms = []
 		for permission in permissions:
-			if permission.get("@AuthorisationLevel", level) == level:
+			if self.protocol_version == "H005":
+				if permission.get("AdminOrderType") == "BTD":
+					level_perms.append(
+						(
+							"BTD",
+							permission.get("Service", {}).get("ServiceName"),
+							permission.get("Service", {}).get("MsgName"),
+						)
+					)
+			elif permission.get("@AuthorisationLevel", level) == level:
 				order_types = permission.get("OrderTypes")
 				if isinstance(order_types, str):
 					# Split if it's a space-separated string
@@ -91,8 +112,11 @@ class EBICSManager:
 
 		return level_perms
 
-	def download_c52(self, start_date: str | None = None, end_date: str | None = None) -> dict:
-		"""Download Bank to Customer Account Reports (camt.052) - Intraday statements.
+	def download(self, request: EbicsRequest) -> dict:
+		"""Execute an EBICS download request.
+
+		Args:
+			request: EbicsRequest containing order type and parameters
 
 		Returns:
 			dict: The downloaded files.
@@ -100,68 +124,17 @@ class EBICSManager:
 		client = self.get_client()
 
 		if client.version != "H005":
-			if self.country_code == "CH":
-				return client.Z52(start_date, end_date)
-
-			return client.C52(start_date, end_date)
+			return client.download(request.order_type, request.start_date, request.end_date)
 
 		from fintech.ebics import BusinessTransactionFormat
 
-		c52_btf = BusinessTransactionFormat(
-			service="STM",  # Statement service
-			msg_name="camt.052",
+		btf = BusinessTransactionFormat(
+			service=request.service,
+			msg_name=request.camt_msg,
 			scope=self.country_code,
 			container="ZIP",
 		)
-		return client.BTD(c52_btf, start_date, end_date)
-
-	def download_c53(self, start_date: str | None = None, end_date: str | None = None) -> dict:
-		"""Download Bank to Customer Statements (camt.053) - End of period statements.
-
-		Returns:
-			dict: The downloaded files.
-		"""
-		client = self.get_client()
-
-		if client.version != "H005":
-			if self.country_code == "CH":
-				return client.Z53(start_date, end_date)
-
-			return client.C53(start_date, end_date)
-
-		from fintech.ebics import BusinessTransactionFormat
-
-		c53_btf = BusinessTransactionFormat(
-			service="EOP",  # End of Period service
-			msg_name="camt.053",
-			scope=self.country_code,
-			container="ZIP",
-		)
-		return client.BTD(c53_btf, start_date, end_date)
-
-	def download_c54(self, start_date: str | None = None, end_date: str | None = None) -> dict:
-		"""Download Bank to Customer Debit Credit Notifications (camt.054) - Batch transaction details.
-
-		Returns:
-			dict: The downloaded files.
-		"""
-		client = self.get_client()
-
-		if client.version != "H005":
-			if self.country_code == "CH":
-				return client.Z54(start_date, end_date)
-
-			return client.C54(start_date, end_date)
-
-		from fintech.ebics import BusinessTransactionFormat
-
-		c54_btf = BusinessTransactionFormat(
-			service="STM",  # Statement service
-			msg_name="camt.054",
-			scope=self.country_code,
-			container="ZIP",
-		)
-		return client.BTD(c54_btf, start_date, end_date)
+		return client.BTD(btf, request.start_date, request.end_date)
 
 	def confirm_download(self, success: bool = True):
 		"""Confirm the receipt of previously executed downloads.

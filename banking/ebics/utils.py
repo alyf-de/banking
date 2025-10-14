@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils.data import get_link_to_form
 
-from banking.ebics.manager import EBICSManager
+from banking.ebics.manager import EBICSManager, EbicsRequest
 from banking.ebics.types import MT940Statement, MT940Transaction
 
 if TYPE_CHECKING:
@@ -51,6 +51,100 @@ def get_ebics_manager(
 	return manager
 
 
+def get_request_map(
+	country_code: str | None = None, start_date: str | None = None, end_date: str | None = None
+) -> dict[str, EbicsRequest]:
+	"""Get EbicsRequest for the given country. Switzerland uses Z-types, others use C-types."""
+	prefix = "Z" if country_code == "CH" else "C"
+	return {
+		"intraday": EbicsRequest(
+			order_type=f"{prefix}52",
+			camt_msg="camt.052",
+			service="STM",
+			start_date=start_date,
+			end_date=end_date,
+		),
+		"statement": EbicsRequest(
+			order_type=f"{prefix}53",
+			camt_msg="camt.053",
+			service="EOP",
+			start_date=start_date,
+			end_date=end_date,
+		),
+		"batch": EbicsRequest(
+			order_type=f"{prefix}54",
+			camt_msg="camt.054",
+			service="STM",
+			start_date=start_date,
+			end_date=end_date,
+		),
+	}
+
+
+def execute_ebics_download(
+	manager: EBICSManager,
+	ebics_user: str,
+	ebics_request: EbicsRequest,
+	requested_by: Literal["User", "System"],
+	permitted_types: list[str],
+) -> dict | None:
+	"""Execute a single EBICS download request with logging and error handling.
+
+	Args:
+		manager: The EBICS manager instance
+		ebics_user: The EBICS User name
+		ebics_request: The request to execute
+		requested_by: Who initiated the request
+		permitted_types: List of permitted order types for validation
+
+	Returns:
+		dict: The downloaded XML files, or None if failed or no data available
+	"""
+	if manager.protocol_version == "H004":
+		validated_perms(ebics_user, permitted_types, ebics_request.order_type)
+	elif manager.protocol_version == "H005":
+		validated_perms(
+			ebics_user,
+			permitted_types,
+			("BTD", ebics_request.service, ebics_request.camt_msg),
+		)
+
+	request_log = log_request(
+		ebics_user,
+		ebics_request.order_type,
+		requested_by,
+		{
+			"start_date": ebics_request.start_date,
+			"end_date": ebics_request.end_date,
+		},
+	)
+
+	try:
+		xml_files = manager.download(ebics_request)
+
+		request_log.db_set(
+			{
+				"status": "Successful",
+				"response": json.dumps(
+					{file_name: file.decode() for file_name, file in xml_files.items()},
+					indent=2,
+				),
+			}
+		)
+		return xml_files
+	except fintech.ebics.EbicsNoDataAvailable:
+		request_log.db_set({"status": "Successful", "response": "No Data Available"})
+	except Exception as e:
+		request_log.db_set({"status": "Failed", "response": str(e)})
+		frappe.log_error(
+			title=_("Banking Error"),
+			reference_doctype="EBICS User",
+			reference_name=ebics_user,
+		)
+
+	return None
+
+
 def sync_ebics_transactions(
 	ebics_user: str,
 	requested_by: Literal["User", "System"],
@@ -66,52 +160,25 @@ def sync_ebics_transactions(
 		CAMTDocument,
 	)  # import possible only after manager is initialized
 
+	request_map = get_request_map(manager.country_code, start_date, end_date)
+	main_request = request_map["intraday"] if intraday else request_map["statement"]
+
+	# Get permitted types once - they don't change across downloads
 	permitted_types = manager.get_permitted_order_types()
-	validate_permitted_types(user, permitted_types, intraday)
 
-	with_c54 = user.split_batch_transactions and "C54" in permitted_types
-	request = log_request(
-		ebics_user,
-		"C52" if intraday else "C53",
-		requested_by,
-		{
-			"start_date": start_date,
-			"end_date": end_date,
-		},
-	)
-	main_xml, batch_xml = None, None
-	try:
-		# Use the manager's download methods which handle protocol version automatically
-		if intraday:
-			main_xml = manager.download_c52(start_date, end_date)
-		else:
-			main_xml = manager.download_c53(start_date, end_date)
-
-		if with_c54:
-			batch_xml = manager.download_c54(start_date, end_date)
-
-		request.db_set(
-			{
-				"status": "Successful",
-				"response": json.dumps(
-					{file_name: file.decode() for file_name, file in main_xml.items()},
-					indent=2,
-				),
-			}
-		)
-	except fintech.ebics.EbicsNoDataAvailable:
-		request.db_set({"status": "Successful", "response": "No Data Available"})
-		return
-	except Exception as e:
-		request.db_set({"status": "Failed", "response": str(e)})
-		frappe.log_error(
-			title=_("Banking Error"),
-			reference_doctype="EBICS User",
-			reference_name=ebics_user,
-		)
+	# Download main statements
+	main_xml = execute_ebics_download(manager, user.name, main_request, requested_by, permitted_types)
+	if not main_xml:
 		return
 
-	# Keep the request log, no matter what happens next.
+	# Download batch transactions if enabled
+	batch_xml = None
+	if user.download_batch_transactions:
+		batch_request = request_map["batch"]
+		batch_xml = execute_ebics_download(manager, user.name, batch_request, requested_by, permitted_types)
+		# Continue even if batch download fails - main_xml is what matters
+
+	# Keep the request logs, no matter what happens next.
 	frappe.db.commit()
 
 	# We want to process either all documents or none. If we fail to process one, we
@@ -140,8 +207,8 @@ def sync_ebics_transactions(
 		frappe.db.rollback()
 		frappe.log_error(
 			title=_("Banking Error"),
-			reference_doctype="EBICS Request",
-			reference_name=request.name,
+			reference_doctype="EBICS User",
+			reference_name=user.name,
 		)
 		manager.confirm_download(success=False)
 		return
@@ -149,37 +216,17 @@ def sync_ebics_transactions(
 	manager.confirm_download(success=True)
 
 
-def validate_permitted_types(user, permitted_types, intraday: bool):
+def validated_perms(ebics_user, permitted_types, required_type):
 	# Not sure yet, how reliable permitted types are. For now, we just log an error
 	# instead of raising an exception or returning.
-	if intraday and "C52" not in permitted_types:
+	if required_type not in permitted_types:
 		frappe.log_error(
-			title=_("Banking Error"),
+			title=_("Banking Warning"),
 			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading intraday transactions. The permitted types are: {1}."
-			).format(user.name, ", ".join(permitted_types)),
+				"It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
+			).format(required_type, ", ".join(str(t) for t in permitted_types)),
 			reference_doctype="EBICS User",
-			reference_name=user.name,
-		)
-
-	if not intraday and "C53" not in permitted_types:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"It seems like EBICS User {0} lacks permission 'C52' for downloading booked bank statements. The permitted types are: {1}."
-			).format(user.name, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=user.name,
-		)
-
-	if not intraday and user.split_batch_transactions and "C54" not in permitted_types:
-		frappe.log_error(
-			title=_("Banking Error"),
-			message=_(
-				"EBICS User {0} lacks permission 'C54' for splitting batch transactions. The permitted types are: {1}."
-			).format(user.name, ", ".join(permitted_types)),
-			reference_doctype="EBICS User",
-			reference_name=user.name,
+			reference_name=ebics_user,
 		)
 
 

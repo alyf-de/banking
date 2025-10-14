@@ -67,7 +67,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						actions_panel: this,
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
-						doc: this.doc,
+						frm: this.frm,
 					});
 				},
 			},
@@ -79,7 +79,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						actions_panel: this,
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
-						company: this.doc.company,
+						company: this.frm.doc.company,
 					});
 				},
 			},

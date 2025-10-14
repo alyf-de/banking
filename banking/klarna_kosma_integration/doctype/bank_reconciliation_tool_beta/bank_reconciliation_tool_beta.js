@@ -232,7 +232,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		frappe.require("bank_reconciliation_beta.bundle.js", () => {
 			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
 				{
-					doc: frm.doc,
+					frm: frm,
 					$wrapper: frm.$reconciliation_area,
 				}
 			);
