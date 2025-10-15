@@ -1048,6 +1048,31 @@ def get_si_matching_query(
 	return query
 
 
+def apply_unpaid_invoice_currency_filters(
+	query, invoice_doctype, currency: str, company_currency: str, common_filters: frappe._dict
+):
+	"""Apply shared currency and amount rules for unpaid invoices.
+
+	- If multi-currency is disabled, restrict to exact transaction currency
+	- If multi-currency is enabled and transaction currency differs from company currency,
+	  allow both invoice currency and company currency
+	- If transaction currency differs from company currency, only support full invoice amounts
+	  to avoid exchange rate issues
+	"""
+	if not common_filters.multi_currency:
+		query = query.where(invoice_doctype.currency == currency)
+	elif currency != company_currency:
+		query = query.where(
+			(invoice_doctype.currency == currency) | (invoice_doctype.currency == company_currency)
+		)
+
+	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
+	if currency != company_currency:
+		query = query.where(invoice_doctype.outstanding_amount == invoice_doctype.base_grand_total)
+
+	return query
+
+
 def get_unpaid_si_matching_query(
 	exact_match: bool,
 	currency: str,
@@ -1130,15 +1155,10 @@ def get_unpaid_si_matching_query(
 		query = query.where(sales_invoice.outstanding_amount == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
-	if not common_filters.multi_currency:
-		query = query.where(sales_invoice.currency == currency)
-	elif currency != company_currency:
-		query = query.where(
-			(sales_invoice.currency == currency) | (sales_invoice.currency == company_currency)
-		)
-	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
-	if currency != company_currency:
-		query = query.where(sales_invoice.outstanding_amount == sales_invoice.base_grand_total)
+
+	query = apply_unpaid_invoice_currency_filters(
+		query, sales_invoice, currency, company_currency, common_filters
+	)
 
 	return query
 
@@ -1323,15 +1343,10 @@ def get_unpaid_pi_matching_query(
 		query = query.where(purchase_invoice.outstanding_amount == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
-	if not common_filters.multi_currency:
-		query = query.where(purchase_invoice.currency == currency)
-	elif currency != company_currency:
-		query = query.where(
-			(purchase_invoice.currency == currency) | (purchase_invoice.currency == company_currency)
-		)
-	# In case that the invoice is not the company currency, only support full invoice amounts (avoiding exchange rate issues)
-	if currency != company_currency:
-		query = query.where(purchase_invoice.outstanding_amount == purchase_invoice.base_grand_total)
+
+	query = apply_unpaid_invoice_currency_filters(
+		query, purchase_invoice, currency, company_currency, common_filters
+	)
 
 	return query
 
