@@ -31,28 +31,61 @@ MAX_QUERY_RESULTS = 150
 
 
 class BankReconciliationToolBeta(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		account_currency: DF.Link | None
+		account_opening_balance: DF.Currency
+		bank: DF.Link | None
+		bank_account: DF.Link | None
+		bank_statement_closing_balance: DF.Currency
+		bank_statement_from_date: DF.Date | None
+		bank_statement_to_date: DF.Date | None
+		company: DF.Link | None
+		filter_by_reference_date: DF.Check
+		from_reference_date: DF.Date | None
+		to_reference_date: DF.Date | None
+	# end: auto-generated types
 	pass
 
 
 @frappe.whitelist()
 def get_bank_transactions(
-	bank_account: str,
+	company: str | None = None,
+	bank: str | None = None,
+	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
 	order_by: str | datetime.date | None = "date asc",
 ):
 	"""Return bank transactions for a bank account"""
 	filters = [
-		["bank_account", "=", bank_account],
 		["docstatus", "=", 1],
 		["status", "not in", ["Reconciled", "Cancelled"]],
 	]
+
+	if bank_account:
+		filters.append(["bank_account", "=", bank_account])
+	else:
+		filters.append(["bank_account", "is", "set"])
 
 	if to_date:
 		filters.append(["date", "<=", to_date])
 
 	if from_date:
 		filters.append(["date", ">=", from_date])
+
+	if company:
+		filters.append(["company", "=", company])
+
+	if bank:
+		bank_accounts = frappe.get_list("Bank Account", filters={"bank": bank}, pluck="name")
+		filters.append(["bank_account", "in", bank_accounts])
 
 	return frappe.get_list(
 		"Bank Transaction",
@@ -328,7 +361,9 @@ def upload_bank_statement(**args):
 
 @frappe.whitelist()
 def auto_reconcile_vouchers(
-	bank_account: str,
+	company: str | None = None,
+	bank: str | None = None,
+	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
 	filter_by_reference_date: str | bool = False,
@@ -339,7 +374,9 @@ def auto_reconcile_vouchers(
 	frappe.flags.auto_reconcile_vouchers = True
 	reconciled, partially_reconciled = set(), set()
 
-	bank_transactions = get_bank_transactions(bank_account, from_date, to_date)
+	bank_transactions = get_bank_transactions(
+		company=company, bank=bank, bank_account=bank_account, from_date=from_date, to_date=to_date
+	)
 	for transaction in bank_transactions:
 		linked_payments = get_linked_payments(
 			transaction.name,
@@ -1402,3 +1439,21 @@ def get_invoice_function_map(document_types: list, is_deposit: bool):
 
 	# Return the ordered function map that has a function and is in the document types
 	return {doctype: fn_map[doctype] for doctype in order if (doctype in document_types and fn_map[doctype])}
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def bank_query(doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict):
+	filters = filters or {}
+	filters.update({"is_company_account": 1, "bank": ["like", f"%{txt}%"]})
+	if company := filters.get("company"):
+		filters.update({"company": company})
+
+	results = frappe.get_list(
+		"Bank Account",
+		filters=filters,
+		pluck="bank",
+		limit_start=start,
+		limit_page_length=page_len,
+	)
+	return [(result,) for result in results]

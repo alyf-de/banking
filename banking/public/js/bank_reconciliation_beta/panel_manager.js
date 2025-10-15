@@ -39,6 +39,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				method:
 					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
 				args: {
+					company: this.frm.doc.company,
+					bank: this.frm.doc.bank,
 					bank_account: this.frm.doc.bank_account,
 					from_date: this.frm.doc.bank_statement_from_date,
 					to_date: this.frm.doc.bank_statement_to_date,

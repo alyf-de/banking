@@ -8,6 +8,17 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				filters: {
 					company: doc.company,
 					is_company_account: 1,
+					bank: doc.bank,
+				},
+			};
+		});
+
+		frm.set_query("bank", function (doc) {
+			return {
+				query:
+					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.bank_query",
+				filters: {
+					company: doc.company,
 				},
 			};
 		});
@@ -56,6 +67,8 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 						method:
 							"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
 						args: {
+							company: frm.doc.company,
+							bank: frm.doc.bank,
 							bank_account: frm.doc.bank_account,
 							from_date: frm.doc.bank_statement_from_date,
 							to_date: frm.doc.bank_statement_to_date,
@@ -96,13 +109,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	},
 
 	get_bank_transactions: function (frm) {
-		if (!frm.doc.bank_account) {
-			frappe.throw({
-				message: __("Please set the 'Bank Account' filter"),
-				title: __("Filter Required"),
-			});
-		}
-
 		frm.events.build_reconciliation_area(frm);
 	},
 
@@ -134,6 +140,14 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		});
 	},
 
+	company: function (frm) {
+		frm.events.get_bank_transactions(frm);
+	},
+
+	bank: function (frm) {
+		frm.events.get_bank_transactions(frm);
+	},
+
 	bank_account: function (frm) {
 		if (frm.doc.bank_account) {
 			frappe.db.get_value(
@@ -149,11 +163,9 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 					});
 				}
 			);
-
-			frm.events.get_bank_transactions(frm);
-		} else {
-			frm.events.setup_empty_state(frm);
 		}
+
+		frm.events.get_bank_transactions(frm);
 	},
 
 	bank_statement_from_date: function (frm) {
@@ -234,8 +246,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	},
 
 	build_reconciliation_area: function (frm) {
-		if (!frm.doc.bank_account) return;
-
 		frappe.require("bank_reconciliation_beta.bundle.js", () => {
 			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
 				{

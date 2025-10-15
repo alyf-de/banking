@@ -78,6 +78,15 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				read_only: 1,
 			},
 			{
+				label: __("Bank Account"),
+				fieldname: "bank_account",
+				fieldtype: "Link",
+				options: "Bank Account",
+				default: this.transaction.bank_account,
+				read_only: 1,
+				hidden: this.frm.doc.bank_account ? 1 : 0,
+			},
+			{
 				label: __("Date"),
 				fieldname: "date",
 				fieldtype: "Date",
