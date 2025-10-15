@@ -1439,3 +1439,21 @@ def get_invoice_function_map(document_types: list, is_deposit: bool):
 
 	# Return the ordered function map that has a function and is in the document types
 	return {doctype: fn_map[doctype] for doctype in order if (doctype in document_types and fn_map[doctype])}
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def bank_query(doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict):
+	filters = filters or {}
+	filters.update({"is_company_account": 1, "bank": ["like", f"%{txt}%"]})
+	if company := filters.get("company"):
+		filters.update({"company": company})
+
+	results = frappe.get_list(
+		"Bank Account",
+		filters=filters,
+		pluck="bank",
+		limit_start=start,
+		limit_page_length=page_len,
+	)
+	return [(result,) for result in results]

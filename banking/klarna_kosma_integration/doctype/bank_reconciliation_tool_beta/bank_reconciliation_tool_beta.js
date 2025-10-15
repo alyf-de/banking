@@ -12,6 +12,16 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				},
 			};
 		});
+
+		frm.set_query("bank", function (doc) {
+			return {
+				query:
+					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.bank_query",
+				filters: {
+					company: doc.company,
+				},
+			};
+		});
 	},
 
 	onload: function (frm) {
