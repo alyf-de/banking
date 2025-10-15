@@ -6,10 +6,14 @@ import frappe
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
 	create_payment_entry,
 )
+from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import (
+	make_purchase_invoice,
+)
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 	create_sales_invoice,
 )
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
+from erpnext.controllers.tests.test_accounts_controller import make_supplier as _make_supplier
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate
@@ -534,6 +538,12 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(je.total_debit, 150)
 		self.assertEqual(je.total_credit, 150)
 
+		# All JE account currencies must match bank account currency
+		bank_gl = frappe.db.get_value("Bank Account", bt.bank_account, "account")
+		bank_currency = frappe.db.get_value("Account", bank_gl, "account_currency")
+		for row in je.accounts:
+			self.assertEqual(row.account_currency, bank_currency)
+
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 150)
 		self.assertEqual(bt.status, "Reconciled")
@@ -681,8 +691,8 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["name"], journal_entry.name)
 		self.assertEqual(first_match["paid_amount"], 200.0)
 
-	def test_usd_jv_against_eur_company(self):
-		"""Test if the tool can create a USD Journal Entry against a EUR company."""
+	def test_usd_jv_against_foreign_currency_setup(self):
+		"""Test if the tool can create a USD Journal Entry against a non-company currency bank."""
 		gl_account = create_bank_gl_account("_Test USD Bank Reco Tool", "USD")
 		usd_receivable_account = frappe.get_doc(
 			{
@@ -727,6 +737,176 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+
+	def test_usd_invoice_inr_bank_partial_allowed(self):
+		"""INR bank (company currency) allows partial against USD invoice (base amounts)."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Partial", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Partial Account")
+		usd_customer = create_customer("USD Cust Partial", currency="USD")
+
+		si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bt = create_bank_transaction(
+			deposit=4500.0,
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="inr-partial-001",
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(si.base_grand_total, 9000.0)
+		self.assertEqual(si.outstanding_amount, 4500.0)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 4500.0)
+		self.assertEqual(bt.unallocated_amount, 0.0)
+
+	def test_paid_purchase_invoice_visible_without_unpaid_filter(self):
+		"""Paid Purchase Invoices without clearance date should appear when unpaid filter is off."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank PI Paid", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR PI Paid Account")
+		bt = create_bank_transaction(withdrawal=100.0, currency="INR", bank_account=inr_bank_account)
+
+		# Ensure supplier exists to avoid missing payment terms template
+		_make_supplier("_Test Supplier")
+
+		pi = make_purchase_invoice(
+			qty=1,
+			rate=100,
+			is_paid=1,
+			cash_bank_account=inr_gl_account,
+			item="Reco Item",
+			supplier_warehouse="Finished Goods - _TC",
+			warehouse="Finished Goods - _TC",
+			uom="Nos",
+			cost_center="Main - _TC",
+			expense_account="Cost of Goods Sold - _TC",
+		)
+		pi.reload()
+
+		matches = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		pi_names = [m["name"] for m in matches if m["doctype"] == "Purchase Invoice"]
+		self.assertIn(pi.name, pi_names)
+
+		# With unpaid filter, paid PI should not be listed under unpaid invoices
+		matches_unpaid = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		pi_names_unpaid = [m["name"] for m in matches_unpaid if m["doctype"] == "Purchase Invoice"]
+		self.assertNotIn(pi.name, pi_names_unpaid)
+
+	def test_expense_claims_visible_only_with_unpaid_filter(self):
+		"""Expense Claims should appear only when unpaid filter is on for withdrawals."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank EC", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR EC Account")
+		bt = create_bank_transaction(withdrawal=200.0, currency="INR", bank_account=inr_bank_account)
+
+		ec = make_expense_claim(
+			payable_account=frappe.db.get_value("Company", bt.company, "default_payable_account"),
+			amount=200,
+			sanctioned_amount=200,
+			company=bt.company,
+			account="Travel Expenses - _TC",
+		)
+
+		# Without unpaid filter, should not show
+		matches_no_unpaid = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["expense_claim"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		ec_names = [m.get("name") for m in matches_no_unpaid if m.get("doctype") == "Expense Claim"]
+		self.assertEqual(len(ec_names), 0)
+
+		# With unpaid filter, should show
+		matches_with_unpaid = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["expense_claim", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		ec_names_unpaid = [m.get("name") for m in matches_with_unpaid if m.get("doctype") == "Expense Claim"]
+		self.assertIn(ec.name, ec_names_unpaid)
+
+	def test_withdrawal_shows_unpaid_return_sales_invoice(self):
+		"""Withdrawal BT with unpaid filter should list return Sales Invoices (unpaid)."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank Return SI", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR Return SI Account")
+		bt = create_bank_transaction(withdrawal=100.0, currency="INR", bank_account=inr_bank_account)
+
+		customer = create_customer()
+		return_si = create_sales_invoice(
+			rate=100,
+			qty=-1,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			is_return=1,
+		)
+
+		matches = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		si_names = [m["name"] for m in matches if m["doctype"] == "Sales Invoice"]
+		self.assertIn(return_si.name, si_names)
+
+	def test_get_linked_payments_uses_grand_total_when_bank_currency_differs(self):
+		"""When bank currency != company currency, unpaid SI matching uses grand_total."""
+		usd_gl_account = create_bank_gl_account("_Test USD Bank GL", "USD")
+		usd_bank_account = create_bank_account(self.test_bank.name, usd_gl_account, "USD Bank GL Account")
+		usd_customer = create_customer("USD Cust GT", currency="USD")
+
+		si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bt = create_bank_transaction(
+			deposit=10.0,
+			currency="USD",
+			bank_account=usd_bank_account,
+			reference_no="usd-grandtotal-001",
+		)
+
+		matches = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "multi_currency"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		matched = next((m for m in matches if m["doctype"] == "Sales Invoice" and m["name"] == si.name), None)
+		self.assertIsNotNone(matched)
+		self.assertEqual(matched["paid_amount"], si.grand_total)
 
 	def test_usd_invoice_usd_bank_same_currency(self):
 		"""Test USD invoice + USD bank transaction (same currency baseline)."""
@@ -1304,6 +1484,50 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertTrue(bank_account_found)
 		self.assertTrue(usd_account_found)
 		self.assertTrue(eur_account_found)
+
+	def test_multi_party_je_currency_mismatch_raises(self):
+		"""Multi-party JE should raise if an invoice receivable currency != bank currency."""
+		inr_gl_account = create_bank_gl_account("_Test INR Bank JE Mismatch", "INR")
+		inr_bank_account = create_bank_account(self.test_bank.name, inr_gl_account, "INR JE Mismatch Account")
+		usd_receivable = frappe.get_doc(
+			{
+				"doctype": "Account",
+				"company": "_Test Company",
+				"parent_account": "Accounts Receivable - _TC",
+				"account_type": "Receivable",
+				"is_group": 0,
+				"account_name": "US Debtors - _TC",
+				"account_currency": "USD",
+			}
+		).insert()
+		usd_customer = create_customer("USD Mismatch Cust", currency="USD")
+
+		usd_si = create_sales_invoice(
+			rate=100,
+			currency="USD",
+			conversion_rate=90,
+			warehouse="Finished Goods - _TC",
+			customer=usd_customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			debit_to=usd_receivable.name,
+		)
+
+		bt = create_bank_transaction(
+			deposit=usd_si.base_grand_total,
+			currency="INR",
+			bank_account=inr_bank_account,
+			reference_no="je-curr-mismatch-001",
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps(
+					[{"payment_doctype": "Sales Invoice", "payment_name": usd_si.name, "party": usd_customer}]
+				),
+				reconcile_multi_party=True,
+			)
 
 
 def get_pe_references(vouchers: list):
