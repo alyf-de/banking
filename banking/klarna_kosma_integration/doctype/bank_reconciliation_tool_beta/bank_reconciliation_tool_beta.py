@@ -1458,5 +1458,5 @@ def bank_query(doctype: str, txt: str, searchfield: str, start: int, page_len: i
 	)
 	results = list(dict.fromkeys(results))
 	results.sort()
-	
+
 	return [(result,) for result in results]
