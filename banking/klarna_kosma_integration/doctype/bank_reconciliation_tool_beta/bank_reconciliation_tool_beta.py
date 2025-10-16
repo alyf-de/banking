@@ -1455,5 +1455,8 @@ def bank_query(doctype: str, txt: str, searchfield: str, start: int, page_len: i
 		pluck="bank",
 		limit_start=start,
 		limit_page_length=page_len,
+		group_by="bank",
+		order_by="bank",
 	)
+
 	return [(result,) for result in results]
