@@ -266,12 +266,14 @@ def process_camt_document(
 			# Split batch transactions into sub-transactions, based on info
 			# from camt.054 that is sometimes available.
 			# If that's not possible, create a single transaction
-			for sub_transaction in transaction:
+			for sub_transaction_index, sub_transaction in enumerate(transaction):
 				create_sepa_bank_transaction(
 					bank_account,
 					company,
 					sub_transaction,
 					earliest_date,
+					is_sub_transaction=True,
+					sub_transaction_index=sub_transaction_index,
 				)
 		else:
 			create_sepa_bank_transaction(
@@ -287,6 +289,8 @@ def create_sepa_bank_transaction(
 	company: str,
 	sepa_transaction: "SEPATransaction",
 	start_date: "date | None" = None,
+	is_sub_transaction: bool = False,
+	sub_transaction_index: int = 0,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -306,16 +310,26 @@ def create_sepa_bank_transaction(
 		*sepa_transaction.purpose,
 	]
 
-	amount = float(sepa_transaction.amount.value)
-	create_bank_transaction(
-		bank_account=bank_account,
-		transaction_id=(
+	if is_sub_transaction:
+		if sepa_transaction._xmlobj.Refs.TxId.text:
+			transaction_id = sepa_transaction._xmlobj.Refs.TxId.text
+		elif sepa_transaction.bank_reference:
+			transaction_id = f"{sepa_transaction.bank_reference}-{sub_transaction_index}"
+		else:
+			transaction_id = get_transaction_hash(values_to_hash)
+	else:
+		transaction_id = (
 			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
 			# For our test bank, the latter is a timestamp with nanosecond accuracy.
 			sepa_transaction.bank_reference
 			or sepa_transaction._xmlobj.Refs.TxId.text
 			or get_transaction_hash(values_to_hash)
-		),
+		)
+
+	amount = float(sepa_transaction.amount.value)
+	create_bank_transaction(
+		bank_account=bank_account,
+		transaction_id=transaction_id,
 		company=company,
 		currency=sepa_transaction.amount.currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
