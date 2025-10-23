@@ -67,9 +67,46 @@ class SEPAPaymentOrder(Document):
 					with contextlib.suppress(Exception):
 						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
 
+		self.set_discounted_amounts()
+
 	def validate(self):
 		self.validate_ibans()
 		self.validate_account_currency()
+
+	def set_discounted_amounts(self):
+		expected_transaction_date = frappe.utils.getdate(self.execution_date) or frappe.utils.getdate()
+		discounted_payments = []
+		for payment in self.payments:
+			if not payment.reference_row_name:
+				# No Payment Schedule to check.
+				continue
+
+			payment_schedule_row = frappe.get_doc("Payment Schedule", payment.reference_row_name)
+			if (
+				not payment_schedule_row.discount_date
+				or payment_schedule_row.discount_date < expected_transaction_date
+			):
+				# If no discount is given or it's too late for the discount: Use the outstanding amount
+				# This is default, but needs to be reset (in case expected_transaction_date changed etc.)
+				payment.amount = payment_schedule_row.outstanding
+			else:
+				# Use the discounted amount
+				payment.amount = round(
+					payment_schedule_row.outstanding * ((100 - payment_schedule_row.discount) / 100),
+					2,
+				)
+				discounted_payments.append(
+					f"• {payment.recipient}: {payment.purpose} ({payment.reference_name})"
+				)
+
+		if discounted_payments:
+			frappe.msgprint(
+				_(
+					"A valid discount was found and (automatically) applied to the following invoices:<br>{0}".format(
+						"<br>".join([p for p in discounted_payments])
+					)
+				)
+			)
 
 	def validate_ibans(self):
 		kontocheck.lut_load()
