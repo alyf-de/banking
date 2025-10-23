@@ -294,7 +294,7 @@ def create_sepa_bank_transaction(
 	sepa_transaction: "SEPATransaction",
 	transaction_id: str,
 	subtransaction_id: str | None = None,
-	start_date: date | None = None,
+	start_date: "date | None" = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
