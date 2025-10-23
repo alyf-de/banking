@@ -258,6 +258,8 @@ def process_camt_document(
 			# Skip PDNG and INFO transactions
 			continue
 
+		transaction_id = get_transaction_id(transaction)
+
 		if (
 			transaction.batch
 			and (split_batch_transactions or len(transaction) == 1)
@@ -267,20 +269,22 @@ def process_camt_document(
 			# from camt.054 that is sometimes available.
 			# If that's not possible, create a single transaction
 			for sub_transaction_index, sub_transaction in enumerate(transaction):
+				sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
 				create_sepa_bank_transaction(
 					bank_account,
 					company,
 					sub_transaction,
-					earliest_date,
-					is_sub_transaction=True,
-					subtransaction_index=sub_transaction_index,
+					transaction_id=transaction_id,
+					subtransaction_id=sub_transaction_id,
+					start_date=earliest_date,
 				)
 		else:
 			create_sepa_bank_transaction(
 				bank_account,
 				company,
 				transaction,
-				earliest_date,
+				transaction_id=transaction_id,
+				start_date=earliest_date,
 			)
 
 
@@ -288,8 +292,9 @@ def create_sepa_bank_transaction(
 	bank_account: str,
 	company: str,
 	sepa_transaction: "SEPATransaction",
-	start_date: "date | None" = None,
-	subtransaction_index: int | None = None,
+	transaction_id: str,
+	subtransaction_id: str | None = None,
+	start_date: date | None = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -301,7 +306,8 @@ def create_sepa_bank_transaction(
 	amount = float(sepa_transaction.amount.value)
 	create_bank_transaction(
 		bank_account=bank_account,
-		transaction_id=get_transaction_id(sepa_transaction, subtransaction_index),
+		transaction_id=transaction_id,
+		subtransaction_id=subtransaction_id,
 		company=company,
 		currency=sepa_transaction.amount.currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
@@ -475,19 +481,49 @@ def create_mt940_bank_transaction(
 def create_bank_transaction(
 	bank_account: str,
 	transaction_id: str,
+	subtransaction_id: str | None = None,
 	**kwargs,
 ):
-	"""Create a bank transaction from the given kwargs."""
-	# NOTE: This does not work for old data, this ID is different from Kosma's.
-	if frappe.db.exists(
+	"""Create a bank transaction from the given kwargs.
+
+	NOTE: This does not prevent duplicate transactions for old data, this ID is
+	different from Kosma's.
+	"""
+	if subtransaction_id:
+		# Check if we have already created a single batch transaction.
+		# Then this subtransaction would be a duplicate resulting from changed batch-splitting settings.
+		if frappe.db.exists(
+			"Bank Transaction",
+			{
+				"transaction_id": transaction_id,
+				"bank_account": bank_account,
+				"subtransaction_id": ("is", "not set"),
+			},
+		):
+			return
+
+		# Check if this subtransaction has already been created.
+		if frappe.db.exists(
+			"Bank Transaction",
+			{
+				"transaction_id": transaction_id,
+				"bank_account": bank_account,
+				"subtransaction_id": subtransaction_id,
+			},
+		):
+			return
+	elif frappe.db.exists(
 		"Bank Transaction",
 		{"transaction_id": transaction_id, "bank_account": bank_account},
 	):
+		# This is not a subtransaction and we have already created a transaction with this ID.
+		# We should only allow additional subtransactions.
 		return
 
 	bt: CustomBankTransaction = frappe.new_doc("Bank Transaction")
 	bt.bank_account = bank_account
 	bt.transaction_id = transaction_id
+	bt.subtransaction_id = subtransaction_id
 	bt.update(kwargs)
 
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
