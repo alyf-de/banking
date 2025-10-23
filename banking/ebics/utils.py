@@ -273,7 +273,7 @@ def process_camt_document(
 					sub_transaction,
 					earliest_date,
 					is_sub_transaction=True,
-					sub_transaction_index=sub_transaction_index,
+					subtransaction_index=sub_transaction_index,
 				)
 		else:
 			create_sepa_bank_transaction(
@@ -289,8 +289,7 @@ def create_sepa_bank_transaction(
 	company: str,
 	sepa_transaction: "SEPATransaction",
 	start_date: "date | None" = None,
-	is_sub_transaction: bool = False,
-	sub_transaction_index: int = 0,
+	subtransaction_index: int | None = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -299,37 +298,10 @@ def create_sepa_bank_transaction(
 	if start_date and sepa_transaction.date < start_date:
 		return
 
-	values_to_hash = [
-		sepa_transaction.date,
-		sepa_transaction.iban,
-		sepa_transaction.name,
-		sepa_transaction.eref,
-		sepa_transaction.amount.value,
-		sepa_transaction.amount.currency,
-		sepa_transaction.info,
-		*sepa_transaction.purpose,
-	]
-
-	if is_sub_transaction:
-		if sepa_transaction._xmlobj.Refs.TxId.text:
-			transaction_id = sepa_transaction._xmlobj.Refs.TxId.text
-		elif sepa_transaction.bank_reference:
-			transaction_id = f"{sepa_transaction.bank_reference}-{sub_transaction_index}"
-		else:
-			transaction_id = get_transaction_hash(values_to_hash)
-	else:
-		transaction_id = (
-			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
-			# For our test bank, the latter is a timestamp with nanosecond accuracy.
-			sepa_transaction.bank_reference
-			or sepa_transaction._xmlobj.Refs.TxId.text
-			or get_transaction_hash(values_to_hash)
-		)
-
 	amount = float(sepa_transaction.amount.value)
 	create_bank_transaction(
 		bank_account=bank_account,
-		transaction_id=transaction_id,
+		transaction_id=get_transaction_id(sepa_transaction, subtransaction_index),
 		company=company,
 		currency=sepa_transaction.amount.currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
@@ -349,6 +321,39 @@ def get_transaction_hash(transaction: list):
 			sha.update(frappe.safe_encode(str(value)))
 
 	return sha.hexdigest()
+
+
+def get_transaction_id(sepa_transaction: "SEPATransaction", subtransaction_index: int | None = None):
+	"""Return a transaction ID for the given SEPA transaction.
+
+	If a subtransaction index is provided, the transaction is treated as a sub-transaction.
+	"""
+	values_to_hash = [
+		sepa_transaction.date,
+		sepa_transaction.iban,
+		sepa_transaction.name,
+		sepa_transaction.eref,
+		sepa_transaction.amount.value,
+		sepa_transaction.amount.currency,
+		sepa_transaction.info,
+		*sepa_transaction.purpose,
+	]
+
+	if subtransaction_index is not None:
+		if sepa_transaction._xmlobj.Refs.TxId.text:
+			return sepa_transaction._xmlobj.Refs.TxId.text
+		elif sepa_transaction.bank_reference:
+			return f"{sepa_transaction.bank_reference}-{subtransaction_index}"
+		else:
+			return get_transaction_hash(values_to_hash)
+	else:
+		return (
+			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
+			# For our test bank, the latter is a timestamp with nanosecond accuracy.
+			sepa_transaction.bank_reference
+			or sepa_transaction._xmlobj.Refs.TxId.text
+			or get_transaction_hash(values_to_hash)
+		)
 
 
 def log_request(
