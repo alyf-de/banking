@@ -117,6 +117,7 @@ doc_events = {
 	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
+		"get_sepa_payment_amount": "banking.custom.purchase_invoice.get_sepa_payment_amount",
 	},
 }
 
