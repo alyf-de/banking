@@ -258,6 +258,8 @@ def process_camt_document(
 			# Skip PDNG and INFO transactions
 			continue
 
+		transaction_id = get_transaction_id(transaction)
+
 		if (
 			transaction.batch
 			and (split_batch_transactions or len(transaction) == 1)
@@ -266,19 +268,23 @@ def process_camt_document(
 			# Split batch transactions into sub-transactions, based on info
 			# from camt.054 that is sometimes available.
 			# If that's not possible, create a single transaction
-			for sub_transaction in transaction:
+			for sub_transaction_index, sub_transaction in enumerate(transaction):
+				sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
 				create_sepa_bank_transaction(
 					bank_account,
 					company,
 					sub_transaction,
-					earliest_date,
+					transaction_id=transaction_id,
+					subtransaction_id=sub_transaction_id,
+					start_date=earliest_date,
 				)
 		else:
 			create_sepa_bank_transaction(
 				bank_account,
 				company,
 				transaction,
-				earliest_date,
+				transaction_id=transaction_id,
+				start_date=earliest_date,
 			)
 
 
@@ -286,6 +292,8 @@ def create_sepa_bank_transaction(
 	bank_account: str,
 	company: str,
 	sepa_transaction: "SEPATransaction",
+	transaction_id: str,
+	subtransaction_id: str | None = None,
 	start_date: "date | None" = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
@@ -295,27 +303,11 @@ def create_sepa_bank_transaction(
 	if start_date and sepa_transaction.date < start_date:
 		return
 
-	values_to_hash = [
-		sepa_transaction.date,
-		sepa_transaction.iban,
-		sepa_transaction.name,
-		sepa_transaction.eref,
-		sepa_transaction.amount.value,
-		sepa_transaction.amount.currency,
-		sepa_transaction.info,
-		*sepa_transaction.purpose,
-	]
-
 	amount = float(sepa_transaction.amount.value)
 	create_bank_transaction(
 		bank_account=bank_account,
-		transaction_id=(
-			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
-			# For our test bank, the latter is a timestamp with nanosecond accuracy.
-			sepa_transaction.bank_reference
-			or sepa_transaction._xmlobj.Refs.TxId.text
-			or get_transaction_hash(values_to_hash)
-		),
+		transaction_id=transaction_id,
+		subtransaction_id=subtransaction_id,
 		company=company,
 		currency=sepa_transaction.amount.currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
@@ -335,6 +327,39 @@ def get_transaction_hash(transaction: list):
 			sha.update(frappe.safe_encode(str(value)))
 
 	return sha.hexdigest()
+
+
+def get_transaction_id(sepa_transaction: "SEPATransaction", subtransaction_index: int | None = None):
+	"""Return a transaction ID for the given SEPA transaction.
+
+	If a subtransaction index is provided, the transaction is treated as a sub-transaction.
+	"""
+	values_to_hash = [
+		sepa_transaction.date,
+		sepa_transaction.iban,
+		sepa_transaction.name,
+		sepa_transaction.eref,
+		sepa_transaction.amount.value,
+		sepa_transaction.amount.currency,
+		sepa_transaction.info,
+		*sepa_transaction.purpose,
+	]
+
+	if subtransaction_index is not None:
+		if sepa_transaction._xmlobj.Refs.TxId.text:
+			return sepa_transaction._xmlobj.Refs.TxId.text
+		elif sepa_transaction.bank_reference:
+			return f"{sepa_transaction.bank_reference}-{subtransaction_index}"
+		else:
+			return get_transaction_hash(values_to_hash)
+	else:
+		return (
+			# sepa_transaction.bank_reference can be None, but we can still find an ID in the XML
+			# For our test bank, the latter is a timestamp with nanosecond accuracy.
+			sepa_transaction.bank_reference
+			or sepa_transaction._xmlobj.Refs.TxId.text
+			or get_transaction_hash(values_to_hash)
+		)
 
 
 def log_request(
@@ -456,19 +481,49 @@ def create_mt940_bank_transaction(
 def create_bank_transaction(
 	bank_account: str,
 	transaction_id: str,
+	subtransaction_id: str | None = None,
 	**kwargs,
 ):
-	"""Create a bank transaction from the given kwargs."""
-	# NOTE: This does not work for old data, this ID is different from Kosma's.
-	if frappe.db.exists(
+	"""Create a bank transaction from the given kwargs.
+
+	NOTE: This does not prevent duplicate transactions for old data, this ID is
+	different from Kosma's.
+	"""
+	if subtransaction_id:
+		# Check if we have already created a single batch transaction.
+		# Then this subtransaction would be a duplicate resulting from changed batch-splitting settings.
+		if frappe.db.exists(
+			"Bank Transaction",
+			{
+				"transaction_id": transaction_id,
+				"bank_account": bank_account,
+				"subtransaction_id": ("is", "not set"),
+			},
+		):
+			return
+
+		# Check if this subtransaction has already been created.
+		if frappe.db.exists(
+			"Bank Transaction",
+			{
+				"transaction_id": transaction_id,
+				"bank_account": bank_account,
+				"subtransaction_id": subtransaction_id,
+			},
+		):
+			return
+	elif frappe.db.exists(
 		"Bank Transaction",
 		{"transaction_id": transaction_id, "bank_account": bank_account},
 	):
+		# This is not a subtransaction and we have already created a transaction with this ID.
+		# We should only allow additional subtransactions.
 		return
 
 	bt: CustomBankTransaction = frappe.new_doc("Bank Transaction")
 	bt.bank_account = bank_account
 	bt.transaction_id = transaction_id
+	bt.subtransaction_id = subtransaction_id
 	bt.update(kwargs)
 
 	with contextlib.suppress(frappe.exceptions.UniqueValidationError):
