@@ -93,3 +93,17 @@ jobs:
           bench --site test_site run-tests --app banking
         env:
           TYPE: server
+<<<<<<< HEAD:.github/workflows/ci.yml
+=======
+
+      - name: Uninstall app
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site uninstall-app --yes banking
+        env:
+          TYPE: server
+
+      - name: Show bench output
+        if: ${{ always() }}
+        run: cat ~/frappe-bench/bench_start.log || true
+>>>>>>> 09adbdd (feat: remove property setters and custom fields on uninstall (#311)):.github/workflows/server-tests.yml
