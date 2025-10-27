@@ -79,4 +79,12 @@ def get_custom_fields():
 				allow_on_submit=1,
 			),
 		],
+		"Bank Transaction": [
+			dict(
+				fieldname="subtransaction_id",
+				label=_("Subtransaction ID"),
+				fieldtype="Data",
+				insert_after="transaction_id",
+			),
+		],
 	}
