@@ -1,9 +1,5 @@
 [pre_model_sync]
-<<<<<<< HEAD
-banking.patches.recreate_custom_fields # 2025-08-11 23:57
-=======
 banking.patches.recreate_custom_fields # 2025-10-23
->>>>>>> aa8d670 (fix!: unique ID for sub-transactions (#305))
 banking.patches.remove_spaces_from_iban
 
 [post_model_sync]
