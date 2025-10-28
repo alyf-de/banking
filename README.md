@@ -38,6 +38,9 @@ bench get-app https://github.com/alyf-de/banking.git
 bench --site <sitename> install-app banking
 ```
 
+> [!TIP]
+> You don't need to be concerned about testing this app, since it supports clean uninstallation.
+
 ## Customize
 
 Ask the user for extra values before reconciling:

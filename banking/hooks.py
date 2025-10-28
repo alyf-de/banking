@@ -209,7 +209,15 @@ alyf_banking_property_setters = {
 			value="",
 			property_type="Small Text",
 		),
-	]
+	],
+	"Bank Transaction": [
+		dict(
+			fieldname="transaction_id",
+			property="unique",
+			value=0,
+			property_type="Check",
+		),
+	],
 }
 
 # Bank Reconciliation Doctypes are defined in the respective apps.
