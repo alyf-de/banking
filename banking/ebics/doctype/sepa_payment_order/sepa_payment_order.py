@@ -186,6 +186,9 @@ def get_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = N
 		getdate(execution_date) if execution_date else getdate(),
 	)
 
+	if new_amount is None:
+		return None
+
 	precision = payment.precision("amount")
 	if round(new_amount, precision) != round(payment.amount, precision):
 		return new_amount
