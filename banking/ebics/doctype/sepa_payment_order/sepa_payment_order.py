@@ -72,7 +72,8 @@ class SEPAPaymentOrder(Document):
 					with contextlib.suppress(Exception):
 						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
 
-		self.set_should_update_amounts()
+		if self.has_value_changed("execution_date"):
+			self.set_should_update_amounts()
 
 	def validate(self):
 		self.validate_ibans()
