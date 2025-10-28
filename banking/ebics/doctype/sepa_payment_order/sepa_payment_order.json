@@ -21,6 +21,7 @@
   "execution_date",
   "column_break_nomw",
   "batch_booking",
+  "should_update_amounts",
   "section_break_sjeq",
   "payments"
  ],
@@ -141,12 +142,19 @@
    "in_list_view": 1,
    "label": "Transmission Datetime",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "should_update_amounts",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Should Update Amounts"
   }
  ],
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-10 15:13:41.024700",
+ "modified": "2025-10-28 22:36:41.626676",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",

@@ -13,7 +13,11 @@ from frappe.utils.data import fmt_money, getdate, now_datetime
 from banking.ebics.utils import get_ebics_manager, register_fintech
 
 if TYPE_CHECKING:
+	from datetime import date
+
 	from fintech.sepa import SEPACreditTransfer
+
+	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
 
 class PaymentOrderStatus(StrEnum):
@@ -50,6 +54,7 @@ class SEPAPaymentOrder(Document):
 		iban: DF.Data
 		payments: DF.Table[SEPAPayment]
 		reference_number: DF.Data | None
+		should_update_amounts: DF.Check
 		swift_number: DF.Data | None
 		transmission_datetime: DF.Datetime | None
 		transmission_type: DF.Literal["", "DOWNLOADED", "SENT_VIA_EBICS"]
@@ -67,33 +72,30 @@ class SEPAPaymentOrder(Document):
 					with contextlib.suppress(Exception):
 						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
 
-		if self.has_value_changed("execution_date") and self.docstatus == 0:
-			self.update_payment_amounts()
+		self.set_should_update_amounts()
 
 	def validate(self):
 		self.validate_ibans()
 		self.validate_account_currency()
 
+	def set_should_update_amounts(self):
+		self.should_update_amounts = 0
+		if any(get_payment_amount(payment, self.execution_date) is not None for payment in self.payments):
+			self.should_update_amounts = 1
+
+	@frappe.whitelist()
 	def update_payment_amounts(self):
 		for payment in self.payments:
-			if not payment.reference_doctype or not payment.reference_name:
+			new_amount = get_payment_amount(payment, self.execution_date)
+			if new_amount is None:
 				continue
 
-			doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
-			new_amount = doc.run_method(
-				"get_sepa_payment_amount",
-				payment.reference_row_name,
-				getdate(self.execution_date) if self.execution_date else getdate(),
-			)
-
-			precision = payment.precision("amount")
-			if round(new_amount, precision) != round(payment.amount, precision):
-				payment.amount = new_amount
-				frappe.msgprint(
-					_("Amount updated to {0} in row {1}.").format(
-						fmt_money(new_amount, currency=payment.currency), payment.idx
-					)
+			payment.amount = new_amount
+			frappe.msgprint(
+				_("Amount updated to {0} in row {1}.").format(
+					fmt_money(new_amount, currency=payment.currency), payment.idx
 				)
+			)
 
 	def validate_ibans(self):
 		kontocheck.lut_load()
@@ -170,6 +172,25 @@ class SEPAPaymentOrder(Document):
 			)
 
 		return transfer
+
+
+def get_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = None) -> float | None:
+	"""Call the reference doc's `get_sepa_payment_amount` method to get the outstanding amount."""
+	if not payment.reference_doctype or not payment.reference_name:
+		return None
+
+	doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
+	new_amount = doc.run_method(
+		"get_sepa_payment_amount",
+		payment.reference_row_name,
+		getdate(execution_date) if execution_date else getdate(),
+	)
+
+	precision = payment.precision("amount")
+	if round(new_amount, precision) != round(payment.amount, precision):
+		return new_amount
+
+	return None
 
 
 @frappe.whitelist(methods=["POST"])

@@ -30,6 +30,35 @@ frappe.ui.form.on("SEPA Payment Order", {
 			// 	__("Actions")
 			// );
 		}
+
+		if (
+			frm.doc.docstatus === 0 &&
+			frm.has_perm("write") &&
+			frm.doc.should_update_amounts
+		) {
+			frm.add_custom_button(__("Update Amounts"), () => {
+				frm.trigger("update_amounts");
+			});
+		}
+	},
+
+	async before_submit(frm) {
+		if (!frm.doc.should_update_amounts) {
+			return;
+		}
+
+		await new Promise((resolve, reject) => {
+			frappe.confirm(
+				__(
+					"Payment amounts have changed. Are you sure you want to submit without updating them first?"
+				),
+				() => resolve(),
+				() => {
+					frappe.validated = false;
+					reject();
+				}
+			);
+		});
 	},
 
 	download_xml_file(frm) {
@@ -123,5 +152,23 @@ frappe.ui.form.on("SEPA Payment Order", {
 					});
 			}
 		);
+	},
+
+	update_amounts(frm) {
+		frm
+			.call("update_payment_amounts")
+			.then((r) => {
+				frappe.show_alert({
+					message: __("Amounts updated."),
+					indicator: "green",
+				});
+				frm.dirty();
+			})
+			.catch((e) => {
+				frappe.show_alert({
+					message: __("Amounts not updated."),
+					indicator: "red",
+				});
+			});
 	},
 });
