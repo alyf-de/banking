@@ -102,6 +102,13 @@ jobs:
         env:
           TYPE: server
 
+      - name: Uninstall app
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site uninstall-app --yes banking
+        env:
+          TYPE: server
+
       - name: Show bench output
         if: ${{ always() }}
         run: cat ~/frappe-bench/bench_start.log || true
