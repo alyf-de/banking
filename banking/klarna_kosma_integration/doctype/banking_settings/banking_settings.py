@@ -87,7 +87,7 @@ def daily_sync_ebics():
 		)
 
 	yesterday = (now_datetime() - timedelta(days=1)).date().isoformat()
-	for ebics_user in frappe.get_all(
+	for ebics_user, country in frappe.get_all(
 		"EBICS User",
 		filters={
 			"initialized": 1,
@@ -95,8 +95,20 @@ def daily_sync_ebics():
 			"passphrase": ("is", "set"),
 			"keyring": ("is", "set"),
 		},
-		pluck="name",
+		fields=["name", "country"],
+		as_list=True,
 	):
+		if frappe.db.exists(
+			"EBICS Request",
+			{
+				"ebics_user": ebics_user,
+				"order_type": "Z53" if country == "Switzerland" else "C53",
+				"status": "Successful",
+				"parameters": ("like", f"%{yesterday}%"),
+			},
+		):
+			continue
+
 		frappe.enqueue(
 			sync_ebics_transactions,
 			requested_by="System",
