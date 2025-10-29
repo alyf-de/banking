@@ -81,13 +81,15 @@ class SEPAPaymentOrder(Document):
 
 	def set_should_update_amounts(self):
 		self.should_update_amounts = 0
-		if any(get_payment_amount(payment, self.execution_date) is not None for payment in self.payments):
+		if any(
+			get_changed_payment_amount(payment, self.execution_date) is not None for payment in self.payments
+		):
 			self.should_update_amounts = 1
 
 	@frappe.whitelist()
 	def update_payment_amounts(self):
 		for payment in self.payments:
-			new_amount = get_payment_amount(payment, self.execution_date)
+			new_amount = get_changed_payment_amount(payment, self.execution_date)
 			if new_amount is None:
 				continue
 
@@ -175,8 +177,11 @@ class SEPAPaymentOrder(Document):
 		return transfer
 
 
-def get_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = None) -> float | None:
-	"""Call the reference doc's `get_sepa_payment_amount` method to get the outstanding amount."""
+def get_changed_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = None) -> float | None:
+	"""Call the reference doc's `get_sepa_payment_amount` method to get the outstanding amount.
+
+	If the amount has changed, return the new amount. Otherwise, return None.
+	"""
 	if not payment.reference_doctype or not payment.reference_name:
 		return None
 
