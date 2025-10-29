@@ -1,7 +1,8 @@
 # Copyright (c) 2022, ALYF GmbH and contributors
 # For license information, please see license.txt
 
-from datetime import timedelta
+import json
+from datetime import date, timedelta
 
 import frappe
 from frappe import _
@@ -86,7 +87,7 @@ def daily_sync_ebics():
 			_("Developer mode is enabled. Please disable it to continue auto-syncing bank transactions.")
 		)
 
-	yesterday = (now_datetime() - timedelta(days=1)).date().isoformat()
+	yesterday = (now_datetime() - timedelta(days=1)).date()
 	for ebics_user, country in frappe.get_all(
 		"EBICS User",
 		filters={
@@ -98,24 +99,49 @@ def daily_sync_ebics():
 		fields=["name", "country"],
 		as_list=True,
 	):
-		if frappe.db.exists(
-			"EBICS Request",
-			{
-				"ebics_user": ebics_user,
-				"order_type": "Z53" if country == "Switzerland" else "C53",
-				"status": "Successful",
-				"parameters": ("like", f"%{yesterday}%"),
-			},
+		if successful_request_exists(
+			ebics_user, order_type="Z53" if country == "Switzerland" else "C53", request_date=yesterday
 		):
 			continue
 
 		frappe.enqueue(
 			sync_ebics_transactions,
 			requested_by="System",
-			start_date=yesterday,
-			end_date=yesterday,
+			start_date=yesterday.isoformat(),
+			end_date=yesterday.isoformat(),
 			ebics_user=ebics_user,
 		)
+
+
+def successful_request_exists(ebics_user: str | None, order_type: str, request_date: date) -> bool:
+	existing_request = frappe.db.get_value(
+		"EBICS Request",
+		{
+			"ebics_user": ebics_user,
+			"order_type": order_type,
+			"status": "Successful",
+		},
+		["name", "parameters"],
+		as_dict=True,
+	)
+
+	if not existing_request:
+		return False
+
+	try:
+		params = json.loads(existing_request.parameters)
+		start_date = params.get("start_date")
+		end_date = params.get("end_date")
+		if (
+			start_date
+			and end_date
+			and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
+		):
+			return True
+	except json.JSONDecodeError:
+		pass  # If we can't parse, let the sync attempt
+
+	return False
 
 
 def intraday_sync_ebics():
