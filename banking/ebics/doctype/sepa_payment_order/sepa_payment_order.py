@@ -54,7 +54,6 @@ class SEPAPaymentOrder(Document):
 		iban: DF.Data
 		payments: DF.Table[SEPAPayment]
 		reference_number: DF.Data | None
-		should_update_amounts: DF.Check
 		swift_number: DF.Data | None
 		transmission_datetime: DF.Datetime | None
 		transmission_type: DF.Literal["", "DOWNLOADED", "SENT_VIA_EBICS"]
@@ -72,19 +71,9 @@ class SEPAPaymentOrder(Document):
 					with contextlib.suppress(Exception):
 						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
 
-		if self.has_value_changed("execution_date"):
-			self.set_should_update_amounts()
-
 	def validate(self):
 		self.validate_ibans()
 		self.validate_account_currency()
-
-	def set_should_update_amounts(self):
-		self.should_update_amounts = 0
-		if any(
-			get_changed_payment_amount(payment, self.execution_date) is not None for payment in self.payments
-		):
-			self.should_update_amounts = 1
 
 	@frappe.whitelist()
 	def update_payment_amounts(self):
@@ -178,15 +167,15 @@ class SEPAPaymentOrder(Document):
 
 
 @frappe.whitelist()
-def should_update_amounts_changed(sepa_payment_order: str):
-	"""Return True if _Should Update Amounts_ was False but should now be True.
+def have_amounts_changed(sepa_payment_order: str):
+	"""Return True if the payment amounts have changed since the last save.
 
-	Runs before submit to determine if the payment amounts have changed since the last save.
+	Runs before submit.
 	"""
 	payment_order: SEPAPaymentOrder = frappe.get_doc("SEPA Payment Order", sepa_payment_order)
 	payment_order.check_permission("write")
 
-	return not payment_order.should_update_amounts and any(
+	return any(
 		get_changed_payment_amount(payment, payment_order.execution_date) is not None
 		for payment in payment_order.payments
 	)

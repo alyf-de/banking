@@ -31,11 +31,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 			// );
 		}
 
-		if (
-			frm.doc.docstatus === 0 &&
-			frm.has_perm("write") &&
-			frm.doc.should_update_amounts
-		) {
+		if (frm.doc.docstatus === 0 && frm.has_perm("write")) {
 			frm.add_custom_button(__("Update Amounts"), () => {
 				frm.trigger("update_amounts");
 			});
@@ -45,34 +41,29 @@ frappe.ui.form.on("SEPA Payment Order", {
 	async before_submit(frm) {
 		await frappe
 			.xcall(
-				"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.should_update_amounts_changed",
+				"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.have_amounts_changed",
 				{
 					sepa_payment_order: frm.doc.name,
 				}
 			)
-			.then((should_update_amounts) => {
-				if (should_update_amounts) {
-					frm.set_value("should_update_amounts", 1);
-					frm.dirty();
+			.then((amounts_changed) => {
+				if (!amounts_changed) {
+					return;
 				}
+
+				return new Promise((resolve, reject) => {
+					frappe.confirm(
+						__(
+							"Payment amounts have changed. Are you sure you want to submit without updating them first?"
+						),
+						() => resolve(),
+						() => {
+							frappe.validated = false;
+							reject();
+						}
+					);
+				});
 			});
-
-		if (!frm.doc.should_update_amounts) {
-			return;
-		}
-
-		await new Promise((resolve, reject) => {
-			frappe.confirm(
-				__(
-					"Payment amounts have changed. Are you sure you want to submit without updating them first?"
-				),
-				() => resolve(),
-				() => {
-					frappe.validated = false;
-					reject();
-				}
-			);
-		});
 	},
 
 	download_xml_file(frm) {
