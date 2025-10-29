@@ -177,6 +177,21 @@ class SEPAPaymentOrder(Document):
 		return transfer
 
 
+@frappe.whitelist()
+def should_update_amounts_changed(sepa_payment_order: str):
+	"""Return True if _Should Update Amounts_ was False but should now be True.
+
+	Runs before submit to determine if the payment amounts have changed since the last save.
+	"""
+	payment_order: SEPAPaymentOrder = frappe.get_doc("SEPA Payment Order", sepa_payment_order)
+	payment_order.check_permission("write")
+
+	return not payment_order.should_update_amounts and any(
+		get_changed_payment_amount(payment, payment_order.execution_date) is not None
+		for payment in payment_order.payments
+	)
+
+
 def get_changed_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = None) -> float | None:
 	"""Call the reference doc's `get_sepa_payment_amount` method to get the outstanding amount.
 

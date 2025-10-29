@@ -43,6 +43,20 @@ frappe.ui.form.on("SEPA Payment Order", {
 	},
 
 	async before_submit(frm) {
+		await frappe
+			.xcall(
+				"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.should_update_amounts_changed",
+				{
+					sepa_payment_order: frm.doc.name,
+				}
+			)
+			.then((should_update_amounts) => {
+				if (should_update_amounts) {
+					frm.set_value("should_update_amounts", 1);
+					frm.dirty();
+				}
+			});
+
 		if (!frm.doc.should_update_amounts) {
 			return;
 		}
