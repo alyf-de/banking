@@ -1,7 +1,9 @@
+from datetime import date
 from typing import TYPE_CHECKING
 
 import frappe
 from frappe.model.mapper import get_mapped_doc
+from frappe.utils.data import getdate
 
 from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 
@@ -56,6 +58,9 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 
 		target.currency = pi.currency
 		target.eref = target.reference_name
+		target.amount = get_sepa_payment_amount(
+			pi, method="get_mapped_doc", payment_schedule_row_name=source.name, execution_date=getdate()
+		)
 
 	return get_mapped_doc(
 		"Purchase Invoice",
@@ -149,3 +154,23 @@ def sepa_payment_order_status_changed(
 			break
 
 	doc.save(ignore_permissions=True)
+
+
+def get_sepa_payment_amount(
+	doc: "PurchaseInvoice", method: str, payment_schedule_row_name: str, execution_date: date
+) -> float:
+	scheduled_payment = next((p for p in doc.payment_schedule if p.name == payment_schedule_row_name), None)
+	if not scheduled_payment:
+		# No Payment Schedule to check.
+		return 0
+
+	if not scheduled_payment.discount_date or getdate(scheduled_payment.discount_date) < execution_date:
+		# If no discount is given or it's too late for the discount: Use the outstanding amount
+		# This is default, but needs to be reset (in case expected_transaction_date changed etc.)
+		return scheduled_payment.outstanding
+	else:
+		# Use the discounted amount
+		return round(
+			scheduled_payment.outstanding * ((100 - scheduled_payment.discount) / 100),
+			scheduled_payment.precision("outstanding"),
+		)

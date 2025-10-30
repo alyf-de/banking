@@ -8,12 +8,16 @@ import frappe
 import kontocheck
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils.data import now_datetime
+from frappe.utils.data import fmt_money, getdate, now_datetime
 
 from banking.ebics.utils import get_ebics_manager, register_fintech
 
 if TYPE_CHECKING:
+	from datetime import date
+
 	from fintech.sepa import SEPACreditTransfer
+
+	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
 
 class PaymentOrderStatus(StrEnum):
@@ -70,6 +74,20 @@ class SEPAPaymentOrder(Document):
 	def validate(self):
 		self.validate_ibans()
 		self.validate_account_currency()
+
+	@frappe.whitelist()
+	def update_payment_amounts(self):
+		for payment in self.payments:
+			new_amount = get_changed_payment_amount(payment, self.execution_date)
+			if new_amount is None:
+				continue
+
+			payment.amount = new_amount
+			frappe.msgprint(
+				_("Amount updated to {0} in row {1}.").format(
+					fmt_money(new_amount, currency=payment.currency), payment.idx
+				)
+			)
 
 	def validate_ibans(self):
 		kontocheck.lut_load()
@@ -146,6 +164,46 @@ class SEPAPaymentOrder(Document):
 			)
 
 		return transfer
+
+
+@frappe.whitelist()
+def have_amounts_changed(sepa_payment_order: str):
+	"""Return True if the payment amounts have changed since the last save.
+
+	Runs before submit.
+	"""
+	payment_order: SEPAPaymentOrder = frappe.get_doc("SEPA Payment Order", sepa_payment_order)
+	payment_order.check_permission("write")
+
+	return any(
+		get_changed_payment_amount(payment, payment_order.execution_date) is not None
+		for payment in payment_order.payments
+	)
+
+
+def get_changed_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = None) -> float | None:
+	"""Call the reference doc's `get_sepa_payment_amount` method to get the outstanding amount.
+
+	If the amount has changed, return the new amount. Otherwise, return None.
+	"""
+	if not payment.reference_doctype or not payment.reference_name:
+		return None
+
+	doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
+	new_amount = doc.run_method(
+		"get_sepa_payment_amount",
+		payment.reference_row_name,
+		getdate(execution_date) if execution_date else getdate(),
+	)
+
+	if new_amount is None:
+		return None
+
+	precision = payment.precision("amount")
+	if round(new_amount, precision) != round(payment.amount, precision):
+		return new_amount
+
+	return None
 
 
 @frappe.whitelist(methods=["POST"])

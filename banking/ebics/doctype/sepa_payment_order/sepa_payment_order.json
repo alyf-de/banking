@@ -146,7 +146,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-10 15:13:41.024700",
+ "modified": "2025-10-29 15:26:22.373076",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",

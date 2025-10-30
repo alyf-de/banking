@@ -117,6 +117,7 @@ doc_events = {
 	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
+		"get_sepa_payment_amount": "banking.custom.purchase_invoice.get_sepa_payment_amount",
 	},
 }
 
@@ -130,8 +131,8 @@ scheduler_events = {
 			# on every day-of-week from Monday through Friday.
 			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.intraday_sync_ebics",
 		],
-		"42 4 * * *": [
-			# Daily at 4:42 am
+		"14 6-22/4 * * *": [
+			# At minute 14 past every 4th hour from 6 through 22.
 			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions",
 		],
 	},

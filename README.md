@@ -99,3 +99,7 @@ def get_payment_entries(
 		},
 	]
 ```
+
+### SEPA Payment Order
+
+DocTypes that map to **SEPA Payment Order** can provide a method `get_sepa_payment_amount` via controller or `doc_events` hook. This is called when the execution date is changed. The parameters are the reference row name and execution date. It should return the amount of the payment. The main use case for this is early payment discounts.
