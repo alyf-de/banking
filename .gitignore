@@ -7,3 +7,4 @@ tags
 banking/docs/current
 node_modules/
 __pycache__
+.claude/
