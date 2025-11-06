@@ -12,6 +12,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 from erpnext.accounts.utils import get_account_currency
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
 from frappe.utils import cint, flt, sbool
@@ -1086,19 +1087,64 @@ def get_si_matching_query(
 
 def get_unpaid_si_matching_query(
 	exact_match: bool,
-	currency: str,
+	currency: str,  # This is B (bank account currency)
 	common_filters: frappe._dict,
 	company: str,
 	include_only_returns: bool = False,
 	reference_field: str = "name",
 ):
+	"""
+	Get matching unpaid sales invoices for bank reconciliation.
+
+	Multi-Currency Handling:
+	- B = Bank account currency (parameter 'currency')
+	- I = Invoice currency (invoice.currency field)
+	- P = Party account currency (invoice.party_account_currency field)
+
+	Amount Selection:
+	- When B = I AND invoice is fully unpaid: Returns grand_total in invoice currency
+	  (User is paying in the same currency as the invoice)
+	- When B ≠ I OR invoice is partially paid: Returns outstanding_amount in party account currency
+	  (ERPNext tracks outstanding in party account currency)
+
+	Note: outstanding_amount is stored in P when P ≠ I, not in I.
+	This is standard ERPNext behavior from taxes_and_totals.py.
+	"""
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 	description = common_filters.description
+
+	is_fully_unpaid = (
+		Case()
+		.when(
+			sales_invoice.party_account_currency == sales_invoice.currency,
+			sales_invoice.outstanding_amount == sales_invoice.grand_total,
+		)
+		.else_(sales_invoice.outstanding_amount == sales_invoice.base_grand_total)
+	)
+
+	paid_amount_field = (
+		Case()
+		.when(
+			(sales_invoice.currency == currency) & is_fully_unpaid,
+			sales_invoice.grand_total,
+		)
+		.else_(sales_invoice.outstanding_amount)
+	)
+
+	company_currency = frappe.get_value("Company", company, "default_currency")
+	currency_field = (
+		Case()
+		.when(
+			(sales_invoice.currency == currency) & is_fully_unpaid,
+			sales_invoice.currency,
+		)
+		.else_(Coalesce(sales_invoice.party_account_currency, company_currency))
+	)
 
 	party_filter = sales_invoice.customer == common_filters.party
 	party_rank = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	amount_rank = amount_rank_condition(sales_invoice.outstanding_amount, common_filters.amount)
+	amount_rank = amount_rank_condition(paid_amount_field, common_filters.amount)
 
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
@@ -1131,14 +1177,14 @@ def get_unpaid_si_matching_query(
 			rank_expression.as_("rank"),
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			sales_invoice.name.as_("name"),
-			sales_invoice.outstanding_amount.as_("paid_amount"),
+			paid_amount_field.as_("paid_amount"),
 			sales_invoice[reference_field or "name"].as_("reference_no"),
 			sales_invoice.posting_date.as_("reference_date"),
 			sales_invoice.customer.as_("party"),
 			ConstantColumn("Customer").as_("party_type"),
 			sales_invoice.customer_name.as_("party_name"),
 			sales_invoice.posting_date,
-			sales_invoice.currency,
+			currency_field.as_("currency"),
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
@@ -1147,9 +1193,8 @@ def get_unpaid_si_matching_query(
 			(ref_rank).as_("reference_number_match"),
 		)
 		.where(sales_invoice.docstatus == 1)
-		.where(sales_invoice.company == company)  # because we do not have bank account check
+		.where(sales_invoice.company == company)
 		.where(sales_invoice.outstanding_amount != 0.0)
-		.where(sales_invoice.currency == currency)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1157,7 +1202,7 @@ def get_unpaid_si_matching_query(
 	if include_only_returns:
 		query = query.where(sales_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(sales_invoice.outstanding_amount == common_filters.amount)
+		query = query.where(paid_amount_field == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
@@ -1256,12 +1301,29 @@ def get_pi_matching_query(
 
 def get_unpaid_pi_matching_query(
 	exact_match: bool,
-	currency: str,
+	currency: str,  # This is B (bank account currency)
 	common_filters: frappe._dict,
 	company: str,
 	include_only_returns: bool = False,
 	reference_field: str = "name",
 ):
+	"""
+	Get matching unpaid purchase invoices for bank reconciliation.
+
+	Multi-Currency Handling:
+	- B = Bank account currency (parameter 'currency')
+	- I = Invoice currency (invoice.currency field)
+	- P = Party account currency (invoice.party_account_currency field)
+
+	Amount Selection:
+	- When B = I AND invoice is fully unpaid: Returns grand_total in invoice currency
+	  (User is paying in the same currency as the invoice)
+	- When B ≠ I OR invoice is partially paid: Returns outstanding_amount in party account currency
+	  (ERPNext tracks outstanding in party account currency)
+
+	Note: outstanding_amount is stored in P when P ≠ I, not in I.
+	This is standard ERPNext behavior from taxes_and_totals.py.
+	"""
 	# Default to bill_no instead of name.
 	# "name" is passed when it is unset. Handle specific default here.
 	if reference_field == "name" or not reference_field:
@@ -1270,10 +1332,38 @@ def get_unpaid_pi_matching_query(
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 	description = common_filters.description
 
+	is_fully_unpaid = (
+		Case()
+		.when(
+			purchase_invoice.party_account_currency == purchase_invoice.currency,
+			purchase_invoice.outstanding_amount == purchase_invoice.grand_total,
+		)
+		.else_(purchase_invoice.outstanding_amount == purchase_invoice.base_grand_total)
+	)
+
+	paid_amount_field = (
+		Case()
+		.when(
+			(purchase_invoice.currency == currency) & is_fully_unpaid,
+			purchase_invoice.grand_total,
+		)
+		.else_(purchase_invoice.outstanding_amount)
+	)
+
+	company_currency = frappe.get_value("Company", company, "default_currency")
+	currency_field = (
+		Case()
+		.when(
+			(purchase_invoice.currency == currency) & is_fully_unpaid,
+			purchase_invoice.currency,
+		)
+		.else_(Coalesce(purchase_invoice.party_account_currency, company_currency))
+	)
+
 	party_filter = purchase_invoice.supplier == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	amount_rank = amount_rank_condition(purchase_invoice.outstanding_amount, common_filters.amount)
+	amount_rank = amount_rank_condition(paid_amount_field, common_filters.amount)
 
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
@@ -1308,14 +1398,14 @@ def get_unpaid_pi_matching_query(
 			rank_expression.as_("rank"),
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name.as_("name"),
-			purchase_invoice.outstanding_amount.as_("paid_amount"),
+			paid_amount_field.as_("paid_amount"),
 			purchase_invoice[reference_field].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
 			purchase_invoice.supplier_name.as_("party_name"),
 			purchase_invoice.posting_date,
-			purchase_invoice.currency,
+			currency_field.as_("currency"),
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
@@ -1327,7 +1417,6 @@ def get_unpaid_pi_matching_query(
 		.where(purchase_invoice.company == company)
 		.where(purchase_invoice.outstanding_amount != 0.0)
 		.where(purchase_invoice.is_paid == 0)
-		.where(purchase_invoice.currency == currency)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1335,7 +1424,7 @@ def get_unpaid_pi_matching_query(
 	if include_only_returns:
 		query = query.where(purchase_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(purchase_invoice.outstanding_amount == common_filters.amount)
+		query = query.where(paid_amount_field == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 

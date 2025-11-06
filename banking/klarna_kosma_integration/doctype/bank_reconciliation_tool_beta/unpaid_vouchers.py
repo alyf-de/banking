@@ -141,22 +141,42 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	validate_invoices_to_bill(invoices_to_bill)
 
 	bank_account = frappe.db.get_value("Bank Account", bt.bank_account, "account")
+	bank_account_currency = frappe.db.get_value("Account", bank_account, "account_currency")
 	first_invoice = invoices_to_bill[0]
+
+	# Multi-currency handling:
+	# - Don't pass party_amount when bank currency = invoice currency (let ERPNext calculate it)
+	# - Pass bank_amount so ERPNext knows the actual bank transaction amount
+	party_amount = None
+	bank_amount = bt.unallocated_amount
+
+	if first_invoice[DOCTYPE] not in ("Sales Invoice", "Purchase Invoice"):
+		# For Expense Claims and other doctypes, use the outstanding amount
+		party_amount = first_invoice[AMOUNT]
+	else:
+		# Check if bank currency matches invoice currency
+		invoice_currency = frappe.db.get_value(first_invoice[DOCTYPE], first_invoice[DOCNAME], "currency")
+		if bank_account_currency != invoice_currency:
+			# Currencies don't match - pass party_amount (outstanding in party currency)
+			party_amount = first_invoice[AMOUNT]
+		# If currencies match, leave party_amount as None so ERPNext uses grand_total
+
 	if first_invoice[DOCTYPE] == "Expense Claim":
 		from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee
 
 		payment_entry = get_payment_entry_for_employee(
 			first_invoice[DOCTYPE],
 			first_invoice[DOCNAME],
-			party_amount=first_invoice[AMOUNT],
+			party_amount=party_amount,
 			bank_account=bank_account,
 		)
 	else:
 		payment_entry = get_payment_entry(
 			first_invoice[DOCTYPE],
 			first_invoice[DOCNAME],
-			party_amount=first_invoice[AMOUNT],
+			party_amount=party_amount,
 			bank_account=bank_account,
+			bank_amount=bank_amount,
 			# make sure return invoice does not cause wrong payment type
 			# return SI against a deposit should be considered as "Receive" (discount)
 			# return SI against a withdrawal should be considered as "Pay" (refund)
@@ -171,9 +191,19 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
 	adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
 
-	payment_entry.paid_amount = abs(
-		sum(row.allocated_amount for row in payment_entry.references)
-	)  # should not be negative
+	# Multi-currency fix: When bank currency = invoice currency but party currency differs,
+	# we need to adjust paid_amount to use the bank transaction amount instead of party amount
+	if party_amount is None and bank_account_currency != payment_entry.paid_to_account_currency:
+		# This means: bank and invoice currencies match, but party currency differs
+		# Use the bank transaction amount for paid_amount
+		payment_entry.paid_amount = bank_amount
+		# received_amount stays as-is (in party currency)
+		# ERPNext will calculate the exchange gain/loss automatically
+	else:
+		payment_entry.paid_amount = abs(
+			sum(row.allocated_amount for row in payment_entry.references)
+		)  # should not be negative
+
 	payment_entry.submit()
 	return payment_entry
 
@@ -307,6 +337,12 @@ def get_debtor_creditor_account(invoice: dict) -> str | None:
 
 
 def get_outstanding_amount(payment_doctype, payment_name) -> float:
+	"""
+	Get the outstanding amount for a voucher.
+
+	Note: Always returns outstanding_amount as stored in the database.
+	Multi-currency conversion is handled by ERPNext's get_payment_entry() function.
+	"""
 	if payment_doctype == "Expense Claim":
 		ec = frappe.get_doc(payment_doctype, payment_name)
 		return flt(
