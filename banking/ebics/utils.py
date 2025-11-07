@@ -198,6 +198,11 @@ def import_ebics_json(user: "EBICSUser", main_data: dict, batch_data: dict | Non
 	"""Import EBICS transactions from the given JSON data, considering user settings.
 
 	NOTE: fintech needs to be registered before calling this function.
+
+	Args:
+		user: An EBICS User record
+		main_data: Dictionary of XML files by name, e.g. {"camt053.xml": "<xml>...</xml>"}
+		batch_data: Dictionary of XML files by name, or None if batch transactions are not enabled
 	"""
 	from fintech.sepa import CAMTDocument
 
