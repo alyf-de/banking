@@ -156,10 +156,6 @@ def sync_ebics_transactions(
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 
-	from fintech.sepa import (
-		CAMTDocument,
-	)  # import possible only after manager is initialized
-
 	request_map = get_request_map(manager.country_code, start_date, end_date)
 	main_request = request_map["intraday"] if intraday else request_map["statement"]
 
@@ -184,25 +180,7 @@ def sync_ebics_transactions(
 	# We want to process either all documents or none. If we fail to process one, we
 	# want to rollback the entire transaction and report an error.
 	try:
-		for name in sorted(main_xml):
-			camt_document = CAMTDocument(xml=main_xml[name], camt54=batch_xml)
-			bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
-			if not bank_account:
-				frappe.log_error(
-					title=_("Banking Error"),
-					message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
-					reference_doctype="EBICS User",
-					reference_name=user.name,
-				)
-				continue
-
-			process_camt_document(
-				camt_document,
-				bank_account,
-				user.company,
-				user.start_date,
-				user.split_batch_transactions,
-			)
+		import_ebics_json(user, main_xml, batch_xml)
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(
@@ -214,6 +192,34 @@ def sync_ebics_transactions(
 		return
 
 	manager.confirm_download(success=True)
+
+
+def import_ebics_json(user: "EBICSUser", main_data: dict, batch_data: dict | None = None):
+	"""Import EBICS transactions from the given JSON data, considering user settings.
+
+	NOTE: fintech needs to be registered before calling this function.
+	"""
+	from fintech.sepa import CAMTDocument
+
+	for name in sorted(main_data):
+		camt_document = CAMTDocument(xml=main_data[name], camt54=batch_data)
+		bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
+		if not bank_account:
+			frappe.log_error(
+				title=_("Banking Error"),
+				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+				reference_doctype="EBICS User",
+				reference_name=user.name,
+			)
+			continue
+
+		process_camt_document(
+			camt_document,
+			bank_account,
+			user.company,
+			user.start_date,
+			user.split_batch_transactions,
+		)
 
 
 def validated_perms(ebics_user, permitted_types, required_type):
