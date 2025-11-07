@@ -20,7 +20,17 @@ frappe.ui.form.on("EBICS Request", {
 			)}`
 		);
 	},
-	re_import: function (frm) {
+	re_import: async function (frm) {
+		try {
+			await confirm_re_import(frm.doc.ebics_user);
+		} catch {
+			frappe.show_alert({
+				message: __("Re-import cancelled."),
+				indicator: "red",
+			});
+			return;
+		}
+
 		frm
 			.call({
 				doc: frm.doc,
@@ -42,3 +52,27 @@ frappe.ui.form.on("EBICS Request", {
 			});
 	},
 });
+
+function confirm_re_import(ebics_user) {
+	return new Promise((resolve, reject) => {
+		frappe.db
+			.get_value("EBICS User", ebics_user, "download_batch_transactions")
+			.then((r) => {
+				if (r?.message?.download_batch_transactions) {
+					frappe.confirm(
+						__(
+							"<b>EBICS User</b> '{0}' has <i>Download Batch Transactions</i> enabled. Batch details are stored in separate <b>EBICS Requests</b>, so this re-import might be incomplete. Do you want to continue?",
+							[ebics_user]
+						),
+						() => resolve(),
+						() => reject()
+					);
+				} else {
+					resolve();
+				}
+			})
+			.catch(() => {
+				reject();
+			});
+	});
+}
