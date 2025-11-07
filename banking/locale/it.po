@@ -1,0 +1,1473 @@
+# Translations template for ALYF Banking.
+# Copyright (C) 2025 ALYF GmbH
+# This file is distributed under the same license as the ALYF Banking project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ALYF Banking VERSION\n"
+"Report-Msgid-Bugs-To: hallo@alyf.de\n"
+"POT-Creation-Date: 2025-11-07 14:18+0053\n"
+"PO-Revision-Date: 2025-01-31 19:26+0053\n"
+"Last-Translator: hallo@alyf.de\n"
+"Language-Team: hallo@alyf.de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.1\n"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:63
+msgid "<b>EBICS User</b> '{0}' has <i>Download Batch Transactions</i> enabled. Batch details are stored in separate <b>EBICS Requests</b>, so this re-import might be incomplete. Do you want to continue?"
+msgstr "<b>Utente EBICS</b> '{0}' ha <i>Scaricare transazioni per lotti</i> abilitato. I dettagli del lotto sono memorizzati in <b>Richieste EBICS</b> separate, quindi questo riimport potrebbe essere incompleto. Vuoi continuare?"
+
+#. Header text in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "<span class=\"h4\">Banking</span>"
+msgstr "<span class=\"h4\">Bancario</span>"
+
+#. Description of the 'Reference Fields' (Table) field in DocType 'Banking
+#. Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>"
+msgstr "<ul><li>Memorizza la mappatura dei campi DocType che dovrebbero essere considerati come 'numero di riferimento' nel Tool di Conciliazione Bancaria</li><li>Sono supportati i campi Link e Data</li><li>Il campo deve avere un singolo numero di riferimento per il matching con le transazioni bancarie</li></ul>"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:214
+msgid "A new version of the Banking app is available ({0}). Please update your instance."
+msgstr "Una nuova versione dell'app Banking è disponibile ({0}). Per favore, aggiorna la tua istanza."
+
+#. Name of a Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "ALYF Banking"
+msgstr "Bancario ALYF"
+
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Account Currency"
+msgstr "Valuta del conto"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:140
+msgid "Account Holder"
+msgstr "Titolare del conto"
+
+#. Label of a Currency field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Account Opening Balance"
+msgstr "Saldo di apertura del conto"
+
+#. Name of a role
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Accounts Manager"
+msgstr ""
+
+#. Name of a role
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Accounts User"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:67
+#: banking/ebics/doctype/ebics_user/ebics_user.js:100
+#: banking/ebics/doctype/ebics_user/ebics_user.js:161
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:23
+msgid "Actions"
+msgstr ""
+
+#. Label of a Data field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Admin URL"
+msgstr "URL amministratore"
+
+#. Label of a Section Break field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Advanced"
+msgstr ""
+
+#. Label of a Link field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Amended From"
+msgstr ""
+
+#. Label of a Currency field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Amount"
+msgstr ""
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:87
+msgid "Amount updated to {0} in row {1}."
+msgstr ""
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:174
+msgid "Amounts not updated."
+msgstr ""
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:167
+msgid "Amounts updated."
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:195
+#: banking/ebics/doctype/ebics_user/ebics_user.js:213
+#: banking/ebics/doctype/ebics_user/ebics_user.js:291
+msgid "An error occurred"
+msgstr "Si è verificato un errore"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:19
+msgid "Approved"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:355
+msgid "Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
+msgstr "Stai cercando di conciliare ricevute di parti diverse? Questa azione concilierà le ricevute utilizzando un movimento contabile."
+
+#: banking/klarna_kosma_integration/exception_handler.py:42
+msgid "Authentication error due to invalid credentials."
+msgstr "Errore di autenticazione dovuto a credenziali non valide."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:60
+msgid "Auto Reconcile"
+msgstr "Conciliazione automatica"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:434
+msgid "Auto Reconciliation Complete"
+msgstr "Conciliazione automatica completata"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:80
+msgid "Auto Reconciling ..."
+msgstr "Conciliazione automatica in corso..."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:62
+msgid "Auto reconcile bank transactions based on matching reference numbers?"
+msgstr "Conciliare le transazioni bancarie automaticamente in base ai numeri di riferimento corrispondenti?"
+
+#. Label of a Link field in DocType 'EBICS User'
+#. Label of a Link field in DocType 'SEPA Payment Order'
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+#: banking/public/js/utils.js:37
+msgid "Bank"
+msgstr ""
+
+#. Label of a Link field in DocType 'SEPA Payment Order'
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:81
+msgid "Bank Account"
+msgstr ""
+
+#: banking/ebics/utils.py:215
+msgid "Bank Account not found for IBAN {0}"
+msgstr "Conto bancario non trovato per l'IBAN {0}"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Bank Keys Activated"
+msgstr "Chiavi del conto attivate"
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Bank Name"
+msgstr ""
+
+#. Label of a Tab Break field in DocType 'Banking Settings'
+#. Label of a shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Bank Reconciliation"
+msgstr "Conciliazione bancaria"
+
+#. Name of a DocType
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Bank Reconciliation Tool Beta"
+msgstr "Tool di Conciliazione Bancaria"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:138
+msgid "Bank Transaction {0} Matched"
+msgstr "Transazione bancaria {0} corrispondente"
+
+#: banking/overrides/bank_transaction.py:12
+msgid "Bank Transaction {0} is already fully reconciled"
+msgstr "La transazione bancaria {0} è già completamente conciliata"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:131
+msgid "Bank Transaction {0} partially matched."
+msgstr "Transazione bancaria {0} parzialmente corrispondente."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:128
+msgid "Bank Transaction {0} partially reconciled."
+msgstr "Transazione bancaria {0} parzialmente conciliata."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:142
+msgid "Bank Transaction {0} reconciled with a new {1}"
+msgstr "Transazione bancaria {0} conciliata con un nuovo {1}"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:64
+msgid "Bank Transaction {0} updated"
+msgstr "Transazione bancaria {0} aggiornata"
+
+#. Label of a Link in the ALYF Banking Workspace
+#. Label of a shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Bank Transactions"
+msgstr "Transazioni bancarie"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:208
+msgid "Bank keys confirmed"
+msgstr "Chiavi del conto confermate"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:284
+msgid "Bank statements are being downloaded in the background."
+msgstr "Le dichiarazioni bancarie vengono scaricate in background."
+
+#. Description of the 'Start Date' (Date) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Bank transactions that happened before this date must not be imported."
+msgstr "Le transazioni bancarie che si sono verificate prima di questa data non devono essere importate."
+
+#: banking/custom/bank.py:14
+msgid "Bank {0} does not have EBICS Host ID or URL set"
+msgstr "Il conto bancario {0} non ha un ID host EBICS o URL impostato"
+
+#: banking/custom_fields.py:33
+msgid "Banking"
+msgstr "Bancario"
+
+#: banking/klarna_kosma_integration/exception_handler.py:91
+msgid "Banking Action has failed due to the following error(s):"
+msgstr "L'azione di Banking ha fallito a causa dei seguenti errori:"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:72
+#: banking/ebics/doctype/ebics_user/ebics_user.py:75
+#: banking/ebics/doctype/ebics_user/ebics_user.py:82
+#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:140
+#: banking/ebics/utils.py:187 banking/ebics/utils.py:214
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
+#: banking/klarna_kosma_integration/exception_handler.py:23
+#: banking/klarna_kosma_integration/exception_handler.py:39
+#: banking/klarna_kosma_integration/exception_handler.py:41
+#: banking/klarna_kosma_integration/exception_handler.py:50
+#: banking/klarna_kosma_integration/exception_handler.py:54
+#: banking/klarna_kosma_integration/exception_handler.py:63
+#: banking/klarna_kosma_integration/exception_handler.py:65
+#: banking/klarna_kosma_integration/exception_handler.py:74
+#: banking/klarna_kosma_integration/exception_handler.py:79
+#: banking/klarna_kosma_integration/exception_handler.py:85
+#: banking/klarna_kosma_integration/exception_handler.py:94
+#: banking/klarna_kosma_integration/exception_handler.py:96
+msgid "Banking Error"
+msgstr "Errore di Banking"
+
+#. Name of a DocType
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Banking Reference Mapping"
+msgstr "Mapping dei riferimenti bancari"
+
+#. Name of a DocType
+#. Label of a Link in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Banking Settings"
+msgstr "Impostazioni di Banking"
+
+#: banking/ebics/utils.py:235
+msgid "Banking Warning"
+msgstr "Avviso di Banking"
+
+#. Label of a Select field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Batch Booking"
+msgstr "Prenotazione in lotti"
+
+#. Option for the 'Charges' (Select) field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "CRED"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:135
+msgid "Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
+msgstr "Non è possibile creare un movimento contabile per una transazione bancaria con sia un deposito che un prelievo"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:288
+msgid "Cannot make Reconciliation Payment Entry against multiple doctypes"
+msgstr "Non è possibile effettuare un pagamento di conciliamento contro più tipi di documenti"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:295
+msgid "Cannot make Reconciliation Payment Entry against multiple parties"
+msgstr "Non è possibile effettuare un pagamento di conciliamento contro più parti"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:158
+msgid "Change"
+msgstr "Cambia"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:110
+#: banking/ebics/doctype/ebics_user/ebics_user.js:157
+msgid "Change Protocol Version"
+msgstr "Cambia versione del protocollo"
+
+#. Label of a Select field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Charges"
+msgstr "Commissioni"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:198
+msgid "Cheque/Reference Date"
+msgstr ""
+
+#. Label of a Currency field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Closing Balance"
+msgstr "Saldo di chiusura"
+
+#. Label of a Link field in DocType 'EBICS User'
+#. Label of a Link field in DocType 'SEPA Payment Order'
+#. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Company"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:182
+msgid "Continue"
+msgstr ""
+
+#. Label of a Link field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Country"
+msgstr ""
+
+#: banking/custom/purchase_invoice.js:40
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:297
+msgid "Create"
+msgstr ""
+
+#: banking/custom_fields.py:63
+msgid "Create Employee Bank Account"
+msgstr "Crea conto bancario dipendente"
+
+#: banking/custom_fields.py:48
+msgid "Create Supplier Bank Account"
+msgstr "Crea conto bancario fornitore"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:79
+msgid "Create Voucher"
+msgstr "Crea ricevuta"
+
+#: banking/custom/purchase_invoice.js:49
+#: banking/custom/purchase_invoice_list.js:19
+msgid "Creating SEPA Payment Order ..."
+msgstr "Creazione ordine di pagamento SEPA..."
+
+#. Label of a Section Break field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Credentials"
+msgstr ""
+
+#. Label of a Link field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:131
+msgid "Currency"
+msgstr ""
+
+#. Label of a Data field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Customer ID"
+msgstr "ID cliente"
+
+#. Option for the 'Charges' (Select) field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "DEBT"
+msgstr ""
+
+#. Option for the 'Transmission Type' (Select) field in DocType 'SEPA Payment
+#. Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "DOWNLOADED"
+msgstr "DESCARICATO"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:90
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:488
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:128
+msgid "Date"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:97
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:130
+msgid "Deposit"
+msgstr "Deposito"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:116
+msgid "Description"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:55
+msgid "Details"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:87
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:152
+msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
+msgstr "Il modo sviluppatore è attivo. Per continuare a sincronizzare le transazioni bancarie, per favore disabilitane il modo sviluppatore."
+
+#: banking/custom/bank_reconciliation_tool.js:8
+msgid "Did you mean {0}?"
+msgstr "Vuoi dire {0}?"
+
+#. Label of a Select field in DocType 'Banking Reference Mapping'
+#. Label of a Link field in DocType 'Voucher Matching Default'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+#: banking/klarna_kosma_integration/doctype/voucher_matching_default/voucher_matching_default.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:154
+msgid "Document Type"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:297
+msgid "Download"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:105
+#: banking/ebics/doctype/ebics_user/ebics_user.js:296
+msgid "Download Bank Statements"
+msgstr "Scarica dichiarazioni bancarie"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Download Batch Transactions"
+msgstr "Scarica transazioni in lotti"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:19
+msgid "Download as XML"
+msgstr "Scarica come XML"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:7
+msgid "Download response files"
+msgstr "Scarica file di risposta"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:6
+msgid "Downloaded"
+msgstr "Scaricato"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:22
+msgid "Draft"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:33
+msgid "Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
+msgstr "A causa della chiusura del periodo, non puoi conciliare le ricevute non pagate con una transazione bancaria prima del {0}"
+
+#. Label of a Section Break field in DocType 'Banking Settings'
+#: banking/custom_fields.py:10
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "EBICS"
+msgstr "EBICS"
+
+#: banking/custom/bank.py:15
+msgid "EBICS Configuration Missing"
+msgstr "Configurazione EBICS mancante"
+
+#: banking/custom_fields.py:16
+msgid "EBICS Host ID"
+msgstr "ID host EBICS"
+
+#. Label of a Data field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "EBICS Order ID"
+msgstr "ID ordine EBICS"
+
+#: banking/custom/bank.js:14
+msgid "EBICS Protocol Versions"
+msgstr "Versioni del protocollo EBICS"
+
+#. Name of a DocType
+#. Linked DocType in EBICS User's connections
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "EBICS Request"
+msgstr "Richiesta EBICS"
+
+#: banking/custom_fields.py:23
+msgid "EBICS URL"
+msgstr "URL EBICS"
+
+#. Label of a Link field in DocType 'EBICS Request'
+#. Name of a DocType
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:83
+msgid "EBICS User"
+msgstr "Utente EBICS"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:73
+msgid "EBICS User limit exceeded."
+msgstr "Limite di utenti EBICS superato."
+
+#. Label of a Link in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "EBICS Users"
+msgstr "Utenti EBICS"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:43
+msgid "EBICS transactions re-imported successfully."
+msgstr "Transazioni EBICS riimportate con successo."
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "EREF"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:114
+msgid "Ebics 2.5 (H004)"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:118
+msgid "Ebics 3.0 (H005)"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+msgid "Ebics Users"
+msgstr "Utenti EBICS"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:211
+msgid "Edit in Full Page"
+msgstr "Modifica nella pagina intera"
+
+#. Description of the 'Admin URL' (Data) field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Eg: https://banking.alyf.de"
+msgstr "Esempio: https://banking.alyf.de"
+
+#: banking/custom_fields.py:55
+msgid "Employee Bank Account"
+msgstr "Conto bancario dipendente"
+
+#: banking/custom/employee.js:11 banking/custom/purchase_invoice.js:81
+msgid "Employee Bank Account was created."
+msgstr "Il conto bancario del dipendente è stato creato."
+
+#: banking/custom/employee.js:17 banking/custom/purchase_invoice.js:87
+msgid "Employee Bank Account was not created."
+msgstr "Il conto bancario del dipendente non è stato creato."
+
+#. Label of a Check field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Enable EBICS (New)"
+msgstr "Abilita EBICS (Nuovo)"
+
+#. Description of the 'Needs Certificate' (Check) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Enable this for EBICS accounts whose key management is based on certificates."
+msgstr "Abilita questo per account EBICS la cui gestione delle chiavi è basata su certificati."
+
+#. Label of a Check field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Enabled"
+msgstr "Abilitato"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:181
+msgid "Enter Passphrase"
+msgstr "Inserisci la passphrase"
+
+#. Description of the 'Execution Date' (Date) field in DocType 'SEPA Payment
+#. Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Enter only if scheduled execution at the bank is desired."
+msgstr "Inserire solo se si desidera l'esecuzione programmata presso la banca."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:131
+msgid "Enter your passphrase"
+msgstr "Inserisci la tua passphrase"
+
+#. Description of the 'Passphrase' (Password) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
+msgstr "Inserisci la tua password per abilitare il sincronizzazione automatica, regolare. Lascia vuoto se preferisci sincronizzare manualmente."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:124
+msgid "Enter your signature passphrase"
+msgstr "Inserisci la tua passphrase di firma"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
+msgid "Error while fetching releases"
+msgstr "Errore durante il recupero delle release"
+
+#. Label of a Date field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Execution Date"
+msgstr "Data di esecuzione"
+
+#. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
+#. Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Expense Claim"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Failed"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:91
+msgid "Failed to create {0} against {1}"
+msgstr "Impossibile creare {0} contro {1}"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:49
+msgid "Failed to re-import EBICS transactions."
+msgstr "Impossibile riimportare le transazioni EBICS."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:122
+msgid "Failed to reconcile new {0} against {1}"
+msgstr "Impossibile conciliare il nuovo {0} contro {1}"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:341
+msgid "Failed to reconcile {0}"
+msgstr "Impossibile conciliare {0}"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:99
+msgid "Failed to remove EBICS user registration."
+msgstr "Impossibile rimuovere la registrazione dell'utente EBICS"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:51
+msgid "Failed to update {0}"
+msgstr "Impossibile aggiornare {0}"
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:50
+msgid "Fetching Bank Transactions"
+msgstr "Recupero transazioni bancarie"
+
+#. Label of a Select field in DocType 'Banking Reference Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Field Name"
+msgstr "Nome del campo"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/utils.py:85
+msgid "Field {} does not exist in {}. Please check the configuration in Banking Settings."
+msgstr "Il campo {} non esiste in {}. Per favore controlla la configurazione in Impostazioni di Banking."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:264
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:298
+msgid "Filter Required"
+msgstr "Filtro richiesto"
+
+#. Label of a Check field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Filter by Reference Date"
+msgstr "Filtra per data di riferimento"
+
+#. Label of a Section Break field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "Filters"
+msgstr "Filtri"
+
+#. Label of a Password field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Fintech License Key"
+msgstr "Chiave di licenza Fintech"
+
+#. Label of a Data field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Fintech Licensee Name"
+msgstr "Nome della licenziataria Fintech"
+
+#: banking/utils.py:58
+msgid "For non-German IBANs, a Bank must be provided."
+msgstr "Per IBAN non tedeschi, deve essere fornita una banca."
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:224
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "From Date"
+msgstr ""
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "From Reference Date"
+msgstr ""
+
+#. Label of a Data field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Full Name"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:58
+msgid "Get Bank Transactions"
+msgstr "Ottieni transazioni bancarie"
+
+#. Option for the 'Protocol Version' (Select) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "H004"
+msgstr ""
+
+#. Option for the 'Protocol Version' (Select) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "H005"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:288
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:207
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:453
+msgid "Hidden field for alignment"
+msgstr ""
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#. Label of a Data field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+#: banking/public/js/utils.js:16
+msgid "IBAN"
+msgstr ""
+
+#: banking/custom/employee.py:11
+msgid "IBAN Warning: Not used in SEPA Payment Orders"
+msgstr "Avviso IBAN: non usato negli ordini di pagamento SEPA"
+
+#: banking/custom/employee.py:8
+msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
+msgstr "L'IBAN del dipendente non è usato negli ordini di pagamento SEPA. Si prega di usare il conto bancario per l'elaborazione dei pagamenti."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:96
+msgid "IBAN {0} is invalid."
+msgstr "L'IBAN {0} non è valido."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:73
+msgid "ID"
+msgstr ""
+
+#. Description of the 'Intraday Sync' (Check) field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "If enabled, <code>camt.052</code> transactions are downloaded four times a day. Otherwise <code>camt.053</code> transactions are downloaded once a day."
+msgstr "Se abilitato, le transazioni <code>camt.052</code> vengono scaricate quattro volte al giorno. Altrimenti, le transazioni <code>camt.053</code> vengono scaricate una volta al giorno."
+
+#. Description of the 'Download Batch Transactions' (Check) field in DocType
+#. 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "If enabled, <code>camt.054</code> files are downloaded and merged with <code>camt.052</code> or <code>camt.053</code> files."
+msgstr "Se abilitato, i file <code>camt.054</code> vengono scaricati e fusi con i file <code>camt.052</code> o <code>camt.053</code>."
+
+#. Description of the 'Split Batch Transactions' (Check) field in DocType
+#. 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "If enabled, a separate <b>Bank Transaction</b> will be created for each sub-transaction in a batch."
+msgstr "Se abilitato, verrà creato un movimento bancario separato per ogni sottotransazione in un batch."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:229
+msgid "If no <a href='/app/bank-transaction' target='_blank'>Bank Transactions</a> are created, please check the <a href='/app/error-log' target='_blank'>Error Logs</a>. If there are no errors, the bank likely did not provide any (new) bank statements for this period."
+msgstr "Se non vengono creati movimenti bancari, per favore controlla i <a href='/app/error-log' target='_blank'>Error Logs</a>. Se non ci sono errori, il banco non ha fornito dichiarazioni bancarie (nuove) per questo periodo."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:16
+#: banking/ebics/doctype/ebics_user/ebics_user.js:64
+msgid "Initialize"
+msgstr "Inizializza"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:63
+msgid "Initialize EBICS User"
+msgstr "Inizializza utente EBICS"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Initialized"
+msgstr "Inizializzato"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:59
+msgid "Initializing..."
+msgstr "Inizializzazione..."
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Intraday Sync"
+msgstr "Sincronizzazione intraday"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/utils.py:84
+msgid "Invalid Field"
+msgstr "Campo non valido"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.py:75
+msgid "Invalid data available for download."
+msgstr "I dati disponibili per il download non sono validi."
+
+#: banking/ebics/doctype/ebics_request/ebics_request.py:21
+#: banking/ebics/doctype/ebics_request/ebics_request.py:24
+msgid "Invalid data for re-import."
+msgstr "Dati non validi per il riimport."
+
+#: banking/ebics/utils.py:236
+msgid "It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
+msgstr "Sembra che l'utente EBICS non abbia le autorizzazioni per il tipo di ordine '{0}'. I tipi autorizzati sono: {1}."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:221
+msgid "Journal Entry Type"
+msgstr "Tipo di rapporto giornaliero"
+
+#. Label of a Code field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Keyring"
+msgstr "Anello chiave"
+
+#: banking/config/desktop.py:9
+msgid "Klarna Kosma Integration"
+msgstr "Integrazione Klarna Kosma"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+msgid "Last Renewed On"
+msgstr "Ultimo rinnovo il"
+
+#: banking/ebics/utils.py:555
+msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
+msgstr "Chiave di licenza non trovata. Per favore attiva il checkbox 'Abilita EBICS' in {0} e assicurati che la tua sottoscrizione sia attiva."
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+msgid "Limit"
+msgstr "Limite"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:94
+msgid "Loading..."
+msgstr "Caricamento..."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:67
+msgid "Match Voucher"
+msgstr "Concilia ricevuta"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:205
+msgid "Mode of Payment"
+msgstr "Modalità di pagamento"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Needs Certificate"
+msgstr "Richiede certificato"
+
+#. Option for the 'Status' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "No Data Available"
+msgstr "Nessun dato disponibile"
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:84
+msgid "No Transactions found for the current filters."
+msgstr "Nessuna transazione trovata per i filtri correnti."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:32
+msgid "No changes to update"
+msgstr "Nessun cambiamento da aggiornare"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.py:72
+msgid "No data available for download."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:415
+msgid "No matches occurred via Auto Reconciliation"
+msgstr "Nessuna corrispondenza avvenuta durante la conciliazione automatica"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:48
+msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
+msgstr "Nota: Quando perdi queste password, dovrai passare nuovamente attraverso il processo di inizializzazione con il tuo banco."
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:34
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:116
+msgid "Open Billing Portal"
+msgstr "Apri portale di fatturazione"
+
+#. Label of a Data field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Order Type"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:492
+msgid "Outstanding"
+msgstr "In sospeso"
+
+#: banking/overrides/bank_transaction.py:73
+msgid "Over Allocation"
+msgstr "Sovrallocazione"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:279
+msgid "Overallocated Returns"
+msgstr "Ritorni sovralocati"
+
+#. Label of a Code field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Parameters"
+msgstr "Parametri"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:430
+msgid "Partially Reconciled"
+msgstr "Parzialmente conciliato"
+
+#. Label of a Data field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Partner ID"
+msgstr "ID partner"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:197
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:496
+msgid "Party"
+msgstr "Partner"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:148
+msgid "Party Account Number"
+msgstr "Numero di conto partner"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:156
+msgid "Party IBAN"
+msgstr "IBAN partner"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:179
+msgid "Party Type"
+msgstr "Tipo di partner"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:150
+msgid "Party Type and Party is required for Receivable / Payable account {0}"
+msgstr "Tipo di partner e partner sono richiesti per il conto recepibile / pagabile {0}"
+
+#. Label of a Password field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:22
+#: banking/ebics/doctype/ebics_user/ebics_user.js:138
+#: banking/ebics/doctype/ebics_user/ebics_user.js:173
+#: banking/ebics/doctype/ebics_user/ebics_user.js:261
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:129
+msgid "Passphrase"
+msgstr ""
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:148
+msgid "Payment Order has been sent to bank."
+msgstr "L'ordine di pagamento è stato inviato alla banca."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:154
+msgid "Payment Order has not been sent to bank."
+msgstr "L'ordine di pagamento non è stato inviato alla banca."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:56
+msgid "Payment amounts have changed. Are you sure you want to submit without updating them first?"
+msgstr ""
+
+#. Label of a Table field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Payments"
+msgstr "Pagamenti"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:291
+msgid "Please activate the checkbox 'Enable EBICS' in the {0}."
+msgstr "Per favore attiva il checkbox 'Abilita EBICS' in {0}."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:284
+msgid "Please activate the checkbox 'Enabled' in the {0}."
+msgstr "Per favore attiva il checkbox 'Abilitato' in {0}."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:120
+msgid "Please add EBICS Host ID and URL to bank {0}"
+msgstr "Per favore aggiungi l'ID host EBICS e l'URL al banco {0}"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:111
+msgid "Please add a two-letter country code to country {0}"
+msgstr "Per favore aggiungi un codice paese a due lettere al paese {0}"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:88
+msgid "Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
+msgstr "Per favore conferma che le seguenti chiavi sono identiche a quelle menzionate nella lettera del tuo banco:"
+
+#. Description of the 'section_break_qjlc' (Section Break) field in DocType
+#. 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Please enter the values provided by your bank."
+msgstr "Per favore inserisci i valori forniti dal tuo banco."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:8
+msgid "Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
+msgstr "Per favore stampa la lettera INI allegata, inviala al tuo banco e attendi la conferma. Quindi verifica le chiavi del banco."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:222
+msgid "Please select a Bank Account to start reconciling."
+msgstr "Selezionare un conto bancario per iniziare la conciliazione."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:281
+msgid "Please select at least one voucher to reconcile"
+msgstr "Seleziona almeno una ricevuta per conciliare"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:292
+msgid "Please select vouchers of the same type to reconcile"
+msgstr "Seleziona ricevute dello stesso tipo per conciliare"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:263
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:297
+msgid "Please set the 'Bank Account' filter"
+msgstr "Imposta il filtro 'Conto bancario'"
+
+#. Label of a Password field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Portal API Token"
+msgstr "Token API portale"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:191
+msgid "Posting Date"
+msgstr ""
+
+#. Option for the 'Batch Booking' (Select) field in DocType 'SEPA Payment
+#. Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Process as batch"
+msgstr "Elabora come lotto"
+
+#. Option for the 'Batch Booking' (Select) field in DocType 'SEPA Payment
+#. Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Process individually"
+msgstr "Elabora individualmente"
+
+#. Label of a Select field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:127
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Protocol Version"
+msgstr "Versione del protocollo"
+
+#. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
+#. Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Purchase Invoice"
+msgstr ""
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Purpose"
+msgstr "Scopo"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:11
+msgid "Re-Import"
+msgstr "Riimporta"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:28
+msgid "Re-import cancelled."
+msgstr "Riimportazione annullata."
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:39
+msgid "Re-importing EBICS transactions ..."
+msgstr "Riimportazione delle transazioni EBICS ..."
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Recipient"
+msgstr "Destinatario"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:462
+msgid "Reconcile"
+msgstr "Concilia"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:421
+msgid "Reconciled"
+msgstr "Concilia"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:337
+msgid "Reconciling ..."
+msgstr "Conciliazione..."
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:38
+msgid "Redirecting to Customer Portal ..."
+msgstr "Reindirizzamento al portale del cliente ..."
+
+#. Label of a Section Break field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:506
+msgid "Reference"
+msgstr "Riferimento"
+
+#. Label of a Link field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Reference DocType"
+msgstr "DocType di riferimento"
+
+#. Label of a Table field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Reference Fields"
+msgstr "Campi di riferimento"
+
+#. Label of a Dynamic Link field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Reference Name"
+msgstr "Nome di riferimento"
+
+#. Label of a Data field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:181
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:170
+msgid "Reference Number"
+msgstr "Numero di riferimento"
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "Reference Row Name"
+msgstr "Nome riga di riferimento"
+
+#. Label of a Select field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Requested By"
+msgstr "Richiesto da"
+
+#. Label of a Code field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Response"
+msgstr "Risposta"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:109
+msgid "Row {0}: Currency {1} does not match bank account currency {2}."
+msgstr "Riga {0}: La valuta {1} non corrisponde alla valuta del conto bancario {2}."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:100
+msgid "Row {0}: IBAN {1} is invalid."
+msgstr "Riga {0}: L'IBAN {1} non è valido."
+
+#. Option for the 'Transmission Type' (Select) field in DocType 'SEPA Payment
+#. Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "SENT_VIA_EBICS"
+msgstr "INVIATO_VIA_EBICS"
+
+#. Name of a DocType
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "SEPA Payment"
+msgstr "Pagamento SEPA"
+
+#. Name of a DocType
+#: banking/custom/purchase_invoice.js:38
+#: banking/custom/purchase_invoice_list.js:7
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "SEPA Payment Order"
+msgstr "Ordine di pagamento SEPA"
+
+#: banking/custom_fields.py:72
+msgid "SEPA Payment Order Status"
+msgstr "Stato ordine di pagamento SEPA"
+
+#. Label of a Link in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "SEPA Payment Orders"
+msgstr "Ordini di pagamento SEPA"
+
+#. Option for the 'Charges' (Select) field in DocType 'SEPA Payment'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+msgid "SHAR"
+msgstr ""
+
+#. Label of a Data field in DocType 'SEPA Payment'
+#. Label of a Data field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment/sepa_payment.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "SWIFT Number"
+msgstr "Numero SWIFT"
+
+#. Option for the 'Document Type' (Select) field in DocType 'Banking Reference
+#. Mapping'
+#: banking/klarna_kosma_integration/doctype/banking_reference_mapping/banking_reference_mapping.json
+msgid "Sales Invoice"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Sender"
+msgstr ""
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:13
+msgid "Sent via EBICS"
+msgstr "Inviato via EBICS"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:24
+msgid "Set a new password for downloading bank statements from your bank."
+msgstr "Imposta una nuova password per scaricare dichiarazioni bancarie dal tuo banco."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:41
+msgid "Set a new password for uploading transactions to your bank."
+msgstr "Imposta una nuova password per caricare transazioni al tuo banco."
+
+#. Label of a Card Break in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Setup"
+msgstr "Configurazione"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:396
+msgid "Show Exact Amount"
+msgstr "Mostra importo esatto"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:408
+msgid "Show Exact Party"
+msgstr "Mostra parte esatta"
+
+#: banking/custom/bank.js:5
+msgid "Show Protocol Versions"
+msgstr "Mostra versioni protocollo"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:39
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:122
+msgid "Signature Passphrase"
+msgstr "Password per la firma"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:46
+msgid "Signup for Banking"
+msgstr "Registrati per il pagamento"
+
+#: banking/klarna_kosma_integration/exception_handler.py:66
+msgid "Something went wrong. Please retry in a while."
+msgstr "Qualcosa è andato storto. Per favore riprova più tardi."
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:116
+msgid "Sort By"
+msgstr "Ordina per"
+
+#. Label of a Check field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Split Batch Transactions"
+msgstr "Dividi transazioni batch"
+
+#. Label of a Date field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "Start Date"
+msgstr ""
+
+#. Label of a Select field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+msgid "Status"
+msgstr "Stato"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:30
+msgid "Store Passphrase"
+msgstr "Salva password"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:33
+msgid "Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
+msgstr "Salva la password nel database ERPNext per abilitare il download automatico, regolare delle dichiarazioni bancarie."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:216
+msgid "Submit"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+msgid "Subscriber"
+msgstr "Abbonato"
+
+#. Label of a Section Break field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Subscription"
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+msgid "Subscription Details"
+msgstr "Dettagli abbonamento"
+
+#: banking/custom_fields.py:85
+msgid "Subtransaction ID"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "Successful"
+msgstr ""
+
+#: banking/custom_fields.py:40
+msgid "Supplier Bank Account"
+msgstr "Conto bancario fornitore"
+
+#: banking/custom/purchase_invoice.js:63 banking/custom/supplier.js:11
+msgid "Supplier Bank Account was created."
+msgstr "Il conto bancario del fornitore è stato creato."
+
+#: banking/custom/purchase_invoice.js:69 banking/custom/supplier.js:17
+msgid "Supplier Bank Account was not created."
+msgstr "Il conto bancario del fornitore non è stato creato."
+
+#. Option for the 'Requested By' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "System"
+msgstr ""
+
+#. Name of a role
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "System Manager"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:70
+msgid "The Bank Transaction is over-allocated by {0} at row {1}."
+msgstr "La transazione bancaria è sovralocata di {0} alla riga {1}."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:280
+msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
+msgstr "L'importo allocato non può essere negativo. Per favore modifica le ricevute di ritorno selezionate."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:155
+msgid "The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
+msgstr "La valuta del secondo conto ({0} : {1}) deve essere la stessa del conto bancario ({2} : {3})"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:82
+msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
+msgstr "La valuta del secondo conto ({0}) deve essere la stessa del conto bancario ({1})"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:219
+msgid "The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
+msgstr "Il programma di sincronizzazione non è attivo. Per favore attiva il programma per continuare a sincronizzare le transazioni bancarie."
+
+#: banking/klarna_kosma_integration/exception_handler.py:76
+msgid "The server has errored. Please retry in some time."
+msgstr "Il server ha errore. Per favore riprova più tardi."
+
+#. Description of the 'Voucher Matching Defaults' (Table MultiSelect) field in
+#. DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "These DocTypes are pre-enabled in the 'Match Voucher' tab."
+msgstr "I tipi di documenti sono pre-abilitati nella scheda 'Concilia ricevuta'."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:123
+msgid "To Allocate"
+msgstr "Importo da allocare"
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/ebics/doctype/ebics_user/ebics_user.js:253
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "To Date"
+msgstr ""
+
+#. Label of a Date field in DocType 'Bank Reconciliation Tool Beta'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
+msgid "To Reference Date"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:140
+msgid "To use protocol version H005, please activate the checkbox 'Needs Certificates'."
+msgstr "Per utilizzare la versione del protocollo H005, attiva la casella 'Richiede certificati'."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:420
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:429
+msgid "Transaction"
+msgstr ""
+
+#. Label of a Card Break in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:420
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:429
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "Transactions"
+msgstr ""
+
+#. Label of a Datetime field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Transmission Datetime"
+msgstr "Data e ora di trasmissione"
+
+#. Label of a Select field in DocType 'SEPA Payment Order'
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
+msgid "Transmission Type"
+msgstr "Tipo di trasmissione"
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:133
+msgid "Unallocated Amount"
+msgstr "Importo non allocato"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:423
+msgid "Unpaid Vouchers"
+msgstr "Ricevute non pagate"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:165
+msgid "Update"
+msgstr "Aggiorna"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
+msgid "Update Amounts"
+msgstr ""
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:48
+msgid "Updating ..."
+msgstr "Aggiornamento..."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:95
+msgid "Upload CAMT file"
+msgstr "Carica file CAMT"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:91
+msgid "Upload CSV / Excel file"
+msgstr "Carica file CSV / Excel"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:99
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:303
+msgid "Upload MT940 file"
+msgstr "Carica file MT940"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:269
+msgid "Upload XML (CAMT.053) file"
+msgstr "Carica file XML (CAMT.053)"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+msgid "Usage"
+msgstr "Utilizzo"
+
+#. Option for the 'Requested By' (Select) field in DocType 'EBICS Request'
+#: banking/ebics/doctype/ebics_request/ebics_request.json
+msgid "User"
+msgstr ""
+
+#. Label of a Data field in DocType 'EBICS User'
+#: banking/ebics/doctype/ebics_user/ebics_user.json
+msgid "User ID"
+msgstr ""
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:83
+msgid "User ID not available."
+msgstr "ID utente non disponibile."
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+msgid "Valid Till"
+msgstr "Valido fino al"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:76
+msgid "Verify Bank Keys"
+msgstr "Verifica chiavi del banco"
+
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:25
+msgid "View EBICS Users"
+msgstr "Visualizza utenti EBICS"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:501
+msgid "Voucher"
+msgstr "Ricevuta"
+
+#. Name of a DocType
+#: banking/klarna_kosma_integration/doctype/voucher_matching_default/voucher_matching_default.json
+msgid "Voucher Matching Default"
+msgstr "Concilia ricevuta per default"
+
+#. Label of a Table MultiSelect field in DocType 'Banking Settings'
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
+msgid "Voucher Matching Defaults"
+msgstr "Concilia ricevute per default"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:244
+msgid "We'll try to download all transactions of completed days in the selected period, using <code>camt.053</code>."
+msgstr "Tenteremo di scaricare tutte le transazioni dei giorni completati nel periodo selezionato, usando <code>camt.053</code>."
+
+#: banking/ebics/doctype/ebics_user/ebics_user.js:236
+msgid "We'll try to download new transactions from today, using <code>camt.052</code>."
+msgstr "Tenteremo di scaricare le nuove transazioni da oggi, usando <code>camt.052</code>."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:105
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:129
+msgid "Withdrawal"
+msgstr "Prelievo"
+
+#: banking/ebics/doctype/ebics_user/ebics_user.py:130
+msgid "You selected protocol version {0}, but the bank {1} only supports {2}."
+msgstr "Hai selezionato la versione del protocollo {0}, ma la banca {1} supporta solo {2}."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:270
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:304
+msgid "to import bank transactions for {0}."
+msgstr "per importare le transazioni bancarie per {0}."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:418
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:427
+msgid "{0} {1} {2}"
+msgstr "{0} {1} {2}"
+
+#. Count format of shortcut in the ALYF Banking Workspace
+#: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
+msgid "{} Unreconciled"
+msgstr "{} Non conciliato"
+
