@@ -127,8 +127,8 @@ scheduler_events = {
 			# on every day-of-week from Monday through Friday.
 			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.intraday_sync_ebics",
 		],
-		"42 4 * * *": [
-			# Daily at 4:42 am
+		"14 6-22/4 * * *": [
+			# At minute 14 past every 4th hour from 6 through 22.
 			"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.sync_all_accounts_and_transactions",
 		],
 	},
@@ -203,7 +203,15 @@ alyf_banking_property_setters = {
 			value="",
 			property_type="Small Text",
 		),
-	]
+	],
+	"Bank Transaction": [
+		dict(
+			fieldname="transaction_id",
+			property="unique",
+			value=0,
+			property_type="Check",
+		),
+	],
 }
 
 get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_matching_queries"
