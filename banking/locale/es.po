@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-10-29 00:05+0053\n"
+"POT-Creation-Date: 2025-11-07 14:18+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -15,6 +15,10 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.1\n"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:63
+msgid "<b>EBICS User</b> '{0}' has <i>Download Batch Transactions</i> enabled. Batch details are stored in separate <b>EBICS Requests</b>, so this re-import might be incomplete. Do you want to continue?"
+msgstr "<b>Usuario de EBICS</b> '{0}' tiene <i>Descargar transacciones por lotes</i> habilitado. Los detalles del lote se almacenan en <b>Solicitudes de EBICS</b> separadas, por lo que este reimportar podría ser incompleto. ¿Desea continuar?"
 
 #. Header text in the ALYF Banking Workspace
 #: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
@@ -27,7 +31,7 @@ msgstr "<span class=\"h4\">Bancario</span>"
 msgid "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>"
 msgstr "<ul><li>Almacena el mapeo por DocType de campos que deben considerarse como campos de 'número de referencia' en la Herramienta de Conciliación Bancaria Beta</li><li>Se admiten campos de enlace y datos</li><li>El campo debe tener un número de referencia singular para coincidir con las transacciones bancarias</li></ul>"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:176
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:214
 msgid "A new version of the Banking app is available ({0}). Please update your instance."
 msgstr "Es está disponible una nueva versión de la aplicación Banking ({0}). Por favor, actualice su instancia."
 
@@ -88,15 +92,15 @@ msgstr ""
 msgid "Amount"
 msgstr ""
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:96
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:87
 msgid "Amount updated to {0} in row {1}."
 msgstr ""
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:169
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:174
 msgid "Amounts not updated."
 msgstr ""
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:162
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:167
 msgid "Amounts updated."
 msgstr ""
 
@@ -152,7 +156,7 @@ msgstr ""
 msgid "Bank Account"
 msgstr ""
 
-#: banking/ebics/utils.py:193
+#: banking/ebics/utils.py:215
 msgid "Bank Account not found for IBAN {0}"
 msgstr "No se encontró la cuenta bancaria para el IBAN {0}"
 
@@ -237,8 +241,8 @@ msgstr "La acción de Banking ha fallado debido a los siguientes errores:"
 #: banking/ebics/doctype/ebics_user/ebics_user.py:75
 #: banking/ebics/doctype/ebics_user/ebics_user.py:82
 #: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:140
-#: banking/ebics/utils.py:192 banking/ebics/utils.py:209
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:204
+#: banking/ebics/utils.py:187 banking/ebics/utils.py:214
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
 #: banking/klarna_kosma_integration/exception_handler.py:41
@@ -266,7 +270,7 @@ msgstr "Asignación de referencia de Banking"
 msgid "Banking Settings"
 msgstr "Configuración de Banking"
 
-#: banking/ebics/utils.py:224
+#: banking/ebics/utils.py:235
 msgid "Banking Warning"
 msgstr "Advertencia de Banking"
 
@@ -401,8 +405,8 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:86
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:114
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:87
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:152
 msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
 msgstr "El modo desarrollador está activado. Por favor, desactívelo para continuar sincronizando transacciones bancarias automáticamente."
 
@@ -490,7 +494,7 @@ msgstr "URL EBICS"
 #. Name of a DocType
 #: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:78
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:83
 msgid "EBICS User"
 msgstr "Usuario de EBICS"
 
@@ -502,6 +506,10 @@ msgstr "Se ha excedido el límite de usuarios de EBICS"
 #: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
 msgid "EBICS Users"
 msgstr "Usuarios de EBICS"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:43
+msgid "EBICS transactions re-imported successfully."
+msgstr "Transacciones EBICS reimportadas correctamente."
 
 #. Label of a Data field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
@@ -566,7 +574,7 @@ msgstr "Ingrese la frase de contraseña"
 msgid "Enter only if scheduled execution at the bank is desired."
 msgstr "Ingrese solo si se desea ejecución programada en el banco."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:126
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:131
 msgid "Enter your passphrase"
 msgstr "Ingrese su frase de contraseña"
 
@@ -575,11 +583,11 @@ msgstr "Ingrese su frase de contraseña"
 msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
 msgstr "Ingrese su contraseña para habilitar la sincronización automática, regular, o deje en blanco si prefiere sincronizar manualmente."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:119
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:124
 msgid "Enter your signature passphrase"
 msgstr "Ingrese su frase de contraseña de firma"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:204
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
 msgid "Error while fetching releases"
 msgstr "Error al obtener las versiones"
 
@@ -602,6 +610,10 @@ msgstr "Fallido"
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:91
 msgid "Failed to create {0} against {1}"
 msgstr "No se pudo crear {0} contra {1}"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:49
+msgid "Failed to re-import EBICS transactions."
+msgstr "No se pudo reimportar las transacciones EBICS."
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:122
 msgid "Failed to reconcile new {0} against {1}"
@@ -713,7 +725,7 @@ msgstr "Advertencia de IBAN: No se usa en órdenes de pago SEPA"
 msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
 msgstr "El IBAN del empleado no se usa en las órdenes de pago SEPA. Por favor, use la cuenta bancaria en su lugar para procesar el pago."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:105
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:96
 msgid "IBAN {0} is invalid."
 msgstr "El IBAN {0} es inválido."
 
@@ -769,11 +781,16 @@ msgstr "Sincronización intradía"
 msgid "Invalid Field"
 msgstr "Campo inválido"
 
-#: banking/ebics/doctype/ebics_request/ebics_request.py:57
+#: banking/ebics/doctype/ebics_request/ebics_request.py:75
 msgid "Invalid data available for download."
 msgstr "No hay datos disponibles para descargar."
 
-#: banking/ebics/utils.py:225
+#: banking/ebics/doctype/ebics_request/ebics_request.py:21
+#: banking/ebics/doctype/ebics_request/ebics_request.py:24
+msgid "Invalid data for re-import."
+msgstr "Datos inválidos para el reimport."
+
+#: banking/ebics/utils.py:236
 msgid "It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
 msgstr "Parece que el usuario de EBICS no tiene permisos para el tipo de pedido '{0}'. Los tipos permitidos son: {1}."
 
@@ -794,7 +811,7 @@ msgstr "Integración de Klarna Kosma"
 msgid "Last Renewed On"
 msgstr "Última renovación en"
 
-#: banking/ebics/utils.py:544
+#: banking/ebics/utils.py:555
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr "No se encontró la clave de licencia. Por favor, active el campo 'Habilitar EBICS' en {0} y asegúrese de que su suscripción esté activa."
 
@@ -832,7 +849,7 @@ msgstr "No se encontraron transacciones para los filtros actuales."
 msgid "No changes to update"
 msgstr "No hay cambios para actualizar"
 
-#: banking/ebics/doctype/ebics_request/ebics_request.py:54
+#: banking/ebics/doctype/ebics_request/ebics_request.py:72
 msgid "No data available for download."
 msgstr ""
 
@@ -908,19 +925,19 @@ msgstr "Se requiere tipo de parte y parte para la cuenta por cobrar/pagar {0}"
 #: banking/ebics/doctype/ebics_user/ebics_user.js:173
 #: banking/ebics/doctype/ebics_user/ebics_user.js:261
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:124
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:129
 msgid "Passphrase"
 msgstr "Frase de contraseña"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:143
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:148
 msgid "Payment Order has been sent to bank."
 msgstr "La orden de pago ha sido enviada al banco."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:149
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:154
 msgid "Payment Order has not been sent to bank."
 msgstr "La orden de pago no ha sido enviada al banco."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:52
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:56
 msgid "Payment amounts have changed. Are you sure you want to submit without updating them first?"
 msgstr ""
 
@@ -1014,6 +1031,18 @@ msgstr ""
 msgid "Purpose"
 msgstr "Propósito"
 
+#: banking/ebics/doctype/ebics_request/ebics_request.js:11
+msgid "Re-Import"
+msgstr "Reimportar"
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:28
+msgid "Re-import cancelled."
+msgstr "Reimportación cancelada."
+
+#: banking/ebics/doctype/ebics_request/ebics_request.js:39
+msgid "Re-importing EBICS transactions ..."
+msgstr "Reimportando transacciones EBICS ..."
+
 #. Label of a Data field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
 msgid "Recipient"
@@ -1078,11 +1107,11 @@ msgstr "Solicitado por"
 msgid "Response"
 msgstr "Respuesta"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:118
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:109
 msgid "Row {0}: Currency {1} does not match bank account currency {2}."
 msgstr "Fila {0}: La moneda {1} no coincide con la moneda de la cuenta bancaria {2}."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:109
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:100
 msgid "Row {0}: IBAN {1} is invalid."
 msgstr "Fila {0}: El IBAN {1} es inválido."
 
@@ -1153,11 +1182,6 @@ msgstr "Establezca una nueva contraseña para cargar transacciones a su banco."
 msgid "Setup"
 msgstr "Configuración"
 
-#. Label of a Check field in DocType 'SEPA Payment Order'
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
-msgid "Should Update Amounts"
-msgstr ""
-
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:396
 msgid "Show Exact Amount"
 msgstr "Mostrar cantidad exacta"
@@ -1171,7 +1195,7 @@ msgid "Show Protocol Versions"
 msgstr "Mostrar versiones de protocolo"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:39
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:117
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:122
 msgid "Signature Passphrase"
 msgstr "Contraseña de firma"
 
@@ -1279,7 +1303,7 @@ msgstr "El tipo de cambio de la cuenta bancaria ({0} : {1}) debe ser el mismo qu
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
 msgstr "El tipo de cambio de la cuenta bancaria ({0}) debe ser el mismo que el de la cuenta bancaria ({1})"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:181
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:219
 msgid "The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
 msgstr "El programador está inactivo. Por favor, actívelo para continuar sincronizando transacciones bancarias automáticamente."
 
@@ -1346,7 +1370,7 @@ msgstr "Comprobantes sin pagar"
 msgid "Update"
 msgstr "Actualizar"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:39
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
 msgid "Update Amounts"
 msgstr ""
 

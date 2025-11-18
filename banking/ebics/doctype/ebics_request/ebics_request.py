@@ -1,12 +1,30 @@
 # Copyright (c) 2025, ALYF GmbH and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
+from banking.ebics.utils import import_ebics_json, register_fintech
 
 
 class EBICSRequest(Document):
-	pass
+	@frappe.whitelist()
+	def re_import(self):
+		"""Re-import the EBICS transactions from the response."""
+		ebics_user = frappe.get_doc("EBICS User", self.ebics_user)
+		try:
+			data = json.loads(self.response)
+		except (json.JSONDecodeError, TypeError):
+			frappe.throw(_("Invalid data for re-import."))
+
+		if not isinstance(data, dict):
+			frappe.throw(_("Invalid data for re-import."))
+
+		register_fintech(needs_license_key=True)
+		import_ebics_json(ebics_user, data)
 
 
 def sanitize_filename(filename: str) -> str:
