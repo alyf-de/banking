@@ -13,6 +13,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 			fields: this.get_detail_tab_fields(),
 			body: this.actions_panel.$tab_content,
 			card_layout: true,
+			doc: this.transaction,
 		});
 		this.details_field_group.make();
 	}
@@ -24,10 +25,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 		const party = this.details_field_group.get_value("party");
 		const party_type = this.details_field_group.get_value("party_type");
 
-		let diff = ["reference_number", "party", "party_type"].some((field) => {
-			return me.details_field_group.get_value(field) !== me.transaction[field];
-		});
-		if (!diff) {
+		if (!this.details_field_group.dirty) {
 			frappe.show_alert({
 				message: __("No changes to update"),
 				indicator: "yellow",
@@ -74,7 +72,6 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				fieldname: "name",
 				fieldtype: "Link",
 				options: "Bank Transaction",
-				default: this.transaction.name,
 				read_only: 1,
 			},
 			{
@@ -82,7 +79,6 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				fieldname: "bank_account",
 				fieldtype: "Link",
 				options: "Bank Account",
-				default: this.transaction.bank_account,
 				read_only: 1,
 				hidden: this.frm.doc.bank_account ? 1 : 0,
 			},
@@ -90,23 +86,20 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				label: __("Date"),
 				fieldname: "date",
 				fieldtype: "Date",
-				default: this.transaction.date,
 				read_only: 1,
 			},
 			{
 				label: __("Deposit"),
 				fieldname: "deposit",
 				fieldtype: "Currency",
-				options: "account_currency",
-				default: this.transaction.deposit,
+				options: "currency",
 				read_only: 1,
 			},
 			{
 				label: __("Withdrawal"),
 				fieldname: "withdrawal",
 				fieldtype: "Currency",
-				options: "account_currency",
-				default: this.transaction.withdrawal,
+				options: "currency",
 				read_only: 1,
 			},
 			{
@@ -116,48 +109,42 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				label: __("Description"),
 				fieldname: "description",
 				fieldtype: "Small Text",
-				default: this.transaction.description,
 				read_only: 1,
 			},
 			{
 				label: __("To Allocate"),
 				fieldname: "unallocated_amount",
 				fieldtype: "Currency",
-				options: "account_currency",
-				default: this.transaction.unallocated_amount,
+				options: "currency",
 				read_only: 1,
 			},
 			{
 				label: __("Currency"),
-				fieldname: "account_currency",
+				fieldname: "currency",
 				fieldtype: "Link",
 				options: "Currency",
 				read_only: 1,
-				default: this.transaction.currency,
 				hidden: 1,
 			},
 			{
 				label: __("Account Holder"),
-				fieldname: "account",
+				fieldname: "bank_party_name",
 				fieldtype: "Data",
-				default: this.transaction.bank_party_name,
 				read_only: 1,
 				hidden: this.transaction.bank_party_name ? 0 : 1,
 			},
 			{
 				label: __("Party Account Number"),
-				fieldname: "account_number",
+				fieldname: "bank_party_account_number",
 				fieldtype: "Data",
-				default: this.transaction.bank_party_account_number,
 				read_only: 1,
 				hidden: this.transaction.bank_party_account_number ? 0 : 1,
 			},
 			{
 				label: __("Party IBAN"),
-				fieldname: "iban",
+				fieldname: "bank_party_iban",
 				fieldtype: "Data",
 				options: "IBAN",
-				default: this.transaction.bank_party_iban,
 				read_only: 1,
 				hidden: this.transaction.bank_party_iban ? 0 : 1,
 			},
@@ -170,7 +157,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				label: __("Reference Number"),
 				fieldname: "reference_number",
 				fieldtype: "Data",
-				default: this.transaction.reference_number,
+				onchange: () => this.toggle_save_button(),
 			},
 			{
 				fieldtype: "Column Break",
@@ -187,18 +174,14 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 						},
 					};
 				},
-				onchange: () => {
-					let value = this.details_field_group.get_value("party_type");
-					this.details_field_group.get_field("party").df.options = value;
-				},
-				default: this.transaction.party_type || null,
+				onchange: () => this.toggle_save_button(),
 			},
 			{
 				label: __("Party"),
 				fieldname: "party",
-				fieldtype: "Link",
-				default: this.transaction.party,
-				options: this.transaction.party_type || null,
+				fieldtype: "Dynamic Link",
+				get_options: () => this.details_field_group.get_value("party_type"),
+				onchange: () => this.toggle_save_button(),
 			},
 			{
 				fieldtype: "Section Break",
@@ -213,12 +196,19 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				fieldtype: "Column Break",
 			},
 			{
-				label: __("Submit"),
-				fieldname: "submit_transaction",
+				label: __("Save"),
+				fieldname: "save_transaction",
 				fieldtype: "Button",
 				primary: true,
+				hidden: 1,
 				click: () => this.update_bank_transaction(),
 			},
 		];
+	}
+
+	toggle_save_button() {
+		this.details_field_group.get_field("save_transaction").df.hidden =
+			!this.details_field_group.dirty;
+		this.details_field_group.refresh();
 	}
 };
