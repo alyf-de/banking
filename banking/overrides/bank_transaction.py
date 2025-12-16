@@ -79,7 +79,7 @@ def on_update_after_submit(doc, event):
 
 
 def before_validate(doc, method):
-	ensure_positive_deposit_withdrawal_fees(doc)
+	ensure_positive_deposit_withdrawal_fees(doc, method)
 
 
 def on_cancel(doc, method):
@@ -316,8 +316,11 @@ def create_fee_journal_entry(doc, company_doc, date, account, bank_fee_account, 
 	return journal_entry.name
 
 
-def ensure_positive_deposit_withdrawal_fees(doc):
+def ensure_positive_deposit_withdrawal_fees(doc, method):
 	doc.deposit = abs(flt(doc.deposit) or 0.0)
 	doc.withdrawal = abs(flt(doc.withdrawal) or 0.0)
 	doc.included_fee = abs(flt(doc.included_fee) or 0.0)
 	doc.excluded_fee = abs(flt(doc.excluded_fee) or 0.0)
+	if method == "before_validate":
+		# Re-call this function as the original function runs before this one and values are not converted
+		BankTransaction.handle_excluded_fee(doc)
