@@ -34,6 +34,7 @@ doctype_js = {
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
+	"Bank Account": "custom/bank_account.js",
 }
 doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -108,9 +109,13 @@ override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transactio
 doc_events = {
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
+		"before_validate": "banking.overrides.bank_transaction.before_validate",
+		"before_submit": "banking.overrides.bank_transaction.before_submit",
+		"on_cancel": "banking.overrides.bank_transaction.on_cancel",
 	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
+		"validate": "banking.overrides.bank_account.validate",
 	},
 	"Employee": {
 		"validate": "banking.custom.employee.validate",

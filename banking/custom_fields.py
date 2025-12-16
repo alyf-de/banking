@@ -87,4 +87,14 @@ def get_custom_fields():
 				insert_after="transaction_id",
 			),
 		],
+		"Bank Account": [
+			dict(
+				fieldname="bank_fee_account",
+				fieldtype="Link",
+				label="Bank Fee Account",
+				options="Account",
+				depends_on="is_company_account",
+				insert_after="account_subtype",
+			),
+		],
 	}
