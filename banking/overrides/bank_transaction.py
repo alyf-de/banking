@@ -126,35 +126,37 @@ def on_cancel(doc, method):
 
 
 def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
-	# Create a journal entry for the bank fees
+	# First step: Create a journal entry for included bank fees
+	included_fee = doc.included_fee
+
+	if included_fee <= 0:
+		return
+
 	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
 	if not bank_fee_account:
 		frappe.throw(_("Please set the bank fee account in the bank account."))
 
-	# First Step: Book visible bank fees
-	if doc.included_fee > 0 and bank_fee_account:
-		included_fee = doc.included_fee
-		# only correct the credit value if set, as the debit value (deposit) is never including the fee.
-		if credit > 0:
-			credit = credit - included_fee
-		if debit > 0:
-			debit = debit - included_fee
-		je_fee_name = create_automatic_journal_entry(
-			doc, company_doc, date, account, bank_fee_account, None, 0, included_fee
-		)
-		doc.append(
-			"payment_entries",
-			{
-				"payment_document": "Journal Entry",
-				"payment_entry": je_fee_name,
-				"allocated_amount": included_fee,
-			},
-		)
-		# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
-		doc.allocated_amount = included_fee
-		doc.unallocated_amount = debit + credit
-		if doc.unallocated_amount == 0:
-			doc.status = "Reconciled"
+	# only correct the credit value if set, as the debit value (deposit) is never including the fee.
+	if credit > 0:
+		credit = credit - included_fee
+	if debit > 0:
+		debit = debit - included_fee
+	je_fee_name = create_automatic_journal_entry(
+		doc, company_doc, date, account, bank_fee_account, None, 0, included_fee
+	)
+	doc.append(
+		"payment_entries",
+		{
+			"payment_document": "Journal Entry",
+			"payment_entry": je_fee_name,
+			"allocated_amount": included_fee,
+		},
+	)
+	# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
+	doc.allocated_amount = included_fee
+	doc.unallocated_amount = debit + credit
+	if doc.unallocated_amount == 0:
+		doc.status = "Reconciled"
 
 	return doc
 
