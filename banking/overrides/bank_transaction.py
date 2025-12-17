@@ -224,7 +224,7 @@ def create_automatic_journal_entry(
 			"account": account,
 			"bank_account": doc.bank_account,
 			"debit_in_account_currency": debit,
-			"credit_in_account_currency": credit,  # included_fee
+			"credit_in_account_currency": credit,
 			"cost_center": company_doc.cost_center,
 		},
 	)
@@ -235,7 +235,7 @@ def create_automatic_journal_entry(
 		{
 			"account": target_account,
 			"bank_account": "",
-			"debit_in_account_currency": credit,  # included_fee
+			"debit_in_account_currency": credit,
 			"credit_in_account_currency": debit,
 			"cost_center": company_doc.cost_center,
 		},
