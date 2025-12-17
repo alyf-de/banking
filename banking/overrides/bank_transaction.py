@@ -2,7 +2,6 @@ import json
 
 import frappe
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTransaction
-from erpnext.accounts.doctype.journal_entry.journal_entry import JournalEntry
 from frappe import _
 from frappe.core.utils import find
 from frappe.utils import flt, getdate
@@ -63,40 +62,8 @@ class CustomBankTransaction(BankTransaction):
 		)
 
 
-def on_update_after_submit(doc, event):
-	"""Validate if the Bank Transaction is over-allocated."""
-	to_allocate = flt(doc.withdrawal or doc.deposit)
-	for entry in doc.payment_entries:
-		to_allocate -= flt(entry.allocated_amount)
-		if round(to_allocate, 2) < 0.0:
-			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
-			frappe.throw(
-				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(
-					frappe.bold(f"{symbol} {abs(to_allocate)!s}"), frappe.bold(entry.idx)
-				),
-				title=_("Over Allocation"),
-			)
-
-
 def before_validate(doc, method):
 	ensure_positive_deposit_withdrawal_fees(doc, method)
-
-
-def on_cancel(doc, method):
-	# Cancel the journal entries created by this Bank Transaction
-	auto_created_journal_entries = frappe.get_all(
-		"Journal Entry",
-		filters={"cheque_no": doc.name},
-		pluck="name",
-	)
-
-	for journal_entry in auto_created_journal_entries:
-		try:
-			doc = frappe.get_doc("Journal Entry", journal_entry)
-			if doc.docstatus == 1:
-				doc.cancel()
-		except Exception as e:
-			frappe.msgprint(f"Failed to cancel {journal_entry}: {e}")
 
 
 def before_submit(doc, method):
@@ -121,126 +88,130 @@ def before_submit(doc, method):
 
 	# Set initial values
 	debit, credit = (doc.deposit, 0) if doc.deposit > 0 else (0, doc.withdrawal)
-	# Create a journal entry for the bank fees
-	if doc.bank_account:
-		bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
-		if not bank_fee_account:
-			frappe.throw(_("Please set the bank fee account in the bank account."))
 
-		# First Step: Book visible bank fees
-		if doc.included_fee > 0 and bank_fee_account:
-			included_fee = doc.included_fee
-			# only correct the credit value if set, as the debit value (deposit) is never including the fee.
-			if credit > 0:
-				credit = credit - included_fee
-			if debit > 0:
-				debit = debit - included_fee
-			je_fee_name = create_fee_journal_entry(
-				doc, company_doc, date, account, bank_fee_account, included_fee
+	doc = create_je_bank_fees(doc, company_doc, date, account, debit, credit)
+	doc = create_je_automatic_rules(doc, company_doc, date, account, debit, credit)
+
+
+def on_update_after_submit(doc, event):
+	"""Validate if the Bank Transaction is over-allocated."""
+	to_allocate = flt(doc.withdrawal or doc.deposit)
+	for entry in doc.payment_entries:
+		to_allocate -= flt(entry.allocated_amount)
+		if round(to_allocate, 2) < 0.0:
+			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
+			frappe.throw(
+				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(
+					frappe.bold(f"{symbol} {abs(to_allocate)!s}"), frappe.bold(entry.idx)
+				),
+				title=_("Over Allocation"),
 			)
-			doc.append(
-				"payment_entries",
-				{
-					"payment_document": "Journal Entry",
-					"payment_entry": je_fee_name,
-					"allocated_amount": included_fee,
-				},
-			)
-			# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
-			doc.allocated_amount = included_fee
-			doc.unallocated_amount = debit + credit
-			if doc.unallocated_amount == 0:
-				doc.status = "Reconciled"
-		else:
-			included_fee = 0
 
-		# Second step: Automatic reconcilation based on the Bank Reconciliation Rules
-		bank_reconciliation_rules = frappe.db.get_list(
-			"Bank Reconciliation Rule",
-			filters={
-				"disabled": 0,
-				"bank_account": doc.bank_account,
-				"docstatus": 1,
-			},
-			fields=["name", "target_account", "filters"],
-			as_list=True,
-		)
-		for br_rule in bank_reconciliation_rules:
-			# Check if line matches filter
-			if br_rule[2]:
-				filters = json.loads(br_rule[2])
-				if filters:
-					condition_met = evaluate_filters(doc, filters)
-					if condition_met:
-						rule = br_rule[0]
-						target_account = br_rule[1]
-						je_auto_name = create_automatic_journal_entry(
-							doc, company_doc, date, account, target_account, rule, debit, credit
-						)
-						doc.append(
-							"payment_entries",
-							{
-								"payment_document": "Journal Entry",
-								"payment_entry": je_auto_name,
-								"allocated_amount": debit + credit,
-							},
-						)
-						# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
-						doc.allocated_amount = doc.allocated_amount + debit + credit
-						# Set remaining debit and credit to 0, so no cash in transit is generated
-						debit = 0
-						credit = 0
-						doc.unallocated_amount = 0
-						doc.status = "Reconciled"
-						break
 
-	if debit == 0 and credit == 0:
-		return
-
-	journal_entry = frappe.new_doc("Journal Entry")
-	journal_entry.voucher_type = "Bank Entry"
-	journal_entry.title = f"BT ID {doc.name}"
-	journal_entry.posting_date = date
-	journal_entry.company = doc.company
-	journal_entry.user_remark = f"Auto-created from BT: {doc.name}"
-	journal_entry.cheque_no = doc.name
-	journal_entry.cheque_date = date
-	journal_entry.multi_currency = 1
-	journal_entry.clearance_date = frappe.utils.today()
-
-	journal_entry.append(
-		"accounts",
-		{
-			"account": account,
-			"bank_account": doc.bank_account,
-			"debit_in_account_currency": debit,
-			"credit_in_account_currency": credit,
-			"cost_center": company_doc.cost_center,
-		},
+def on_cancel(doc, method):
+	# Cancel the journal entries created by this Bank Transaction
+	auto_created_journal_entries = frappe.get_all(
+		"Journal Entry",
+		filters={"cheque_no": doc.name},
+		pluck="name",
 	)
 
-	# If by any filter, no accounting entries (single lines) are present, do not create a journal entry.
-	if len(journal_entry.accounts) > 0:
-		journal_entry.insert()
+	for journal_entry in auto_created_journal_entries:
+		try:
+			doc = frappe.get_doc("Journal Entry", journal_entry)
+			if doc.docstatus == 1:
+				doc.cancel()
+		except Exception as e:
+			frappe.msgprint(_("Failed to cancel {0}: {1}").format(journal_entry, e))
 
-		# Create Exchange Gain/Loss Line
-		JournalEntry.get_balance(journal_entry, difference_account=company_doc.exchange_gain_loss_account)
 
-		journal_entry.submit()
+def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
+	# Create a journal entry for the bank fees
+	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
+	if not bank_fee_account:
+		frappe.throw(_("Please set the bank fee account in the bank account."))
 
-	else:
-		frappe.msgprint(
-			_("No journal entry was created, as no data was present in the Accounting Entries table.")
+	# First Step: Book visible bank fees
+	if doc.included_fee > 0 and bank_fee_account:
+		included_fee = doc.included_fee
+		# only correct the credit value if set, as the debit value (deposit) is never including the fee.
+		if credit > 0:
+			credit = credit - included_fee
+		if debit > 0:
+			debit = debit - included_fee
+		je_fee_name = create_automatic_journal_entry(
+			doc, company_doc, date, account, bank_fee_account, None, 0, included_fee
 		)
+		doc.append(
+			"payment_entries",
+			{
+				"payment_document": "Journal Entry",
+				"payment_entry": je_fee_name,
+				"allocated_amount": included_fee,
+			},
+		)
+		# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
+		doc.allocated_amount = included_fee
+		doc.unallocated_amount = debit + credit
+		if doc.unallocated_amount == 0:
+			doc.status = "Reconciled"
+
+	return doc
 
 
-def create_automatic_journal_entry(doc, company_doc, date, account, target_account, rule, debit, credit):
+def create_je_automatic_rules(doc, company_doc, date, account, debit, credit):
+	# Second step: Automatic reconcilation based on the Bank Reconciliation Rules
+	bank_reconciliation_rules = frappe.db.get_list(
+		"Bank Reconciliation Rule",
+		filters={
+			"disabled": 0,
+			"bank_account": doc.bank_account,
+			"docstatus": 1,
+		},
+		fields=["name", "target_account", "filters"],
+		as_list=True,
+	)
+	for br_rule in bank_reconciliation_rules:
+		# Check if line matches filter
+		if br_rule[2]:
+			filters = json.loads(br_rule[2])
+			if filters:
+				condition_met = evaluate_filters(doc, filters)
+				if condition_met:
+					rule = br_rule[0]
+					target_account = br_rule[1]
+					je_auto_name = create_automatic_journal_entry(
+						doc, company_doc, date, account, target_account, rule, debit, credit
+					)
+					doc.append(
+						"payment_entries",
+						{
+							"payment_document": "Journal Entry",
+							"payment_entry": je_auto_name,
+							"allocated_amount": debit + credit,
+						},
+					)
+					# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
+					doc.allocated_amount = doc.allocated_amount + debit + credit
+					# Set remaining debit and credit to 0, so no cash in transit is generated
+					debit = 0
+					credit = 0
+					doc.unallocated_amount = 0
+					doc.status = "Reconciled"
+					break
+
+	return doc
+
+
+def create_automatic_journal_entry(
+	doc, company_doc, date, account, target_account, rule=None, debit=0, credit=0
+):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Journal Entry"
-	journal_entry.title = f"BT ID {doc.name}"
 	journal_entry.posting_date = date
 	journal_entry.company = doc.company
-	journal_entry.user_remark = f"Auto-created from BT: {doc.name} by automatic rule {rule}"
+	rule_part = " " + _("by automatic rule {0}").format(rule) if rule else ""
+	journal_entry.user_remark = _("Auto-created from BT: {0}").format(doc.name) + rule_part
 	journal_entry.cheque_no = doc.name
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
@@ -253,7 +224,7 @@ def create_automatic_journal_entry(doc, company_doc, date, account, target_accou
 			"account": account,
 			"bank_account": doc.bank_account,
 			"debit_in_account_currency": debit,
-			"credit_in_account_currency": credit,
+			"credit_in_account_currency": credit,  # included_fee
 			"cost_center": company_doc.cost_center,
 		},
 	)
@@ -264,49 +235,8 @@ def create_automatic_journal_entry(doc, company_doc, date, account, target_accou
 		{
 			"account": target_account,
 			"bank_account": "",
-			"debit_in_account_currency": credit,
+			"debit_in_account_currency": credit,  # included_fee
 			"credit_in_account_currency": debit,
-			"cost_center": company_doc.cost_center,
-		},
-	)
-
-	journal_entry.submit()
-
-	return journal_entry.name
-
-
-def create_fee_journal_entry(doc, company_doc, date, account, bank_fee_account, included_fee):
-	journal_entry = frappe.new_doc("Journal Entry")
-	journal_entry.voucher_type = "Journal Entry"
-	journal_entry.title = f"BT ID {doc.name}"
-	journal_entry.posting_date = date
-	journal_entry.company = doc.company
-	journal_entry.user_remark = f"Auto-created from BT: {doc.name}"
-	journal_entry.cheque_no = doc.name
-	journal_entry.cheque_date = date
-	journal_entry.multi_currency = 1
-	journal_entry.clearance_date = frappe.utils.today()
-
-	# Bank fee entry
-	journal_entry.append(
-		"accounts",
-		{
-			"account": account,
-			"bank_account": doc.bank_account,
-			"debit_in_account_currency": 0,
-			"credit_in_account_currency": included_fee,
-			"cost_center": company_doc.cost_center,
-		},
-	)
-
-	# Fee account entry
-	journal_entry.append(
-		"accounts",
-		{
-			"account": bank_fee_account,
-			"bank_account": "",
-			"debit_in_account_currency": included_fee,
-			"credit_in_account_currency": 0,
 			"cost_center": company_doc.cost_center,
 		},
 	)
@@ -321,6 +251,5 @@ def ensure_positive_deposit_withdrawal_fees(doc, method):
 	doc.withdrawal = abs(flt(doc.withdrawal) or 0.0)
 	doc.included_fee = abs(flt(doc.included_fee) or 0.0)
 	doc.excluded_fee = abs(flt(doc.excluded_fee) or 0.0)
-	if method == "before_validate":
-		# Re-call this function as the original function runs before this one and values are not converted
-		BankTransaction.handle_excluded_fee(doc)
+	# Re-call this function as the original function runs before this one and values are not converted
+	BankTransaction.handle_excluded_fee(doc)
