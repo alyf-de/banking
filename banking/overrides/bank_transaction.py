@@ -89,8 +89,8 @@ def before_submit(doc, method):
 	# Set initial values
 	debit, credit = (doc.deposit, 0) if doc.deposit > 0 else (0, doc.withdrawal)
 
-	doc = create_je_bank_fees(doc, company_doc, date, account, debit, credit)
-	doc = create_je_automatic_rules(doc, company_doc, date, account, debit, credit)
+	create_je_bank_fees(doc, company_doc, date, account, debit, credit)
+	create_je_automatic_rules(doc, company_doc, date, account, debit, credit)
 
 
 def on_update_after_submit(doc, event):
@@ -158,8 +158,6 @@ def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
 	if doc.unallocated_amount == 0:
 		doc.status = "Reconciled"
 
-	return doc
-
 
 def create_je_automatic_rules(doc, company_doc, date, account, debit, credit):
 	# Second step: Automatic reconcilation based on the Bank Reconciliation Rules
@@ -201,8 +199,6 @@ def create_je_automatic_rules(doc, company_doc, date, account, debit, credit):
 					doc.unallocated_amount = 0
 					doc.status = "Reconciled"
 					break
-
-	return doc
 
 
 def create_automatic_journal_entry(
