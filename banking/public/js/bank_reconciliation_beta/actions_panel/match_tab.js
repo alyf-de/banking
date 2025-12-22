@@ -388,7 +388,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			}
 		});
 
-		const party_title = await frappe.utils.fetch_link_title(this.transaction.party_type, this.transaction.party);
+		const party_title = await frappe.utils.fetch_link_title(
+			this.transaction.party_type,
+			this.transaction.party
+		);
 
 		return [
 			...document_types_fields,
@@ -408,7 +411,9 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldtype: "Column Break",
 			},
 			{
-				label: __("Show Exact Party") + (party_title ? " (" + party_title + ")" : ""),
+				label:
+					__("Show Exact Party") +
+					(party_title ? " (" + party_title + ")" : ""),
 				fieldname: "exact_party_match",
 				fieldtype: "Check",
 				default: this.transaction.party_type && this.transaction.party ? 1 : 0,
