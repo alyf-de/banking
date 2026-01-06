@@ -88,9 +88,11 @@ def before_submit(doc, method):
 
 	# Set initial values
 	debit, credit = (doc.deposit, 0) if doc.deposit > 0 else (0, doc.withdrawal)
+	included_fee = doc.included_fee or 0
 
 	create_je_bank_fees(doc, company_doc, date, account, debit, credit)
-	create_je_automatic_rules(doc, company_doc, date, account, debit, credit)
+	credit_no_fee = max(0, credit - included_fee)
+	create_je_automatic_rules(doc, company_doc, date, account, debit, credit_no_fee)
 
 
 def on_update_after_submit(doc, event):
@@ -136,25 +138,31 @@ def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
 	if not bank_fee_account:
 		frappe.throw(_("Please set the bank fee account in the bank account."))
 
-	# only correct the credit value if set, as the debit value (deposit) is never including the fee.
-	if credit > 0:
-		credit = credit - included_fee
-	if debit > 0:
-		debit = debit - included_fee
 	je_fee_name = create_automatic_journal_entry(
 		doc, company_doc, date, account, bank_fee_account, None, 0, included_fee
 	)
+
+	if credit > 0:
+		# only correct the credit value if set, as the debit value (deposit) is never including the fee.
+		credit_no_fee = credit - included_fee
+		# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
+		doc.allocated_amount = included_fee
+		doc.unallocated_amount = debit + (credit_no_fee or 0)
+		allocated_amount = included_fee
+	else:
+		allocated_amount = 0
+
+	# Add the journal entry for a deposit fee with an allocated_amount of 0, as the fee is not included in the deposit itself.
+	# Otherwise this would cause the un-/allocated amounts to fail.
 	doc.append(
 		"payment_entries",
 		{
 			"payment_document": "Journal Entry",
 			"payment_entry": je_fee_name,
-			"allocated_amount": included_fee,
+			"allocated_amount": allocated_amount,
 		},
 	)
-	# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
-	doc.allocated_amount = included_fee
-	doc.unallocated_amount = debit + credit
+
 	if doc.unallocated_amount == 0:
 		doc.status = "Reconciled"
 
