@@ -32,35 +32,16 @@ class TestBankReconciliationRule(FrappeTestCase):
 				"account": account_1.name,
 				"bank": "_Test_Bank",
 				"is_company_account": 1,
+				"bank_fee_account": account_2.name,
 			}
-		).insert(ignore_permissions=True, ignore_links=True)
-
-		brr_doc = frappe.new_doc("Bank Reconciliation Rule")
-		brr_doc.bank_account = ba.name
-		brr_doc.target_account = account_2.name
+		)
 
 		with self.assertRaisesRegex(
 			frappe.ValidationError,
-			"Bank Account and Target Account need to be in the same currency!",
+			"Company Account and Bank Fee Account must be in the same currency!",
 		):
-			brr_doc.validate_account_currencies()
+			ba.insert(ignore_permissions=True, ignore_links=True)
 
 		frappe.db.delete("Bank Account", ba.name)
 		frappe.db.delete("Account", account_1.name)
 		frappe.db.delete("Account", account_2.name)
-
-	def test_validate_filters(self):
-		brr_doc = frappe.new_doc("Bank Reconciliation Rule")
-		brr_doc.filters = None
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Please define at least one filter!",
-		):
-			brr_doc.validate_filters()
-
-		brr_doc.filters = []
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Please define at least one filter!",
-		):
-			brr_doc.validate_filters()
