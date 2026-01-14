@@ -6,10 +6,37 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		render_bt_filters(frm);
 	},
 	refresh(frm) {
-		set_target_account_filter(frm);
+		frm.trigger("set_target_account_query");
 	},
 	bank_account(frm) {
-		set_target_account_filter(frm);
+		frm.trigger("set_target_account_query");
+	},
+	async set_target_account_query(frm) {
+		if (!frm.doc.bank_account) {
+			return;
+		}
+
+		const {
+			message: { account },
+		} = await frappe.db.get_value(
+			"Bank Account",
+			frm.doc.bank_account,
+			"account"
+		);
+
+		const {
+			message: { account_currency: currency, company: company },
+		} = await frappe.db.get_value("Account", account, [
+			"account_currency",
+			"company",
+		]);
+
+		frm.set_query("target_account", () => ({
+			filters: {
+				account_currency: currency,
+				company: company,
+			},
+		}));
 	},
 });
 
@@ -34,36 +61,3 @@ let render_bt_filters = function (frm) {
 		filter_group.add_filters_to_filter_group(filters);
 	});
 };
-
-function set_target_account_filter(frm) {
-	if (!frm.doc.bank_account) return;
-
-	(async () => {
-		const {
-			message: { account },
-		} = await frappe.db.get_value(
-			"Bank Account",
-			frm.doc.bank_account,
-			"account"
-		);
-
-		const {
-			message: { account_currency: currency },
-		} = await frappe.db.get_value("Account", account, "account_currency");
-
-		const {
-			message: { company: company },
-		} = await frappe.db.get_value(
-			"Bank Account",
-			frm.doc.bank_account,
-			"company"
-		);
-
-		frm.set_query("target_account", () => ({
-			filters: {
-				account_currency: currency,
-				company: company,
-			},
-		}));
-	})();
-}
