@@ -57,6 +57,13 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 			});
 
 			filter_group.add_filters_to_filter_group(filters);
+
+			if (frm.doc.docstatus === 1) {
+				parent.find(".filter-action-buttons").remove();
+				parent.find(".divider").remove();
+				parent.find(".remove-filter").remove();
+				parent.find(".form-control").prop("disabled", true);
+			}
 		});
 	},
 });
