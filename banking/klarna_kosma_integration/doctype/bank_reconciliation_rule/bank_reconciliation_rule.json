@@ -20,7 +20,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Bank Account",
-   "link_filters": "[[\"Bank Account\",\"is_company_account\",\"=\",1]]",
+   "link_filters": "[[\"Bank Account\",\"is_company_account\",\"=\",1],[\"Bank Account\",\"account\",\"is\",\"set\"]]",
    "options": "Bank Account",
    "reqd": 1
   },
@@ -81,7 +81,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-14 01:31:36.550231",
+ "modified": "2026-01-14 01:42:33.190842",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Rule",
