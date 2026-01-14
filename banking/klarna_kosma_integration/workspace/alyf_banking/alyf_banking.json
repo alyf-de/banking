@@ -45,7 +45,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Setup",
-   "link_count": 2,
+   "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -69,9 +69,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bank Reconciliation Rule",
+   "link_count": 0,
+   "link_to": "Bank Reconciliation Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-08-05 19:58:14.464908",
+ "modified": "2026-01-14 01:28:31.573172",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "ALYF Banking",
