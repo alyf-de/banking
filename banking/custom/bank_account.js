@@ -3,40 +3,33 @@
 
 frappe.ui.form.on("Bank Account", {
 	refresh(frm) {
-		set_bank_fee_filter(frm);
+		frm.trigger("set_fee_account_query");
 	},
 
 	account(frm) {
-		set_bank_fee_filter(frm);
+		frm.trigger("set_fee_account_query");
+	},
+
+	async set_fee_account_query(frm) {
+		if (!frm.doc.account) {
+			return;
+		}
+
+		const {
+			message: { account_currency: currency, company: company },
+		} = await frappe.db.get_value("Account", frm.doc.account, [
+			"account_currency",
+			"company",
+		]);
+
+		frm.set_query("bank_fee_account", (doc) => {
+			return {
+				filters: {
+					root_type: "Expense",
+					account_currency: currency,
+					company: company,
+				},
+			};
+		});
 	},
 });
-
-function set_bank_fee_filter(frm) {
-	if (!frm.doc.account) return;
-
-	(async () => {
-		const {
-			message: { account_currency: currency },
-		} = await frappe.db.get_value(
-			"Account",
-			frm.doc.account,
-			"account_currency"
-		);
-
-		const {
-			message: { company: company },
-		} = await frappe.db.get_value(
-			"Bank Account",
-			frm.doc.bank_account,
-			"company"
-		);
-
-		frm.set_query("bank_fee_account", () => ({
-			filters: {
-				account_type: "Cost of Goods Sold",
-				account_currency: currency,
-				company: company,
-			},
-		}));
-	})();
-}

@@ -93,7 +93,7 @@ def get_custom_fields():
 				fieldtype="Link",
 				label="Bank Fee Account",
 				options="Account",
-				depends_on="is_company_account",
+				depends_on="eval:doc.is_company_account && doc.account",
 				insert_after="account_subtype",
 			),
 		],
