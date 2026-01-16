@@ -150,13 +150,6 @@ def create_journal_entry_bts(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
 		)
 
-	if second_account_currency != bank_account_currency:
-		frappe.throw(
-			_(
-				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
-			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
-		)
-
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.update(
 		{
@@ -200,6 +193,13 @@ def create_journal_entry_bts(
 	if allow_edit:
 		return journal_entry  # Return saved document
 
+	if second_account_currency != bank_account_currency:
+		frappe.throw(
+			_(
+				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
+			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
+		)
+	
 	journal_entry.submit()
 
 	return reconcile_voucher(
