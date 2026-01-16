@@ -199,7 +199,7 @@ def create_journal_entry_bts(
 				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
 			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
 		)
-	
+
 	journal_entry.submit()
 
 	return reconcile_voucher(
