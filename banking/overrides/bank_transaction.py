@@ -221,7 +221,6 @@ def create_automatic_journal_entry(
 	journal_entry.cheque_no = doc.name
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
-	journal_entry.clearance_date = frappe.utils.today()
 
 	# Bank account entry
 	journal_entry.append(
@@ -248,6 +247,7 @@ def create_automatic_journal_entry(
 	)
 
 	journal_entry.submit()
+	frappe.db.set_value("Journal Entry", journal_entry.name, "clearance_date", frappe.utils.today())
 
 	return journal_entry.name
 
