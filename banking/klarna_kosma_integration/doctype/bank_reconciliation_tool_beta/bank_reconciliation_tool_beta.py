@@ -645,6 +645,7 @@ def get_matching_queries(
 	if "journal_entry" in document_types:
 		frappe.has_permission("Journal Entry", throw=True)
 		query = get_je_matching_query(
+			transaction,
 			exact_match,
 			common_filters,
 			from_date,
@@ -930,6 +931,7 @@ def get_pe_matching_query(
 
 
 def get_je_matching_query(
+	transaction: "CustomBankTransaction",
 	exact_match: bool,
 	common_filters: frappe._dict,
 	from_date: str | datetime.date | None = None,
@@ -969,6 +971,7 @@ def get_je_matching_query(
 		)
 		.where(je.docstatus == 1)
 		.where(je.voucher_type != "Opening Entry")
+		.where(je.cheque_no != transaction.name)
 		.where(je.clearance_date.isnull())
 		.where(jea.account == common_filters.bank_account)
 		.where(filter_by_date)
