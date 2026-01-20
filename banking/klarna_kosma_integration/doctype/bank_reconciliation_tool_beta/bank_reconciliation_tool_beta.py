@@ -28,6 +28,13 @@ if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
+# Weights for ranking parameters
+REF_RANK_WEIGHT = 3 # Reference number match
+PARTY_RANK_WEIGHT = 2 # Party match
+AMOUNT_RANK_WEIGHT = 2 # Amount match
+DATE_RANK_WEIGHT = 1 # Date match
+NAME_MATCH_WEIGHT = 3 # Name (Paid From) match
+REF_MATCH_WEIGHT = 3 # Reference number match in description
 
 
 class BankReconciliationToolBeta(Document):
@@ -557,7 +564,6 @@ def check_matching(
 			# higher rank if voucher name is in bank transaction
 			reference_no = voucher["reference_no"]
 			if reference_no and (reference_no.strip() in transaction.description):
-				voucher["rank"] += 1
 				voucher["name_in_desc_match"] = 1
 
 	return sorted(matching_vouchers, key=lambda x: x["rank"], reverse=True)
@@ -720,7 +726,7 @@ def get_bt_matching_query(exact_match: bool, common_filters: frappe._dict, trans
 	)
 	party_rank = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	rank_expression = ref_rank + amount_rank + party_rank + unallocated_rank + 1
+	rank_expression = (ref_rank * REF_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (unallocated_rank * 1) + 1
 
 	query = (
 		frappe.qb.from_(bt)
@@ -770,7 +776,7 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	reference_rank = ref_equality_condition(loan_disbursement.reference_number, common_filters.reference_no)
 	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
-	rank_expression = reference_rank + party_rank + date_rank + 1
+	rank_expression = (reference_rank * REF_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + 1
 
 	query = (
 		frappe.qb.from_(loan_disbursement)
@@ -819,7 +825,7 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 	reference_rank = ref_equality_condition(loan_repayment.reference_number, common_filters.reference_no)
 	party_rank = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
 
-	rank_expression = reference_rank + party_rank + date_rank + 1
+	rank_expression = (reference_rank * REF_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + 1
 
 	query = (
 		frappe.qb.from_(loan_repayment)
@@ -890,7 +896,7 @@ def get_pe_matching_query(
 	date_condition = Coalesce(pe.reference_date, pe.posting_date) == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank_expression = ref_rank + amount_rank + party_rank + date_rank + 1
+	rank_expression = (ref_rank * REF_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + 1
 
 	query = (
 		frappe.qb.from_(pe)
@@ -986,7 +992,7 @@ def get_je_matching_query(
 	)
 	date_condition = subquery.reference_date == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
-	rank_expression = ref_rank + amount_rank + date_rank + 1
+	rank_expression = (ref_rank * REF_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + 1
 
 	query = (
 		frappe.qb.from_(subquery)
@@ -1045,7 +1051,7 @@ def get_si_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_rank + amount_rank + date_rank + name_match + ref_match + 1
+	rank_expression = (ref_rank * REF_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + (name_match * NAME_MATCH_WEIGHT) + (ref_match * REF_MATCH_WEIGHT) + 1
 
 	query = (
 		frappe.qb.from_(sip)
@@ -1123,7 +1129,9 @@ def get_unpaid_si_matching_query(
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank_expression = ref_rank + party_rank + amount_rank + date_rank + name_match + ref_match + 1
+	rank_expression = (
+		(ref_rank * REF_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + (name_match * NAME_MATCH_WEIGHT) + (ref_match * REF_MATCH_WEIGHT) + 1
+	)
 
 	query = (
 		frappe.qb.from_(sales_invoice)
@@ -1215,7 +1223,9 @@ def get_pi_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_rank + amount_rank + date_rank + name_match + ref_match + 1
+	rank_expression = (
+		(ref_rank * REF_RANK_WEIGHT) + (party_rank * PARTY_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + (name_match * NAME_MATCH_WEIGHT) + (ref_match * REF_MATCH_WEIGHT) + 1
+	)
 
 	query = (
 		frappe.qb.from_(purchase_invoice)
@@ -1300,7 +1310,9 @@ def get_unpaid_pi_matching_query(
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank_expression = ref_rank + party_match + amount_rank + date_rank + name_match + ref_match + 1
+	rank_expression = (
+		(ref_rank * REF_RANK_WEIGHT) + (party_match * PARTY_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (date_rank * DATE_RANK_WEIGHT) + (name_match * NAME_MATCH_WEIGHT) + (ref_match * REF_MATCH_WEIGHT) + 1
+	)
 
 	query = (
 		frappe.qb.from_(purchase_invoice)
@@ -1385,7 +1397,9 @@ def get_unpaid_ec_matching_query(
 		else Cast(0, "int")
 	)
 
-	rank_expression = ref_rank + party_match + amount_rank + name_match + ref_match + 1
+	rank_expression = (
+		(ref_rank * REF_RANK_WEIGHT) + (party_match * PARTY_RANK_WEIGHT) + (amount_rank * AMOUNT_RANK_WEIGHT) + (name_match * NAME_MATCH_WEIGHT) + (ref_match * REF_MATCH_WEIGHT) + 1
+	)
 
 	query = (
 		frappe.qb.from_(expense_claim)
