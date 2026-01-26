@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import fintech
 import frappe
 from frappe import _
+from frappe.utils import is_valid_iban
 from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager, EbicsRequest
@@ -315,6 +316,8 @@ def create_sepa_bank_transaction(
 		return
 
 	amount = float(sepa_transaction.amount.value)
+	party_iban, party_account_number = get_iban_or_account_number(sepa_transaction.iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=transaction_id,
@@ -327,7 +330,8 @@ def create_sepa_bank_transaction(
 		date=sepa_transaction.date,
 		reference_number=sepa_transaction.eref,
 		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
-		bank_party_iban=sepa_transaction.iban,
+		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
 
 
@@ -473,6 +477,8 @@ def create_mt940_bank_transaction(
 		description,
 	]
 
+	party_iban, party_account_number = get_iban_or_account_number(party_iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=get_transaction_hash(values_to_hash),
@@ -486,7 +492,20 @@ def create_mt940_bank_transaction(
 		reference_number="" if reference == "NONREF" else reference,
 		bank_party_name=party_name,
 		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
+
+
+def get_iban_or_account_number(number: str) -> tuple[str | None, str | None]:
+	"""Return a tuple of (iban, account_number) for the given number.
+
+	If the number is a valid IBAN, account_number is None.
+	Otherwise, iban is None and account_number is the given number.
+	"""
+	if is_valid_iban(number):
+		return number, None
+
+	return None, number
 
 
 def create_bank_transaction(
