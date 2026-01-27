@@ -979,6 +979,9 @@ def get_je_matching_query(
 	)
 
 	if bank_transaction_name:
+		# This filter ensures that Journal Entries that have been created
+		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
+		# other apps are not offered as matches.
 		subquery = subquery.where(je.cheque_no != bank_transaction_name)
 
 	if frappe.flags.auto_reconcile_vouchers:
