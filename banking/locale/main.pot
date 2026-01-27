@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2026-01-27 21:26+0053\n"
-"PO-Revision-Date: 2026-01-27 21:26+0053\n"
+"POT-Creation-Date: 2026-01-27 21:56+0053\n"
+"PO-Revision-Date: 2026-01-27 21:56+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
 "MIME-Version: 1.0\n"
@@ -29,6 +29,12 @@ msgstr ""
 #. Settings'
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
 msgid "<ul><li>It stores DocType-wise mapping of fields that should be considered as 'reference number' fields in Bank Reconciliation Tool Beta</li><li>Link and Data fields are supported</li><li>The field must have a singular reference number for matching with Bank Transactions</li></ul>"
+msgstr ""
+
+#. Content of the 'filter_description' (HTML) field in DocType 'Bank
+#. Reconciliation Rule'
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.json
+msgid "A <b>Journal Entry</b> is created automatically, when a submitted <b>Bank Transaction</b> matches these filters.<br>Please define set these filters as strictly as possible to avoid accounting errors.<br><br>"
 msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:214
@@ -96,17 +102,15 @@ msgstr ""
 msgid "Auto reconcile bank transactions based on matching reference numbers?"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:220
-msgid "Auto-created from BT: {0}"
+#: banking/overrides/bank_transaction.py:239
+msgid "Auto-created from Bank Transaction {0}"
 msgstr ""
 
-#. Content of the 'filter_description' (HTML) field in DocType 'Bank
-#. Reconciliation Rule'
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.json
-msgid "Automatically create a <b>Journal Entry</b> if the submitted document matches these filters.<br>Note: if the filter is not strict enough, accounting errors will occur.<br><br>"
+#: banking/overrides/bank_transaction.py:237
+msgid "Auto-created from Bank Transaction {0} by Bank Reconciliation Rule {1}"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:43
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:42
 msgid "Bank Account and Target Account need to be in the same currency!"
 msgstr ""
 
@@ -288,10 +292,6 @@ msgstr ""
 msgid "DOWNLOADED"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:79
-msgid "Debit or Credit is negative. Verify input data!"
-msgstr ""
-
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:87
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:152
 msgid "Developer mode is enabled. Please disable it to continue auto-syncing bank transactions."
@@ -323,7 +323,7 @@ msgstr ""
 msgid "Downloaded"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:36
+#: banking/overrides/bank_transaction.py:38
 msgid "Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
 msgstr ""
 
@@ -462,7 +462,7 @@ msgstr ""
 msgid "Execution Date"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:127
+#: banking/overrides/bank_transaction.py:139
 msgid "Failed to cancel {0}: {1}"
 msgstr ""
 
@@ -645,10 +645,6 @@ msgstr ""
 msgid "No Transactions found for the current filters."
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:73
-msgid "No bank account - verify data!"
-msgstr ""
-
 #: banking/ebics/doctype/ebics_request/ebics_request.py:72
 msgid "No data available for download."
 msgstr ""
@@ -683,8 +679,8 @@ msgstr ""
 msgid "Open Billing Portal"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:109
-msgid "Over Allocation"
+#: banking/overrides/bank_transaction.py:120
+msgid "Over-allocation"
 msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:279
@@ -746,7 +742,7 @@ msgstr ""
 msgid "Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:49
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:48
 msgid "Please define at least one filter!"
 msgstr ""
 
@@ -777,8 +773,8 @@ msgstr ""
 msgid "Please set the 'Bank Account' filter"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:139
-msgid "Please set the bank fee account in the bank account."
+#: banking/overrides/bank_transaction.py:153
+msgid "Please specify a <i>Bank Fee Account</i> for {0}."
 msgstr ""
 
 #. Label of a Password field in DocType 'Banking Settings'
@@ -954,10 +950,6 @@ msgstr ""
 msgid "Target Account"
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:106
-msgid "The Bank Transaction is over-allocated by {0} at row {1}."
-msgstr ""
-
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:280
 msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
 msgstr ""
@@ -968,6 +960,14 @@ msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:82
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:86
+msgid "The field {0} is negative. Please verify the input data."
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:76
+msgid "The field {0} is required. Please verify the input data."
 msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:219
@@ -1065,13 +1065,17 @@ msgstr ""
 msgid "You selected protocol version {0}, but the bank {1} only supports {2}."
 msgstr ""
 
-#: banking/overrides/bank_transaction.py:219
-msgid "by automatic rule {0}"
-msgstr ""
-
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:270
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:304
 msgid "to import bank transactions for {0}."
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:16
+msgid "{0} is already fully reconciled"
+msgstr ""
+
+#: banking/overrides/bank_transaction.py:115
+msgid "{0} is over-allocated by {1} at row {2}."
 msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:418
