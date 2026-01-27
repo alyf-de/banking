@@ -103,3 +103,22 @@ def get_payment_entries(
 ### SEPA Payment Order
 
 DocTypes that map to **SEPA Payment Order** can provide a method `get_sepa_payment_amount` via controller or `doc_events` hook. This is called when the execution date is changed. The parameters are the reference row name and execution date. It should return the amount of the payment. The main use case for this is early payment discounts.
+
+## Contribute
+
+### Translations
+
+In general, translations are managed using PO files in the `banking/locale/` directory. PO files exclude strings that are already translated in Frappe or ERPNext.
+
+To update translation files, run the following commands:
+
+```bash
+# ERPNext v15 does not come with a pot file, but we need it to exclude existing translations.
+bench generate-pot-file --app erpnext
+
+# Generate POT file for Banking
+bench generate-pot-file --app banking
+
+# Update PO files from POT files
+bench update-po-files --app banking
+```
