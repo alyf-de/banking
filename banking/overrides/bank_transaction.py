@@ -5,14 +5,16 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTrans
 from frappe import _
 from frappe.core.utils import find
 from frappe.utils import flt, getdate
-from frappe.utils.data import evaluate_filters
+from frappe.utils.data import evaluate_filters, get_link_to_form
 
 
 class CustomBankTransaction(BankTransaction):
 	def add_payment_entries(self, vouchers: list, reconcile_multi_party: bool = False):
 		"Add the vouchers with zero allocation. Save() will perform the allocations and clearance"
 		if self.unallocated_amount <= 0.0:
-			frappe.throw(frappe._("Bank Transaction {0} is already fully reconciled").format(self.name))
+			frappe.throw(
+				_("{0} is already fully reconciled").format(get_link_to_form("Bank Transaction", self.name))
+			)
 
 		pe_length_before = len(self.payment_entries)
 		self.reconcile_paid_vouchers(vouchers)
@@ -62,21 +64,29 @@ class CustomBankTransaction(BankTransaction):
 		)
 
 
-def before_validate(doc, method):
+def before_validate(doc: "CustomBankTransaction", method):
 	ensure_positive_deposit_withdrawal_fees(doc, method)
 
 
-def before_submit(doc, method):
+def before_submit(doc: "CustomBankTransaction", method):
 	date = doc.date or frappe.utils.nowdate()
 
 	if not doc.bank_account:
-		frappe.throw(_("No bank account - verify data!"))
+		frappe.throw(
+			_("The field {0} is required. Please verify the input data.").format(
+				doc.meta.get_label("bank_account")
+			)
+		)
 
 	if doc.deposit == 0 and doc.withdrawal == 0:
 		return
 
 	if doc.deposit < 0 or doc.withdrawal < 0:
-		frappe.throw(_("Debit or Credit is negative. Verify input data!"))
+		frappe.throw(
+			_("The field {0} is negative. Please verify the input data.").format(
+				doc.meta.get_label("deposit" if doc.deposit < 0 else "withdrawal")
+			)
+		)
 
 	# Generic data catching
 	# Get Company
@@ -101,12 +111,13 @@ def on_update_after_submit(doc, event):
 	for entry in doc.payment_entries:
 		to_allocate -= flt(entry.allocated_amount)
 		if round(to_allocate, 2) < 0.0:
-			symbol = frappe.db.get_value("Currency", doc.currency, "symbol")
 			frappe.throw(
-				msg=_("The Bank Transaction is over-allocated by {0} at row {1}.").format(
-					frappe.bold(f"{symbol} {abs(to_allocate)!s}"), frappe.bold(entry.idx)
+				msg=_("{0} is over-allocated by {1} at row {2}.").format(
+					get_link_to_form("Bank Transaction", doc.name),
+					frappe.bold(frappe.format(abs(to_allocate), "Currency", currency=doc.currency)),
+					frappe.bold(entry.idx),
 				),
-				title=_("Over Allocation"),
+				title=_("Over-allocation"),
 			)
 
 
@@ -124,7 +135,9 @@ def on_cancel(doc, method):
 			if doc.docstatus == 1:
 				doc.cancel()
 		except Exception as e:
-			frappe.msgprint(_("Failed to cancel {0}: {1}").format(journal_entry, e))
+			frappe.msgprint(
+				_("Failed to cancel {0}: {1}").format(get_link_to_form("Journal Entry", journal_entry), e)
+			)
 
 
 def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
@@ -136,7 +149,11 @@ def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
 
 	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
 	if not bank_fee_account:
-		frappe.throw(_("Please set the bank fee account in the bank account."))
+		frappe.throw(
+			_("Please specify a <i>Bank Fee Account</i> for {0}.").format(
+				get_link_to_form("Bank Account", doc.bank_account)
+			)
+		)
 
 	je_fee_name = create_automatic_journal_entry(
 		doc, company_doc, date, account, bank_fee_account, None, 0, included_fee
@@ -216,8 +233,11 @@ def create_automatic_journal_entry(
 	journal_entry.voucher_type = "Journal Entry"
 	journal_entry.posting_date = date
 	journal_entry.company = doc.company
-	rule_part = " " + _("by automatic rule {0}").format(rule) if rule else ""
-	journal_entry.user_remark = _("Auto-created from BT: {0}").format(doc.name) + rule_part
+	journal_entry.user_remark = (
+		_("Auto-created from Bank Transaction {0} by Bank Reconciliation Rule {1}").format(doc.name, rule)
+		if rule
+		else _("Auto-created from Bank Transaction {0}").format(doc.name)
+	)
 	journal_entry.cheque_no = doc.name
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
