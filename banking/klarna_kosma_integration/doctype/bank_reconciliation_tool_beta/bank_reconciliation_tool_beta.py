@@ -645,7 +645,6 @@ def get_matching_queries(
 	if "journal_entry" in document_types:
 		frappe.has_permission("Journal Entry", throw=True)
 		query = get_je_matching_query(
-			transaction,
 			exact_match,
 			common_filters,
 			from_date,
@@ -653,6 +652,7 @@ def get_matching_queries(
 			filter_by_reference_date,
 			from_reference_date,
 			to_reference_date,
+			transaction.name,
 		)
 		queries.append(query)
 
@@ -931,7 +931,6 @@ def get_pe_matching_query(
 
 
 def get_je_matching_query(
-	transaction: "CustomBankTransaction",
 	exact_match: bool,
 	common_filters: frappe._dict,
 	from_date: str | datetime.date | None = None,
@@ -939,6 +938,7 @@ def get_je_matching_query(
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
+	bank_transaction_name: str | None = None,
 ):
 	# get matching journal entry query
 	# We have mapping at the bank level
@@ -971,13 +971,15 @@ def get_je_matching_query(
 		)
 		.where(je.docstatus == 1)
 		.where(je.voucher_type != "Opening Entry")
-		.where(je.cheque_no != transaction.name)
 		.where(je.clearance_date.isnull())
 		.where(jea.account == common_filters.bank_account)
 		.where(filter_by_date)
 		.groupby(je.name)
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
+
+	if bank_transaction_name:
+		subquery = subquery.where(je.cheque_no != bank_transaction_name)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
