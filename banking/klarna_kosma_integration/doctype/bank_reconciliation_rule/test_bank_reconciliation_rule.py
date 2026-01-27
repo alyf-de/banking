@@ -4,26 +4,17 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
+	CurrencyMismatchError,
+	NoFiltersError,
+)
+
 
 class TestBankReconciliationRule(FrappeTestCase):
 	def test_validate_account_currencies(self):
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_USD",
-				"account_currency": "USD",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_account("EUR", parent_account)
+		account_2 = create_account("USD", parent_account)
 
 		ba = frappe.get_doc(
 			{
@@ -39,28 +30,32 @@ class TestBankReconciliationRule(FrappeTestCase):
 		brr_doc.bank_account = ba.name
 		brr_doc.target_account = account_2.name
 
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Bank Account and Target Account need to be in the same currency!",
-		):
+		with self.assertRaises(CurrencyMismatchError):
 			brr_doc.validate_account_currencies()
 
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		ba.delete(delete_permanently=True, ignore_permissions=True)
+		account_1.delete(delete_permanently=True, ignore_permissions=True)
+		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	def test_validate_filters(self):
 		brr_doc = frappe.new_doc("Bank Reconciliation Rule")
 		brr_doc.filters = None
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Please define at least one filter!",
-		):
+		with self.assertRaises(NoFiltersError):
 			brr_doc.validate_filters()
 
-		brr_doc.filters = []
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Please define at least one filter!",
-		):
+		brr_doc.filters = "[]"
+		with self.assertRaises(NoFiltersError):
 			brr_doc.validate_filters()
+
+
+def create_account(currency: str, parent_account: str):
+	account = frappe.new_doc("Account")
+	account.update(
+		{
+			"account_name": f"_Test_Account_{currency}",
+			"account_currency": currency,
+			"parent_account": parent_account,
+		}
+	)
+	account.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+	return account

@@ -3,7 +3,16 @@
 
 import frappe
 from frappe import _
+from frappe.exceptions import ValidationError
 from frappe.model.document import Document
+
+
+class NoFiltersError(ValidationError):
+	pass
+
+
+class CurrencyMismatchError(ValidationError):
+	pass
 
 
 class BankReconciliationRule(Document):
@@ -32,9 +41,11 @@ class BankReconciliationRule(Document):
 		target_account_currency = frappe.db.get_value("Account", self.target_account, "account_currency")
 
 		if bank_account_currency != target_account_currency:
-			frappe.throw(_("Bank Account and Target Account need to be in the same currency!"))
+			frappe.throw(
+				_("Bank Account and Target Account need to be in the same currency!"), CurrencyMismatchError
+			)
 
 	def validate_filters(self):
 		# self.filters is a code field with json, so it has "[]" when empty
 		if not self.filters or len(self.filters) <= 2:
-			frappe.throw(_("Please define at least one filter!"))
+			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
