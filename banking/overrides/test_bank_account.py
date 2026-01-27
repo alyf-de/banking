@@ -4,44 +4,18 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from banking.exceptions import CurrencyMismatchError
+from banking.utils import create_bank_account, create_currency_account
+
 
 class TestBankReconciliationRule(FrappeTestCase):
 	def test_validate_account_currencies(self):
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_currency_account("EUR", parent_account)
+		account_2 = create_currency_account("USD", parent_account)
 
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_USD",
-				"account_currency": "USD",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		with self.assertRaises(CurrencyMismatchError):
+			create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
-		ba = frappe.get_doc(
-			{
-				"doctype": "Bank Account",
-				"account_name": "_Test_B_Account",
-				"account": account_1.name,
-				"bank": "_Test_Bank",
-				"is_company_account": 1,
-				"bank_fee_account": account_2.name,
-			}
-		)
-
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Company Account and Bank Fee Account must be in the same currency!",
-		):
-			ba.insert(ignore_permissions=True, ignore_links=True)
-
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		account_1.delete(ignore_permissions=True, delete_permanently=True)
+		account_2.delete(ignore_permissions=True, delete_permanently=True)

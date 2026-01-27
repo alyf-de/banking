@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from banking.exceptions import CurrencyMismatchError
+
 
 def before_validate(doc, method):
 	"""Remove spaces from IBAN"""
@@ -17,4 +19,6 @@ def validate_account_currencies(doc):
 		bank_account_currency = frappe.db.get_value("Account", doc.account, "account_currency")
 		bank_fee_currency = frappe.db.get_value("Account", doc.bank_fee_account, "account_currency")
 		if bank_account_currency != bank_fee_currency:
-			frappe.throw(_("Company Account and Bank Fee Account must be in the same currency!"))
+			frappe.throw(
+				_("Company Account and Bank Fee Account must be in the same currency!"), CurrencyMismatchError
+			)
