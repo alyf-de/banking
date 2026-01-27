@@ -74,7 +74,7 @@ def before_submit(doc: "CustomBankTransaction", method):
 	if not doc.bank_account:
 		frappe.throw(
 			_("The field {0} is required. Please verify the input data.").format(
-				doc.meta.get_label("bank_account")
+				_(doc.meta.get_label("bank_account"))
 			)
 		)
 
@@ -84,7 +84,7 @@ def before_submit(doc: "CustomBankTransaction", method):
 	if doc.deposit < 0 or doc.withdrawal < 0:
 		frappe.throw(
 			_("The field {0} is negative. Please verify the input data.").format(
-				doc.meta.get_label("deposit" if doc.deposit < 0 else "withdrawal")
+				_(doc.meta.get_label("deposit" if doc.deposit < 0 else "withdrawal"))
 			)
 		)
 
