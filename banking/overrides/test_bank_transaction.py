@@ -6,6 +6,8 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from banking.utils import create_bank_account, create_currency_account
+
 
 class TestBankReconciliationRule(FrappeTestCase):
 	def test_ensure_positive_deposit_withdrawal_fees(self):
@@ -53,41 +55,17 @@ class TestBankReconciliationRule(FrappeTestCase):
 	def test_before_submit(self, mock_create_bank_fees, mock_create_auto_rules):
 		from banking.overrides.bank_transaction import before_submit
 
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR_Fee",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		ba = frappe.get_doc(
-			{
-				"doctype": "Bank Account",
-				"account_name": "_Test_B_Account",
-				"account": account_1.name,
-				"bank": "_Test_Bank",
-				"is_company_account": 1,
-				"bank_fee_account": account_2.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		bt = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"company": "_Test Company",
-			}
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_currency_account("EUR", parent_account)
+		account_2 = create_currency_account(
+			"EUR",
+			parent_account,
+			account_name="_Test_Account_EUR_Fee",
 		)
+		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
+
+		bt = frappe.new_doc("Bank Transaction")
+		bt.company = "_Test Company"
 
 		with self.assertRaisesRegex(
 			frappe.ValidationError,
@@ -119,9 +97,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_bank_fees.assert_called_once()
 		mock_create_auto_rules.assert_called_once()
 
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		ba.delete(delete_permanently=True, ignore_permissions=True)
+		account_1.delete(delete_permanently=True, ignore_permissions=True)
+		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_withdrawal(self, mock_create_je):
@@ -130,34 +108,14 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR_Fee",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		ba = frappe.get_doc(
-			{
-				"doctype": "Bank Account",
-				"account_name": "_Test_B_Account",
-				"account": account_1.name,
-				"bank": "_Test_Bank",
-				"is_company_account": 1,
-				"bank_fee_account": account_2.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_currency_account("EUR", parent_account)
+		account_2 = create_currency_account(
+			"EUR",
+			parent_account,
+			account_name="_Test_Account_EUR_Fee",
+		)
+		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
 		bt = frappe.get_doc(
 			{
@@ -200,9 +158,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.unallocated_amount, 0.0)
 		self.assertEqual(bt.status, "Reconciled")
 
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		ba.delete(delete_permanently=True, ignore_permissions=True)
+		account_1.delete(delete_permanently=True, ignore_permissions=True)
+		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_deposit(self, mock_create_je):
@@ -211,34 +169,14 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR_Fee",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		ba = frappe.get_doc(
-			{
-				"doctype": "Bank Account",
-				"account_name": "_Test_B_Account",
-				"account": account_1.name,
-				"bank": "_Test_Bank",
-				"is_company_account": 1,
-				"bank_fee_account": account_2.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_currency_account("EUR", parent_account)
+		account_2 = create_currency_account(
+			"EUR",
+			parent_account,
+			account_name="_Test_Account_EUR_Fee",
+		)
+		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
 		bt = frappe.get_doc(
 			{
@@ -273,9 +211,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.unallocated_amount, 5.0)
 		self.assertEqual(bt.status, "Pending")
 
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		ba.delete(delete_permanently=True, ignore_permissions=True)
+		account_1.delete(delete_permanently=True, ignore_permissions=True)
+		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_automatic_rules_withdrawal(self, mock_create_je):
@@ -286,34 +224,14 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR_Fee",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		ba = frappe.get_doc(
-			{
-				"doctype": "Bank Account",
-				"account_name": "_Test_B_Account",
-				"account": account_1.name,
-				"bank": "_Test_Bank",
-				"is_company_account": 1,
-				"bank_fee_account": account_1.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_currency_account("EUR", parent_account)
+		account_2 = create_currency_account(
+			"EUR",
+			parent_account,
+			account_name="_Test_Account_EUR_Fee",
+		)
+		ba = create_bank_account(account_1.name, bank_fee_account=account_1.name)
 
 		# brr_1 => correct
 		brr_1 = frappe.get_doc(
@@ -384,9 +302,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.allocated_amount, 4.0)
 		self.assertEqual(bt.status, "Reconciled")
 
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		ba.delete(delete_permanently=True, ignore_permissions=True)
+		account_1.delete(delete_permanently=True, ignore_permissions=True)
+		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_automatic_rules_deposit(self, mock_create_je):
@@ -397,34 +315,14 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		account_1 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		account_2 = frappe.get_doc(
-			{
-				"doctype": "Account",
-				"account_name": "_Test_Account_EUR_Fee",
-				"account_currency": "EUR",
-				"parent_account": frappe.get_all("Account", filters={"is_group": 1}, pluck="name")[0],
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-
-		ba = frappe.get_doc(
-			{
-				"doctype": "Bank Account",
-				"account_name": "_Test_B_Account",
-				"account": account_1.name,
-				"bank": "_Test_Bank",
-				"is_company_account": 1,
-				"bank_fee_account": account_1.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		account_1 = create_currency_account("EUR", parent_account)
+		account_2 = create_currency_account(
+			"EUR",
+			parent_account,
+			account_name="_Test_Account_EUR_Fee",
+		)
+		ba = create_bank_account(account_1.name, bank_fee_account=account_1.name)
 
 		# brr_1 => correct
 		brr_1 = frappe.get_doc(
@@ -495,6 +393,6 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.allocated_amount, 5.0)
 		self.assertEqual(bt.status, "Reconciled")
 
-		frappe.db.delete("Bank Account", ba.name)
-		frappe.db.delete("Account", account_1.name)
-		frappe.db.delete("Account", account_2.name)
+		ba.delete(delete_permanently=True, ignore_permissions=True)
+		account_1.delete(delete_permanently=True, ignore_permissions=True)
+		account_2.delete(delete_permanently=True, ignore_permissions=True)

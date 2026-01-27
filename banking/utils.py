@@ -92,10 +92,10 @@ def create_bank(iban: str) -> str:
 	return doc.name
 
 
-def create_currency_account(currency: str, parent_account: str):
+def create_currency_account(currency: str, parent_account: str, account_name: str | None = None):
 	"""Used in tests that ensure accounts have matching currencies."""
 	acc = frappe.new_doc("Account")
-	acc.account_name = f"_Test_Account_{currency}"
+	acc.account_name = account_name or f"_Test_Account_{currency}"
 	acc.account_currency = currency
 	acc.parent_account = parent_account
 	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
