@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2025-11-07 14:18+0053\n"
+"POT-Creation-Date: 2026-01-27 17:37+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -45,7 +45,7 @@ msgstr "ALYF Banking"
 msgid "Account Currency"
 msgstr "Kontowährung"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:140
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:130
 msgid "Account Holder"
 msgstr "Kontoinhaber"
 
@@ -152,11 +152,11 @@ msgstr "Bank"
 #. Label of a Link field in DocType 'Bank Reconciliation Tool Beta'
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.json
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:81
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:78
 msgid "Bank Account"
 msgstr "Bankkonto"
 
-#: banking/ebics/utils.py:215
+#: banking/ebics/utils.py:216
 msgid "Bank Account not found for IBAN {0}"
 msgstr "Bankkonto nicht gefunden für IBAN {0}"
 
@@ -202,7 +202,7 @@ msgstr "Banktransaktion {0} teilweise verbucht."
 msgid "Bank Transaction {0} reconciled with a new {1}"
 msgstr "Banktransaktion {0} mit einem neuen {1} abgeglichen"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:64
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:62
 msgid "Bank Transaction {0} updated"
 msgstr "Banktransaktion {0} aktualisiert"
 
@@ -240,8 +240,8 @@ msgstr "Banking-Aktion ist aufgrund der folgenden Fehler fehlgeschlagen:"
 #: banking/ebics/doctype/ebics_user/ebics_user.py:72
 #: banking/ebics/doctype/ebics_user/ebics_user.py:75
 #: banking/ebics/doctype/ebics_user/ebics_user.py:82
-#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:140
-#: banking/ebics/utils.py:187 banking/ebics/utils.py:214
+#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:141
+#: banking/ebics/utils.py:188 banking/ebics/utils.py:215
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
@@ -270,7 +270,7 @@ msgstr "Bank-Referenz-Zuordnung"
 msgid "Banking Settings"
 msgstr "Bankeneinstellungen"
 
-#: banking/ebics/utils.py:235
+#: banking/ebics/utils.py:236
 msgid "Banking Warning"
 msgstr "Banking-Warnung"
 
@@ -366,7 +366,7 @@ msgstr "Anmeldedaten"
 
 #. Label of a Link field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:131
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:122
 msgid "Currency"
 msgstr "Währung"
 
@@ -386,18 +386,18 @@ msgstr ""
 msgid "DOWNLOADED"
 msgstr "HERUNTERGELADEN"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:90
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:488
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:86
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:494
 #: banking/public/js/bank_reconciliation_beta/panel_manager.js:128
 msgid "Date"
 msgstr "Datum"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:97
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:92
 #: banking/public/js/bank_reconciliation_beta/panel_manager.js:130
 msgid "Deposit"
 msgstr "Einzahlung"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:116
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:109
 msgid "Description"
 msgstr "Beschreibung"
 
@@ -627,7 +627,7 @@ msgstr "Fehler beim Abgleich von {0}"
 msgid "Failed to remove EBICS user registration."
 msgstr "EBICS-Benutzerregistrierung konnte nicht entfernt werden."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:51
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:49
 msgid "Failed to update {0}"
 msgstr "Fehler beim Aktualisieren von {0}"
 
@@ -704,8 +704,8 @@ msgid "H005"
 msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:288
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:207
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:453
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:190
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:459
 msgid "Hidden field for alignment"
 msgstr "Verstecktes Feld für Ausrichtung"
 
@@ -729,7 +729,7 @@ msgstr "IBAN auf Mitarbeiter wird nicht in SEPA-Zahlungsaufträgen verwendet. Bi
 msgid "IBAN {0} is invalid."
 msgstr "IBAN {0} ist ungültig."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:73
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:71
 msgid "ID"
 msgstr ""
 
@@ -790,7 +790,7 @@ msgstr "Die Daten, die heruntergeladen werden sollen, sind ungültig."
 msgid "Invalid data for re-import."
 msgstr "Ungültige Daten für den erneuten Import."
 
-#: banking/ebics/utils.py:236
+#: banking/ebics/utils.py:237
 msgid "It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
 msgstr "Es scheint, dass der EBICS-Benutzer keine Berechtigungen für die Auftragsart '{0}' hat. Die zulässigen Typen sind: {1}."
 
@@ -811,7 +811,7 @@ msgstr ""
 msgid "Last Renewed On"
 msgstr "Zuletzt erneuert am"
 
-#: banking/ebics/utils.py:555
+#: banking/ebics/utils.py:574
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr "Lizenzschlüssel nicht gefunden. Bitte aktivieren Sie das Kontrollkästchen 'EBICS aktivieren' in den {0} und stellen Sie sicher, dass Ihr Abonnement aktiv ist."
 
@@ -845,7 +845,7 @@ msgstr "Keine Daten verfügbar"
 msgid "No Transactions found for the current filters."
 msgstr "Keine Transaktionen gefunden für die aktuellen Filter."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:32
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:30
 msgid "No changes to update"
 msgstr "Keine Änderungen zum Aktualisieren"
 
@@ -857,9 +857,25 @@ msgstr "Keine Daten für das Herunterladen verfügbar."
 msgid "No matches occurred via Auto Reconciliation"
 msgstr "Keine Übereinstimmungen bei der automatischen Abgleichung"
 
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:414
+msgid "Not available"
+msgstr "Nicht verfügbar"
+
 #: banking/ebics/doctype/ebics_user/ebics_user.js:48
 msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
 msgstr "Hinweis: Wenn Sie diese Passwörter verlieren, müssen Sie den Initialisierungsprozess mit Ihrer Bank erneut durchlaufen."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:414
+msgid "Only from {0}"
+msgstr "Nur von {0}"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:402
+msgid "Only matching amounts"
+msgstr "Nur übereinstimmende Beträge"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:429
+msgid "Only unpaid vouchers"
+msgstr "Nur unbezahlte Belege"
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:34
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
@@ -872,7 +888,7 @@ msgstr "Abrechnungsportal öffnen"
 msgid "Order Type"
 msgstr "Auftragsart"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:492
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:498
 msgid "Outstanding"
 msgstr "Offen"
 
@@ -898,20 +914,20 @@ msgstr "Teilweise abgeglichen"
 msgid "Partner ID"
 msgstr "Partner-ID"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:197
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:496
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:180
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:502
 msgid "Party"
 msgstr "Partei"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:148
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:137
 msgid "Party Account Number"
 msgstr "Partei-Kontonummer"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:156
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:144
 msgid "Party IBAN"
 msgstr "Partei-IBAN"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:179
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:166
 msgid "Party Type"
 msgstr "Partei-Typ"
 
@@ -1048,7 +1064,7 @@ msgstr "EBICS-Transaktionen werden erneut importiert ..."
 msgid "Recipient"
 msgstr "Empfänger"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:462
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:468
 msgid "Reconcile"
 msgstr "Abgleichen"
 
@@ -1066,7 +1082,7 @@ msgstr "Weiterleitung zum Kundenportal ..."
 
 #. Label of a Section Break field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:506
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:512
 msgid "Reference"
 msgstr "Referenz"
 
@@ -1088,7 +1104,7 @@ msgstr "Referenzname"
 #. Label of a Data field in DocType 'SEPA Payment Order'
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:181
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:170
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:157
 msgid "Reference Number"
 msgstr "Referenznummer"
 
@@ -1160,6 +1176,10 @@ msgstr "SWIFT-Nummer"
 msgid "Sales Invoice"
 msgstr ""
 
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:199
+msgid "Save"
+msgstr "Speichern"
+
 #. Label of a Section Break field in DocType 'SEPA Payment Order'
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
 msgid "Sender"
@@ -1181,14 +1201,6 @@ msgstr "Legen Sie ein neues Passwort fest, um Transaktionen an Ihre Bank hochzul
 #: banking/klarna_kosma_integration/workspace/alyf_banking/alyf_banking.json
 msgid "Setup"
 msgstr "Einrichtung"
-
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:396
-msgid "Show Exact Amount"
-msgstr "Betrag muss übereinstimmen"
-
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:408
-msgid "Show Exact Party"
-msgstr "Partei muss übereinstimmen"
 
 #: banking/custom/bank.js:5
 msgid "Show Protocol Versions"
@@ -1234,10 +1246,6 @@ msgstr "Passwort speichern"
 #: banking/ebics/doctype/ebics_user/ebics_user.js:33
 msgid "Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
 msgstr "Passwort in der ERPNext-Datenbank speichern, um den automatisierten, regelmäßigen Download von Kontoauszügen zu ermöglichen."
-
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:216
-msgid "Submit"
-msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
 msgid "Subscriber"
@@ -1317,7 +1325,7 @@ msgstr "Der Server hat einen Fehler verursacht. Bitte versuchen Sie es später e
 msgid "These DocTypes are pre-enabled in the 'Match Voucher' tab."
 msgstr "Diese Belegtypen sind im Tab 'Beleg-Zuordnung' voreingestellt."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:123
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:115
 msgid "To Allocate"
 msgstr "Offener Betrag"
 
@@ -1362,11 +1370,7 @@ msgstr "Übertragungstyp"
 msgid "Unallocated Amount"
 msgstr "Nicht zugewiesener Betrag"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:423
-msgid "Unpaid Vouchers"
-msgstr "Unbezahlte Belege"
-
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:165
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:152
 msgid "Update"
 msgstr "Aktualisieren"
 
@@ -1374,7 +1378,7 @@ msgstr "Aktualisieren"
 msgid "Update Amounts"
 msgstr "Beträge aktualisieren"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:48
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:46
 msgid "Updating ..."
 msgstr "Aktualisieren ..."
 
@@ -1425,7 +1429,7 @@ msgstr "Bankenschlüssel überprüfen"
 msgid "View EBICS Users"
 msgstr "EBICS-Benutzer anzeigen"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:501
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:507
 msgid "Voucher"
 msgstr "Beleg"
 
@@ -1447,7 +1451,7 @@ msgstr "Wir versuchen, alle Transaktionen der abgeschlossenen Tage im ausgewähl
 msgid "We'll try to download new transactions from today, using <code>camt.052</code>."
 msgstr "Wir versuchen, neue Transaktionen von heute via <code>camt.052</code> herunterzuladen."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:105
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:99
 #: banking/public/js/bank_reconciliation_beta/panel_manager.js:129
 msgid "Withdrawal"
 msgstr "Auszahlung"
