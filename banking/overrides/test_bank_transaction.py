@@ -9,11 +9,40 @@ from frappe.tests.utils import FrappeTestCase
 from banking.utils import create_bank_account, create_currency_account
 
 
+def create_bank_reconciliation_rule(
+	bank_account,
+	target_account,
+	filters,
+	disabled=0,
+	submit=True,
+):
+	rule = frappe.new_doc("Bank Reconciliation Rule")
+	rule.disabled = disabled
+	rule.bank_account = bank_account
+	rule.target_account = target_account
+	rule.filters = filters
+	rule.insert(ignore_permissions=True, ignore_mandatory=True)
+	if submit:
+		rule.flags.ignore_permissions = True
+		rule.flags.ignore_mandatory = True
+		rule.submit()
+	return rule
+
+
+def create_bank_transaction(insert=True, **values):
+	doc = frappe.new_doc("Bank Transaction")
+	doc.company = "_Test Company"
+	doc.update(values)
+	if insert:
+		doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+	return doc
+
+
 class TestBankReconciliationRule(FrappeTestCase):
 	def test_ensure_positive_deposit_withdrawal_fees(self):
 		from banking.overrides.bank_transaction import ensure_positive_deposit_withdrawal_fees
 
-		doc = frappe.new_doc("Bank Transaction")
+		doc = create_bank_transaction(insert=False)
 		doc.deposit = -2.0
 		doc.withdrawal = 0.0
 		doc.included_fee = -1.0
@@ -64,8 +93,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		)
 		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
-		bt = frappe.new_doc("Bank Transaction")
-		bt.company = "_Test Company"
+		bt = create_bank_transaction(insert=False)
 
 		with self.assertRaises(
 			frappe.ValidationError,
@@ -117,15 +145,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		)
 		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
-		bt = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"company": "_Test Company",
-				"withdrawal": 5.0,
-				"included_fee": 1.0,
-				"bank_account": ba.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		bt = create_bank_transaction(withdrawal=5.0, included_fee=1.0, bank_account=ba.name)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
@@ -178,15 +198,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		)
 		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
-		bt = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"company": "_Test Company",
-				"deposit": 5.0,
-				"included_fee": 1.0,
-				"bank_account": ba.name,
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		bt = create_bank_transaction(deposit=5.0, included_fee=1.0, bank_account=ba.name)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
@@ -234,51 +246,34 @@ class TestBankReconciliationRule(FrappeTestCase):
 		ba = create_bank_account(account_1.name, bank_fee_account=account_1.name)
 
 		# brr_1 => correct
-		brr_1 = frappe.get_doc(
-			{
-				"doctype": "Bank Reconciliation Rule",
-				"disabled": 0,
-				"bank_account": ba.name,
-				"docstatus": 1,
-				"target_account": account_2.name,
-				"filters": '[["Bank Transaction","description","=","FLAG-TRUE",false]]',
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		brr_1 = create_bank_reconciliation_rule(
+			ba.name,
+			account_2.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+		)
 
 		# brr_2 => fail
-		frappe.get_doc(
-			{
-				"doctype": "Bank Reconciliation Rule",
-				"disabled": 1,
-				"bank_account": ba.name,
-				"docstatus": 1,
-				"target_account": account_1.name,
-				"filters": '[["Bank Transaction","description","=","FLAG-TRUE",false]]',
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		create_bank_reconciliation_rule(
+			ba.name,
+			account_1.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			disabled=1,
+		)
 
 		# brr_3 => fail
-		frappe.get_doc(
-			{
-				"doctype": "Bank Reconciliation Rule",
-				"disabled": 0,
-				"bank_account": ba.name,
-				"docstatus": 0,
-				"target_account": account_1.name,
-				"filters": '[["Bank Transaction","description","=","FLAG-TRUE",false]]',
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		create_bank_reconciliation_rule(
+			ba.name,
+			account_1.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			submit=False,
+		)
 
-		bt = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"company": "_Test Company",
-				"withdrawal": 5.0,
-				"included_fee": 1.0,
-				"bank_account": ba.name,
-				"description": "FLAG-TRUE",
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		bt = create_bank_transaction(
+			withdrawal=5.0,
+			included_fee=1.0,
+			bank_account=ba.name,
+			description="FLAG-TRUE",
+		)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
@@ -325,51 +320,34 @@ class TestBankReconciliationRule(FrappeTestCase):
 		ba = create_bank_account(account_1.name, bank_fee_account=account_1.name)
 
 		# brr_1 => correct
-		brr_1 = frappe.get_doc(
-			{
-				"doctype": "Bank Reconciliation Rule",
-				"disabled": 0,
-				"bank_account": ba.name,
-				"docstatus": 1,
-				"target_account": account_2.name,
-				"filters": '[["Bank Transaction","description","=","FLAG-TRUE",false]]',
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		brr_1 = create_bank_reconciliation_rule(
+			ba.name,
+			account_2.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+		)
 
 		# brr_2 => fail
-		frappe.get_doc(
-			{
-				"doctype": "Bank Reconciliation Rule",
-				"disabled": 1,
-				"bank_account": ba.name,
-				"docstatus": 1,
-				"target_account": account_1.name,
-				"filters": '[["Bank Transaction","description","=","FLAG-TRUE",false]]',
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		create_bank_reconciliation_rule(
+			ba.name,
+			account_1.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			disabled=1,
+		)
 
 		# brr_3 => fail
-		frappe.get_doc(
-			{
-				"doctype": "Bank Reconciliation Rule",
-				"disabled": 0,
-				"bank_account": ba.name,
-				"docstatus": 0,
-				"target_account": account_1.name,
-				"filters": '[["Bank Transaction","description","=","FLAG-TRUE",false]]',
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True)
+		create_bank_reconciliation_rule(
+			ba.name,
+			account_1.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			submit=False,
+		)
 
-		bt = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"company": "_Test Company",
-				"deposit": 5.0,
-				"included_fee": 1.0,
-				"bank_account": ba.name,
-				"description": "FLAG-TRUE",
-			}
-		).insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		bt = create_bank_transaction(
+			deposit=5.0,
+			included_fee=1.0,
+			bank_account=ba.name,
+			description="FLAG-TRUE",
+		)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
