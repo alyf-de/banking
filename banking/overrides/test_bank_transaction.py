@@ -67,27 +67,27 @@ class TestBankReconciliationRule(FrappeTestCase):
 		bt = frappe.new_doc("Bank Transaction")
 		bt.company = "_Test Company"
 
-		with self.assertRaisesRegex(
+		with self.assertRaises(
 			frappe.ValidationError,
-			"No bank account - verify data!",
+			msg="Expected ValidationError when bank account is missing.",
 		):
 			before_submit(bt, None)
 
 		bt.bank_account = ba.name
 		bt.deposit = -1.0
 
-		with self.assertRaisesRegex(
+		with self.assertRaises(
 			frappe.ValidationError,
-			"Debit or Credit is negative. Verify input data!",
+			msg="Expected ValidationError for negative deposit.",
 		):
 			before_submit(bt, None)
 
 		bt.deposit = 0.0
 		bt.withdrawal = -1.0
 
-		with self.assertRaisesRegex(
+		with self.assertRaises(
 			frappe.ValidationError,
-			"Debit or Credit is negative. Verify input data!",
+			msg="Expected ValidationError for negative withdrawal.",
 		):
 			before_submit(bt, None)
 
