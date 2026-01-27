@@ -90,3 +90,26 @@ def create_bank(iban: str) -> str:
 	doc.insert()
 
 	return doc.name
+
+
+def create_currency_account(currency: str, parent_account: str):
+	"""Used in tests that ensure accounts have matching currencies."""
+	acc = frappe.new_doc("Account")
+	acc.account_name = f"_Test_Account_{currency}"
+	acc.account_currency = currency
+	acc.parent_account = parent_account
+	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+	return acc
+
+
+def create_bank_account(account: str, bank_fee_account: str | None = None):
+	"""Used in tests that ensure bank accounts have matching currencies."""
+	ba = frappe.new_doc("Bank Account")
+	ba.account_name = "_Test_B_Account"
+	ba.account = account
+	ba.bank = "_Test_Bank"
+	ba.is_company_account = 1
+	if bank_fee_account:
+		ba.bank_fee_account = bank_fee_account
+	ba.insert(ignore_permissions=True, ignore_links=True)
+	return ba

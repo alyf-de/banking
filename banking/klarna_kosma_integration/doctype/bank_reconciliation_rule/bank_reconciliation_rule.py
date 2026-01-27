@@ -6,12 +6,10 @@ from frappe import _
 from frappe.exceptions import ValidationError
 from frappe.model.document import Document
 
+from banking.exceptions import CurrencyMismatchError
+
 
 class NoFiltersError(ValidationError):
-	pass
-
-
-class CurrencyMismatchError(ValidationError):
 	pass
 
 
