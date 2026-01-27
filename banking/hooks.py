@@ -200,6 +200,13 @@ before_tests = "banking.utils.before_tests"
 
 export_python_type_annotations = True
 
+
+# Translation
+# ------------
+# List of apps whose translatable strings should be excluded from this app's translations.
+ignore_translatable_strings_from = ["frappe", "erpnext"]
+
+
 alyf_banking_property_setters = {
 	"Bank Account": [
 		dict(
