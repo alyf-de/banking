@@ -9,13 +9,15 @@ from banking.utils import TEST_COMPANY, create_bank_account, create_currency_acc
 
 
 class TestBankReconciliationRule(FrappeTestCase):
-	def test_validate_account_currencies(self):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+
+		# these should be cleaned up by the DB rollback of FrappeTestCase
 		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account("USD", parent_account)
+		cls.account_1 = create_currency_account("EUR", parent_account)
+		cls.account_2 = create_currency_account("USD", parent_account)
 
+	def test_validate_account_currencies(self):
 		with self.assertRaises(CurrencyMismatchError):
-			create_bank_account(account_1.name, bank_fee_account=account_2.name)
-
-		account_1.delete(ignore_permissions=True, delete_permanently=True)
-		account_2.delete(ignore_permissions=True, delete_permanently=True)
+			create_bank_account(self.account_1.name, bank_fee_account=self.account_2.name)

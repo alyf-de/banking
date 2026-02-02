@@ -87,19 +87,20 @@ class TestEnforcePositiveValues(FrappeTestCase):
 
 
 class TestBankReconciliationRule(FrappeTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+
+		# these should be cleaned up by the DB rollback of FrappeTestCase
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
+		cls.account_1 = create_currency_account("EUR", parent_account)
+		cls.account_2 = create_currency_account("EUR", parent_account, account_name="_Test_Account_EUR_Fee")
+		cls.ba = create_bank_account(cls.account_1.name, bank_fee_account=cls.account_2.name)
+
 	@patch("banking.overrides.bank_transaction.create_je_automatic_rules")
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit(self, mock_create_bank_fees, mock_create_auto_rules):
 		from banking.overrides.bank_transaction import before_submit
-
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account(
-			"EUR",
-			parent_account,
-			account_name="_Test_Account_EUR_Fee",
-		)
-		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
 
 		bt = create_bank_transaction(insert=False)
 
@@ -109,7 +110,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		):
 			before_submit(bt, None)
 
-		bt.bank_account = ba.name
+		bt.bank_account = self.ba.name
 		bt.deposit = -1.0
 
 		with self.assertRaises(
@@ -133,10 +134,6 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_bank_fees.assert_called_once()
 		mock_create_auto_rules.assert_called_once()
 
-		ba.delete(delete_permanently=True, ignore_permissions=True)
-		account_1.delete(delete_permanently=True, ignore_permissions=True)
-		account_2.delete(delete_permanently=True, ignore_permissions=True)
-
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_withdrawal(self, mock_create_je):
 		from banking.overrides.bank_transaction import create_je_bank_fees
@@ -144,28 +141,19 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account(
-			"EUR",
-			parent_account,
-			account_name="_Test_Account_EUR_Fee",
-		)
-		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
-
-		bt = create_bank_transaction(withdrawal=5.0, included_fee=1.0, bank_account=ba.name)
+		bt = create_bank_transaction(withdrawal=5.0, included_fee=1.0, bank_account=self.ba.name)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_bank_fees(bt, company_doc, date, account_1, 0, bt.withdrawal)
+		create_je_bank_fees(bt, company_doc, date, self.account_1, 0, bt.withdrawal)
 
 		mock_create_je.assert_called_once_with(
 			bt,
 			company_doc,
 			date,
-			account_1,
-			account_2.name,
+			self.account_1,
+			self.account_2.name,
 			None,
 			0,
 			1.0,
@@ -180,15 +168,11 @@ class TestBankReconciliationRule(FrappeTestCase):
 
 		# Assert fee = full amount entry
 		bt.withdrawal = 1.0
-		create_je_bank_fees(bt, company_doc, date, account_1, 0, bt.withdrawal)
+		create_je_bank_fees(bt, company_doc, date, self.account_1, 0, bt.withdrawal)
 
 		self.assertEqual(bt.allocated_amount, 1.0)
 		self.assertEqual(bt.unallocated_amount, 0.0)
 		self.assertEqual(bt.status, "Reconciled")
-
-		ba.delete(delete_permanently=True, ignore_permissions=True)
-		account_1.delete(delete_permanently=True, ignore_permissions=True)
-		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_deposit(self, mock_create_je):
@@ -197,28 +181,19 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account(
-			"EUR",
-			parent_account,
-			account_name="_Test_Account_EUR_Fee",
-		)
-		ba = create_bank_account(account_1.name, bank_fee_account=account_2.name)
-
-		bt = create_bank_transaction(deposit=5.0, included_fee=1.0, bank_account=ba.name)
+		bt = create_bank_transaction(deposit=5.0, included_fee=1.0, bank_account=self.ba.name)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_bank_fees(bt, company_doc, date, account_1, bt.deposit, 0)
+		create_je_bank_fees(bt, company_doc, date, self.account_1, bt.deposit, 0)
 
 		mock_create_je.assert_called_once_with(
 			bt,
 			company_doc,
 			date,
-			account_1,
-			account_2.name,
+			self.account_1,
+			self.account_2.name,
 			None,
 			0,
 			1.0,
@@ -231,10 +206,6 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.unallocated_amount, 5.0)
 		self.assertEqual(bt.status, "Pending")
 
-		ba.delete(delete_permanently=True, ignore_permissions=True)
-		account_1.delete(delete_permanently=True, ignore_permissions=True)
-		account_2.delete(delete_permanently=True, ignore_permissions=True)
-
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_automatic_rules_withdrawal(self, mock_create_je):
 		from banking.overrides.bank_transaction import create_je_automatic_rules
@@ -244,34 +215,25 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account(
-			"EUR",
-			parent_account,
-			account_name="_Test_Account_EUR_Fee",
-		)
-		ba = create_bank_account(account_1.name, bank_fee_account=account_1.name)
-
 		# brr_1 => correct
 		brr_1 = create_bank_reconciliation_rule(
-			ba.name,
-			account_2.name,
+			self.ba.name,
+			self.account_2.name,
 			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
 		)
 
 		# brr_2 => fail
 		create_bank_reconciliation_rule(
-			ba.name,
-			account_1.name,
+			self.ba.name,
+			self.account_1.name,
 			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
 			disabled=1,
 		)
 
 		# brr_3 => fail
 		create_bank_reconciliation_rule(
-			ba.name,
-			account_1.name,
+			self.ba.name,
+			self.account_1.name,
 			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
 			submit=False,
 		)
@@ -279,21 +241,21 @@ class TestBankReconciliationRule(FrappeTestCase):
 		bt = create_bank_transaction(
 			withdrawal=5.0,
 			included_fee=1.0,
-			bank_account=ba.name,
+			bank_account=self.ba.name,
 			description="FLAG-TRUE",
 		)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_automatic_rules(bt, company_doc, date, account_1, 0, bt.withdrawal - bt.included_fee)
+		create_je_automatic_rules(bt, company_doc, date, self.account_1, 0, bt.withdrawal - bt.included_fee)
 
 		mock_create_je.assert_called_once_with(
 			bt,
 			company_doc,
 			date,
-			account_1,
-			account_2.name,
+			self.account_1,
+			self.account_2.name,
 			brr_1.name,
 			0.0,
 			4.0,
@@ -305,10 +267,6 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.allocated_amount, 4.0)
 		self.assertEqual(bt.status, "Reconciled")
 
-		ba.delete(delete_permanently=True, ignore_permissions=True)
-		account_1.delete(delete_permanently=True, ignore_permissions=True)
-		account_2.delete(delete_permanently=True, ignore_permissions=True)
-
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_automatic_rules_deposit(self, mock_create_je):
 		from banking.overrides.bank_transaction import create_je_automatic_rules
@@ -318,34 +276,25 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account(
-			"EUR",
-			parent_account,
-			account_name="_Test_Account_EUR_Fee",
-		)
-		ba = create_bank_account(account_1.name, bank_fee_account=account_1.name)
-
 		# brr_1 => correct
 		brr_1 = create_bank_reconciliation_rule(
-			ba.name,
-			account_2.name,
+			self.ba.name,
+			self.account_2.name,
 			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
 		)
 
 		# brr_2 => fail
 		create_bank_reconciliation_rule(
-			ba.name,
-			account_1.name,
+			self.ba.name,
+			self.account_1.name,
 			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
 			disabled=1,
 		)
 
 		# brr_3 => fail
 		create_bank_reconciliation_rule(
-			ba.name,
-			account_1.name,
+			self.ba.name,
+			self.account_1.name,
 			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
 			submit=False,
 		)
@@ -353,21 +302,21 @@ class TestBankReconciliationRule(FrappeTestCase):
 		bt = create_bank_transaction(
 			deposit=5.0,
 			included_fee=1.0,
-			bank_account=ba.name,
+			bank_account=self.ba.name,
 			description="FLAG-TRUE",
 		)
 
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_automatic_rules(bt, company_doc, date, account_1, bt.deposit, 0)
+		create_je_automatic_rules(bt, company_doc, date, self.account_1, bt.deposit, 0)
 
 		mock_create_je.assert_called_once_with(
 			bt,
 			company_doc,
 			date,
-			account_1,
-			account_2.name,
+			self.account_1,
+			self.account_2.name,
 			brr_1.name,
 			5.0,
 			0.0,
@@ -378,7 +327,3 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 5.0)
 		self.assertEqual(bt.allocated_amount, 5.0)
 		self.assertEqual(bt.status, "Reconciled")
-
-		ba.delete(delete_permanently=True, ignore_permissions=True)
-		account_1.delete(delete_permanently=True, ignore_permissions=True)
-		account_2.delete(delete_permanently=True, ignore_permissions=True)
