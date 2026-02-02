@@ -39,8 +39,8 @@ def create_bank_transaction(insert=True, **values):
 
 
 class TestBankReconciliationRule(FrappeTestCase):
-	def test_ensure_positive_deposit_withdrawal_fees(self):
-		from banking.overrides.bank_transaction import ensure_positive_deposit_withdrawal_fees
+	def test_enforce_positive_values(self):
+		from banking.overrides.bank_transaction import enforce_positive_values
 
 		doc = create_bank_transaction(insert=False)
 		doc.deposit = -2.0
@@ -48,7 +48,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		doc.included_fee = -1.0
 		doc.excluded_fee = -1.0
 
-		ensure_positive_deposit_withdrawal_fees(doc, None)
+		enforce_positive_values(doc)
 
 		self.assertEqual(doc.deposit, 1.0)
 		self.assertEqual(doc.withdrawal, 0.0)
@@ -60,7 +60,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		doc.included_fee = -1.0
 		doc.excluded_fee = -1.0
 
-		ensure_positive_deposit_withdrawal_fees(doc, None)
+		enforce_positive_values(doc)
 
 		self.assertEqual(doc.deposit, 0.0)
 		self.assertEqual(doc.withdrawal, 2.0)
@@ -72,7 +72,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		doc.included_fee = None
 		doc.excluded_fee = None
 
-		ensure_positive_deposit_withdrawal_fees(doc, None)
+		enforce_positive_values(doc)
 
 		self.assertEqual(doc.deposit, 0.0)
 		self.assertEqual(doc.withdrawal, 0.0)

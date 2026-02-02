@@ -63,9 +63,14 @@ class CustomBankTransaction(BankTransaction):
 			lambda x: x.payment_document == voucher_type and x.payment_entry == voucher_name,
 		)
 
+	def convert_to_positive_value(self, fieldname: str):
+		cur_value = self.get(fieldname)
+		if cur_value is not None and flt(cur_value) < 0:
+			self.set(fieldname, abs(flt(cur_value)))
+
 
 def before_validate(doc: "CustomBankTransaction", method):
-	ensure_positive_deposit_withdrawal_fees(doc, method)
+	enforce_positive_values(doc)
 
 
 def before_submit(doc: "CustomBankTransaction", method):
@@ -272,10 +277,15 @@ def create_automatic_journal_entry(
 	return journal_entry.name
 
 
-def ensure_positive_deposit_withdrawal_fees(doc, method):
-	doc.deposit = abs(flt(doc.deposit) or 0.0)
-	doc.withdrawal = abs(flt(doc.withdrawal) or 0.0)
-	doc.included_fee = abs(flt(doc.included_fee) or 0.0)
-	doc.excluded_fee = abs(flt(doc.excluded_fee) or 0.0)
+def enforce_positive_values(doc: "CustomBankTransaction"):
+	"""Convert any negative values to positive values.
+
+	Bank Statements often contain negative values (mostly for withdrawals and
+	fees) while ERPNext expects positive values only. To avoid errors during
+	Data Import, we accept negative values but convert them to positive values.
+	"""
+	for fieldname in ["deposit", "withdrawal", "included_fee", "excluded_fee"]:
+		doc.convert_to_positive_value(fieldname)
+
 	# Re-call this function as the original function runs before this one and values are not converted
-	BankTransaction.handle_excluded_fee(doc)
+	doc.handle_excluded_fee()
