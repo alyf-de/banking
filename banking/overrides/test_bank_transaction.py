@@ -6,6 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from banking.overrides.bank_transaction import enforce_positive_values
 from banking.utils import TEST_COMPANY, create_bank_account, create_currency_account
 
 
@@ -38,11 +39,10 @@ def create_bank_transaction(insert=True, **values):
 	return doc
 
 
-class TestBankReconciliationRule(FrappeTestCase):
-	def test_enforce_positive_values(self):
-		from banking.overrides.bank_transaction import enforce_positive_values
+class TestEnforcePositiveValues(FrappeTestCase):
+	def test_deposit(self):
+		doc = frappe.new_doc("Bank Transaction")
 
-		doc = create_bank_transaction(insert=False)
 		doc.deposit = -2.0
 		doc.withdrawal = 0.0
 		doc.included_fee = -1.0
@@ -54,6 +54,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(doc.withdrawal, 0.0)
 		self.assertEqual(doc.included_fee, 2.0)
 		self.assertEqual(doc.excluded_fee, 0.0)
+
+	def test_withdrawal(self):
+		doc = frappe.new_doc("Bank Transaction")
 
 		doc.deposit = 0.0
 		doc.withdrawal = -1.0
@@ -67,6 +70,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(doc.included_fee, 2.0)
 		self.assertEqual(doc.excluded_fee, 0.0)
 
+	def test_none(self):
+		doc = frappe.new_doc("Bank Transaction")
+
 		doc.deposit = None
 		doc.withdrawal = None
 		doc.included_fee = None
@@ -79,6 +85,8 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(doc.included_fee, None)
 		self.assertEqual(doc.excluded_fee, None)
 
+
+class TestBankReconciliationRule(FrappeTestCase):
 	@patch("banking.overrides.bank_transaction.create_je_automatic_rules")
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit(self, mock_create_bank_fees, mock_create_auto_rules):
