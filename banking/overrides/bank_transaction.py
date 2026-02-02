@@ -86,12 +86,13 @@ def before_submit(doc: "CustomBankTransaction", method):
 	if doc.deposit == 0 and doc.withdrawal == 0:
 		return
 
-	if doc.deposit < 0 or doc.withdrawal < 0:
-		frappe.throw(
-			_("The field {0} is negative. Please verify the input data.").format(
-				_(doc.meta.get_label("deposit" if doc.deposit < 0 else "withdrawal"))
+	for fieldname in ["deposit", "withdrawal", "included_fee"]:
+		if doc.get(fieldname) < 0:
+			frappe.throw(
+				_("The field {0} is negative. Please verify the input data.").format(
+					_(doc.meta.get_label(fieldname))
+				)
 			)
-		)
 
 	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
 	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
@@ -142,7 +143,7 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 	# First step: Create a journal entry for included bank fees
 	included_fee = doc.included_fee
 
-	if included_fee <= 0:
+	if included_fee is None or included_fee <= 0:
 		return
 
 	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
