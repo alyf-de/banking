@@ -6,7 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from banking.utils import create_bank_account, create_currency_account
+from banking.utils import TEST_COMPANY, create_bank_account, create_currency_account
 
 
 def create_bank_reconciliation_rule(
@@ -31,7 +31,7 @@ def create_bank_reconciliation_rule(
 
 def create_bank_transaction(insert=True, **values):
 	doc = frappe.new_doc("Bank Transaction")
-	doc.company = "_Test Company"
+	doc.company = TEST_COMPANY
 	doc.update(values)
 	if insert:
 		doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
@@ -84,7 +84,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 	def test_before_submit(self, mock_create_bank_fees, mock_create_auto_rules):
 		from banking.overrides.bank_transaction import before_submit
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		account_1 = create_currency_account("EUR", parent_account)
 		account_2 = create_currency_account(
 			"EUR",
@@ -136,7 +136,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		account_1 = create_currency_account("EUR", parent_account)
 		account_2 = create_currency_account(
 			"EUR",
@@ -189,7 +189,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		account_1 = create_currency_account("EUR", parent_account)
 		account_2 = create_currency_account(
 			"EUR",
@@ -236,7 +236,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		account_1 = create_currency_account("EUR", parent_account)
 		account_2 = create_currency_account(
 			"EUR",
@@ -310,7 +310,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1})
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		account_1 = create_currency_account("EUR", parent_account)
 		account_2 = create_currency_account(
 			"EUR",

@@ -10,6 +10,9 @@ if TYPE_CHECKING:
 	from erpnext.accounts.doctype.bank_account.bank_account import BankAccount
 
 
+TEST_COMPANY = "Bolt Trades"
+
+
 def before_tests():
 	# complete setup if missing
 	year = now_datetime().year
