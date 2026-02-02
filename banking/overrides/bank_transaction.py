@@ -185,44 +185,52 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 
 def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 	# Second step: Automatic reconcilation based on the Bank Reconciliation Rules
-	bank_reconciliation_rules = frappe.db.get_list(
+	bank_reconciliation_rules = frappe.get_all(
 		"Bank Reconciliation Rule",
 		filters={
 			"disabled": 0,
 			"bank_account": doc.bank_account,
 			"docstatus": 1,
+			"filters": ("is", "set"),
 		},
 		fields=["name", "target_account", "filters"],
 		as_list=True,
 	)
-	for br_rule in bank_reconciliation_rules:
-		# Check if line matches filter
-		if br_rule[2]:
-			filters = json.loads(br_rule[2])
-			if filters:
-				condition_met = evaluate_filters(doc, filters)
-				if condition_met:
-					rule = br_rule[0]
-					target_account = br_rule[1]
-					je_auto_name = create_automatic_journal_entry(
-						doc, cost_center, date, account, target_account, rule, debit, credit
-					)
-					doc.append(
-						"payment_entries",
-						{
-							"payment_document": "Journal Entry",
-							"payment_entry": je_auto_name,
-							"allocated_amount": debit + credit,
-						},
-					)
-					# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
-					doc.allocated_amount = doc.allocated_amount + debit + credit
-					# Set remaining debit and credit to 0, so no cash in transit is generated
-					debit = 0
-					credit = 0
-					doc.unallocated_amount = 0
-					doc.status = "Reconciled"
-					break
+
+	for br_rule_name, target_account, filters in bank_reconciliation_rules:
+		try:
+			filters = json.loads(filters)
+		except json.JSONDecodeError:
+			frappe.log_error(
+				title="Invalid Filters in Bank Reconciliation Rule",
+				message=f"The filters for the Bank Reconciliation Rule {br_rule_name} are not valid JSON: {filters}",
+				reference_doctype="Bank Reconciliation Rule",
+				reference_name=br_rule_name,
+			)
+			continue
+
+		if not evaluate_filters(doc, filters):
+			continue
+
+		je_auto_name = create_automatic_journal_entry(
+			doc, cost_center, date, account, target_account, br_rule_name, debit, credit
+		)
+		doc.append(
+			"payment_entries",
+			{
+				"payment_document": "Journal Entry",
+				"payment_entry": je_auto_name,
+				"allocated_amount": debit + credit,
+			},
+		)
+		# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
+		doc.allocated_amount = doc.allocated_amount + debit + credit
+		# Set remaining debit and credit to 0, so no cash in transit is generated
+		debit = 0
+		credit = 0
+		doc.unallocated_amount = 0
+		doc.status = "Reconciled"
+		break
 
 
 def create_automatic_journal_entry(
