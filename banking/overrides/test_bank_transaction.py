@@ -74,10 +74,10 @@ class TestBankReconciliationRule(FrappeTestCase):
 
 		enforce_positive_values(doc)
 
-		self.assertEqual(doc.deposit, 0.0)
-		self.assertEqual(doc.withdrawal, 0.0)
-		self.assertEqual(doc.included_fee, 0.0)
-		self.assertEqual(doc.excluded_fee, 0.0)
+		self.assertEqual(doc.deposit, None)
+		self.assertEqual(doc.withdrawal, None)
+		self.assertEqual(doc.included_fee, None)
+		self.assertEqual(doc.excluded_fee, None)
 
 	@patch("banking.overrides.bank_transaction.create_je_automatic_rules")
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
