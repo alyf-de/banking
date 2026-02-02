@@ -93,21 +93,14 @@ def before_submit(doc: "CustomBankTransaction", method):
 			)
 		)
 
-	# Generic data catching
-	# Get Company
-	company_doc = frappe.get_cached_doc("Company", doc.company)
-
-	# Bank account debit/credit
-	account = frappe.db.get_value("Bank Account", doc.bank_account, "account")
-	# End Generic data catching
-
-	# Set initial values
+	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
+	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
 	debit, credit = (doc.deposit, 0) if doc.deposit > 0 else (0, doc.withdrawal)
 	included_fee = doc.included_fee or 0
 
-	create_je_bank_fees(doc, company_doc, date, account, debit, credit)
+	create_je_bank_fees(doc, cost_center, date, account, debit, credit)
 	credit_no_fee = max(0, credit - included_fee)
-	create_je_automatic_rules(doc, company_doc, date, account, debit, credit_no_fee)
+	create_je_automatic_rules(doc, cost_center, date, account, debit, credit_no_fee)
 
 
 def on_update_after_submit(doc, event):
@@ -145,7 +138,7 @@ def on_cancel(doc, method):
 			)
 
 
-def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
+def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 	# First step: Create a journal entry for included bank fees
 	included_fee = doc.included_fee
 
@@ -161,7 +154,7 @@ def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
 		)
 
 	je_fee_name = create_automatic_journal_entry(
-		doc, company_doc, date, account, bank_fee_account, None, 0, included_fee
+		doc, cost_center, date, account, bank_fee_account, None, 0, included_fee
 	)
 
 	if credit > 0:
@@ -189,7 +182,7 @@ def create_je_bank_fees(doc, company_doc, date, account, debit, credit):
 		doc.status = "Reconciled"
 
 
-def create_je_automatic_rules(doc, company_doc, date, account, debit, credit):
+def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 	# Second step: Automatic reconcilation based on the Bank Reconciliation Rules
 	bank_reconciliation_rules = frappe.db.get_list(
 		"Bank Reconciliation Rule",
@@ -211,7 +204,7 @@ def create_je_automatic_rules(doc, company_doc, date, account, debit, credit):
 					rule = br_rule[0]
 					target_account = br_rule[1]
 					je_auto_name = create_automatic_journal_entry(
-						doc, company_doc, date, account, target_account, rule, debit, credit
+						doc, cost_center, date, account, target_account, rule, debit, credit
 					)
 					doc.append(
 						"payment_entries",
@@ -232,7 +225,7 @@ def create_je_automatic_rules(doc, company_doc, date, account, debit, credit):
 
 
 def create_automatic_journal_entry(
-	doc, company_doc, date, account, target_account, rule=None, debit=0, credit=0
+	doc, cost_center, date, account, target_account, rule=None, debit=0, credit=0
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Journal Entry"
@@ -255,7 +248,7 @@ def create_automatic_journal_entry(
 			"bank_account": doc.bank_account,
 			"debit_in_account_currency": debit,
 			"credit_in_account_currency": credit,
-			"cost_center": company_doc.cost_center,
+			"cost_center": cost_center,
 		},
 	)
 
@@ -267,7 +260,7 @@ def create_automatic_journal_entry(
 			"bank_account": "",
 			"debit_in_account_currency": credit,
 			"credit_in_account_currency": debit,
-			"cost_center": company_doc.cost_center,
+			"cost_center": cost_center,
 		},
 	)
 
