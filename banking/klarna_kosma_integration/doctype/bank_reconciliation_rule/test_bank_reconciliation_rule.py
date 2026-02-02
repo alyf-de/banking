@@ -12,23 +12,23 @@ from banking.utils import TEST_COMPANY, create_bank_account, create_currency_acc
 
 
 class TestBankReconciliationRule(FrappeTestCase):
-	def test_validate_account_currencies(self):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+
+		# these should be cleaned up by the DB rollback of FrappeTestCase
 		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		account_1 = create_currency_account("EUR", parent_account)
-		account_2 = create_currency_account("USD", parent_account)
+		bank_account = create_currency_account("EUR", parent_account)
+		cls.target_account = create_currency_account("USD", parent_account)
+		cls.ba = create_bank_account(bank_account.name)
 
-		ba = create_bank_account(account_1.name)
-
+	def test_validate_account_currencies(self):
 		brr_doc = frappe.new_doc("Bank Reconciliation Rule")
-		brr_doc.bank_account = ba.name
-		brr_doc.target_account = account_2.name
+		brr_doc.bank_account = self.ba.name
+		brr_doc.target_account = self.target_account.name
 
 		with self.assertRaises(CurrencyMismatchError):
 			brr_doc.validate_account_currencies()
-
-		ba.delete(delete_permanently=True, ignore_permissions=True)
-		account_1.delete(delete_permanently=True, ignore_permissions=True)
-		account_2.delete(delete_permanently=True, ignore_permissions=True)
 
 	def test_validate_filters(self):
 		brr_doc = frappe.new_doc("Bank Reconciliation Rule")
