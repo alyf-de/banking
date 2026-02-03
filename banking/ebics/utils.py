@@ -440,7 +440,7 @@ def upload_mt940_file():
 
 	from fintech.swift import parse_mt940
 
-	mt940_data = file_bytes.decode()
+	mt940_data = decode_mt940_bytes(file_bytes)
 	statements: list[MT940Statement] = parse_mt940(mt940_data)
 
 	for statement in statements:
