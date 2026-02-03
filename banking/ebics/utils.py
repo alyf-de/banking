@@ -417,6 +417,7 @@ def upload_camt_file():
 	camt_document = CAMTDocument(file_bytes.decode())
 	process_camt_document(camt_document, bank_account)
 
+
 def decode_mt940_bytes(file_bytes: bytes) -> str:
 	"""Decode MT940 file bytes by trying common encodings (UTF-8, Latin-1, CP1252)."""
 	encodings = ("utf-8", "latin-1", "cp1252")
@@ -426,6 +427,7 @@ def decode_mt940_bytes(file_bytes: bytes) -> str:
 		except UnicodeDecodeError:
 			continue
 	return file_bytes.decode("latin-1", errors="replace")
+
 
 @frappe.whitelist()
 def upload_mt940_file():
