@@ -403,6 +403,17 @@ def upload_camt_file():
 	process_camt_document(camt_document, bank_account)
 
 
+def decode_mt940_bytes(file_bytes: bytes) -> str:
+	"""Decode MT940 file bytes by trying common encodings (UTF-8, CP1252, Latin-1)."""
+	for encoding in ("utf-8", "cp1252"):
+		try:
+			return file_bytes.decode(encoding)
+		except UnicodeDecodeError:
+			continue
+
+	return file_bytes.decode("latin-1")
+
+
 @frappe.whitelist()
 def upload_mt940_file():
 	frappe.has_permission("Bank Transaction", "create", throw=True)
@@ -414,7 +425,7 @@ def upload_mt940_file():
 
 	from fintech.swift import parse_mt940
 
-	mt940_data = file_bytes.decode()
+	mt940_data = decode_mt940_bytes(file_bytes)
 	statements: list[MT940Statement] = parse_mt940(mt940_data)
 
 	for statement in statements:
