@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import fintech
 import frappe
 from frappe import _
+from frappe.utils import is_valid_iban
 from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager, EbicsRequest
@@ -344,6 +345,8 @@ def create_sepa_bank_transaction(
 		return
 
 	amount = float(sepa_transaction.amount.value)
+	party_iban, party_account_number = get_iban_or_account_number(sepa_transaction.iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=transaction_id,
@@ -356,7 +359,8 @@ def create_sepa_bank_transaction(
 		date=sepa_transaction.date,
 		reference_number=sepa_transaction.eref,
 		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
-		bank_party_iban=sepa_transaction.iban,
+		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
 
 
@@ -443,6 +447,17 @@ def upload_camt_file():
 	process_camt_document(camt_document, bank_account, split_batch_transactions=False)
 
 
+def decode_mt940_bytes(file_bytes: bytes) -> str:
+	"""Decode MT940 file bytes by trying common encodings (UTF-8, CP1252, Latin-1)."""
+	for encoding in ("utf-8", "cp1252"):
+		try:
+			return file_bytes.decode(encoding)
+		except UnicodeDecodeError:
+			continue
+
+	return file_bytes.decode("latin-1")
+
+
 @frappe.whitelist()
 def upload_mt940_file():
 	frappe.has_permission("Bank Transaction", "create", throw=True)
@@ -454,7 +469,7 @@ def upload_mt940_file():
 
 	from fintech.swift import parse_mt940
 
-	mt940_data = file_bytes.decode()
+	mt940_data = decode_mt940_bytes(file_bytes)
 	statements: list[MT940Statement] = parse_mt940(mt940_data)
 
 	for statement in statements:
@@ -502,6 +517,8 @@ def create_mt940_bank_transaction(
 		description,
 	]
 
+	party_iban, party_account_number = get_iban_or_account_number(party_iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=get_transaction_hash(values_to_hash),
@@ -515,7 +532,20 @@ def create_mt940_bank_transaction(
 		reference_number="" if reference == "NONREF" else reference,
 		bank_party_name=party_name,
 		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
+
+
+def get_iban_or_account_number(number: str) -> tuple[str | None, str | None]:
+	"""Return a tuple of (iban, account_number) for the given number.
+
+	If the number is a valid IBAN, account_number is None.
+	Otherwise, iban is None and account_number is the given number.
+	"""
+	if is_valid_iban(number):
+		return number, None
+
+	return None, number
 
 
 def create_bank_transaction(

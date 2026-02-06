@@ -150,13 +150,6 @@ def create_journal_entry_bts(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
 		)
 
-	if second_account_currency != bank_account_currency:
-		frappe.throw(
-			_(
-				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
-			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
-		)
-
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.update(
 		{
@@ -199,6 +192,15 @@ def create_journal_entry_bts(
 
 	if allow_edit:
 		return journal_entry  # Return saved document
+
+	# This check happens here because the user should be able to make
+	# multicurrency entries when they edit the Journal Entry manually (`allow_edit` is True).
+	if second_account_currency != bank_account_currency:
+		frappe.throw(
+			_(
+				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
+			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
+		)
 
 	journal_entry.submit()
 
@@ -652,6 +654,7 @@ def get_matching_queries(
 			filter_by_reference_date,
 			from_reference_date,
 			to_reference_date,
+			transaction.name,
 		)
 		queries.append(query)
 
@@ -937,6 +940,7 @@ def get_je_matching_query(
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
+	bank_transaction_name: str | None = None,
 ):
 	# get matching journal entry query
 	# We have mapping at the bank level
@@ -975,6 +979,12 @@ def get_je_matching_query(
 		.groupby(je.name)
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
+
+	if bank_transaction_name:
+		# This filter ensures that Journal Entries that have been created
+		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
+		# other apps are not offered as matches.
+		subquery = subquery.where(je.cheque_no != bank_transaction_name)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)

@@ -387,13 +387,19 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				});
 			}
 		});
+
+		const party_title = await frappe.utils.fetch_link_title(
+			this.transaction.party_type,
+			this.transaction.party
+		);
+
 		return [
 			...document_types_fields,
 			{
 				fieldtype: "Section Break",
 			},
 			{
-				label: __("Show Exact Amount"),
+				label: __("Only matching amounts"),
 				fieldname: "exact_match",
 				fieldtype: "Check",
 				default: filters_state.exact_match,
@@ -405,22 +411,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				fieldtype: "Column Break",
 			},
 			{
-				label: __("Show Exact Party"),
-				fieldname: "exact_party_match",
-				fieldtype: "Check",
-				default: this.transaction.party_type && this.transaction.party ? 1 : 0,
-				onchange: (e) => {
-					this.populate_matching_vouchers(e);
-				},
-				read_only: !Boolean(
-					this.transaction.party_type && this.transaction.party
-				),
-			},
-			{
-				fieldtype: "Column Break",
-			},
-			{
-				label: __("Unpaid Vouchers"),
+				label: __("Only unpaid vouchers"),
 				fieldname: "unpaid_invoices",
 				fieldtype: "Check",
 				default: filters_state.unpaid_invoices,
@@ -432,6 +423,18 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			},
 			{
 				fieldtype: "Column Break",
+			},
+			{
+				label: this.transaction.party
+					? __("Only from {0}", [frappe.utils.escape_html(party_title)])
+					: __("Not available"),
+				fieldname: "exact_party_match",
+				fieldtype: "Check",
+				default: this.transaction.party_type && this.transaction.party ? 1 : 0,
+				onchange: (e) => {
+					this.populate_matching_vouchers(e);
+				},
+				hidden: !Boolean(this.transaction.party_type && this.transaction.party),
 			},
 			{
 				fieldtype: "Section Break",
