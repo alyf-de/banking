@@ -193,6 +193,8 @@ def create_journal_entry_bts(
 	if allow_edit:
 		return journal_entry  # Return saved document
 
+	# This check happens here because the user should be able to make
+	# multicurrency entries when they edit the Journal Entry manually (`allow_edit` is True).
 	if second_account_currency != bank_account_currency:
 		frappe.throw(
 			_(
