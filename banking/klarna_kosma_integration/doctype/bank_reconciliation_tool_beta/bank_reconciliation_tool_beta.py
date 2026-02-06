@@ -652,6 +652,7 @@ def get_matching_queries(
 			filter_by_reference_date,
 			from_reference_date,
 			to_reference_date,
+			transaction.name,
 		)
 		queries.append(query)
 
@@ -937,6 +938,7 @@ def get_je_matching_query(
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
+	bank_transaction_name: str | None = None,
 ):
 	# get matching journal entry query
 	# We have mapping at the bank level
@@ -975,6 +977,12 @@ def get_je_matching_query(
 		.groupby(je.name)
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
+
+	if bank_transaction_name:
+		# This filter ensures that Journal Entries that have been created
+		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
+		# other apps are not offered as matches.
+		subquery = subquery.where(je.cheque_no != bank_transaction_name)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
