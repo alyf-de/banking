@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import fintech
 import frappe
 from frappe import _
+from frappe.utils import is_valid_iban
 from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager, EbicsRequest
@@ -156,10 +157,6 @@ def sync_ebics_transactions(
 	user = frappe.get_doc("EBICS User", ebics_user)
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase)
 
-	from fintech.sepa import (
-		CAMTDocument,
-	)  # import possible only after manager is initialized
-
 	request_map = get_request_map(manager.country_code, start_date, end_date)
 	main_request = request_map["intraday"] if intraday else request_map["statement"]
 
@@ -184,25 +181,7 @@ def sync_ebics_transactions(
 	# We want to process either all documents or none. If we fail to process one, we
 	# want to rollback the entire transaction and report an error.
 	try:
-		for name in sorted(main_xml):
-			camt_document = CAMTDocument(xml=main_xml[name], camt54=batch_xml)
-			bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
-			if not bank_account:
-				frappe.log_error(
-					title=_("Banking Error"),
-					message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
-					reference_doctype="EBICS User",
-					reference_name=user.name,
-				)
-				continue
-
-			process_camt_document(
-				camt_document,
-				bank_account,
-				user.company,
-				user.start_date,
-				user.split_batch_transactions,
-			)
+		import_ebics_json(user, main_xml, batch_xml)
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(
@@ -214,6 +193,39 @@ def sync_ebics_transactions(
 		return
 
 	manager.confirm_download(success=True)
+
+
+def import_ebics_json(user: "EBICSUser", main_data: dict, batch_data: dict | None = None):
+	"""Import EBICS transactions from the given JSON data, considering user settings.
+
+	NOTE: fintech needs to be registered before calling this function.
+
+	Args:
+		user: An EBICS User record
+		main_data: Dictionary of XML files by name, e.g. {"camt053.xml": "<xml>...</xml>"}
+		batch_data: Dictionary of XML files by name, or None if batch transactions are not enabled
+	"""
+	from fintech.sepa import CAMTDocument
+
+	for name in sorted(main_data):
+		camt_document = CAMTDocument(xml=main_data[name], camt54=batch_data)
+		bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
+		if not bank_account:
+			frappe.log_error(
+				title=_("Banking Error"),
+				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+				reference_doctype="EBICS User",
+				reference_name=user.name,
+			)
+			continue
+
+		process_camt_document(
+			camt_document,
+			bank_account,
+			user.company,
+			user.start_date,
+			user.split_batch_transactions,
+		)
 
 
 def validated_perms(ebics_user, permitted_types, required_type):
@@ -304,6 +316,8 @@ def create_sepa_bank_transaction(
 		return
 
 	amount = float(sepa_transaction.amount.value)
+	party_iban, party_account_number = get_iban_or_account_number(sepa_transaction.iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=transaction_id,
@@ -316,7 +330,8 @@ def create_sepa_bank_transaction(
 		date=sepa_transaction.date,
 		reference_number=sepa_transaction.eref,
 		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
-		bank_party_iban=sepa_transaction.iban,
+		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
 
 
@@ -403,6 +418,17 @@ def upload_camt_file():
 	process_camt_document(camt_document, bank_account)
 
 
+def decode_mt940_bytes(file_bytes: bytes) -> str:
+	"""Decode MT940 file bytes by trying common encodings (UTF-8, CP1252, Latin-1)."""
+	for encoding in ("utf-8", "cp1252"):
+		try:
+			return file_bytes.decode(encoding)
+		except UnicodeDecodeError:
+			continue
+
+	return file_bytes.decode("latin-1")
+
+
 @frappe.whitelist()
 def upload_mt940_file():
 	frappe.has_permission("Bank Transaction", "create", throw=True)
@@ -414,7 +440,7 @@ def upload_mt940_file():
 
 	from fintech.swift import parse_mt940
 
-	mt940_data = file_bytes.decode()
+	mt940_data = decode_mt940_bytes(file_bytes)
 	statements: list[MT940Statement] = parse_mt940(mt940_data)
 
 	for statement in statements:
@@ -462,6 +488,8 @@ def create_mt940_bank_transaction(
 		description,
 	]
 
+	party_iban, party_account_number = get_iban_or_account_number(party_iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=get_transaction_hash(values_to_hash),
@@ -475,7 +503,20 @@ def create_mt940_bank_transaction(
 		reference_number="" if reference == "NONREF" else reference,
 		bank_party_name=party_name,
 		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
+
+
+def get_iban_or_account_number(number: str) -> tuple[str | None, str | None]:
+	"""Return a tuple of (iban, account_number) for the given number.
+
+	If the number is a valid IBAN, account_number is None.
+	Otherwise, iban is None and account_number is the given number.
+	"""
+	if is_valid_iban(number):
+		return number, None
+
+	return None, number
 
 
 def create_bank_transaction(
