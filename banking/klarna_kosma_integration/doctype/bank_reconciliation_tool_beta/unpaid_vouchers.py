@@ -11,7 +11,7 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
 )
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
@@ -142,6 +142,28 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 
 	bank_account = frappe.db.get_value("Bank Account", bt.bank_account, "account")
 	first_invoice = invoices_to_bill[0]
+
+	# Detect multi-currency: the bank account currency differs from the
+	# party (payable/receivable) account currency.  A USD invoice with a EUR
+	# payable paid from a EUR bank is same-currency from the PE's perspective.
+	is_multi_currency = False
+	if first_invoice[DOCTYPE] != "Expense Claim":
+		invoice_details = frappe.db.get_value(
+			first_invoice[DOCTYPE],
+			first_invoice[DOCNAME],
+			["party_account_currency", "currency", "conversion_rate"],
+			as_dict=True,
+		)
+		bank_account_currency = frappe.db.get_value("Account", bank_account, "account_currency")
+		is_multi_currency = invoice_details.party_account_currency != bank_account_currency
+
+	if is_multi_currency and len(invoices_to_bill) > 1:
+		frappe.throw(
+			_(
+				"Reconciling multiple multi-currency invoices at once is not supported. Please reconcile one invoice at a time."
+			)
+		)
+
 	if first_invoice[DOCTYPE] == "Expense Claim":
 		from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee
 
@@ -151,6 +173,8 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 			party_amount=first_invoice[AMOUNT],
 			bank_account=bank_account,
 		)
+	elif is_multi_currency:
+		payment_entry = _create_multi_currency_pe(bt, first_invoice, invoice_details, bank_account)
 	else:
 		payment_entry = get_payment_entry(
 			first_invoice[DOCTYPE],
@@ -162,20 +186,68 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 			# return SI against a withdrawal should be considered as "Pay" (refund)
 			payment_type="Receive" if bt.deposit > 0 else "Pay",
 		)
+
 	payment_entry.posting_date = bt.date
 	payment_entry.reference_no = bt.reference_number or first_invoice[DOCNAME]
 	payment_entry.reference_date = bt.date
 
-	# clear references to allocate invoices correctly with splits
-	payment_entry.references = []
-	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
-	adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
+	if is_multi_currency:
+		# Refresh exchange rate for the bank transaction date (not the invoice date)
+		# and recalculate amounts (exchange gain/loss deductions, etc.)
+		payment_entry.source_exchange_rate = 0
+		payment_entry.target_exchange_rate = 0
+		payment_entry.set_exchange_rate()
+		payment_entry.set_amounts()
+	else:
+		# clear references to allocate invoices correctly with splits
+		payment_entry.references = []
+		invoices = split_invoices_based_on_payment_terms(
+			prepare_invoices_to_split(invoices_to_bill), bt.company
+		)
+		adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
 
-	payment_entry.paid_amount = abs(
-		sum(row.allocated_amount for row in payment_entry.references)
-	)  # should not be negative
+		payment_entry.paid_amount = abs(
+			sum(row.allocated_amount for row in payment_entry.references)
+		)  # should not be negative
+
 	payment_entry.submit()
 	return payment_entry
+
+
+def _create_multi_currency_pe(
+	bt: "CustomBankTransaction",
+	invoice: tuple,
+	invoice_details: frappe._dict,
+	bank_account: str,
+) -> "Document":
+	"""Create a Payment Entry for a multi-currency invoice.
+
+	When the party account currency (e.g. EUR) differs from the invoice/bank
+	currency (e.g. USD), we pass bank_amount (from the Bank Transaction) to
+	get_payment_entry. This bypasses the get_exchange_rate lookup inside
+	get_payment_entry (which may return a different rate than the invoice's
+	original conversion_rate) and ensures paid_amount is set correctly in the
+	bank currency.
+	"""
+	bank_amount = bt.unallocated_amount
+	party_amount = invoice[AMOUNT]  # outstanding in party_account_currency
+
+	# For partial payments: cap party_amount to what the bank amount covers,
+	# converted to party_account_currency using the invoice's conversion_rate.
+	# Round to currency precision to avoid false partial payments from floating
+	# point drift (e.g. stored outstanding 1140.07 vs computed 1140.0654...).
+	currency_precision = cint(frappe.db.get_default("currency_precision")) or 2
+	max_party_amount = flt(bank_amount * invoice_details.conversion_rate, currency_precision)
+	party_amount = min(party_amount, max_party_amount)
+
+	return get_payment_entry(
+		invoice[DOCTYPE],
+		invoice[DOCNAME],
+		party_amount=party_amount,
+		bank_account=bank_account,
+		bank_amount=bank_amount,
+		payment_type="Receive" if bt.deposit > 0 else "Pay",
+	)
 
 
 def prepare_invoices_to_split(invoices):
