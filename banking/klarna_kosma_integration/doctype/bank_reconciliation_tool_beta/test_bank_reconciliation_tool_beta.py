@@ -6,6 +6,9 @@ import frappe
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
 	create_payment_entry,
 )
+from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import (
+	make_purchase_invoice,
+)
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 	create_sales_invoice,
 )
@@ -22,6 +25,8 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	create_payment_entry_bts,
 	get_linked_payments,
 )
+
+test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
 
 
 class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
@@ -678,6 +683,222 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["name"], journal_entry.name)
 		self.assertEqual(first_match["paid_amount"], 200.0)
 
+	def test_usd_purchase_invoice_paid_in_usd(self):
+		"""Reconcile a USD Purchase Invoice via a USD bank account.
+
+		Invoice: 100 USD, payable account in company currency (INR).
+		Bank Transaction: 100 USD withdrawal.
+		Expected: invoice fetched with 100 USD outstanding (converted from 8000 INR),
+		multi-currency PE with paid_amount=100 USD, full reconciliation.
+		"""
+		_gl_account, usd_bank_account = setup_usd_bank()
+		supplier = create_supplier("USD Supplier Inc.", "USD")
+		create_currency_exchange("USD", "INR", 80)
+
+		pi = make_purchase_invoice(
+			supplier=supplier,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			qty=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+
+		bt = create_bank_transaction(
+			withdrawal=100,
+			bank_account=usd_bank_account,
+			currency="USD",
+		)
+
+		# Verify the invoice is fetched with the correct outstanding and currency
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		pi_match = next(m for m in matched if m["name"] == pi.name)
+		self.assertEqual(pi_match["paid_amount"], 100)  # converted from 8000 INR
+		self.assertEqual(pi_match["currency"], "USD")
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}]),
+		)
+
+		bt.reload()
+		pi.reload()
+
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(pi.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 100)
+		self.assertEqual(pe.paid_from_account_currency, "USD")
+		self.assertEqual(pe.paid_to_account_currency, "INR")
+
+	def test_usd_purchase_invoice_paid_in_company_currency(self):
+		"""Reconcile a USD Purchase Invoice via an INR bank account.
+
+		Invoice: 100 USD (= 8000 INR outstanding), payable account in INR.
+		Bank Transaction: 8000 INR withdrawal.
+		Expected: invoice fetched with 8000 INR outstanding (unchanged),
+		same-currency PE with paid_amount=8000 INR, full reconciliation.
+		"""
+		supplier = create_supplier("USD Supplier Inc.", "USD")
+
+		pi = make_purchase_invoice(
+			supplier=supplier,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			qty=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+
+		bt = create_bank_transaction(
+			withdrawal=8000,
+			bank_account=self.bank_account,
+		)
+
+		# Verify the invoice is fetched with unchanged INR outstanding
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		pi_match = next(m for m in matched if m["name"] == pi.name)
+		self.assertEqual(pi_match["paid_amount"], 8000)  # INR, unchanged
+		self.assertEqual(pi_match["currency"], "INR")
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}]),
+		)
+
+		bt.reload()
+		pi.reload()
+
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(pi.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 8000)
+		self.assertEqual(pe.paid_from_account_currency, "INR")
+		self.assertEqual(pe.paid_to_account_currency, "INR")
+
+	def test_usd_sales_invoice_paid_in_usd(self):
+		"""Reconcile a USD Sales Invoice via a USD bank account.
+
+		Invoice: 100 USD, receivable account in company currency (INR).
+		Bank Transaction: 100 USD deposit.
+		Expected: invoice fetched with 100 USD outstanding (converted from 8000 INR),
+		multi-currency PE with received_amount=100 USD, full reconciliation.
+		"""
+		_gl_account, usd_bank_account = setup_usd_bank()
+		customer = create_customer("USD Client Inc.", "USD")
+		create_currency_exchange("USD", "INR", 80)
+
+		si = create_sales_invoice(
+			customer=customer,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bt = create_bank_transaction(
+			deposit=100,
+			bank_account=usd_bank_account,
+			currency="USD",
+		)
+
+		# Verify the invoice is fetched with the correct outstanding and currency
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 100)  # converted from 8000 INR
+		self.assertEqual(si_match["currency"], "USD")
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.received_amount, 100)
+		self.assertEqual(pe.paid_from_account_currency, "INR")
+		self.assertEqual(pe.paid_to_account_currency, "USD")
+
+	def test_usd_sales_invoice_paid_in_company_currency(self):
+		"""Reconcile a USD Sales Invoice via an INR bank account.
+
+		Invoice: 100 USD (= 8000 INR outstanding), receivable account in INR.
+		Bank Transaction: 8000 INR deposit.
+		Expected: invoice fetched with 8000 INR outstanding (unchanged),
+		same-currency PE with paid_amount=8000 INR, full reconciliation.
+		"""
+		customer = create_customer("USD Client Inc.", "USD")
+
+		si = create_sales_invoice(
+			customer=customer,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bt = create_bank_transaction(
+			deposit=8000,
+			bank_account=self.bank_account,
+		)
+
+		# Verify the invoice is fetched with unchanged INR outstanding
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 8000)  # INR, unchanged
+		self.assertEqual(si_match["currency"], "INR")
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 8000)
+		self.assertEqual(pe.paid_from_account_currency, "INR")
+		self.assertEqual(pe.paid_to_account_currency, "INR")
+
 	def test_usd_jv_against_eur_company(self):
 		"""Test if the tool can create a USD Journal Entry against a EUR company."""
 		bank = create_bank("Citi Bank USD", swift_number="CITIUS34")
@@ -835,3 +1056,37 @@ def create_bank_gl_account(account_name: str = "_Test Bank - _TC", currency: str
 		}
 	).insert()
 	return gl_account.name
+
+
+def create_supplier(supplier_name="_Test Supplier", currency=None):
+	if not frappe.db.exists("Supplier", supplier_name):
+		supplier = frappe.new_doc("Supplier")
+		supplier.supplier_name = supplier_name
+		supplier.supplier_group = "All Supplier Groups"
+		supplier.supplier_type = "Individual"
+		if currency:
+			supplier.default_currency = currency
+		supplier.save()
+	return supplier_name
+
+
+def setup_usd_bank():
+	"""Create a USD bank account for multi-currency tests."""
+	bank = create_bank("Citi Bank USD", swift_number="CITIUS34")
+	gl_account = create_bank_gl_account("_Test USD Bank Reco Beta", "USD")
+	bank_account = create_bank_account(bank.name, gl_account, "USD Reco Account")
+	return gl_account, bank_account
+
+
+def create_currency_exchange(from_currency, to_currency, rate, date=None):
+	frappe.get_doc(
+		{
+			"doctype": "Currency Exchange",
+			"from_currency": from_currency,
+			"to_currency": to_currency,
+			"exchange_rate": rate,
+			"date": date or frappe.utils.nowdate(),
+			"for_buying": 1,
+			"for_selling": 1,
+		}
+	).insert()
