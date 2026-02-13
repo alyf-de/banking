@@ -161,7 +161,8 @@ function set_field_options(frm, cdt, cdn) {
 		const meta = frappe.get_meta(document_type);
 		const fields = meta.fields.filter((field) => {
 			return (
-				["Link", "Data"].includes(field.fieldtype) && field.is_virtual === 0
+				["Link", "Data", "Read Only"].includes(field.fieldtype) &&
+				field.is_virtual === 0
 			);
 		});
 
