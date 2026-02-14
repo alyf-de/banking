@@ -212,7 +212,7 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 						fieldtype: "HTML",
 					},
 				],
-				primary_action_label: __("Apply"),
+				primary_action_label: __("Reconcile"),
 				primary_action(values) {
 					const source_amount = clamp_source_amount(
 						values.source_amount,
