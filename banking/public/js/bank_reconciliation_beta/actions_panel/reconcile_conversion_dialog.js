@@ -190,6 +190,9 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 						fieldtype: "Float",
 						precision: 9,
 						label: __("Exchange Rate"),
+						description: __("On {0}", [
+							frappe.format(transaction.date, { fieldtype: "Date" }),
+						]),
 						reqd: 1,
 						default: prefilled_exchange_rate,
 						onchange: handle_exchange_rate_change,
