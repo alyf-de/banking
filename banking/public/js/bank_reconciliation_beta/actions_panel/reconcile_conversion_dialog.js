@@ -27,24 +27,9 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 				round_reconcile_value(context.exchange_rate) || 1;
 
 			let initial_source_amount = max_source_amount;
-			if (prefilled_exchange_rate > 0 && max_target_amount > 0) {
-				initial_source_amount = Math.min(
-					initial_source_amount,
-					max_target_amount / prefilled_exchange_rate
-				);
-			}
 			initial_source_amount = round_reconcile_value(initial_source_amount);
 
-			let initial_target_amount = round_reconcile_value(
-				initial_source_amount * prefilled_exchange_rate
-			);
-			if (max_target_amount > 0) {
-				initial_target_amount = Math.min(
-					initial_target_amount,
-					max_target_amount
-				);
-			}
-			initial_target_amount = round_reconcile_value(initial_target_amount);
+			const initial_target_amount = round_reconcile_value(max_target_amount);
 
 			let is_internal_update = false;
 			let dialog;
