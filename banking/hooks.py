@@ -108,7 +108,6 @@ override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transactio
 doc_events = {
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
-		"before_validate": "banking.overrides.bank_transaction.before_validate",
 	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
