@@ -4,8 +4,6 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from banking.overrides.bank_transaction import enforce_positive_values
-
 
 class TestEnforcePositiveValues(FrappeTestCase):
 	def test_deposit_values_are_normalized(self):
@@ -16,7 +14,7 @@ class TestEnforcePositiveValues(FrappeTestCase):
 		doc.included_fee = -1.0
 		doc.excluded_fee = -1.0
 
-		enforce_positive_values(doc)
+		doc.enforce_positive_values()
 
 		self.assertEqual(doc.deposit, 1.0)
 		self.assertEqual(doc.withdrawal, 0.0)
@@ -31,7 +29,7 @@ class TestEnforcePositiveValues(FrappeTestCase):
 		doc.included_fee = -1.0
 		doc.excluded_fee = -1.0
 
-		enforce_positive_values(doc)
+		doc.enforce_positive_values()
 
 		self.assertEqual(doc.deposit, 0.0)
 		self.assertEqual(doc.withdrawal, 2.0)
@@ -46,7 +44,7 @@ class TestEnforcePositiveValues(FrappeTestCase):
 		doc.included_fee = None
 		doc.excluded_fee = None
 
-		enforce_positive_values(doc)
+		doc.enforce_positive_values()
 
 		self.assertIsNone(doc.deposit)
 		self.assertIsNone(doc.withdrawal)

@@ -63,9 +63,22 @@ class CustomBankTransaction(BankTransaction):
 		if cur_value is not None and flt(cur_value) < 0:
 			self.set(fieldname, abs(flt(cur_value)))
 
+	def enforce_positive_values(self):
+		"""Convert any negative values to positive values.
+
+		Bank Statements often contain negative values (mostly for withdrawals and
+		fees) while ERPNext expects positive values only. To avoid errors during
+		Data Import, we accept negative values but convert them to positive values.
+		"""
+		for fieldname in ["deposit", "withdrawal", "included_fee", "excluded_fee"]:
+			self.convert_to_positive_value(fieldname)
+
+		# Re-call this function as the original function runs before this one and values are not converted
+		self.handle_excluded_fee()
+
 
 def before_validate(doc: "CustomBankTransaction", method):
-	enforce_positive_values(doc)
+	doc.enforce_positive_values()
 
 
 def on_update_after_submit(doc, event):
@@ -81,17 +94,3 @@ def on_update_after_submit(doc, event):
 				),
 				title=_("Over Allocation"),
 			)
-
-
-def enforce_positive_values(doc: "CustomBankTransaction"):
-	"""Convert any negative values to positive values.
-
-	Bank Statements often contain negative values (mostly for withdrawals and
-	fees) while ERPNext expects positive values only. To avoid errors during
-	Data Import, we accept negative values but convert them to positive values.
-	"""
-	for fieldname in ["deposit", "withdrawal", "included_fee", "excluded_fee"]:
-		doc.convert_to_positive_value(fieldname)
-
-	# Re-call this function as the original function runs before this one and values are not converted
-	doc.handle_excluded_fee()
