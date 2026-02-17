@@ -19,6 +19,7 @@
   "fintech_licensee_name",
   "fintech_license_key",
   "bank_reconciliation_tab",
+  "enable_automatic_journal_entries_for_bank_fees",
   "advanced_section",
   "reference_fields",
   "voucher_matching_defaults"
@@ -115,6 +116,13 @@
    "fieldtype": "Table MultiSelect",
    "label": "Voucher Matching Defaults",
    "options": "Voucher Matching Default"
+  },
+  {
+   "default": "0",
+   "description": "When a <b>Bank Transaction</b> with <i>Included Fee</i> is submitted, we'll automatically create a <b>Journal Entry</b> for the fee amount. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\"><b>Bank Account</b></a>.",
+   "fieldname": "enable_automatic_journal_entries_for_bank_fees",
+   "fieldtype": "Check",
+   "label": "Enable Automatic Journal Entries for Bank Fees"
   }
  ],
  "grid_page_length": 50,

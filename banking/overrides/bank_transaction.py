@@ -104,7 +104,8 @@ def before_submit(doc: "CustomBankTransaction", method):
 	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
 	debit, credit = (doc.deposit, 0) if doc.deposit else (0, doc.withdrawal)
 
-	create_je_bank_fees(doc, cost_center, date, account, debit, credit)
+	if flt(frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")):
+		create_je_bank_fees(doc, cost_center, date, account, debit, credit)
 
 
 def on_cancel(doc, method):
