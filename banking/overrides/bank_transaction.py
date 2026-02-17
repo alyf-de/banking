@@ -133,6 +133,13 @@ def before_submit(doc: "CustomBankTransaction", method):
 				)
 			)
 
+	if flt(doc.withdrawal) and flt(doc.included_fee) > flt(doc.withdrawal):
+		frappe.throw(
+			_("The field {0} cannot be greater than {1}. Please verify the input data.").format(
+				_(doc.meta.get_label("included_fee")), _(doc.meta.get_label("withdrawal"))
+			)
+		)
+
 	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
 	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
 	debit, credit = (doc.deposit, 0) if doc.deposit else (0, doc.withdrawal)

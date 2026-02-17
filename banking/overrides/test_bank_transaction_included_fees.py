@@ -90,6 +90,41 @@ class TestIncludedBankFees(FrappeTestCase):
 
 		mock_create_bank_fees.assert_not_called()
 
+	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
+	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
+		from banking.overrides.bank_transaction import before_submit
+
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		bt = create_bank_transaction(
+			insert=False,
+			bank_account=self.bank_account.name,
+			withdrawal=1.0,
+			included_fee=2.0,
+			date="2025-01-01",
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			before_submit(bt, None)
+
+		mock_create_bank_fees.assert_not_called()
+
+	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
+	def test_before_submit_allows_missing_deposit_for_withdrawal_with_fee(self, mock_create_bank_fees):
+		from banking.overrides.bank_transaction import before_submit
+
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		bt = create_bank_transaction(
+			insert=False,
+			bank_account=self.bank_account.name,
+			withdrawal=2.0,
+			included_fee=1.0,
+			date="2025-01-01",
+		)
+
+		before_submit(bt, None)
+
+		mock_create_bank_fees.assert_called_once()
+
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_withdrawal(self, mock_create_je):
 		from banking.overrides.bank_transaction import create_je_bank_fees
