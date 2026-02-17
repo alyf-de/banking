@@ -3,6 +3,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTrans
 from frappe import _
 from frappe.core.utils import find
 from frappe.utils import flt, getdate
+from frappe.utils.data import get_link_to_form
 
 
 class CustomBankTransaction(BankTransaction):
@@ -72,3 +73,152 @@ def on_update_after_submit(doc, event):
 				),
 				title=_("Over Allocation"),
 			)
+
+
+def before_submit(doc: "CustomBankTransaction", method):
+	date = doc.date or frappe.utils.nowdate()
+
+	if not doc.bank_account:
+		frappe.throw(
+			_("The field {0} is required. Please verify the input data.").format(
+				_(doc.meta.get_label("bank_account"))
+			)
+		)
+
+	if doc.deposit == 0 and doc.withdrawal == 0:
+		return
+
+	for fieldname in ["deposit", "withdrawal", "included_fee"]:
+		value = doc.get(fieldname)
+		if value is None:
+			continue
+
+		if value < 0:
+			frappe.throw(
+				_("The field {0} is negative. Please verify the input data.").format(
+					_(doc.meta.get_label(fieldname))
+				)
+			)
+
+	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
+	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
+	debit, credit = (doc.deposit, 0) if doc.deposit else (0, doc.withdrawal)
+
+	create_je_bank_fees(doc, cost_center, date, account, debit, credit)
+
+
+def on_cancel(doc, method):
+	# Cancel the journal entries created by this Bank Transaction.
+	auto_created_journal_entries = frappe.get_all(
+		"Journal Entry",
+		filters={"cheque_no": doc.name},
+		pluck="name",
+	)
+
+	for journal_entry in auto_created_journal_entries:
+		try:
+			je_doc = frappe.get_doc("Journal Entry", journal_entry)
+			if je_doc.docstatus == 1:
+				je_doc.cancel()
+		except Exception as e:
+			frappe.msgprint(
+				_("Failed to cancel {0}: {1}").format(get_link_to_form("Journal Entry", journal_entry), e)
+			)
+
+
+def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
+	# Create a journal entry for included bank fees.
+	included_fee = doc.included_fee
+
+	if included_fee is None or included_fee <= 0:
+		return
+
+	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
+	if not bank_fee_account:
+		frappe.throw(
+			_("Please specify a <i>Bank Fee Account</i> for {0}.").format(
+				get_link_to_form("Bank Account", doc.bank_account)
+			)
+		)
+
+	je_fee_name = create_automatic_journal_entry(
+		company=doc.company,
+		bank_account=doc.bank_account,
+		bank_transaction=doc.name,
+		cost_center=cost_center,
+		date=date,
+		account=account,
+		target_account=bank_fee_account,
+		debit=0,
+		credit=included_fee,
+	)
+
+	if credit > 0:
+		# Only adjust withdrawals, because deposits never include the fee in the bank amount.
+		credit_no_fee = credit - included_fee
+		doc.allocated_amount = included_fee
+		doc.unallocated_amount = debit + (credit_no_fee or 0)
+		allocated_amount = included_fee
+	else:
+		allocated_amount = 0
+
+	# For deposits, this entry remains unallocated so deposit reconciliation still works correctly.
+	doc.append(
+		"payment_entries",
+		{
+			"payment_document": "Journal Entry",
+			"payment_entry": je_fee_name,
+			"allocated_amount": allocated_amount,
+		},
+	)
+
+	if doc.unallocated_amount == 0:
+		doc.status = "Reconciled"
+
+
+def create_automatic_journal_entry(
+	company: str,
+	bank_account: str,
+	bank_transaction: str,
+	cost_center: str,
+	date: str,
+	account: str,
+	target_account: str,
+	debit: float = 0,
+	credit: float = 0,
+):
+	journal_entry = frappe.new_doc("Journal Entry")
+	journal_entry.voucher_type = "Journal Entry"
+	journal_entry.posting_date = date
+	journal_entry.company = company
+	journal_entry.user_remark = _("Auto-created from Bank Transaction {0}").format(bank_transaction)
+	journal_entry.cheque_no = bank_transaction
+	journal_entry.cheque_date = date
+	journal_entry.multi_currency = 1
+
+	journal_entry.append(
+		"accounts",
+		{
+			"account": account,
+			"bank_account": bank_account,
+			"debit_in_account_currency": debit,
+			"credit_in_account_currency": credit,
+			"cost_center": cost_center,
+		},
+	)
+
+	journal_entry.append(
+		"accounts",
+		{
+			"account": target_account,
+			"bank_account": "",
+			"debit_in_account_currency": credit,
+			"credit_in_account_currency": debit,
+			"cost_center": cost_center,
+		},
+	)
+
+	journal_entry.submit()
+	frappe.db.set_value("Journal Entry", journal_entry.name, "clearance_date", frappe.utils.today())
+
+	return journal_entry.name
