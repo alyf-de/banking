@@ -146,17 +146,18 @@ class TestBankReconciliationRule(FrappeTestCase):
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_bank_fees(bt, company_doc, date, self.account_1, 0, bt.withdrawal)
+		create_je_bank_fees(bt, company_doc.cost_center, date, self.account_1, 0, bt.withdrawal)
 
 		mock_create_je.assert_called_once_with(
-			bt,
-			company_doc,
-			date,
-			self.account_1,
-			self.account_2.name,
-			None,
-			0,
-			1.0,
+			company=bt.company,
+			bank_account=bt.bank_account,
+			bank_transaction=bt.name,
+			cost_center=company_doc.cost_center,
+			date=date,
+			account=self.account_1,
+			target_account=self.account_2.name,
+			debit=0,
+			credit=1.0,
 		)
 
 		self.assertEqual(len(bt.payment_entries), 1)
@@ -168,7 +169,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 
 		# Assert fee = full amount entry
 		bt.withdrawal = 1.0
-		create_je_bank_fees(bt, company_doc, date, self.account_1, 0, bt.withdrawal)
+		create_je_bank_fees(bt, company_doc.cost_center, date, self.account_1, 0, bt.withdrawal)
 
 		self.assertEqual(bt.allocated_amount, 1.0)
 		self.assertEqual(bt.unallocated_amount, 0.0)
@@ -186,17 +187,18 @@ class TestBankReconciliationRule(FrappeTestCase):
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_bank_fees(bt, company_doc, date, self.account_1, bt.deposit, 0)
+		create_je_bank_fees(bt, company_doc.cost_center, date, self.account_1, bt.deposit, 0)
 
 		mock_create_je.assert_called_once_with(
-			bt,
-			company_doc,
-			date,
-			self.account_1,
-			self.account_2.name,
-			None,
-			0,
-			1.0,
+			company=bt.company,
+			bank_account=bt.bank_account,
+			bank_transaction=bt.name,
+			cost_center=company_doc.cost_center,
+			date=date,
+			account=self.account_1,
+			target_account=self.account_2.name,
+			debit=0,
+			credit=1.0,
 		)
 
 		self.assertEqual(len(bt.payment_entries), 1)
@@ -248,17 +250,26 @@ class TestBankReconciliationRule(FrappeTestCase):
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_automatic_rules(bt, company_doc, date, self.account_1, 0, bt.withdrawal - bt.included_fee)
-
-		mock_create_je.assert_called_once_with(
+		create_je_automatic_rules(
 			bt,
-			company_doc,
+			company_doc.cost_center,
 			date,
 			self.account_1,
-			self.account_2.name,
-			brr_1.name,
-			0.0,
-			4.0,
+			0,
+			bt.withdrawal - bt.included_fee,
+		)
+
+		mock_create_je.assert_called_once_with(
+			company=bt.company,
+			bank_account=bt.bank_account,
+			bank_transaction=bt.name,
+			cost_center=company_doc.cost_center,
+			date=date,
+			account=self.account_1,
+			target_account=self.account_2.name,
+			debit=0.0,
+			credit=4.0,
+			rule=brr_1.name,
 		)
 
 		self.assertEqual(len(bt.payment_entries), 1)
@@ -309,17 +320,19 @@ class TestBankReconciliationRule(FrappeTestCase):
 		company_doc = frappe.get_cached_doc("Company", bt.company)
 
 		# Assert regular entry
-		create_je_automatic_rules(bt, company_doc, date, self.account_1, bt.deposit, 0)
+		create_je_automatic_rules(bt, company_doc.cost_center, date, self.account_1, bt.deposit, 0)
 
 		mock_create_je.assert_called_once_with(
-			bt,
-			company_doc,
-			date,
-			self.account_1,
-			self.account_2.name,
-			brr_1.name,
-			5.0,
-			0.0,
+			company=bt.company,
+			bank_account=bt.bank_account,
+			bank_transaction=bt.name,
+			cost_center=company_doc.cost_center,
+			date=date,
+			account=self.account_1,
+			target_account=self.account_2.name,
+			debit=5.0,
+			credit=0.0,
+			rule=brr_1.name,
 		)
 
 		self.assertEqual(len(bt.payment_entries), 1)

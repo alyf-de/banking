@@ -159,7 +159,15 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 		)
 
 	je_fee_name = create_automatic_journal_entry(
-		doc, cost_center, date, account, bank_fee_account, None, 0, included_fee
+		company=doc.company,
+		bank_account=doc.bank_account,
+		bank_transaction=doc.name,
+		cost_center=cost_center,
+		date=date,
+		account=account,
+		target_account=bank_fee_account,
+		debit=0,
+		credit=included_fee,
 	)
 
 	if credit > 0:
@@ -217,7 +225,16 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 			continue
 
 		je_auto_name = create_automatic_journal_entry(
-			doc, cost_center, date, account, target_account, br_rule_name, debit, credit
+			company=doc.company,
+			bank_account=doc.bank_account,
+			bank_transaction=doc.name,
+			cost_center=cost_center,
+			date=date,
+			account=account,
+			target_account=target_account,
+			debit=debit,
+			credit=credit,
+			rule=br_rule_name,
 		)
 		doc.append(
 			"payment_entries",
@@ -238,18 +255,29 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 
 
 def create_automatic_journal_entry(
-	doc, cost_center, date, account, target_account, rule=None, debit=0, credit=0
+	company: str,
+	bank_account: str,
+	bank_transaction: str,
+	cost_center: str,
+	date: str,
+	account: str,
+	target_account: str,
+	debit: float = 0,
+	credit: float = 0,
+	rule: str | None = None,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Journal Entry"
 	journal_entry.posting_date = date
-	journal_entry.company = doc.company
+	journal_entry.company = company
 	journal_entry.user_remark = (
-		_("Auto-created from Bank Transaction {0} by Bank Reconciliation Rule {1}").format(doc.name, rule)
+		_("Auto-created from Bank Transaction {0} by Bank Reconciliation Rule {1}").format(
+			bank_transaction, rule
+		)
 		if rule
-		else _("Auto-created from Bank Transaction {0}").format(doc.name)
+		else _("Auto-created from Bank Transaction {0}").format(bank_transaction)
 	)
-	journal_entry.cheque_no = doc.name
+	journal_entry.cheque_no = bank_transaction
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
 
@@ -258,7 +286,7 @@ def create_automatic_journal_entry(
 		"accounts",
 		{
 			"account": account,
-			"bank_account": doc.bank_account,
+			"bank_account": bank_account,
 			"debit_in_account_currency": debit,
 			"credit_in_account_currency": credit,
 			"cost_center": cost_center,
