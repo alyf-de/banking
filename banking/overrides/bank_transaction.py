@@ -103,8 +103,13 @@ def before_submit(doc: "CustomBankTransaction", method):
 	debit, credit = (doc.deposit, 0) if doc.deposit else (0, doc.withdrawal)
 	included_fee = doc.included_fee or 0
 
-	create_je_bank_fees(doc, cost_center, date, account, debit, credit)
+	if frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees"):
+		create_je_bank_fees(doc, cost_center, date, account, debit, credit)
+
+	# For withdrawals, `included_fee` must be posted separately (auto or manual).
+	# So rules should only reconcile the net amount.
 	credit_no_fee = max(0, credit - included_fee)
+
 	create_je_automatic_rules(doc, cost_center, date, account, debit, credit_no_fee)
 
 
@@ -245,12 +250,10 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 			},
 		)
 		# Set manually the un-/allocated amounts, as this value is already set and needs to be updated
-		doc.allocated_amount = doc.allocated_amount + debit + credit
-		# Set remaining debit and credit to 0, so no cash in transit is generated
-		debit = 0
-		credit = 0
-		doc.unallocated_amount = 0
-		doc.status = "Reconciled"
+		doc.allocated_amount = flt(doc.allocated_amount) + debit + credit
+		total_amount = abs(flt(doc.withdrawal) - flt(doc.deposit))
+		doc.unallocated_amount = max(0, total_amount - flt(doc.allocated_amount))
+		doc.status = "Reconciled" if doc.unallocated_amount == 0 else "Pending"
 		break
 
 

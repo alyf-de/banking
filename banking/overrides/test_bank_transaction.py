@@ -129,10 +129,35 @@ class TestBankReconciliationRule(FrappeTestCase):
 			before_submit(bt, None)
 
 		bt.withdrawal = 1.0
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 
 		before_submit(bt, None)
 		mock_create_bank_fees.assert_called_once()
 		mock_create_auto_rules.assert_called_once()
+
+	@patch("banking.overrides.bank_transaction.create_je_automatic_rules")
+	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
+	def test_before_submit_without_automatic_bank_fee_entries(
+		self, mock_create_bank_fees, mock_create_auto_rules
+	):
+		from banking.overrides.bank_transaction import before_submit
+
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		bt = create_bank_transaction(
+			insert=False,
+			bank_account=self.ba.name,
+			withdrawal=10.0,
+			included_fee=1.0,
+			date="2025-01-01",
+		)
+
+		before_submit(bt, None)
+
+		mock_create_bank_fees.assert_not_called()
+		mock_create_auto_rules.assert_called_once()
+		self.assertEqual(mock_create_auto_rules.call_args.args[0], bt)
+		self.assertEqual(mock_create_auto_rules.call_args.args[4], 0)
+		self.assertEqual(mock_create_auto_rules.call_args.args[5], 9.0)
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_withdrawal(self, mock_create_je):
@@ -276,6 +301,58 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(bt.payment_entries[0].payment_entry, "JE-TEST-0001")
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 4.0)
 		self.assertEqual(bt.allocated_amount, 4.0)
+		self.assertEqual(bt.unallocated_amount, 1.0)
+		self.assertEqual(bt.status, "Pending")
+
+	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
+	def test_create_je_automatic_rules_withdrawal_with_preallocated_fee(self, mock_create_je):
+		from banking.overrides.bank_transaction import create_je_automatic_rules
+
+		frappe.db.delete("Bank Reconciliation Rule")
+
+		mock_create_je.return_value = "JE-TEST-0001"
+		date = "2025-01-01"
+
+		brr_1 = create_bank_reconciliation_rule(
+			self.ba.name,
+			self.account_2.name,
+			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+		)
+
+		bt = create_bank_transaction(
+			withdrawal=5.0,
+			included_fee=1.0,
+			bank_account=self.ba.name,
+			description="FLAG-TRUE",
+		)
+		bt.allocated_amount = 1.0
+		bt.unallocated_amount = 4.0
+
+		company_doc = frappe.get_cached_doc("Company", bt.company)
+
+		create_je_automatic_rules(
+			bt,
+			company_doc.cost_center,
+			date,
+			self.account_1,
+			0,
+			bt.withdrawal - bt.included_fee,
+		)
+
+		mock_create_je.assert_called_once_with(
+			company=bt.company,
+			bank_account=bt.bank_account,
+			bank_transaction=bt.name,
+			cost_center=company_doc.cost_center,
+			date=date,
+			account=self.account_1,
+			target_account=self.account_2.name,
+			debit=0.0,
+			credit=4.0,
+			rule=brr_1.name,
+		)
+		self.assertEqual(bt.allocated_amount, 5.0)
+		self.assertEqual(bt.unallocated_amount, 0.0)
 		self.assertEqual(bt.status, "Reconciled")
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
