@@ -33,6 +33,10 @@ def before_tests():
 			}
 		)
 
+	frappe.db.set_single_value(
+		"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account", 1
+	)
+
 	frappe.db.commit()  # nosemgrep
 
 
