@@ -316,6 +316,7 @@ def create_sepa_bank_transaction(
 		return
 
 	amount = float(sepa_transaction.amount.value)
+	currency = sepa_transaction.amount.currency
 	party_iban, party_account_number = get_iban_or_account_number(sepa_transaction.iban)
 
 	create_bank_transaction(
@@ -323,7 +324,7 @@ def create_sepa_bank_transaction(
 		transaction_id=transaction_id,
 		subtransaction_id=subtransaction_id,
 		company=company,
-		currency=sepa_transaction.amount.currency,
+		currency=currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
 		deposit=max(amount, 0),
 		withdrawal=abs(min(amount, 0)),
@@ -332,7 +333,44 @@ def create_sepa_bank_transaction(
 		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
 		bank_party_iban=party_iban,
 		bank_party_account_number=party_account_number,
+		included_fee=parse_included_fees(sepa_transaction, currency),
 	)
+
+
+def parse_included_fees(
+	sepa_transaction: "SEPATransaction", transaction_currency: str | None = None
+) -> float:
+	def _parse_amount(value) -> float:
+		if isinstance(value, str):
+			normalized_value = value.strip().replace(",", ".")
+			if not normalized_value:
+				return 0.0
+			with contextlib.suppress(ValueError):
+				return float(normalized_value)
+			return 0.0
+
+		with contextlib.suppress(TypeError, ValueError):
+			return float(value)
+		return 0.0
+
+	def _normalize_currency(value) -> str | None:
+		if not isinstance(value, str):
+			return None
+		normalized = value.strip().upper()
+		return normalized or None
+
+	charges = sepa_transaction._xmlobj.Chrgs.TtlChrgsAndTaxAmt
+	charges_currency = _normalize_currency(
+		charges.attrib.get("Ccy") if isinstance(charges.attrib, dict) else None
+	)
+	expected_currency = _normalize_currency(transaction_currency)
+	if expected_currency and charges_currency and expected_currency != charges_currency:
+		return 0.0
+
+	# This is the gross amount including taxes.
+	# The tax amount can be found in sepa_transaction._xmlobj.Tax.TtlTaxAmt._text
+	taxes_and_charges = _parse_amount(charges._text)
+	return taxes_and_charges
 
 
 def get_transaction_hash(transaction: list):
