@@ -43,7 +43,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Successful\nNo Data Available\nFailed"
+   "options": "Successful\nNo Data Available\nFailed\nSkipped"
   },
   {
    "fieldname": "response",
@@ -53,7 +53,7 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2025-03-12 19:06:17.168084",
+ "modified": "2026-01-21 13:31:17.168084",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS Request",
