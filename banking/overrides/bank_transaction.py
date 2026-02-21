@@ -6,6 +6,24 @@ from frappe.utils import flt, getdate
 
 
 class CustomBankTransaction(BankTransaction):
+	def before_validate(self):
+		"""Normalize imported signs before ERPNext computes fees and balances.
+
+		Order matters here:
+		- ERPNext's `BankTransaction.before_validate` applies `handle_excluded_fee()`
+		  and then recalculates `unallocated_amount`.
+		- Imported statements can contain negative deposit/withdrawal/fee values.
+		- If we normalize after the core method, fees may be applied in the wrong
+		  direction and `unallocated_amount` can be computed from pre-normalized
+		  values (stale until a later validation cycle).
+
+		By normalizing first and calling `super().before_validate()` second, core
+		fee handling and amount calculations run once on a consistent, positive-value
+		representation in the same validation pass.
+		"""
+		self.enforce_positive_values()
+		super().before_validate()
+
 	def add_payment_entries(self, vouchers: list, reconcile_multi_party: bool = False):
 		"Add the vouchers with zero allocation. Save() will perform the allocations and clearance"
 		if self.unallocated_amount <= 0.0:
@@ -57,6 +75,21 @@ class CustomBankTransaction(BankTransaction):
 			self.payment_entries,
 			lambda x: x.payment_document == voucher_type and x.payment_entry == voucher_name,
 		)
+
+	def convert_to_positive_value(self, fieldname: str):
+		cur_value = self.get(fieldname)
+		if cur_value is not None and flt(cur_value) < 0:
+			self.set(fieldname, abs(flt(cur_value)))
+
+	def enforce_positive_values(self):
+		"""Convert any negative values to positive values.
+
+		Bank Statements often contain negative values (mostly for withdrawals and
+		fees) while ERPNext expects positive values only. To avoid errors during
+		Data Import, we accept negative values but convert them to positive values.
+		"""
+		for fieldname in ["deposit", "withdrawal", "included_fee", "excluded_fee"]:
+			self.convert_to_positive_value(fieldname)
 
 
 def on_update_after_submit(doc, event):
