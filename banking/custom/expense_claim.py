@@ -6,8 +6,6 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 from frappe.utils.data import getdate
 
-from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
-
 if TYPE_CHECKING:
 	from hrms.hr.doctype.expense_claim.expense_claim import ExpenseClaim
 	from hrms.hr.doctype.expense_claim_detail.expense_claim_detail import ExpenseClaimDetail
@@ -31,18 +29,14 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
-	def process_payment(
-		source: "ExpenseClaimDetail", target: "SEPAPayment", source_parent: "ExpenseClaim"
-	):
+	def process_payment(source: "ExpenseClaimDetail", target: "SEPAPayment", source_parent: "ExpenseClaim"):
 		claim = source_parent
 		target.recipient = claim.employee_name
 		target.purpose = _get_employee_purpose(claim)
 
 		bank_account = _get_recipients_bank_account(claim)
 		if not bank_account or not bank_account.get("iban"):
-			frappe.throw(
-				frappe._("No Bank Account with IBAN found for Employee {0}.").format(claim.employee)
-			)
+			frappe.throw(frappe._("No Bank Account with IBAN found for Employee {0}.").format(claim.employee))
 		if bank_account:
 			if bank_account.get("bank"):
 				swift_number, bank_name = frappe.db.get_value(
@@ -94,11 +88,7 @@ def _get_employee_purpose(claim: "ExpenseClaim"):
 
 	Example: "EC-00001, 2025-03-01"
 	"""
-	reference = ", ".join(
-		str(ref).strip()
-		for ref in [claim.name, claim.posting_date]
-		if ref
-	)
+	reference = ", ".join(str(ref).strip() for ref in [claim.name, claim.posting_date] if ref)
 	return reference.strip()
 
 
@@ -122,6 +112,7 @@ def make_bulk_sepa_payment_order(source_names: str):
 		target_doc = make_sepa_payment_order(source_name, target_doc)
 
 	return target_doc
+
 
 def get_sepa_payment_amount(
 	doc: "ExpenseClaim", method: str, reference_row_name: str, execution_date: date

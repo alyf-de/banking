@@ -1,5 +1,6 @@
 const old_onload = frappe.listview_settings["Expense Claim"].onload;
-const old_add_fields = frappe.listview_settings["Expense Claim"].add_fields || [];
+const old_add_fields =
+	frappe.listview_settings["Expense Claim"].add_fields || [];
 frappe.listview_settings["Expense Claim"].add_fields = [
 	...old_add_fields,
 	"approval_status",
