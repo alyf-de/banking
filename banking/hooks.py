@@ -30,12 +30,16 @@ app_include_js = "/assets/banking/js/utils.js"
 # include js in doctype views
 doctype_js = {
 	"Bank": "custom/bank.js",
+	"Expense Claim": "custom/expense_claim.js",
 	"Purchase Invoice": "custom/purchase_invoice.js",
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
 }
-doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
+doctype_list_js = {
+	"Expense Claim": "custom/expense_claim_list.js",
+	"Purchase Invoice": "custom/purchase_invoice_list.js",
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -114,6 +118,9 @@ doc_events = {
 	},
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
+	},
+	"Expense Claim": {
+		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
 	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
@@ -236,6 +243,16 @@ get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconcilia
 get_payment_entries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers.get_payment_entries"
 
 alyf_banking_custom_records = [
+	{
+		"doctype": "DocType Link",
+		"parent": "Expense Claim",
+		"parentfield": "links",
+		"parenttype": "Customize Form",
+		"group": "Payment",
+		"link_doctype": "SEPA Payment Order",
+		"link_fieldname": "reference_name",
+		"custom": 1,
+	},
 	{
 		"doctype": "DocType Link",
 		"parent": "Purchase Invoice",

@@ -1,0 +1,132 @@
+from datetime import date
+from typing import TYPE_CHECKING
+
+import frappe
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import flt
+from frappe.utils.data import getdate
+
+from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
+
+if TYPE_CHECKING:
+	from hrms.hr.doctype.expense_claim.expense_claim import ExpenseClaim
+	from hrms.hr.doctype.expense_claim_detail.expense_claim_detail import ExpenseClaimDetail
+
+	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
+
+
+@frappe.whitelist()
+def make_sepa_payment_order(source_name: str, target_doc=None):
+	def set_missing_values(source, target):
+		if not target.bank_account:
+			bank_account = frappe.db.get_value(
+				"Bank Account",
+				{"is_company_account": 1, "company": source.company, "disabled": 0},
+				["name", "iban", "bank"],
+				order_by="is_default DESC",
+				as_dict=True,
+			)
+			if bank_account:
+				target.bank_account = bank_account.get("name")
+				target.iban = bank_account.get("iban")
+				target.bank = bank_account.get("bank")
+
+	def process_payment(
+		source: "ExpenseClaimDetail", target: "SEPAPayment", source_parent: "ExpenseClaim"
+	):
+		claim = source_parent
+		target.recipient = claim.employee_name
+		target.purpose = _get_employee_purpose(claim)
+
+		bank_account = _get_recipients_bank_account(claim)
+		if not bank_account or not bank_account.get("iban"):
+			frappe.throw(
+				frappe._("No Bank Account with IBAN found for Employee {0}.").format(claim.employee)
+			)
+		if bank_account:
+			if bank_account.get("bank"):
+				swift_number, bank_name = frappe.db.get_value(
+					"Bank", bank_account["bank"], ["swift_number", "bank_name"]
+				)
+				target.swift_number = swift_number
+				target.bank_name = bank_name
+			target.iban = bank_account.get("iban")
+
+		target.currency = frappe.db.get_value("Company", claim.company, "default_currency")
+		target.eref = target.reference_name
+		target.amount = get_sepa_payment_amount(
+			claim,
+			method="get_mapped_doc",
+			reference_row_name=source.name,
+			execution_date=getdate(),
+		)
+
+	return get_mapped_doc(
+		"Expense Claim",
+		source_name,
+		{
+			"Expense Claim": {
+				"doctype": "SEPA Payment Order",
+				"validation": {
+					"docstatus": ("=", 1),
+					"approval_status": ("=", "Approved"),
+					"status": ("!=", "Paid"),
+				},
+			},
+			"Expense Claim Detail": {
+				"doctype": "SEPA Payment",
+				"field_map": {
+					"name": "reference_row_name",
+					"parent": "reference_name",
+					"parenttype": "reference_doctype",
+				},
+				"condition": lambda row: row.idx == 1,
+				"postprocess": process_payment,
+			},
+		},
+		target_doc,
+		postprocess=set_missing_values,
+	)
+
+
+def _get_employee_purpose(claim: "ExpenseClaim"):
+	"""Return the bank transfer purpose for an expense claim reimbursement.
+
+	Example: "EC-00001, 2025-03-01"
+	"""
+	reference = ", ".join(
+		str(ref).strip()
+		for ref in [claim.name, claim.posting_date]
+		if ref
+	)
+	return reference.strip()
+
+
+def _get_recipients_bank_account(claim: "ExpenseClaim"):
+	return frappe.db.get_value(
+		"Bank Account",
+		{"party_type": "Employee", "party": claim.employee, "disabled": 0},
+		["iban", "bank"],
+		order_by="is_default DESC",
+		as_dict=True,
+	)
+
+
+@frappe.whitelist()
+def make_bulk_sepa_payment_order(source_names: str):
+	target_doc = None
+	for source_name in frappe.parse_json(source_names):
+		if not isinstance(source_name, str):
+			raise TypeError
+
+		target_doc = make_sepa_payment_order(source_name, target_doc)
+
+	return target_doc
+
+def get_sepa_payment_amount(
+	doc: "ExpenseClaim", method: str, reference_row_name: str, execution_date: date
+) -> float:
+	"""Return outstanding amount (grand_total minus reimbursed). No discount logic."""
+	precision = doc.precision("grand_total")
+	outstanding = flt(doc.grand_total, precision) - flt(doc.total_amount_reimbursed, precision)
+	return max(0, outstanding)
