@@ -120,6 +120,7 @@ doc_events = {
 		"validate": "banking.custom.employee.validate",
 	},
 	"Expense Claim": {
+		"sepa_payment_order_status_changed": "banking.custom.expense_claim.sepa_payment_order_status_changed",
 		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
 	},
 	"Purchase Invoice": {
