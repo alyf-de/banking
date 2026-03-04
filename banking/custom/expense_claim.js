@@ -11,6 +11,7 @@ frappe.ui.form.on("Expense Claim", {
 			frm.doc.status !== "Paid" &&
 			frm.doc.docstatus === 1 &&
 			frm.doc.approval_status === "Approved" &&
+			!frm.doc.sepa_payment_order_status &&
 			flt(frm.doc.grand_total) - flt(frm.doc.total_amount_reimbursed) > 0;
 
 		if (has_outstanding) {

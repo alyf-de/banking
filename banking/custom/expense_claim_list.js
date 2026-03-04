@@ -4,6 +4,7 @@ const old_add_fields =
 frappe.listview_settings["Expense Claim"].add_fields = [
 	...old_add_fields,
 	"approval_status",
+	"sepa_payment_order_status",
 ];
 
 frappe.listview_settings["Expense Claim"].onload = function (listview) {
@@ -17,13 +18,14 @@ frappe.listview_settings["Expense Claim"].onload = function (listview) {
 					(item) =>
 						item.status !== "Paid" &&
 						item.docstatus === 1 &&
-						item.approval_status === "Approved"
+						item.approval_status === "Approved" &&
+						!item.sepa_payment_order_status
 				)
 				.map((item) => item.name);
 			if (!claims_to_pay.length) {
 				frappe.msgprint(
 					__(
-						"Only submitted, approved and unpaid Expense Claims can be used. Rejected or already paid claims were ignored."
+						"Only submitted, approved and unpaid Expense Claims without an existing SEPA Payment Order can be used. Rejected, paid or already linked claims were ignored."
 					),
 					__("SEPA Payment Order")
 				);
