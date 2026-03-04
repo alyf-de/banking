@@ -6,6 +6,8 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 from frappe.utils.data import getdate
 
+from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
+
 if TYPE_CHECKING:
 	from hrms.hr.doctype.expense_claim.expense_claim import ExpenseClaim
 	from hrms.hr.doctype.expense_claim_detail.expense_claim_detail import ExpenseClaimDetail
@@ -114,10 +116,18 @@ def make_bulk_sepa_payment_order(source_names: str):
 	return target_doc
 
 
+def sepa_payment_order_status_changed(
+	doc: "ExpenseClaim", method: str, reference_row_name: str, status: PaymentOrderStatus
+):
+	"""Called via hooks when a linked SEPA Payment Order changes."""
+	doc.sepa_payment_order_status = status.value
+	doc.save(ignore_permissions=True)
+
+
 def get_sepa_payment_amount(
 	doc: "ExpenseClaim", method: str, reference_row_name: str, execution_date: date
 ) -> float:
-	"""Return outstanding amount (grand_total minus reimbursed). No discount logic."""
+	"""Return outstanding amount. No discount logic."""
 	precision = doc.precision("grand_total")
 	outstanding = flt(doc.grand_total, precision) - flt(doc.total_amount_reimbursed, precision)
 	return max(0, outstanding)
