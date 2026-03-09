@@ -32,10 +32,69 @@ frappe.ui.form.on("SEPA Payment Order", {
 		}
 
 		if (frm.doc.docstatus === 0 && frm.has_perm("write")) {
+			frm.add_custom_button(__("Add Recipient"), () => {
+				frm.trigger("add_recipient");
+			});
 			frm.add_custom_button(__("Update Amounts"), () => {
 				frm.trigger("update_amounts");
 			});
 		}
+	},
+
+	add_recipient(frm) {
+		const d = new frappe.ui.Dialog({
+			title: __("Add Recipient"),
+			fields: [
+				{
+					fieldname: "recipient_doctype",
+					label: __("DocType"),
+					fieldtype: "Link",
+					options: "DocType",
+					reqd: 1,
+					get_query: () => ({
+						filters: { name: ["in", ["Supplier", "Employee"]] },
+					}),
+				},
+				{
+					fieldname: "recipient_name",
+					label: __("Name"),
+					fieldtype: "Dynamic Link",
+					options: "recipient_doctype",
+					reqd: 1,
+				},
+			],
+			primary_action_label: __("Add"),
+			primary_action(values) {
+				frappe.call({
+					method:
+						"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.get_recipient_details",
+					args: {
+						doctype: values.recipient_doctype,
+						name: values.recipient_name,
+					},
+					callback(r) {
+						const data = r.message;
+						const row = {
+							recipient: data.recipient,
+							iban: data.iban,
+							amount: 0,
+						};
+						//use first row if empty, otherweise add a new row (first row is already open when creating a new payment order)
+						const first = frm.doc.payments[0];
+						const firstEmpty =
+							frm.doc.payments.length === 1 && !first.recipient && !first.iban;
+						if (firstEmpty) {
+							Object.assign(first, row);
+						} else {
+							frm.doc.payments.push(row);
+						}
+						frm.refresh_field("payments");
+						d.hide();
+					},
+				});
+			},
+		});
+		d.show();
 	},
 
 	async before_submit(frm) {
