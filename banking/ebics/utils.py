@@ -359,7 +359,12 @@ def create_sepa_bank_transaction(
 		withdrawal=abs(min(amount, 0)),
 		date=sepa_transaction.date,
 		reference_number=sepa_transaction.eref,
-		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
+		bank_party_name=sepa_transaction.ultimate_name
+		or sepa_transaction.name
+		or (
+			# some swiss banks specify the address only
+			", ".join(sepa_transaction.address) if sepa_transaction.address else None
+		),
 		bank_party_iban=party_iban,
 		bank_party_account_number=party_account_number,
 		included_fee=parse_included_fees(sepa_transaction, currency),
