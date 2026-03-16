@@ -2,6 +2,7 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 import frappe
+from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 from frappe.utils.data import getdate
