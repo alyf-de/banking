@@ -172,21 +172,22 @@ def get_recipient_details(doctype: str, name: str):
 
 	if doctype not in ("Supplier", "Employee"):
 		frappe.throw(_("DocType must be Supplier or Employee."))
-	frappe.has_permission(doctype, "read", doc=name, throw=True)
+	doc = frappe.get_doc(doctype, name)
+	doc.check_permission()
 
+	iban = None
 	if doctype == "Supplier":
-		recipient = frappe.db.get_value("Supplier", name, "supplier_name")
-		bank_acc = frappe.db.get_value(
-			"Bank Account",
-			{"party_type": "Supplier", "party": name, "is_default": 1, "disabled": 0},
-			"name",
-		)
-		if not bank_acc:
-			frappe.throw(_("No default bank account for Supplier {0}.").format(name))
-		iban = frappe.db.get_value("Bank Account", bank_acc, "iban")
+		recipient = doc.supplier_name
 	else:
-		recipient = frappe.db.get_value("Employee", name, "employee_name")
-		iban = frappe.db.get_value("Employee", name, "iban")
+		recipient = doc.employee_name
+		iban = doc.iban
+
+	if not iban:
+		iban = frappe.db.get_value(
+			"Bank Account",
+			{"party_type":  doctype, "party": name, "is_default": 1, "disabled": 0},
+			"iban",
+		)
 
 	if not iban:
 		frappe.throw(_("No IBAN for {0} {1}.").format(doctype, name))
