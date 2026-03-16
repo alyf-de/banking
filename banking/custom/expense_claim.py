@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 @frappe.whitelist()
-def make_sepa_payment_order(source_name: str, target_doc=None):
+def make_sepa_payment_order(source_name: str, target_doc: str | Document | None = None):
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
