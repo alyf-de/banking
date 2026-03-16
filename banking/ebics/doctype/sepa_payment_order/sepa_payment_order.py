@@ -185,7 +185,7 @@ def get_recipient_details(doctype: str, name: str):
 	if not iban:
 		iban = frappe.db.get_value(
 			"Bank Account",
-			{"party_type":  doctype, "party": name, "is_default": 1, "disabled": 0},
+			{"party_type": doctype, "party": name, "is_default": 1, "disabled": 0},
 			"iban",
 		)
 
