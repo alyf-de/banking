@@ -96,7 +96,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 						doctype: values.recipient_doctype,
 						name: values.recipient_name,
 					},
-					callback({ message }) {
+					async callback({ message }) {
 						const new_row = {
 							recipient: message.recipient,
 							iban: message.iban,
@@ -108,7 +108,8 @@ frappe.ui.form.on("SEPA Payment Order", {
 							!frm.doc.payments.at(-1).recipient &&
 							!frm.doc.payments.at(-1).iban
 						) {
-							Object.assign(frm.doc.payments.at(-1), new_row);
+							const row = frm.doc.payments.at(-1);
+							await frappe.model.set_value(row.doctype, row.name, new_row);
 						} else {
 							frm.add_child("payments", new_row);
 						}
