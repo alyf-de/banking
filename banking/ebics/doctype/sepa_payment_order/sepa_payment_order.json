@@ -146,7 +146,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-29 15:26:22.373076",
+ "modified": "2026-03-17 21:35:58.094427",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",
@@ -164,6 +164,28 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Accounts User",
    "write": 1
   }
  ],
