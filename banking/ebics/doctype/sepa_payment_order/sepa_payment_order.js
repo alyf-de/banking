@@ -81,6 +81,11 @@ frappe.ui.form.on("SEPA Payment Order", {
 						}
 					},
 				},
+				{
+					fieldname: "amount",
+					label: __("Amount"),
+					fieldtype: "Currency",
+				},
 			],
 			primary_action_label: __("Add"),
 			primary_action(values) {
@@ -91,21 +96,21 @@ frappe.ui.form.on("SEPA Payment Order", {
 						doctype: values.recipient_doctype,
 						name: values.recipient_name,
 					},
-					callback(r) {
-						const data = r.message;
-						const row = {
-							recipient: data.recipient,
-							iban: data.iban,
-							amount: 0,
+					callback({ message }) {
+						const new_row = {
+							recipient: message.recipient,
+							iban: message.iban,
+							amount: values.amount,
 						};
-						//use first row if empty, otherweise add a new row (first row is already open when creating a new payment order)
-						const first = frm.doc.payments[0];
-						const firstEmpty =
-							frm.doc.payments.length === 1 && !first.recipient && !first.iban;
-						if (firstEmpty) {
-							Object.assign(first, row);
+						//use last row if empty, otherwise add a new row
+						if (
+							frm.doc.payments?.length > 0 &&
+							!frm.doc.payments.at(-1).recipient &&
+							!frm.doc.payments.at(-1).iban
+						) {
+							Object.assign(frm.doc.payments.at(-1), new_row);
 						} else {
-							frm.doc.payments.push(row);
+							frm.add_child("payments", new_row);
 						}
 						frm.refresh_field("payments");
 						d.hide();
