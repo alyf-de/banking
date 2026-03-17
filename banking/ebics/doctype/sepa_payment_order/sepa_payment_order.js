@@ -61,6 +61,25 @@ frappe.ui.form.on("SEPA Payment Order", {
 					fieldtype: "Dynamic Link",
 					options: "recipient_doctype",
 					reqd: 1,
+					get_query: () => {
+						const recipient_doctype = d.get_value("recipient_doctype");
+						if (!recipient_doctype) {
+							return;
+						}
+						if (recipient_doctype === "Supplier") {
+							return {
+								filters: {
+									disabled: 0,
+								},
+							};
+						} else if (recipient_doctype === "Employee") {
+							return {
+								filters: {
+									status: ["in", ["Active", "Suspended"]],
+								},
+							};
+						}
+					},
 				},
 			],
 			primary_action_label: __("Add"),
