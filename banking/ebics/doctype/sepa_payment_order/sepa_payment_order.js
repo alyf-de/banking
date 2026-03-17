@@ -82,6 +82,11 @@ frappe.ui.form.on("SEPA Payment Order", {
 					},
 				},
 				{
+					fieldname: "purpose",
+					label: __("Purpose"),
+					fieldtype: "Data",
+				},
+				{
 					fieldname: "amount",
 					label: __("Amount"),
 					fieldtype: "Currency",
@@ -100,6 +105,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 						const new_row = {
 							recipient: message.recipient,
 							iban: message.iban,
+							purpose: values.purpose,
 							amount: values.amount,
 						};
 						//use last row if empty, otherwise add a new row
