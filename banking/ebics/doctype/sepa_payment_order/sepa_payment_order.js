@@ -255,3 +255,9 @@ frappe.ui.form.on("SEPA Payment Order", {
 			});
 	},
 });
+
+frappe.ui.form.on("SEPA Payment", {
+	payments_add(frm) {
+		frm.trigger("add_recipient");
+	},
+});
