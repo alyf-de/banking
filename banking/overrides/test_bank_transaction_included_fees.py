@@ -129,6 +129,50 @@ class TestIncludedBankFees(FrappeTestCase):
 			)
 		)
 
+	def test_submit_creates_and_reconciles_fee_journal_entry_for_withdrawal(self):
+		"""Submitting a withdrawal with an included fee must create and reconcile the fee JE."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bt = create_bank_transaction(
+			bank_account=self.bank_account.name,
+			withdrawal=5.0,
+			included_fee=1.0,
+			date=frappe.utils.nowdate(),
+			currency="EUR",
+			description="Withdrawal with included bank fee",
+		)
+
+		bt.submit()
+		bt.reload()
+
+		self.assertEqual(bt.docstatus, 1)
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 1.0)
+		self.assertEqual(bt.allocated_amount, 1.0)
+		self.assertEqual(bt.unallocated_amount, 4.0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.docstatus, 1)
+		self.assertEqual(je.voucher_type, "Bank Entry")
+		self.assertTrue(je.is_system_generated)
+		self.assertEqual(je.cheque_no, bt.name)
+		self.assertEqual(str(frappe.db.get_value("Journal Entry", je.name, "clearance_date")), str(bt.date))
+		self.assertTrue(
+			frappe.db.exists(
+				"Journal Entry Account",
+				{
+					"parent": je.name,
+					"reference_type": "Bank Transaction",
+					"reference_name": bt.name,
+				},
+			)
+		)
+
+		accounts = {row.account: row for row in je.accounts}
+		self.assertEqual(accounts[self.account_main.name].credit_in_account_currency, 1.0)
+		self.assertEqual(accounts[self.account_fee.name].debit_in_account_currency, 1.0)
+
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
@@ -163,41 +207,6 @@ class TestIncludedBankFees(FrappeTestCase):
 		before_submit(bt, None)
 
 		mock_create_bank_fees.assert_called_once()
-
-	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
-	def test_create_je_bank_fees_withdrawal(self, mock_create_je):
-		from banking.overrides.bank_transaction import create_je_bank_fees
-
-		mock_create_je.return_value = "JE-TEST-0001"
-		date = "2025-01-01"
-
-		bt = create_bank_transaction(withdrawal=5.0, included_fee=1.0, bank_account=self.bank_account.name)
-		cost_center = frappe.get_cached_value("Company", bt.company, "cost_center")
-
-		create_je_bank_fees(bt, cost_center, date, self.account_main.name, 0, bt.withdrawal)
-
-		mock_create_je.assert_called_once_with(
-			company=bt.company,
-			bank_account=bt.bank_account,
-			bank_transaction=bt.name,
-			cost_center=cost_center,
-			date=date,
-			account=self.account_main.name,
-			target_account=self.account_fee.name,
-			debit=0,
-			credit=1.0,
-		)
-		self.assertEqual(bt.payment_entries[0].payment_entry, "JE-TEST-0001")
-		self.assertEqual(bt.payment_entries[0].allocated_amount, 1.0)
-		self.assertEqual(bt.allocated_amount, 1.0)
-		self.assertEqual(bt.unallocated_amount, 4.0)
-		self.assertEqual(bt.status, "Pending")
-
-		bt.withdrawal = 1.0
-		create_je_bank_fees(bt, cost_center, date, self.account_main.name, 0, bt.withdrawal)
-		self.assertEqual(bt.allocated_amount, 1.0)
-		self.assertEqual(bt.unallocated_amount, 0.0)
-		self.assertEqual(bt.status, "Reconciled")
 
 	@patch("banking.overrides.bank_transaction.create_automatic_journal_entry")
 	def test_create_je_bank_fees_deposit(self, mock_create_je):
