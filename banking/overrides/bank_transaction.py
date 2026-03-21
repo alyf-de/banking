@@ -148,25 +148,6 @@ def before_submit(doc: "CustomBankTransaction", method):
 		create_je_bank_fees(doc, cost_center, date, account, debit, credit)
 
 
-def on_cancel(doc, method):
-	# Cancel the journal entries created by this Bank Transaction.
-	auto_created_journal_entries = frappe.get_all(
-		"Journal Entry",
-		filters={"cheque_no": doc.name},
-		pluck="name",
-	)
-
-	for journal_entry in auto_created_journal_entries:
-		try:
-			je_doc = frappe.get_doc("Journal Entry", journal_entry)
-			if je_doc.docstatus == 1:
-				je_doc.cancel()
-		except Exception as e:
-			frappe.msgprint(
-				_("Failed to cancel {0}: {1}").format(get_link_to_form("Journal Entry", journal_entry), e)
-			)
-
-
 def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 	# Create a journal entry for included bank fees.
 	included_fee = doc.included_fee
@@ -229,10 +210,11 @@ def create_automatic_journal_entry(
 	credit: float = 0,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
-	journal_entry.voucher_type = "Journal Entry"
+	journal_entry.voucher_type = "Bank Entry"
 	journal_entry.posting_date = date
 	journal_entry.company = company
 	journal_entry.user_remark = _("Auto-created from Bank Transaction {0}").format(bank_transaction)
+	journal_entry.is_system_generated = 1
 	journal_entry.cheque_no = bank_transaction
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
@@ -245,6 +227,8 @@ def create_automatic_journal_entry(
 			"debit_in_account_currency": debit,
 			"credit_in_account_currency": credit,
 			"cost_center": cost_center,
+			"reference_type": "Bank Transaction",
+			"reference_name": bank_transaction,
 		},
 	)
 
