@@ -18,9 +18,11 @@ def create_currency_account(currency: str, parent_account: str, account_name: st
 	return acc
 
 
-def create_bank_account(account: str, bank_fee_account: str | None = None):
+def create_bank_account(
+	account: str, bank_fee_account: str | None = None, account_name: str = "_Test_B_Account"
+):
 	ba = frappe.new_doc("Bank Account")
-	ba.account_name = "_Test_B_Account"
+	ba.account_name = account_name
 	ba.account = account
 	ba.bank = "_Test_Bank"
 	ba.is_company_account = 1
@@ -46,8 +48,14 @@ class TestIncludedBankFees(FrappeTestCase):
 
 		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		cls.account_main = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
+		cls.account_main_without_fee = create_currency_account(
+			"EUR", parent_account, "_Test_Account_EUR_No_Fee"
+		)
 		cls.account_fee = create_currency_account("EUR", parent_account, "_Test_Account_EUR_Fee")
 		cls.bank_account = create_bank_account(cls.account_main.name, bank_fee_account=cls.account_fee.name)
+		cls.bank_account_without_fee = create_bank_account(
+			cls.account_main_without_fee.name, account_name="_Test_B_Account_No_Fee"
+		)
 
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit(self, mock_create_bank_fees):
@@ -89,6 +97,37 @@ class TestIncludedBankFees(FrappeTestCase):
 		before_submit(bt, None)
 
 		mock_create_bank_fees.assert_not_called()
+
+	def test_submit_without_fee_account_when_automatic_fee_entries_are_disabled(self):
+		"""Ensure a Bank Transaction can be submitted without a bank fee account
+		when automatic bank fee journal entries are disabled, and assert that
+		no linked fee Journal Entry is created."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+
+		bt = create_bank_transaction(
+			bank_account=self.bank_account_without_fee.name,
+			withdrawal=10.0,
+			included_fee=1.0,
+			date="2025-01-01",
+			currency="EUR",
+			description="Bank fee should not create a Journal Entry when disabled",
+		)
+
+		bt.submit()
+		bt.reload()
+
+		self.assertEqual(bt.docstatus, 1)
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertFalse(bt.payment_entries)
+		self.assertFalse(
+			frappe.db.exists(
+				"Journal Entry Account",
+				{
+					"reference_type": "Bank Transaction",
+					"reference_name": bt.name,
+				},
+			)
+		)
 
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
