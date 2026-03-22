@@ -177,9 +177,6 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 
 	if credit > 0:
 		# Only adjust withdrawals, because deposits never include the fee in the bank amount.
-		credit_no_fee = credit - included_fee
-		doc.allocated_amount = included_fee
-		doc.unallocated_amount = debit + (credit_no_fee or 0)
 		doc.append(
 			"payment_entries",
 			{
@@ -188,6 +185,10 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 				"allocated_amount": included_fee,
 			},
 		)
+		# Recompute from the rows so existing allocations are preserved if this helper
+		# is reused outside the current submit flow.
+		doc.allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+		doc.unallocated_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - doc.allocated_amount
 	# Deposit fees are linked via the Journal Entry reference only and must stay
 	# out of the reconciliation table.
 

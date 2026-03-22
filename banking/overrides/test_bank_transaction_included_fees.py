@@ -182,6 +182,48 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(accounts[self.account_main.name].credit_in_account_currency, 1.0)
 		self.assertEqual(accounts[self.account_fee.name].debit_in_account_currency, 1.0)
 
+	@patch(
+		"banking.overrides.bank_transaction.create_automatic_journal_entry",
+		return_value="ACC-JV-TEST-FEE",
+	)
+	def test_create_je_bank_fees_preserves_existing_allocations(self, mock_create_automatic_journal_entry):
+		from banking.overrides.bank_transaction import create_je_bank_fees
+
+		bt = create_bank_transaction(
+			insert=False,
+			bank_account=self.bank_account.name,
+			withdrawal=10.0,
+			included_fee=1.0,
+			date="2025-01-01",
+		)
+		bt.append(
+			"payment_entries",
+			{
+				"payment_document": "Payment Entry",
+				"payment_entry": "ACC-PE-EXISTING",
+				"allocated_amount": 3.0,
+			},
+		)
+		bt.allocated_amount = 0.0
+		bt.unallocated_amount = 10.0
+
+		create_je_bank_fees(
+			bt,
+			cost_center=frappe.get_cached_value("Company", TEST_COMPANY, "cost_center"),
+			date="2025-01-01",
+			account=self.account_main.name,
+			debit=0.0,
+			credit=10.0,
+		)
+
+		mock_create_automatic_journal_entry.assert_called_once()
+		self.assertEqual(len(bt.payment_entries), 2)
+		self.assertEqual(bt.payment_entries[-1].payment_document, "Journal Entry")
+		self.assertEqual(bt.payment_entries[-1].payment_entry, "ACC-JV-TEST-FEE")
+		self.assertEqual(bt.payment_entries[-1].allocated_amount, 1.0)
+		self.assertEqual(bt.allocated_amount, 4.0)
+		self.assertEqual(bt.unallocated_amount, 6.0)
+
 	def test_submit_creates_fee_journal_entry_for_deposit(self):
 		"""Submitting a deposit with an included fee must create a cleared fee JE without allocation."""
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
