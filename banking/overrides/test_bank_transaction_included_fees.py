@@ -4,49 +4,17 @@
 from unittest.mock import patch
 
 import frappe
-from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests.utils import FrappeTestCase
 
-TEST_COMPANY = "Bolt Trades"
-
-
-def get_bank_parent_account(company: str) -> str:
-	return frappe.db.get_value("Account", {"account_type": "Bank", "is_group": 1, "company": company})
-
-
-def create_currency_account(currency: str, parent_account: str, account_name: str):
-	account = create_account(
-		account_name=account_name,
-		account_type="Bank",
-		parent_account=parent_account,
-		company=TEST_COMPANY,
-		account_currency=currency,
-	)
-	return frappe.get_doc("Account", account)
-
-
-def create_bank_account(
-	account: str, bank_fee_account: str | None = None, account_name: str = "_Test_B_Account"
-):
-	ba = frappe.new_doc("Bank Account")
-	ba.account_name = account_name
-	ba.account = account
-	ba.bank = "_Test_Bank"
-	ba.company = TEST_COMPANY
-	ba.is_company_account = 1
-	if bank_fee_account:
-		ba.bank_fee_account = bank_fee_account
-	ba.insert(ignore_permissions=True, ignore_links=True)
-	return ba
-
-
-def create_bank_transaction(insert=True, **values):
-	doc = frappe.new_doc("Bank Transaction")
-	doc.company = TEST_COMPANY
-	doc.update(values)
-	if insert:
-		doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-	return doc
+from banking.testing_utils import (
+	TEST_COMPANY,
+	create_bank_account,
+	create_bank_transaction,
+	create_currency_account,
+	get_bank_parent_account,
+	make_bank_transaction,
+	set_automatic_bank_fee_entries,
+)
 
 
 class TestIncludedBankFees(FrappeTestCase):
@@ -54,7 +22,7 @@ class TestIncludedBankFees(FrappeTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 
-		parent_account = get_bank_parent_account(TEST_COMPANY)
+		parent_account = get_bank_parent_account()
 		cls.account_main = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
 		cls.account_main_without_fee = create_currency_account(
 			"EUR", parent_account, "_Test_Account_EUR_No_Fee"
@@ -70,7 +38,7 @@ class TestIncludedBankFees(FrappeTestCase):
 	def test_before_submit(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
-		bt = create_bank_transaction(insert=False)
+		bt = make_bank_transaction()
 
 		with self.assertRaises(frappe.ValidationError):
 			before_submit(bt, None)
@@ -86,7 +54,7 @@ class TestIncludedBankFees(FrappeTestCase):
 			before_submit(bt, None)
 
 		bt.withdrawal = 1.0
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		set_automatic_bank_fee_entries(True)
 		before_submit(bt, None)
 		mock_create_bank_fees.assert_called_once()
 
@@ -94,9 +62,8 @@ class TestIncludedBankFees(FrappeTestCase):
 	def test_before_submit_with_disabled_automatic_fee_entries(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
-		bt = create_bank_transaction(
-			insert=False,
+		set_automatic_bank_fee_entries(False)
+		bt = make_bank_transaction(
 			bank_account=self.bank_account.name,
 			withdrawal=10.0,
 			included_fee=1.0,
@@ -111,7 +78,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		"""Ensure a Bank Transaction can be submitted without a bank fee account
 		when automatic bank fee journal entries are disabled, and assert that
 		no linked fee Journal Entry is created."""
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		set_automatic_bank_fee_entries(False)
 
 		bt = create_bank_transaction(
 			bank_account=self.bank_account_without_fee.name,
@@ -140,7 +107,7 @@ class TestIncludedBankFees(FrappeTestCase):
 
 	def test_submit_creates_and_reconciles_fee_journal_entry_for_withdrawal(self):
 		"""Submitting a withdrawal with an included fee must create and reconcile the fee JE."""
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		set_automatic_bank_fee_entries(True)
 
 		bt = create_bank_transaction(
 			bank_account=self.bank_account.name,
@@ -189,8 +156,7 @@ class TestIncludedBankFees(FrappeTestCase):
 	def test_create_je_bank_fees_preserves_existing_allocations(self, mock_create_automatic_journal_entry):
 		from banking.overrides.bank_transaction import create_je_bank_fees
 
-		bt = create_bank_transaction(
-			insert=False,
+		bt = make_bank_transaction(
 			bank_account=self.bank_account.name,
 			withdrawal=10.0,
 			included_fee=1.0,
@@ -226,7 +192,7 @@ class TestIncludedBankFees(FrappeTestCase):
 
 	def test_submit_creates_fee_journal_entry_for_deposit(self):
 		"""Submitting a deposit with an included fee must create a cleared fee JE without allocation."""
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		set_automatic_bank_fee_entries(True)
 
 		bt = create_bank_transaction(
 			bank_account=self.bank_account.name,
@@ -281,9 +247,8 @@ class TestIncludedBankFees(FrappeTestCase):
 	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
-		bt = create_bank_transaction(
-			insert=False,
+		set_automatic_bank_fee_entries(True)
+		bt = make_bank_transaction(
 			bank_account=self.bank_account.name,
 			withdrawal=1.0,
 			included_fee=2.0,
@@ -299,9 +264,8 @@ class TestIncludedBankFees(FrappeTestCase):
 	def test_before_submit_allows_missing_deposit_for_withdrawal_with_fee(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
-		bt = create_bank_transaction(
-			insert=False,
+		set_automatic_bank_fee_entries(True)
+		bt = make_bank_transaction(
 			bank_account=self.bank_account.name,
 			withdrawal=2.0,
 			included_fee=1.0,

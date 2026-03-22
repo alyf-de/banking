@@ -6,49 +6,26 @@ from contextlib import contextmanager
 from datetime import date
 
 import frappe
-from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests.utils import FrappeTestCase
 
 from banking.klarna_kosma_integration.doctype.banking_settings.banking_settings import (
 	successful_request_exists,
 )
-
-TEST_COMPANY = "Bolt Trades"
-
-
-def get_bank_parent_account(company: str) -> str:
-	return frappe.db.get_value("Account", {"account_type": "Bank", "is_group": 1, "company": company})
-
-
-def create_currency_account(currency: str, parent_account: str, account_name: str):
-	account = create_account(
-		account_name=account_name,
-		account_type="Bank",
-		parent_account=parent_account,
-		company=TEST_COMPANY,
-		account_currency=currency,
-	)
-	return frappe.get_doc("Account", account)
-
-
-def create_bank_account(account: str, account_name: str):
-	ba = frappe.new_doc("Bank Account")
-	ba.account_name = account_name
-	ba.account = account
-	ba.bank = "_Test_Bank"
-	ba.company = TEST_COMPANY
-	ba.is_company_account = 1
-	ba.insert(ignore_permissions=True, ignore_links=True)
-	return ba
+from banking.testing_utils import (
+	create_bank_account,
+	create_currency_account,
+	get_bank_parent_account,
+	set_automatic_bank_fee_entries,
+)
 
 
 class TestBankingSettings(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		set_automatic_bank_fee_entries(False)
 
-		parent_account = get_bank_parent_account(TEST_COMPANY)
+		parent_account = get_bank_parent_account()
 		cls.account_without_fee = create_currency_account(
 			"EUR", parent_account, "_Test_Banking_Settings_Account_No_Fee"
 		)
@@ -58,10 +35,10 @@ class TestBankingSettings(FrappeTestCase):
 
 	def setUp(self):
 		super().setUp()
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		set_automatic_bank_fee_entries(False)
 
 	def tearDown(self):
-		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		set_automatic_bank_fee_entries(False)
 		super().tearDown()
 
 	def test_successful_request_exists(self):
