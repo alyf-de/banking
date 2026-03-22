@@ -2,18 +2,25 @@
 # See license.txt
 
 import frappe
+from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests.utils import FrappeTestCase
 
 TEST_COMPANY = "Bolt Trades"
 
 
+def get_bank_parent_account(company: str) -> str:
+	return frappe.db.get_value("Account", {"account_type": "Bank", "is_group": 1, "company": company})
+
+
 def create_currency_account(currency: str, parent_account: str, account_name: str):
-	acc = frappe.new_doc("Account")
-	acc.account_name = account_name
-	acc.account_currency = currency
-	acc.parent_account = parent_account
-	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-	return acc
+	account = create_account(
+		account_name=account_name,
+		account_type="Bank",
+		parent_account=parent_account,
+		company=TEST_COMPANY,
+		account_currency=currency,
+	)
+	return frappe.get_doc("Account", account)
 
 
 def create_bank_account(
@@ -23,6 +30,7 @@ def create_bank_account(
 	ba.account_name = account_name
 	ba.account = account
 	ba.bank = "_Test_Bank"
+	ba.company = TEST_COMPANY
 	ba.is_company_account = 1
 	if bank_fee_account:
 		ba.bank_fee_account = bank_fee_account
@@ -36,7 +44,7 @@ class TestBankAccount(FrappeTestCase):
 		super().setUpClass()
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
+		parent_account = get_bank_parent_account(TEST_COMPANY)
 		cls.account_eur = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
 		cls.account_usd = create_currency_account("USD", parent_account, "_Test_Account_USD")
 		cls.account_fee = create_currency_account("EUR", parent_account, "_Test_Account_EUR_Fee")

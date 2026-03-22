@@ -180,19 +180,16 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 		credit_no_fee = credit - included_fee
 		doc.allocated_amount = included_fee
 		doc.unallocated_amount = debit + (credit_no_fee or 0)
-		allocated_amount = included_fee
-	else:
-		allocated_amount = 0
-
-	# For deposits, this entry remains unallocated so deposit reconciliation still works correctly.
-	doc.append(
-		"payment_entries",
-		{
-			"payment_document": "Journal Entry",
-			"payment_entry": je_fee_name,
-			"allocated_amount": allocated_amount,
-		},
-	)
+		doc.append(
+			"payment_entries",
+			{
+				"payment_document": "Journal Entry",
+				"payment_entry": je_fee_name,
+				"allocated_amount": included_fee,
+			},
+		)
+	# Deposit fees are linked via the Journal Entry reference only and must stay
+	# out of the reconciliation table.
 
 	if doc.unallocated_amount == 0:
 		doc.status = "Reconciled"
