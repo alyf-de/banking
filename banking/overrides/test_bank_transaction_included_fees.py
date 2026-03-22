@@ -182,8 +182,8 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(accounts[self.account_main.name].credit_in_account_currency, 1.0)
 		self.assertEqual(accounts[self.account_fee.name].debit_in_account_currency, 1.0)
 
-	def test_submit_creates_fee_journal_entry_without_reconciliation_for_deposit(self):
-		"""Submitting a deposit with an included fee must keep the fee JE out of reconciliation."""
+	def test_submit_creates_fee_journal_entry_for_deposit(self):
+		"""Submitting a deposit with an included fee must create a cleared fee JE without allocation."""
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 
 		bt = create_bank_transaction(

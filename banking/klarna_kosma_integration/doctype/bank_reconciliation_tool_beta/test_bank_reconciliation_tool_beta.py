@@ -683,6 +683,171 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["name"], journal_entry.name)
 		self.assertEqual(first_match["paid_amount"], 200.0)
 
+	def test_auto_generated_fee_journal_entry_is_excluded_for_deposit_matches(self):
+		"""Deposit fee JEs must stay hidden even if they are otherwise query-eligible."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank Fee Filter", swift_number="CITIUS35")
+		gl_account = create_bank_gl_account("_Test Fee Filter Bank - _TC")
+		fee_account = create_bank_gl_account("_Test Fee Filter Offset - _TC")
+		bank_account = frappe.get_doc(
+			{
+				"doctype": "Bank Account",
+				"account_name": "Fee Filter Account",
+				"bank": bank.name,
+				"account": gl_account,
+				"bank_fee_account": fee_account,
+				"company": "_Test Company",
+				"is_company_account": 1,
+			}
+		).insert()
+
+		bt = frappe.get_doc(
+			{
+				"doctype": "Bank Transaction",
+				"company": "_Test Company",
+				"description": "Deposit with auto-generated fee entry",
+				"date": getdate(),
+				"deposit": 5.0,
+				"included_fee": 1.0,
+				"currency": "INR",
+				"bank_account": bank_account.name,
+				"reference_number": "FEE-FILTER-001",
+			}
+		).insert()
+		bt.submit()
+		bt.reload()
+
+		journal_entries = frappe.get_all(
+			"Journal Entry Account",
+			filters={
+				"reference_type": "Bank Transaction",
+				"reference_name": bt.name,
+			},
+			pluck="parent",
+		)
+		self.assertEqual(len(journal_entries), 1)
+
+		fee_journal_entry = frappe.get_doc("Journal Entry", journal_entries[0])
+		self.assertTrue(fee_journal_entry.is_system_generated)
+		self.assertEqual(fee_journal_entry.cheque_no, bt.name)
+
+		# Make the JE query-eligible and prove deposit exclusion does not depend on cheque_no.
+		frappe.db.set_value("Journal Entry", fee_journal_entry.name, "clearance_date", None)
+		frappe.db.set_value("Journal Entry", fee_journal_entry.name, "cheque_no", "UNRELATED-CHEQUE-NO")
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["journal_entry"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		matched_names = [voucher["name"] for voucher in matched_vouchers]
+
+		self.assertEqual(matched_names, [])
+		self.assertNotIn(fee_journal_entry.name, matched_names)
+
+	def test_auto_generated_fee_journal_entry_is_offered_again_after_unreconcile(self):
+		"""Withdrawal fee JEs must be offered again once unreconciled from the BT."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank Fee Reoffer", swift_number="CITIUS36")
+		gl_account = create_bank_gl_account("_Test Fee Reoffer Bank - _TC")
+		fee_account = create_bank_gl_account("_Test Fee Reoffer Offset - _TC")
+		bank_account = frappe.get_doc(
+			{
+				"doctype": "Bank Account",
+				"account_name": "Fee Reoffer Account",
+				"bank": bank.name,
+				"account": gl_account,
+				"bank_fee_account": fee_account,
+				"company": "_Test Company",
+				"is_company_account": 1,
+			}
+		).insert()
+
+		bt = frappe.get_doc(
+			{
+				"doctype": "Bank Transaction",
+				"company": "_Test Company",
+				"description": "Withdrawal with auto-generated fee entry",
+				"date": getdate(),
+				"withdrawal": 5.0,
+				"included_fee": 1.0,
+				"currency": "INR",
+				"bank_account": bank_account.name,
+				"reference_number": "FEE-FILTER-002",
+			}
+		).insert()
+		bt.submit()
+		bt.reload()
+
+		self.assertEqual(len(bt.payment_entries), 1)
+		fee_journal_entry = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(str(fee_journal_entry.clearance_date), str(bt.date))
+
+		bt.remove_payment_entries()
+		bt.reload()
+		fee_journal_entry.reload()
+
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertFalse(bt.payment_entries)
+		self.assertIsNone(fee_journal_entry.clearance_date)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["journal_entry"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		matched_names = [voucher["name"] for voucher in matched_vouchers]
+
+		self.assertIn(fee_journal_entry.name, matched_names)
+		self.assertEqual(matched_vouchers[0]["paid_amount"], 1.0)
+
+	def test_cheque_number_linked_journal_entry_is_excluded_from_matches(self):
+		"""Cheque-number-linked custom JEs must stay hidden."""
+		bt = create_bank_transaction(
+			date=getdate(),
+			withdrawal=200,
+			bank_account=self.bank_account,
+			reference_no="CUSTOM-JE-001",
+		)
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.name,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			allow_edit=True,
+		)
+		journal_entry.submit()
+
+		self.assertFalse(journal_entry.is_system_generated)
+		self.assertFalse(
+			frappe.db.exists(
+				"Journal Entry Account",
+				{
+					"parent": journal_entry.name,
+					"reference_type": "Bank Transaction",
+					"reference_name": bt.name,
+				},
+			)
+		)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["journal_entry"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		matched_names = [voucher["name"] for voucher in matched_vouchers]
+
+		self.assertNotIn(journal_entry.name, matched_names)
+
 	def test_usd_purchase_invoice_paid_in_usd(self):
 		"""Reconcile a USD Purchase Invoice via a USD bank account.
 
