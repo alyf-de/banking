@@ -591,7 +591,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(matched_vouchers), 2)
 		self.assertEqual(first_match["reference_no"], si.custom_ref_no)
 		self.assertEqual(first_match["name"], si.name)
-		self.assertEqual(first_match["rank"], 5)
+		self.assertEqual(first_match["rank"], 6)
 		self.assertEqual(first_match["ref_in_desc_match"], 1)
 		self.assertEqual(first_match["reference_number_match"], 1)
 		self.assertEqual(second_match["ref_in_desc_match"], 0)
@@ -599,7 +599,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		#  Check if ranking across another SI is correct
 		self.assertEqual(second_match["reference_no"], si2.custom_ref_no)
 		self.assertEqual(second_match["name"], si2.name)
-		self.assertEqual(second_match["rank"], 2)
+		self.assertEqual(second_match["rank"], 3)
 		self.assertEqual(second_match["ref_in_desc_match"], 0)
 
 	def test_no_configurable_reference_field(self):
@@ -634,7 +634,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(matched_vouchers), 1)
 		self.assertEqual(first_match["reference_no"], si.name)
 		self.assertEqual(first_match["name"], si.name)
-		self.assertEqual(first_match["rank"], 3)
+		self.assertEqual(first_match["rank"], 4)
 		self.assertEqual(first_match["amount_match"], 1)
 		self.assertEqual(first_match["ref_in_desc_match"], 0)
 
