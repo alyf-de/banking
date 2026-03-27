@@ -248,6 +248,7 @@ def _create_multi_currency_pe(
 		bank_account=bank_account,
 		bank_amount=bank_amount,
 		payment_type="Receive" if bt.deposit > 0 else "Pay",
+		reference_date=bt.date,
 	)
 
 
