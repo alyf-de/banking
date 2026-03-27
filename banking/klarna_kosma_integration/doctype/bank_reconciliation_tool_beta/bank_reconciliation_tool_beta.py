@@ -502,7 +502,7 @@ def get_reconcile_amount_context(bank_transaction_name: str, voucher_doctype: st
 
 	return {
 		"voucher_currency": target_currency,
-		"exchange_rate": flt(exchange_rate) if exchange_rate else None,
+		"exchange_rate": flt(exchange_rate),
 	}
 
 

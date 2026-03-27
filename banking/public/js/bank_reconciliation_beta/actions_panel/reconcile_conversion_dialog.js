@@ -23,8 +23,10 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 				flt(selected_voucher?.amount)
 			);
 			const max_target_amount = voucher_outstanding_amount || 0;
-			const prefilled_exchange_rate =
-				round_reconcile_value(context.exchange_rate) || 1;
+			const no_exchange_rate_available = !flt(context.exchange_rate);
+			const prefilled_exchange_rate = no_exchange_rate_available
+				? 1
+				: round_reconcile_value(context.exchange_rate);
 
 			let initial_source_amount = max_source_amount;
 			initial_source_amount = round_reconcile_value(initial_source_amount);
@@ -258,6 +260,15 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 			};
 
 			dialog.show();
+			if (no_exchange_rate_available) {
+				dialog
+					.get_field("exchange_rate")
+					.set_description(
+						`<span class="text-danger">${__(
+							"No exchange rate found — please enter manually"
+						)}</span>`
+					);
+			}
 			refresh_previews({
 				source_amount: initial_source_amount,
 				exchange_rate: prefilled_exchange_rate,
