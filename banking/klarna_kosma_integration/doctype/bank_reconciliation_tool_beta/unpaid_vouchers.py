@@ -340,7 +340,14 @@ def get_capped_manual_reconcile_amounts(
 	if source_amount <= 0 or target_amount <= 0 or exchange_rate <= 0:
 		frappe.throw(_("Manual reconcile amounts must be greater than zero."))
 
-	source_amount = min(source_amount, flt(bt.unallocated_amount))
+	bt_precision = bt.precision("unallocated_amount")
+	if flt(source_amount, bt_precision) > flt(bt.unallocated_amount, bt_precision):
+		frappe.throw(
+			_(
+				"The bank transaction has been modified since the dialog was loaded. Please refresh and try again."
+			)
+		)
+
 	if source_amount <= 0:
 		frappe.throw(_("Nothing to reconcile: source amount is fully capped by the bank transaction."))
 
