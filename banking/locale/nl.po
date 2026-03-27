@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2026-02-14 18:22+0053\n"
+"POT-Creation-Date: 2026-03-27 13:56+0053\n"
 "PO-Revision-Date: 2025-09-29 23:38+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language: nl\n"
@@ -43,8 +43,14 @@ msgid "ALYF Banking"
 msgstr "ALYF Banking"
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:130
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:181
 msgid "Account Holder"
 msgstr "Rekeninghouder"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:46
+msgid "Add Recipient"
+msgstr "Ontvanger toevoegen"
 
 #. Label of a Data field in DocType 'Banking Settings'
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
@@ -55,11 +61,11 @@ msgstr "Admin-URL"
 msgid "Amount updated to {0} in row {1}."
 msgstr "Bedrag bijgewerkt naar {0} in rij {1}."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:174
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:264
 msgid "Amounts not updated."
 msgstr "Bedragen niet bijgewerkt."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:167
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:257
 msgid "Amounts updated."
 msgstr "Bedragen bijgewerkt."
 
@@ -93,7 +99,7 @@ msgstr "Automatisch afstemmen ..."
 msgid "Auto reconcile bank transactions based on matching reference numbers?"
 msgstr "Banktransacties automatisch afstemmen op basis van overeenkomende referentienummers?"
 
-#: banking/ebics/utils.py:216
+#: banking/ebics/utils.py:245
 msgid "Bank Account not found for IBAN {0}"
 msgstr "Bankrekening niet gevonden voor IBAN {0}"
 
@@ -156,8 +162,8 @@ msgstr "Banking-actie is mislukt door de volgende fout(en):"
 #: banking/ebics/doctype/ebics_user/ebics_user.py:72
 #: banking/ebics/doctype/ebics_user/ebics_user.py:75
 #: banking/ebics/doctype/ebics_user/ebics_user.py:82
-#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:141
-#: banking/ebics/utils.py:188 banking/ebics/utils.py:215
+#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:153
+#: banking/ebics/utils.py:217 banking/ebics/utils.py:244
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
@@ -186,7 +192,7 @@ msgstr "Banking Referentietoewijzing"
 msgid "Banking Settings"
 msgstr "Banking-instellingen"
 
-#: banking/ebics/utils.py:236
+#: banking/ebics/utils.py:207 banking/ebics/utils.py:265
 msgid "Banking Warning"
 msgstr "Banking-waarschuwing"
 
@@ -204,11 +210,11 @@ msgstr "Crediteur"
 msgid "Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
 msgstr "Kan geen dagboekboeking aanmaken voor een banktransactie met zowel storting als opname"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:581
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:583
 msgid "Cannot make Reconciliation Payment Entry against multiple doctypes"
 msgstr "Kan geen afstemmingsbetalingsboeking aanmaken tegen meerdere documenttypen"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:588
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:590
 msgid "Cannot make Reconciliation Payment Entry against multiple parties"
 msgstr "Kan geen afstemmingsbetalingsboeking aanmaken tegen meerdere partijen"
 
@@ -277,6 +283,10 @@ msgstr "Ontwikkelaarsmodus is ingeschakeld. Schakel deze uit om automatische syn
 msgid "Did you mean {0}?"
 msgstr "Meent u {0}?"
 
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:174
+msgid "DocType must be Supplier or Employee."
+msgstr "DocType moet Leverancier of Werknemer zijn."
+
 #: banking/ebics/doctype/ebics_user/ebics_user.js:105
 #: banking/ebics/doctype/ebics_user/ebics_user.js:296
 msgid "Download Bank Statements"
@@ -299,7 +309,7 @@ msgstr "Antwoordbestanden downloaden"
 msgid "Downloaded"
 msgstr "Gedownload"
 
-#: banking/overrides/bank_transaction.py:33
+#: banking/overrides/bank_transaction.py:51
 msgid "Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
 msgstr "Vanwege periode-afsluiting kunt u onbetaalde documenten niet afstemmen met een banktransactie vóór {0}"
 
@@ -341,7 +351,7 @@ msgstr "EBICS-URL"
 #. Name of a DocType
 #: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:83
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:173
 msgid "EBICS User"
 msgstr "EBICS-gebruiker"
 
@@ -371,7 +381,7 @@ msgstr "EBICS 2.5 (H004)"
 msgid "Ebics 3.0 (H005)"
 msgstr "EBICS 3.0 (H005)"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:89
 msgid "Ebics Users"
 msgstr "EBICS-gebruikers"
 
@@ -416,7 +426,7 @@ msgstr "Wachtwoord invoeren"
 msgid "Enter only if scheduled execution at the bank is desired."
 msgstr "Vul alleen in als geplande uitvoering bij de bank gewenst is."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:131
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:221
 msgid "Enter your passphrase"
 msgstr "Voer uw wachtwoord in"
 
@@ -425,7 +435,7 @@ msgstr "Voer uw wachtwoord in"
 msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
 msgstr "Voer uw wachtwoord in om geautomatiseerde, regelmatige synchronisatie in te schakelen. Laat leeg als u handmatig wilt synchroniseren."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:124
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:214
 msgid "Enter your signature passphrase"
 msgstr "Voer uw handtekeningwachtwoord in"
 
@@ -517,13 +527,9 @@ msgstr "H005"
 msgid "Hidden field for alignment"
 msgstr "Verborgen veld voor uitlijning"
 
-#: banking/custom/employee.py:11
+#: banking/custom/employee.py:15
 msgid "IBAN Warning: Not used in SEPA Payment Orders"
 msgstr "IBAN-waarschuwing: Niet gebruikt in SEPA-betalingsopdrachten"
-
-#: banking/custom/employee.py:8
-msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
-msgstr "IBAN op werknemer wordt niet gebruikt in SEPA-betalingsopdrachten. Gebruik in plaats daarvan Bankrekening voor betalingsverwerking."
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:96
 msgid "IBAN {0} is invalid."
@@ -586,19 +592,19 @@ msgstr "Ongeldige gegevens beschikbaar voor downloaden."
 msgid "Invalid data for re-import."
 msgstr "Ongeldige gegevens voor reimporteren."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:317
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:319
 msgid "Invalid manual reconcile amounts payload."
 msgstr "Ongeldige payload voor handmatige afstembedragen."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:373
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:375
 msgid "Invalid source currency for manual reconciliation."
 msgstr "Ongeldige bronvaluta voor handmatige afstemming."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:380
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:382
 msgid "Invalid target currency for manual reconciliation."
 msgstr "Ongeldige doelvaluta voor handmatige afstemming."
 
-#: banking/ebics/utils.py:237
+#: banking/ebics/utils.py:266
 msgid "It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
 msgstr "Het lijkt erop dat de EBICS-gebruiker geen toestemmingen heeft voor ordertype '{0}'. De toegestane typen zijn: {1}."
 
@@ -611,11 +617,11 @@ msgstr "Porte-clés"
 msgid "Klarna Kosma Integration"
 msgstr "Klarna Kosma-integratie"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:99
 msgid "Last Renewed On"
 msgstr "Laatst vernieuwd op"
 
-#: banking/ebics/utils.py:585
+#: banking/ebics/utils.py:657
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr "Licentiesleutel niet gevonden. Activeer het selectievakje 'EBICS inschakelen' in de {0} en zorg ervoor dat uw abonnement actief is."
 
@@ -627,7 +633,7 @@ msgstr "Handmatige valutaomrekening is alleen beschikbaar voor afstemming van é
 msgid "Manual currency conversion is only supported for a single voucher at a time."
 msgstr "Handmatige valutaomrekening wordt alleen ondersteund voor één document tegelijk."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:339
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:341
 msgid "Manual reconcile amounts must be greater than zero."
 msgstr "Handmatige afstembedragen moeten groter zijn dan nul."
 
@@ -650,7 +656,11 @@ msgstr "Certificaat vereist"
 msgid "No Data Available"
 msgstr "Geen gegevens beschikbaar"
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:84
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:193
+msgid "No IBAN for {0} {1}."
+msgstr "Geen IBAN voor {0} {1}."
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:87
 msgid "No Transactions found for the current filters."
 msgstr "Geen transacties gevonden voor de huidige filters."
 
@@ -670,7 +680,7 @@ msgstr "Niet beschikbaar"
 msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
 msgstr "Let op: Als u deze wachtwoorden kwijtraakt, moet u het initialisatieproces met uw bank opnieuw doorlopen."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:343
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:345
 msgid "Nothing to reconcile: source amount is fully capped by the bank transaction."
 msgstr "Niets om af te stemmen: bronbedrag wordt volledig begrensd door de banktransactie."
 
@@ -691,16 +701,16 @@ msgid "Only unpaid vouchers"
 msgstr "Alleen onbetaalde documenten"
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:34
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:108
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:116
 msgid "Open Billing Portal"
 msgstr "Facturatieportaal openen"
 
-#: banking/overrides/bank_transaction.py:73
+#: banking/overrides/bank_transaction.py:106
 msgid "Over Allocation"
 msgstr "Overboeking"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:572
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:574
 msgid "Overallocated Returns"
 msgstr "Overgeboekte retouren"
 
@@ -723,19 +733,19 @@ msgstr "Partij IBAN"
 #: banking/ebics/doctype/ebics_user/ebics_user.js:173
 #: banking/ebics/doctype/ebics_user/ebics_user.js:261
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:129
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:219
 msgid "Passphrase"
 msgstr "Wachtwoord"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:148
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:238
 msgid "Payment Order has been sent to bank."
 msgstr "Betalingsopdracht is naar de bank verzonden."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:154
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:244
 msgid "Payment Order has not been sent to bank."
 msgstr "Betalingsopdracht is niet naar de bank verzonden."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:56
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:146
 msgid "Payment amounts have changed. Are you sure you want to submit without updating them first?"
 msgstr "Betalingsbedragen zijn gewijzigd. Weet u zeker dat u wilt indienen zonder ze eerst bij te werken?"
 
@@ -769,7 +779,7 @@ msgstr "Voer de waarden in die door uw bank zijn verstrekt."
 msgid "Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
 msgstr "Print de bijgevoegde INI-brief, stuur deze naar uw bank en wacht op bevestiging. Verifieer vervolgens de banksleutels."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:261
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:264
 msgid "Please select a Bank Account to start reconciling."
 msgstr "Selecteer een bankrekening om te beginnen met afstemmen."
 
@@ -909,7 +919,7 @@ msgid "Show Protocol Versions"
 msgstr "Toon protocolversies"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:39
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:122
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:212
 msgid "Signature Passphrase"
 msgstr "Handtekeningwachtwoord"
 
@@ -921,7 +931,7 @@ msgstr "Aanmelden voor Banking"
 msgid "Something went wrong. Please retry in a while."
 msgstr "Er is iets misgegaan. Probeer het over een tijdje opnieuw."
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:116
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:117
 msgid "Sort By"
 msgstr "Sorteren op"
 
@@ -946,11 +956,11 @@ msgstr "Wachtwoord opslaan"
 msgid "Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
 msgstr "Sla het wachtwoord op in de ERPNext-database om geautomatiseerde, regelmatige download van bankafschriften in te schakelen."
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:81
 msgid "Subscriber"
 msgstr "Abonnee"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:78
 msgid "Subscription Details"
 msgstr "Abonnementsgegevens"
 
@@ -974,15 +984,19 @@ msgstr "Leveranciersbankrekening is niet aangemaakt."
 msgid "Target Amount ({0})"
 msgstr "Doelbedrag ({0})"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:349
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:351
 msgid "Target amount is not valid for the selected voucher."
 msgstr "Doelbedrag is niet geldig voor het geselecteerde document."
 
-#: banking/overrides/bank_transaction.py:70
+#: banking/overrides/bank_transaction.py:103
 msgid "The Bank Transaction is over-allocated by {0} at row {1}."
 msgstr "De banktransactie is overgeboekt met {0} op rij {1}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:573
+#: banking/custom/employee.py:12
+msgid "The IBAN in this form will not be used in SEPA Payment Orders because a Bank Account is already linked to this Employee."
+msgstr "De IBAN in dit formulier wordt niet gebruikt in SEPA-betalingsopdrachten omdat er al een bankrekening aan deze medewerker is gekoppeld."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:575
 msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
 msgstr "Het toegewezen bedrag kan niet negatief zijn. Pas de geselecteerde retourdocumenten aan."
 
@@ -1012,7 +1026,7 @@ msgstr "Deze documenttypen zijn standaard ingeschakeld in de tab 'Beleidsmatchin
 msgid "To Allocate"
 msgstr "Te alloceren"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:305
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:306
 msgid "To Allocate after reconcile"
 msgstr "Te alloceren na afstemming"
 
@@ -1030,7 +1044,7 @@ msgstr "Transmissiedatum"
 msgid "Transmission Type"
 msgstr "Transmissietype"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:468
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:470
 msgid "Unable to determine exchange rate for {0} against {1}."
 msgstr "Kan wisselkoers voor {0} ten opzichte van {1} niet bepalen."
 
@@ -1042,11 +1056,15 @@ msgstr "Kan conversiedetails voor afstemming niet voorbereiden."
 msgid "Unable to prepare reconciliation details."
 msgstr "Kan afstemmingsdetails niet voorbereiden."
 
+#: banking/ebics/utils.py:208
+msgid "Unable to resolve batch transaction: camt.054 not available. Please try again later."
+msgstr "Kan batchtransactie niet oplossen: camt.054 niet beschikbaar. Probeer het later opnieuw."
+
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:518
 msgid "Unsupported voucher type for manual reconciliation: {0}"
 msgstr "Niet-ondersteund documenttype voor handmatige afstemming: {0}"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:38
 msgid "Update Amounts"
 msgstr "Bedragen bijwerken"
 
@@ -1071,7 +1089,7 @@ msgstr "MT940-bestand uploaden"
 msgid "Upload XML (CAMT.053) file"
 msgstr "XML (CAMT.053)-bestand uploaden"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:90
 msgid "Usage"
 msgstr "Gebruik"
 
