@@ -2,6 +2,7 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
@@ -38,16 +39,21 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 		target.purpose = _get_employee_purpose(claim)
 
 		bank_account = _get_recipients_bank_account(claim)
-		if not bank_account or not bank_account.get("iban"):
-			frappe.throw(frappe._("No Bank Account with IBAN found for Employee {0}.").format(claim.employee))
-		if bank_account:
+
+		if bank_account and bank_account.get("iban"):
+			target.iban = bank_account.get("iban")
 			if bank_account.get("bank"):
 				swift_number, bank_name = frappe.db.get_value(
 					"Bank", bank_account["bank"], ["swift_number", "bank_name"]
 				)
 				target.swift_number = swift_number
 				target.bank_name = bank_name
-			target.iban = bank_account.get("iban")
+		else:
+			employee_iban = frappe.db.get_value("Employee", claim.employee, "iban")
+			if employee_iban:
+				target.iban = employee_iban
+			else:
+				frappe.throw(_("No IBAN found for Employee {0}.").format(claim.employee))
 
 		target.currency = frappe.db.get_value("Company", claim.company, "default_currency")
 		target.eref = target.reference_name
