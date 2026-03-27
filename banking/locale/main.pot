@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2026-03-27 13:56+0053\n"
-"PO-Revision-Date: 2026-03-27 13:56+0053\n"
+"POT-Creation-Date: 2026-03-27 23:00+0053\n"
+"PO-Revision-Date: 2026-03-27 23:00+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
 "MIME-Version: 1.0\n"
@@ -208,11 +208,11 @@ msgstr ""
 msgid "Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:583
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:590
 msgid "Cannot make Reconciliation Payment Entry against multiple doctypes"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:590
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:597
 msgid "Cannot make Reconciliation Payment Entry against multiple parties"
 msgstr ""
 
@@ -441,11 +441,11 @@ msgstr ""
 msgid "Error while fetching releases"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:322
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:344
 msgid "Exchange Gain"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:320
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:342
 msgid "Exchange Loss"
 msgstr ""
 
@@ -594,11 +594,11 @@ msgstr ""
 msgid "Invalid manual reconcile amounts payload."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:375
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:382
 msgid "Invalid source currency for manual reconciliation."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:382
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:389
 msgid "Invalid target currency for manual reconciliation."
 msgstr ""
 
@@ -639,8 +639,8 @@ msgstr ""
 msgid "Match Voucher"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:166
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:198
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:170
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:202
 msgid "Max {0}"
 msgstr ""
 
@@ -666,6 +666,10 @@ msgstr ""
 msgid "No data available for download."
 msgstr ""
 
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:267
+msgid "No exchange rate found — please enter manually"
+msgstr ""
+
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:418
 msgid "No matches occurred via Auto Reconciliation"
 msgstr ""
@@ -678,11 +682,11 @@ msgstr ""
 msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:345
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:352
 msgid "Nothing to reconcile: source amount is fully capped by the bank transaction."
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:179
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:183
 msgid "On {0}"
 msgstr ""
 
@@ -708,7 +712,7 @@ msgstr ""
 msgid "Over Allocation"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:574
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:581
 msgid "Overallocated Returns"
 msgstr ""
 
@@ -900,7 +904,7 @@ msgstr ""
 msgid "Sent via EBICS"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:156
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:160
 msgid "Set Reconcile Conversion Amounts"
 msgstr ""
 
@@ -933,11 +937,11 @@ msgstr ""
 msgid "Sort By"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:161
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:165
 msgid "Source Amount ({0})"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:229
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:233
 msgid "Source amount, exchange rate, and target amount must be greater than zero."
 msgstr ""
 
@@ -978,11 +982,11 @@ msgstr ""
 msgid "Supplier Bank Account was not created."
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:191
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:195
 msgid "Target Amount ({0})"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:351
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:358
 msgid "Target amount is not valid for the selected voucher."
 msgstr ""
 
@@ -994,8 +998,12 @@ msgstr ""
 msgid "The IBAN in this form will not be used in SEPA Payment Orders because a Bank Account is already linked to this Employee."
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:575
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:582
 msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
+msgstr ""
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:346
+msgid "The bank transaction has been modified since the dialog was loaded. Please refresh and try again."
 msgstr ""
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:201
@@ -1024,7 +1032,7 @@ msgstr ""
 msgid "To Allocate"
 msgstr ""
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:306
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:319
 msgid "To Allocate after reconcile"
 msgstr ""
 
@@ -1042,7 +1050,7 @@ msgstr ""
 msgid "Transmission Type"
 msgstr ""
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:470
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:477
 msgid "Unable to determine exchange rate for {0} against {1}."
 msgstr ""
 
