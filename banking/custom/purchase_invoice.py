@@ -55,6 +55,8 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.swift_number = swift_number
 				target.bank_name = bank_name
 			target.iban = bank_account.get("iban")
+		elif pay_to_employee:
+			target.iban = frappe.db.get_value("Employee", pi.business_trip_employee, "iban")
 
 		target.currency = pi.currency
 		target.eref = target.reference_name
