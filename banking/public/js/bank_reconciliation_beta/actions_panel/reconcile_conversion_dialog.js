@@ -30,6 +30,7 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 			initial_source_amount = round_reconcile_value(initial_source_amount);
 
 			const initial_target_amount = round_reconcile_value(max_target_amount);
+			const is_deposit = flt(transaction.deposit) > 0;
 
 			let is_internal_update = false;
 			let dialog;
@@ -94,7 +95,8 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 						exchange_rate,
 						target_amount
 					),
-					target_currency
+					target_currency,
+					is_deposit
 				);
 			};
 			const sync_target_with_source_and_rate = async (source_input = null) => {
@@ -312,10 +314,19 @@ function update_to_allocate_preview(
 function update_exchange_gain_loss_preview(
 	dialog,
 	exchange_gain_loss_amount,
-	target_currency
+	target_currency,
+	is_deposit
 ) {
-	const is_exchange_loss = exchange_gain_loss_amount > 0;
-	const is_exchange_gain = exchange_gain_loss_amount < 0;
+	// For deposits (receipts): positive delta (target > source*rate) means
+	// we're writing off more receivable than received → Exchange Loss.
+	// For withdrawals (payments): the same positive delta means we settled
+	// more liability than we paid out → Exchange Gain.
+	const is_exchange_loss = is_deposit
+		? exchange_gain_loss_amount > 0
+		: exchange_gain_loss_amount < 0;
+	const is_exchange_gain = is_deposit
+		? exchange_gain_loss_amount < 0
+		: exchange_gain_loss_amount > 0;
 	const exchange_label = is_exchange_loss
 		? __("Exchange Loss")
 		: is_exchange_gain
