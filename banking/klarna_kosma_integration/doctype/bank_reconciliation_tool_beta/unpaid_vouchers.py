@@ -185,6 +185,7 @@ def make_pe_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 			# return SI against a deposit should be considered as "Receive" (discount)
 			# return SI against a withdrawal should be considered as "Pay" (refund)
 			payment_type="Receive" if bt.deposit > 0 else "Pay",
+			reference_date=bt.date,
 		)
 
 	payment_entry.posting_date = bt.date
@@ -247,6 +248,7 @@ def _create_multi_currency_pe(
 		bank_account=bank_account,
 		bank_amount=bank_amount,
 		payment_type="Receive" if bt.deposit > 0 else "Pay",
+		reference_date=bt.date,
 	)
 
 
