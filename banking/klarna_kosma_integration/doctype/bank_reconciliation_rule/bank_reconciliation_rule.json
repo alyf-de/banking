@@ -7,6 +7,8 @@
   "account_settings_section",
   "bank_account",
   "target_account",
+  "column_break_dvyd",
+  "priority",
   "disabled",
   "filters_section",
   "filter_description",
@@ -75,13 +77,25 @@
    "fieldname": "disabled",
    "fieldtype": "Check",
    "label": "Disabled"
+  },
+  {
+   "fieldname": "column_break_dvyd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "If multiple rules match a <b>Bank Transaction</b>, only the one with the highest priority is executed.",
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Priority",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-28 02:02:55.846298",
+ "modified": "2026-03-28 02:28:06.918430",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Rule",

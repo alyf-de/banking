@@ -135,6 +135,7 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 		},
 		fields=["name", "target_account", "filters"],
 		as_list=True,
+		order_by="priority DESC, creation ASC",
 	)
 
 	for br_rule_name, target_account, filters in bank_reconciliation_rules:

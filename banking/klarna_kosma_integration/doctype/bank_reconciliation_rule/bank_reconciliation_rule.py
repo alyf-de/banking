@@ -26,6 +26,7 @@ class BankReconciliationRule(Document):
 		bank_account: DF.Link
 		disabled: DF.Check
 		filters: DF.Code | None
+		priority: DF.Int
 		target_account: DF.Link
 
 	# end: auto-generated types
