@@ -5,7 +5,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTrans
 from frappe import _
 from frappe.core.utils import find
 from frappe.utils import flt, getdate
-from frappe.utils.data import evaluate_filters, get_link_to_form
+from frappe.utils.data import evaluate_filters
 
 
 class CustomBankTransaction(BankTransaction):
@@ -109,22 +109,19 @@ def before_submit(doc: "CustomBankTransaction", method):
 
 
 def on_cancel(doc, method):
-	# Cancel the journal entries created by this Bank Transaction.
-	auto_created_journal_entries = frappe.get_all(
+	"""Cancel the automatically created Journal Entries for this Bank Transaction."""
+	for journal_entry in frappe.get_all(
 		"Journal Entry",
-		filters={"cheque_no": doc.name},
+		filters=[
+			["Journal Entry", "docstatus", "=", 1],
+			["Journal Entry", "is_system_generated", "=", 1],
+			["Journal Entry Account", "reference_type", "=", "Bank Transaction"],
+			["Journal Entry Account", "reference_name", "=", doc.name],
+		],
 		pluck="name",
-	)
-
-	for journal_entry in auto_created_journal_entries:
-		try:
-			je_doc = frappe.get_doc("Journal Entry", journal_entry)
-			if je_doc.docstatus == 1:
-				je_doc.cancel()
-		except Exception as e:
-			frappe.msgprint(
-				_("Failed to cancel {0}: {1}").format(get_link_to_form("Journal Entry", journal_entry), e)
-			)
+		distinct=True,
+	):
+		frappe.get_doc("Journal Entry", journal_entry).cancel()
 
 
 def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
@@ -207,6 +204,7 @@ def create_automatic_journal_entry(
 	journal_entry.cheque_no = bank_transaction
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
+	journal_entry.is_system_generated = 1
 
 	journal_entry.append(
 		"accounts",
@@ -216,6 +214,8 @@ def create_automatic_journal_entry(
 			"debit_in_account_currency": debit,
 			"credit_in_account_currency": credit,
 			"cost_center": cost_center,
+			"reference_type": "Bank Transaction",
+			"reference_name": bank_transaction,
 		},
 	)
 
