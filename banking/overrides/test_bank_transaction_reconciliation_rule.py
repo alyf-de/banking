@@ -61,7 +61,7 @@ class TestBankTransactionReconciliationRule(FrappeTestCase):
 	def test_create_je_automatic_rules_withdrawal(self, mock_create_je):
 		from banking.overrides.bank_transaction import create_je_automatic_rules
 
-		frappe.db.delete("Bank Reconciliation Rule")
+		frappe.db.delete("Bank Reconciliation Rule", {"bank_account": self.bank_account.name})
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
@@ -114,7 +114,7 @@ class TestBankTransactionReconciliationRule(FrappeTestCase):
 	def test_create_je_automatic_rules_deposit(self, mock_create_je):
 		from banking.overrides.bank_transaction import create_je_automatic_rules
 
-		frappe.db.delete("Bank Reconciliation Rule")
+		frappe.db.delete("Bank Reconciliation Rule", {"bank_account": self.bank_account.name})
 		mock_create_je.return_value = "JE-TEST-0001"
 		date = "2025-01-01"
 
