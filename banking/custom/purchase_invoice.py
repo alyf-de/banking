@@ -12,10 +12,11 @@ if TYPE_CHECKING:
 	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
 
 	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
+	from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import SEPAPaymentOrder
 
 
 @frappe.whitelist()
-def make_sepa_payment_order(source_name: str, target_doc=None):
+def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | None" = None):
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
@@ -55,6 +56,8 @@ def make_sepa_payment_order(source_name: str, target_doc=None):
 				target.swift_number = swift_number
 				target.bank_name = bank_name
 			target.iban = bank_account.get("iban")
+		elif pay_to_employee:
+			target.iban = frappe.db.get_value("Employee", pi.business_trip_employee, "iban")
 
 		target.currency = pi.currency
 		target.eref = target.reference_name

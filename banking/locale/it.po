@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2026-01-27 18:03+0053\n"
+"POT-Creation-Date: 2026-03-27 23:00+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -41,8 +41,14 @@ msgid "ALYF Banking"
 msgstr "Bancario ALYF"
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:130
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:181
 msgid "Account Holder"
 msgstr "Titolare del conto"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:46
+msgid "Add Recipient"
+msgstr "Aggiungi destinatario"
 
 #. Label of a Data field in DocType 'Banking Settings'
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
@@ -51,15 +57,15 @@ msgstr "URL amministratore"
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:87
 msgid "Amount updated to {0} in row {1}."
-msgstr ""
+msgstr "Importo aggiornato a {0} nella riga {1}."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:174
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:264
 msgid "Amounts not updated."
-msgstr ""
+msgstr "Importi non aggiornati."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:167
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:257
 msgid "Amounts updated."
-msgstr ""
+msgstr "Importi aggiornati."
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:195
 #: banking/ebics/doctype/ebics_user/ebics_user.js:213
@@ -69,9 +75,9 @@ msgstr "Si è verificato un errore"
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:19
 msgid "Approved"
-msgstr ""
+msgstr "Approvato"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:355
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:400
 msgid "Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
 msgstr "Stai cercando di conciliare ricevute di parti diverse? Questa azione concilierà le ricevute utilizzando un movimento contabile."
 
@@ -79,19 +85,19 @@ msgstr "Stai cercando di conciliare ricevute di parti diverse? Questa azione con
 msgid "Authentication error due to invalid credentials."
 msgstr "Errore di autenticazione dovuto a credenziali non valide."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:434
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:437
 msgid "Auto Reconciliation Complete"
 msgstr "Conciliazione automatica completata"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:80
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:119
 msgid "Auto Reconciling ..."
 msgstr "Conciliazione automatica in corso..."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:62
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:101
 msgid "Auto reconcile bank transactions based on matching reference numbers?"
 msgstr "Conciliare le transazioni bancarie automaticamente in base ai numeri di riferimento corrispondenti?"
 
-#: banking/ebics/utils.py:216
+#: banking/ebics/utils.py:245
 msgid "Bank Account not found for IBAN {0}"
 msgstr "Conto bancario non trovato per l'IBAN {0}"
 
@@ -154,8 +160,8 @@ msgstr "L'azione di Banking ha fallito a causa dei seguenti errori:"
 #: banking/ebics/doctype/ebics_user/ebics_user.py:72
 #: banking/ebics/doctype/ebics_user/ebics_user.py:75
 #: banking/ebics/doctype/ebics_user/ebics_user.py:82
-#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:141
-#: banking/ebics/utils.py:188 banking/ebics/utils.py:215
+#: banking/ebics/doctype/ebics_user/ebics_user.py:85 banking/ebics/utils.py:153
+#: banking/ebics/utils.py:217 banking/ebics/utils.py:244
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
 #: banking/klarna_kosma_integration/exception_handler.py:23
 #: banking/klarna_kosma_integration/exception_handler.py:39
@@ -184,7 +190,7 @@ msgstr "Mapping dei riferimenti bancari"
 msgid "Banking Settings"
 msgstr "Impostazioni di Banking"
 
-#: banking/ebics/utils.py:236
+#: banking/ebics/utils.py:207 banking/ebics/utils.py:265
 msgid "Banking Warning"
 msgstr "Avviso di Banking"
 
@@ -196,17 +202,17 @@ msgstr "Prenotazione in lotti"
 #. Option for the 'Charges' (Select) field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
 msgid "CRED"
-msgstr ""
+msgstr "CRED"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:135
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:136
 msgid "Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
 msgstr "Non è possibile creare un movimento contabile per una transazione bancaria con sia un deposito che un prelievo"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:288
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:590
 msgid "Cannot make Reconciliation Payment Entry against multiple doctypes"
 msgstr "Non è possibile effettuare un pagamento di conciliamento contro più tipi di documenti"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:295
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:597
 msgid "Cannot make Reconciliation Payment Entry against multiple parties"
 msgstr "Non è possibile effettuare un pagamento di conciliamento contro più parti"
 
@@ -240,7 +246,15 @@ msgstr "Creazione ordine di pagamento SEPA..."
 #. Label of a Section Break field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 msgid "Credentials"
-msgstr ""
+msgstr "Credenziali"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:327
+msgid "Currency conversion reconcile is only available for Sales Invoice, Purchase Invoice, and Expense Claim."
+msgstr "La conciliazione con conversione valuta è disponibile solo per Fattura di vendita, Fattura d'acquisto e Richiesta di rimborso spese."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:311
+msgid "Currency conversion reconcile is only supported for one voucher at a time."
+msgstr "La conciliazione con conversione valuta è supportata solo per un documento alla volta."
 
 #. Label of a Data field in DocType 'Banking Settings'
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
@@ -250,7 +264,7 @@ msgstr "ID cliente"
 #. Option for the 'Charges' (Select) field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
 msgid "DEBT"
-msgstr ""
+msgstr "DEBT"
 
 #. Option for the 'Transmission Type' (Select) field in DocType 'SEPA Payment
 #. Order'
@@ -266,6 +280,10 @@ msgstr "Il modo sviluppatore è attivo. Per continuare a sincronizzare le transa
 #: banking/custom/bank_reconciliation_tool.js:8
 msgid "Did you mean {0}?"
 msgstr "Vuoi dire {0}?"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:174
+msgid "DocType must be Supplier or Employee."
+msgstr "Il DocType deve essere Fornitore o Dipendente."
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:105
 #: banking/ebics/doctype/ebics_user/ebics_user.js:296
@@ -289,7 +307,7 @@ msgstr "Scarica file di risposta"
 msgid "Downloaded"
 msgstr "Scaricato"
 
-#: banking/overrides/bank_transaction.py:33
+#: banking/overrides/bank_transaction.py:51
 msgid "Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
 msgstr "A causa della chiusura del periodo, non puoi conciliare le ricevute non pagate con una transazione bancaria prima del {0}"
 
@@ -331,7 +349,7 @@ msgstr "URL EBICS"
 #. Name of a DocType
 #: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:83
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:173
 msgid "EBICS User"
 msgstr "Utente EBICS"
 
@@ -351,17 +369,17 @@ msgstr "Transazioni EBICS riimportate con successo."
 #. Label of a Data field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
 msgid "EREF"
-msgstr ""
+msgstr "EREF"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:114
 msgid "Ebics 2.5 (H004)"
-msgstr ""
+msgstr "Ebics 2.5 (H004)"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:118
 msgid "Ebics 3.0 (H005)"
-msgstr ""
+msgstr "Ebics 3.0 (H005)"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:89
 msgid "Ebics Users"
 msgstr "Utenti EBICS"
 
@@ -406,7 +424,7 @@ msgstr "Inserisci la passphrase"
 msgid "Enter only if scheduled execution at the bank is desired."
 msgstr "Inserire solo se si desidera l'esecuzione programmata presso la banca."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:131
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:221
 msgid "Enter your passphrase"
 msgstr "Inserisci la tua passphrase"
 
@@ -415,13 +433,21 @@ msgstr "Inserisci la tua passphrase"
 msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
 msgstr "Inserisci la tua password per abilitare il sincronizzazione automatica, regolare. Lascia vuoto se preferisci sincronizzare manualmente."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:124
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:214
 msgid "Enter your signature passphrase"
 msgstr "Inserisci la tua passphrase di firma"
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:242
 msgid "Error while fetching releases"
 msgstr "Errore durante il recupero delle release"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:344
+msgid "Exchange Gain"
+msgstr "Utile da cambio"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:342
+msgid "Exchange Loss"
+msgstr "Perdita da cambio"
 
 #. Label of a Date field in DocType 'SEPA Payment Order'
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.json
@@ -440,7 +466,7 @@ msgstr "Impossibile riimportare le transazioni EBICS."
 msgid "Failed to reconcile new {0} against {1}"
 msgstr "Impossibile conciliare il nuovo {0} contro {1}"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:341
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:386
 msgid "Failed to reconcile {0}"
 msgstr "Impossibile conciliare {0}"
 
@@ -460,8 +486,8 @@ msgstr "Recupero transazioni bancarie"
 msgid "Field {} does not exist in {}. Please check the configuration in Banking Settings."
 msgstr "Il campo {} non esiste in {}. Per favore controlla la configurazione in Impostazioni di Banking."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:264
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:298
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:363
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:397
 msgid "Filter Required"
 msgstr "Filtro richiesto"
 
@@ -475,37 +501,33 @@ msgstr "Chiave di licenza Fintech"
 msgid "Fintech Licensee Name"
 msgstr "Nome della licenziataria Fintech"
 
-#: banking/utils.py:58
+#: banking/utils.py:62
 msgid "For non-German IBANs, a Bank must be provided."
 msgstr "Per IBAN non tedeschi, deve essere fornita una banca."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:58
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:97
 msgid "Get Bank Transactions"
 msgstr "Ottieni transazioni bancarie"
 
 #. Option for the 'Protocol Version' (Select) field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 msgid "H004"
-msgstr ""
+msgstr "H004"
 
 #. Option for the 'Protocol Version' (Select) field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.json
 msgid "H005"
-msgstr ""
+msgstr "H005"
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:288
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:190
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:456
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:501
 msgid "Hidden field for alignment"
-msgstr ""
+msgstr "Campo nascosto per allineamento"
 
-#: banking/custom/employee.py:11
+#: banking/custom/employee.py:15
 msgid "IBAN Warning: Not used in SEPA Payment Orders"
 msgstr "Avviso IBAN: non usato negli ordini di pagamento SEPA"
-
-#: banking/custom/employee.py:8
-msgid "IBAN on Employee is not used in SEPA Payment Orders. Please use Bank Account instead for payment processing."
-msgstr "L'IBAN del dipendente non è usato negli ordini di pagamento SEPA. Si prega di usare il conto bancario per l'elaborazione dei pagamenti."
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:96
 msgid "IBAN {0} is invalid."
@@ -568,7 +590,19 @@ msgstr "I dati disponibili per il download non sono validi."
 msgid "Invalid data for re-import."
 msgstr "Dati non validi per il riimport."
 
-#: banking/ebics/utils.py:237
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:319
+msgid "Invalid manual reconcile amounts payload."
+msgstr "Payload degli importi per conciliazione manuale non valido."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:382
+msgid "Invalid source currency for manual reconciliation."
+msgstr "Valuta di origine non valida per la conciliazione manuale."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:389
+msgid "Invalid target currency for manual reconciliation."
+msgstr "Valuta di destinazione non valida per la conciliazione manuale."
+
+#: banking/ebics/utils.py:266
 msgid "It seems like the EBICS User lacks permissions for order type '{0}'. The permitted types are: {1}."
 msgstr "Sembra che l'utente EBICS non abbia le autorizzazioni per il tipo di ordine '{0}'. I tipi autorizzati sono: {1}."
 
@@ -581,17 +615,34 @@ msgstr "Anello chiave"
 msgid "Klarna Kosma Integration"
 msgstr "Integrazione Klarna Kosma"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:99
 msgid "Last Renewed On"
 msgstr "Ultimo rinnovo il"
 
-#: banking/ebics/utils.py:574
+#: banking/ebics/utils.py:657
 msgid "License key not found. Please activate the checkbox 'Enable EBICS' in the {0} and ensure that your subscription is active."
 msgstr "Chiave di licenza non trovata. Per favore attiva il checkbox 'Abilita EBICS' in {0} e assicurati che la tua sottoscrizione sia attiva."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:38
+msgid "Manual currency conversion is only available for single-voucher reconciliation."
+msgstr "La conversione valuta manuale è disponibile solo per la conciliazione di un singolo documento."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:41
+msgid "Manual currency conversion is only supported for a single voucher at a time."
+msgstr "La conversione valuta manuale è supportata solo per un documento alla volta."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:341
+msgid "Manual reconcile amounts must be greater than zero."
+msgstr "Gli importi per la conciliazione manuale devono essere maggiori di zero."
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/actions_panel_manager.js:67
 msgid "Match Voucher"
 msgstr "Concilia ricevuta"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:170
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:202
+msgid "Max {0}"
+msgstr "Max {0}"
 
 #. Label of a Check field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.json
@@ -603,19 +654,27 @@ msgstr "Richiede certificato"
 msgid "No Data Available"
 msgstr "Nessun dato disponibile"
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:84
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:193
+msgid "No IBAN for {0} {1}."
+msgstr "Nessun IBAN per {0} {1}."
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:87
 msgid "No Transactions found for the current filters."
 msgstr "Nessuna transazione trovata per i filtri correnti."
 
 #: banking/ebics/doctype/ebics_request/ebics_request.py:72
 msgid "No data available for download."
-msgstr ""
+msgstr "Nessun dato disponibile per il download."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:415
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:267
+msgid "No exchange rate found — please enter manually"
+msgstr "Tasso di cambio non trovato — per favore, inserisci manualmente"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:418
 msgid "No matches occurred via Auto Reconciliation"
 msgstr "Nessuna corrispondenza avvenuta durante la conciliazione automatica"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:430
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:475
 msgid "Not available"
 msgstr "Non disponibile"
 
@@ -623,29 +682,37 @@ msgstr "Non disponibile"
 msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
 msgstr "Nota: Quando perdi queste password, dovrai passare nuovamente attraverso il processo di inizializzazione con il tuo banco."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:429
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:352
+msgid "Nothing to reconcile: source amount is fully capped by the bank transaction."
+msgstr "Niente da conciliare: l'importo di origine è completamente coperto dalla transazione bancaria."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:183
+msgid "On {0}"
+msgstr "Il {0}"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:474
 msgid "Only from {0}"
 msgstr "Solo da {0}"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:402
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:447
 msgid "Only matching amounts"
 msgstr "Solo importi corrispondenti"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:414
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:459
 msgid "Only unpaid vouchers"
 msgstr "Solo ricevute non pagate"
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:34
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:72
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:108
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:116
 msgid "Open Billing Portal"
 msgstr "Apri portale di fatturazione"
 
-#: banking/overrides/bank_transaction.py:73
+#: banking/overrides/bank_transaction.py:106
 msgid "Over Allocation"
 msgstr "Sovrallocazione"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:279
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:581
 msgid "Overallocated Returns"
 msgstr "Ritorni sovralocati"
 
@@ -668,21 +735,21 @@ msgstr "IBAN partner"
 #: banking/ebics/doctype/ebics_user/ebics_user.js:173
 #: banking/ebics/doctype/ebics_user/ebics_user.js:261
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:129
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:219
 msgid "Passphrase"
-msgstr ""
+msgstr "Passphrase"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:148
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:238
 msgid "Payment Order has been sent to bank."
 msgstr "L'ordine di pagamento è stato inviato alla banca."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:154
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:244
 msgid "Payment Order has not been sent to bank."
 msgstr "L'ordine di pagamento non è stato inviato alla banca."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:56
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:146
 msgid "Payment amounts have changed. Are you sure you want to submit without updating them first?"
-msgstr ""
+msgstr "Gli importi dei pagamenti sono cambiati. Sei sicuro di voler inviare senza aggiornarli prima?"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.py:291
 msgid "Please activate the checkbox 'Enable EBICS' in the {0}."
@@ -714,20 +781,20 @@ msgstr "Per favore inserisci i valori forniti dal tuo banco."
 msgid "Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
 msgstr "Per favore stampa la lettera INI allegata, inviala al tuo banco e attendi la conferma. Quindi verifica le chiavi del banco."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:222
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:264
 msgid "Please select a Bank Account to start reconciling."
 msgstr "Selezionare un conto bancario per iniziare la conciliazione."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:281
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:306
 msgid "Please select at least one voucher to reconcile"
 msgstr "Seleziona almeno una ricevuta per conciliare"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:292
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:317
 msgid "Please select vouchers of the same type to reconcile"
 msgstr "Seleziona ricevute dello stesso tipo per conciliare"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:263
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:297
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:362
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:396
 msgid "Please set the 'Bank Account' filter"
 msgstr "Imposta il filtro 'Conto bancario'"
 
@@ -766,9 +833,13 @@ msgstr "Riimportazione annullata."
 msgid "Re-importing EBICS transactions ..."
 msgstr "Riimportazione delle transazioni EBICS ..."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:337
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:382
 msgid "Reconciling ..."
 msgstr "Conciliazione..."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:178
+msgid "Reconciling multiple multi-currency invoices at once is not supported. Please reconcile one invoice at a time."
+msgstr "La conciliazione di più fatture multivaluta contemporaneamente non è supportata. Concilia una fattura alla volta."
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:38
 msgid "Redirecting to Customer Portal ..."
@@ -827,11 +898,15 @@ msgstr "Ordini di pagamento SEPA"
 #. Option for the 'Charges' (Select) field in DocType 'SEPA Payment'
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
 msgid "SHAR"
-msgstr ""
+msgstr "SHAR"
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:13
 msgid "Sent via EBICS"
 msgstr "Inviato via EBICS"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:160
+msgid "Set Reconcile Conversion Amounts"
+msgstr "Imposta importi conversione per conciliazione"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:24
 msgid "Set a new password for downloading bank statements from your bank."
@@ -846,7 +921,7 @@ msgid "Show Protocol Versions"
 msgstr "Mostra versioni protocollo"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:39
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:122
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:212
 msgid "Signature Passphrase"
 msgstr "Password per la firma"
 
@@ -858,9 +933,17 @@ msgstr "Registrati per il pagamento"
 msgid "Something went wrong. Please retry in a while."
 msgstr "Qualcosa è andato storto. Per favore riprova più tardi."
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:116
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:117
 msgid "Sort By"
 msgstr "Ordina per"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:165
+msgid "Source Amount ({0})"
+msgstr "Importo origine ({0})"
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:233
+msgid "Source amount, exchange rate, and target amount must be greater than zero."
+msgstr "L'importo di origine, il tasso di cambio e l'importo di destinazione devono essere maggiori di zero."
 
 #. Label of a Check field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.json
@@ -875,17 +958,17 @@ msgstr "Salva password"
 msgid "Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
 msgstr "Salva la password nel database ERPNext per abilitare il download automatico, regolare delle dichiarazioni bancarie."
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:81
 msgid "Subscriber"
 msgstr "Abbonato"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:78
 msgid "Subscription Details"
 msgstr "Dettagli abbonamento"
 
 #: banking/custom_fields.py:85
 msgid "Subtransaction ID"
-msgstr ""
+msgstr "ID sottotransazione"
 
 #: banking/custom_fields.py:40
 msgid "Supplier Bank Account"
@@ -899,19 +982,35 @@ msgstr "Il conto bancario del fornitore è stato creato."
 msgid "Supplier Bank Account was not created."
 msgstr "Il conto bancario del fornitore non è stato creato."
 
-#: banking/overrides/bank_transaction.py:70
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:195
+msgid "Target Amount ({0})"
+msgstr "Importo destinazione ({0})"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:358
+msgid "Target amount is not valid for the selected voucher."
+msgstr "L'importo di destinazione non è valido per il documento selezionato."
+
+#: banking/overrides/bank_transaction.py:103
 msgid "The Bank Transaction is over-allocated by {0} at row {1}."
 msgstr "La transazione bancaria è sovralocata di {0} alla riga {1}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:280
+#: banking/custom/employee.py:12
+msgid "The IBAN in this form will not be used in SEPA Payment Orders because a Bank Account is already linked to this Employee."
+msgstr "L'IBAN in questo modulo non verrà utilizzato in Ordini di pagamento SEPA perché un conto bancario è già collegato a questo dipendente."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:582
 msgid "The allocated amount cannot be negative. Please adjust the selected return vouchers."
 msgstr "L'importo allocato non può essere negativo. Per favore modifica le ricevute di ritorno selezionate."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:155
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:346
+msgid "The bank transaction has been modified since the dialog was loaded. Please refresh and try again."
+msgstr "La transazione bancaria è stata modificata dal momento in cui il dialogo è stato caricato. Per favore aggiorna e prova di nuovo."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:201
 msgid "The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
 msgstr "La valuta del secondo conto ({0} : {1}) deve essere la stessa del conto bancario ({2} : {3})"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:82
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:94
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
 msgstr "La valuta del secondo conto ({0}) deve essere la stessa del conto bancario ({1})"
 
@@ -933,6 +1032,10 @@ msgstr "I tipi di documenti sono pre-abilitati nella scheda 'Concilia ricevuta'.
 msgid "To Allocate"
 msgstr "Importo da allocare"
 
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:319
+msgid "To Allocate after reconcile"
+msgstr "Da allocare dopo la conciliazione"
+
 #: banking/ebics/doctype/ebics_user/ebics_user.py:140
 msgid "To use protocol version H005, please activate the checkbox 'Needs Certificates'."
 msgstr "Per utilizzare la versione del protocollo H005, attiva la casella 'Richiede certificati'."
@@ -947,32 +1050,52 @@ msgstr "Data e ora di trasmissione"
 msgid "Transmission Type"
 msgstr "Tipo di trasmissione"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:477
+msgid "Unable to determine exchange rate for {0} against {1}."
+msgstr "Impossibile determinare il tasso di cambio per {0} rispetto a {1}."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:353
+msgid "Unable to prepare conversion details for reconciliation."
+msgstr "Impossibile preparare i dettagli di conversione per la conciliazione."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:348
+msgid "Unable to prepare reconciliation details."
+msgstr "Impossibile preparare i dettagli della conciliazione."
+
+#: banking/ebics/utils.py:208
+msgid "Unable to resolve batch transaction: camt.054 not available. Please try again later."
+msgstr "Impossibile risolvere la transazione batch: camt.054 non disponibile. Per favore riprova più tardi."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:518
+msgid "Unsupported voucher type for manual reconciliation: {0}"
+msgstr "Tipo di documento non supportato per la conciliazione manuale: {0}"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:38
 msgid "Update Amounts"
-msgstr ""
+msgstr "Aggiorna importi"
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:46
 msgid "Updating ..."
 msgstr "Aggiornamento..."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:95
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:134
 msgid "Upload CAMT file"
 msgstr "Carica file CAMT"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:91
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:130
 msgid "Upload CSV / Excel file"
 msgstr "Carica file CSV / Excel"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:99
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:303
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:138
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:402
 msgid "Upload MT940 file"
 msgstr "Carica file MT940"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:269
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:368
 msgid "Upload XML (CAMT.053) file"
 msgstr "Carica file XML (CAMT.053)"
 
-#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:70
+#: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.js:90
 msgid "Usage"
 msgstr "Utilizzo"
 
@@ -1010,13 +1133,13 @@ msgstr "Tenteremo di scaricare le nuove transazioni da oggi, usando <code>camt.0
 msgid "You selected protocol version {0}, but the bank {1} only supports {2}."
 msgstr "Hai selezionato la versione del protocollo {0}, ma la banca {1} supporta solo {2}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:270
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:304
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:369
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:403
 msgid "to import bank transactions for {0}."
 msgstr "per importare le transazioni bancarie per {0}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:418
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:427
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:421
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:430
 msgid "{0} {1} {2}"
 msgstr "{0} {1} {2}"
 
