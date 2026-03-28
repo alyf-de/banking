@@ -57,7 +57,7 @@
   {
    "fieldname": "filter_description",
    "fieldtype": "HTML",
-   "options": "A <b>Journal Entry</b> is created automatically, when a submitted <b>Bank Transaction</b> matches these filters.<br>Please define set these filters as strictly as possible to avoid accounting errors.<br><br>"
+   "options": "A <b>Journal Entry</b> is created automatically, when a submitted <b>Bank Transaction</b> matches these filters.<br>Please define these filters as strictly as possible to avoid accounting errors.<br><br>"
   },
   {
    "fieldname": "amended_from",
@@ -81,7 +81,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-17 23:56:35.890446",
+ "modified": "2026-03-28 02:02:55.846298",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Rule",
