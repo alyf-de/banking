@@ -24,6 +24,16 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 			"account"
 		);
 
+		if (!account) {
+			frappe.throw(
+				__("In {0} {1} the field {2} is not set.", [
+					frappe.bold(__("Bank Account")),
+					frm.doc.bank_account,
+					__("Company Account"),
+				])
+			);
+		}
+
 		const {
 			message: { account_currency: currency, company: company },
 		} = await frappe.db.get_value("Account", account, [
