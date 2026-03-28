@@ -231,6 +231,6 @@ def create_automatic_journal_entry(
 	)
 
 	journal_entry.submit()
-	frappe.db.set_value("Journal Entry", journal_entry.name, "clearance_date", frappe.utils.today())
+	frappe.db.set_value("Journal Entry", journal_entry.name, "clearance_date", date)
 
 	return journal_entry.name
