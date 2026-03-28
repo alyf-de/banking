@@ -6,26 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-TEST_COMPANY = "Bolt Trades"
-
-
-def create_currency_account(currency: str, parent_account: str, account_name: str):
-	acc = frappe.new_doc("Account")
-	acc.account_name = account_name
-	acc.account_currency = currency
-	acc.parent_account = parent_account
-	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-	return acc
-
-
-def create_bank_account(account: str):
-	ba = frappe.new_doc("Bank Account")
-	ba.account_name = "_Test_B_Account"
-	ba.account = account
-	ba.bank = "_Test_Bank"
-	ba.is_company_account = 1
-	ba.insert(ignore_permissions=True, ignore_links=True)
-	return ba
+from banking.testing_utils import TEST_COMPANY, create_bank_account, create_currency_account
 
 
 def create_bank_reconciliation_rule(bank_account, target_account, filters, disabled=0, submit=True):

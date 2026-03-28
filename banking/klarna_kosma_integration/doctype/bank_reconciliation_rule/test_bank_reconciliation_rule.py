@@ -8,27 +8,7 @@ from banking.exceptions import CurrencyMismatchError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
 	NoFiltersError,
 )
-
-TEST_COMPANY = "Bolt Trades"
-
-
-def create_currency_account(currency: str, parent_account: str, account_name: str):
-	acc = frappe.new_doc("Account")
-	acc.account_name = account_name
-	acc.account_currency = currency
-	acc.parent_account = parent_account
-	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-	return acc
-
-
-def create_bank_account(account: str):
-	ba = frappe.new_doc("Bank Account")
-	ba.account_name = "_Test_B_Account"
-	ba.account = account
-	ba.bank = "_Test_Bank"
-	ba.is_company_account = 1
-	ba.insert(ignore_permissions=True, ignore_links=True)
-	return ba
+from banking.testing_utils import TEST_COMPANY, create_bank_account, create_currency_account
 
 
 class TestBankReconciliationRule(FrappeTestCase):
@@ -36,7 +16,6 @@ class TestBankReconciliationRule(FrappeTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 
-		# these should be cleaned up by the DB rollback of FrappeTestCase
 		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
 		bank_account = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
 		cls.target_account = create_currency_account("USD", parent_account, "_Test_Account_USD")
