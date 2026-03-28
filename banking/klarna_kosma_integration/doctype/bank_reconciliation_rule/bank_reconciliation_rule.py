@@ -1,6 +1,8 @@
 # Copyright (c) 2025, ALYF GmbH and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe import _
 from frappe.exceptions import ValidationError
@@ -45,6 +47,5 @@ class BankReconciliationRule(Document):
 			)
 
 	def validate_filters(self):
-		# self.filters is a code field with json, so it has "[]" when empty
-		if not self.filters or len(self.filters) <= 2:
+		if not self.filters or not json.loads(self.filters):
 			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
