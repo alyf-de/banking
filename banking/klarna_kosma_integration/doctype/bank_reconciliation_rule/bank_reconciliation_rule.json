@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "creation": "2025-10-23 13:00:49.226504",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "account_settings_section",
+  "bank_account",
+  "target_account",
+  "column_break_dvyd",
+  "priority",
+  "disabled",
+  "filters_section",
+  "filter_description",
+  "filters",
+  "filter_area",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Bank Account",
+   "link_filters": "[[\"Bank Account\",\"is_company_account\",\"=\",1],[\"Bank Account\",\"account\",\"is\",\"set\"]]",
+   "options": "Bank Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "account_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Account Settings"
+  },
+  {
+   "fieldname": "target_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "filters",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Filters",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filter_area",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "filter_description",
+   "fieldtype": "HTML",
+   "options": "A <b>Journal Entry</b> is created automatically, when a submitted <b>Bank Transaction</b> matches these filters.<br>Please define these filters as strictly as possible to avoid accounting errors.<br><br>"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Bank Reconciliation Rule",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "column_break_dvyd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "If multiple rules match a <b>Bank Transaction</b>, only the one with the highest priority is executed.",
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Priority",
+   "non_negative": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-28 02:28:06.918430",
+ "modified_by": "Administrator",
+ "module": "Klarna Kosma Integration",
+ "name": "Bank Reconciliation Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
