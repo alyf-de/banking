@@ -32,10 +32,100 @@ frappe.ui.form.on("SEPA Payment Order", {
 		}
 
 		if (frm.doc.docstatus === 0 && frm.has_perm("write")) {
+			frm.add_custom_button(__("Add Recipient"), () => {
+				frm.trigger("add_recipient");
+			});
 			frm.add_custom_button(__("Update Amounts"), () => {
 				frm.trigger("update_amounts");
 			});
 		}
+	},
+
+	add_recipient(frm) {
+		const d = new frappe.ui.Dialog({
+			title: __("Add Recipient"),
+			fields: [
+				{
+					fieldname: "recipient_doctype",
+					label: __("DocType"),
+					fieldtype: "Link",
+					options: "DocType",
+					reqd: 1,
+					get_query: () => ({
+						filters: { name: ["in", ["Supplier", "Employee"]] },
+					}),
+				},
+				{
+					fieldname: "recipient_name",
+					label: __("Name"),
+					fieldtype: "Dynamic Link",
+					options: "recipient_doctype",
+					reqd: 1,
+					get_query: () => {
+						const recipient_doctype = d.get_value("recipient_doctype");
+						if (!recipient_doctype) {
+							return;
+						}
+						if (recipient_doctype === "Supplier") {
+							return {
+								filters: {
+									disabled: 0,
+								},
+							};
+						} else if (recipient_doctype === "Employee") {
+							return {
+								filters: {
+									status: ["in", ["Active", "Suspended"]],
+								},
+							};
+						}
+					},
+				},
+				{
+					fieldname: "purpose",
+					label: __("Purpose"),
+					fieldtype: "Data",
+				},
+				{
+					fieldname: "amount",
+					label: __("Amount"),
+					fieldtype: "Currency",
+				},
+			],
+			primary_action_label: __("Add"),
+			primary_action(values) {
+				frappe.call({
+					method:
+						"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.get_recipient_details",
+					args: {
+						doctype: values.recipient_doctype,
+						name: values.recipient_name,
+					},
+					async callback({ message }) {
+						const new_row = {
+							recipient: message.recipient,
+							iban: message.iban,
+							purpose: values.purpose,
+							amount: values.amount,
+						};
+						//use last row if empty, otherwise add a new row
+						if (
+							frm.doc.payments?.length > 0 &&
+							!frm.doc.payments.at(-1).recipient &&
+							!frm.doc.payments.at(-1).iban
+						) {
+							const row = frm.doc.payments.at(-1);
+							await frappe.model.set_value(row.doctype, row.name, new_row);
+						} else {
+							frm.add_child("payments", new_row);
+						}
+						frm.refresh_field("payments");
+						d.hide();
+					},
+				});
+			},
+		});
+		d.show();
 	},
 
 	async before_submit(frm) {
@@ -175,5 +265,11 @@ frappe.ui.form.on("SEPA Payment Order", {
 					indicator: "red",
 				});
 			});
+	},
+});
+
+frappe.ui.form.on("SEPA Payment", {
+	payments_add(frm) {
+		frm.trigger("add_recipient");
 	},
 });
