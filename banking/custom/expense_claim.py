@@ -86,7 +86,8 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 					"parent": "reference_name",
 					"parenttype": "reference_doctype",
 				},
-				"condition": lambda row: row.idx == 1,
+				"condition": lambda row: row.idx == 1
+				and flt(row.parent_doc.grand_total) - flt(row.parent_doc.total_amount_reimbursed) > 0.0,
 				"postprocess": process_payment,
 			},
 		},
