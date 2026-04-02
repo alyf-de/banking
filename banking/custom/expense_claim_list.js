@@ -1,3 +1,5 @@
+frappe.listview_settings["Expense Claim"] =
+	frappe.listview_settings["Expense Claim"] || {};
 const old_onload = frappe.listview_settings["Expense Claim"].onload;
 const old_add_fields =
 	frappe.listview_settings["Expense Claim"].add_fields || [];
