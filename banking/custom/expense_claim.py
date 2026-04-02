@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 
 @frappe.whitelist()
 def make_sepa_payment_order(source_name: str, target_doc: str | Document | None = None):
+	if frappe.db.get_value("Expense Claim", source_name, "sepa_payment_order_status"):
+		frappe.throw(_("A SEPA Payment Order already exists for Expense Claim {0}.").format(source_name))
+
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
