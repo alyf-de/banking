@@ -30,12 +30,12 @@ if TYPE_CHECKING:
 
 MAX_QUERY_RESULTS = 150
 # Weights for ranking parameters
-REF_RANK_WEIGHT = 3  # Reference number match
+REF_RANK_WEIGHT = 3  # Reference field equality match
 PARTY_RANK_WEIGHT = 2  # Party match
 AMOUNT_RANK_WEIGHT = 2  # Amount match
 DATE_RANK_WEIGHT = 1  # Date match
 NAME_MATCH_WEIGHT = 3  # Name (Paid From) match
-REF_MATCH_WEIGHT = 3  # Reference number match in description
+REF_MATCH_WEIGHT = 3  # Reference number found in transaction description
 
 
 class BankReconciliationToolBeta(Document):
