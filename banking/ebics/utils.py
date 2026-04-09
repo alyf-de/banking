@@ -6,16 +6,29 @@ from typing import TYPE_CHECKING, Literal
 import fintech
 import frappe
 from frappe import _
+from frappe.utils import is_valid_iban
 from frappe.utils.data import get_link_to_form
 
 from banking.ebics.manager import EBICSManager, EbicsRequest
 from banking.ebics.types import MT940Statement, MT940Transaction
 
+
+class UnresolvedBatchTransactionError(Exception):
+	"""Raised when a batch transaction cannot be resolved due to missing camt.054 data.
+
+	This is a transient error - the camt.054 file may become available on a later sync.
+	Scheduled jobs should catch this and log a warning instead of failing the entire sync.
+	"""
+
+	pass
+
+
 if TYPE_CHECKING:
 	from datetime import date
 
-	from fintech.sepa import SEPATransaction
+	from fintech.sepa import CAMTDocument, SEPATransaction
 
+	from banking.ebics.doctype.ebics_request.ebics_request import EBICSRequest as EBICSRequestDoc
 	from banking.ebics.doctype.ebics_user.ebics_user import EBICSUser
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
@@ -87,7 +100,7 @@ def execute_ebics_download(
 	ebics_request: EbicsRequest,
 	requested_by: Literal["User", "System"],
 	permitted_types: list[str],
-) -> dict | None:
+) -> tuple[dict | None, "EBICSRequestDoc"]:
 	"""Execute a single EBICS download request with logging and error handling.
 
 	Args:
@@ -98,7 +111,7 @@ def execute_ebics_download(
 		permitted_types: List of permitted order types for validation
 
 	Returns:
-		dict: The downloaded XML files, or None if failed or no data available
+		tuple: (downloaded XML files or None, request log document)
 	"""
 	if manager.protocol_version == "H004":
 		validated_perms(ebics_user, permitted_types, ebics_request.order_type)
@@ -131,7 +144,7 @@ def execute_ebics_download(
 				),
 			}
 		)
-		return xml_files
+		return xml_files, request_log
 	except fintech.ebics.EbicsNoDataAvailable:
 		request_log.db_set({"status": "Successful", "response": "No Data Available"})
 	except Exception as e:
@@ -142,7 +155,7 @@ def execute_ebics_download(
 			reference_name=ebics_user,
 		)
 
-	return None
+	return None, request_log
 
 
 def sync_ebics_transactions(
@@ -163,7 +176,9 @@ def sync_ebics_transactions(
 	permitted_types = manager.get_permitted_order_types()
 
 	# Download main statements
-	main_xml = execute_ebics_download(manager, user.name, main_request, requested_by, permitted_types)
+	main_xml, main_request_log = execute_ebics_download(
+		manager, user.name, main_request, requested_by, permitted_types
+	)
 	if not main_xml:
 		return
 
@@ -171,7 +186,9 @@ def sync_ebics_transactions(
 	batch_xml = None
 	if user.download_batch_transactions:
 		batch_request = request_map["batch"]
-		batch_xml = execute_ebics_download(manager, user.name, batch_request, requested_by, permitted_types)
+		batch_xml, _batch_request_log = execute_ebics_download(
+			manager, user.name, batch_request, requested_by, permitted_types
+		)
 		# Continue even if batch download fails - main_xml is what matters
 
 	# Keep the request logs, no matter what happens next.
@@ -181,6 +198,19 @@ def sync_ebics_transactions(
 	# want to rollback the entire transaction and report an error.
 	try:
 		import_ebics_json(user, main_xml, batch_xml)
+	except UnresolvedBatchTransactionError:
+		# This is a transient error - camt.054 may become available on the next sync.
+		# Log a warning instead of an error and tell the bank to resend the data.
+		frappe.db.rollback()
+		main_request_log.db_set("status", "Skipped")
+		frappe.log_error(
+			title=_("Banking Warning"),
+			message=_("Unable to resolve batch transaction: camt.054 not available. Please try again later."),
+			reference_doctype="EBICS User",
+			reference_name=user.name,
+		)
+		manager.confirm_download(success=False)
+		return
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(
@@ -255,7 +285,7 @@ def get_bank_account(iban: str, bank: str, company: str) -> str | None:
 
 
 def process_camt_document(
-	camt_document,
+	camt_document: "CAMTDocument",
 	bank_account: str,
 	company: "str | None" = None,
 	earliest_date: "date | None" = None,
@@ -271,14 +301,14 @@ def process_camt_document(
 
 		transaction_id = get_transaction_id(transaction)
 
-		if (
-			transaction.batch
-			and (split_batch_transactions or len(transaction) == 1)
-			and len(transaction) >= 1
-		):
-			# Split batch transactions into sub-transactions, based on info
-			# from camt.054 that is sometimes available.
-			# If that's not possible, create a single transaction
+		if transaction.batch and split_batch_transactions:
+			# Split batch transactions into sub-transactions, based on info from camt.054.
+
+			if len(transaction) == 0:
+				# camt.054 might become available at a later time than camt.053.
+				# In this case, we want to block the processing of camt.053 until camt.054 is available.
+				raise UnresolvedBatchTransactionError()
+
 			for sub_transaction_index, sub_transaction in enumerate(transaction):
 				sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
 				create_sepa_bank_transaction(
@@ -315,20 +345,66 @@ def create_sepa_bank_transaction(
 		return
 
 	amount = float(sepa_transaction.amount.value)
+	currency = sepa_transaction.amount.currency
+	party_iban, party_account_number = get_iban_or_account_number(sepa_transaction.iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=transaction_id,
 		subtransaction_id=subtransaction_id,
 		company=company,
-		currency=sepa_transaction.amount.currency,
+		currency=currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
 		deposit=max(amount, 0),
 		withdrawal=abs(min(amount, 0)),
 		date=sepa_transaction.date,
 		reference_number=sepa_transaction.eref,
-		bank_party_name=sepa_transaction.ultimate_name or sepa_transaction.name,
-		bank_party_iban=sepa_transaction.iban,
+		bank_party_name=sepa_transaction.ultimate_name
+		or sepa_transaction.name
+		or (
+			# some swiss banks specify the address only
+			", ".join(sepa_transaction.address) if sepa_transaction.address else None
+		),
+		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
+		included_fee=parse_included_fees(sepa_transaction, currency),
 	)
+
+
+def parse_included_fees(
+	sepa_transaction: "SEPATransaction", transaction_currency: str | None = None
+) -> float:
+	def _parse_amount(value) -> float:
+		if isinstance(value, str):
+			normalized_value = value.strip().replace(",", ".")
+			if not normalized_value:
+				return 0.0
+			with contextlib.suppress(ValueError):
+				return float(normalized_value)
+			return 0.0
+
+		with contextlib.suppress(TypeError, ValueError):
+			return float(value)
+		return 0.0
+
+	def _normalize_currency(value) -> str | None:
+		if not isinstance(value, str):
+			return None
+		normalized = value.strip().upper()
+		return normalized or None
+
+	charges = sepa_transaction._xmlobj.Chrgs.TtlChrgsAndTaxAmt
+	charges_currency = _normalize_currency(
+		charges.attrib.get("Ccy") if isinstance(charges.attrib, dict) else None
+	)
+	expected_currency = _normalize_currency(transaction_currency)
+	if expected_currency and charges_currency and expected_currency != charges_currency:
+		return 0.0
+
+	# This is the gross amount including taxes.
+	# The tax amount can be found in sepa_transaction._xmlobj.Tax.TtlTaxAmt._text
+	taxes_and_charges = _parse_amount(charges._text)
+	return taxes_and_charges
 
 
 def get_transaction_hash(transaction: list):
@@ -411,7 +487,18 @@ def upload_camt_file():
 	from fintech.sepa import CAMTDocument
 
 	camt_document = CAMTDocument(file_bytes.decode())
-	process_camt_document(camt_document, bank_account)
+	process_camt_document(camt_document, bank_account, split_batch_transactions=False)
+
+
+def decode_mt940_bytes(file_bytes: bytes) -> str:
+	"""Decode MT940 file bytes by trying common encodings (UTF-8, CP1252, Latin-1)."""
+	for encoding in ("utf-8", "cp1252"):
+		try:
+			return file_bytes.decode(encoding)
+		except UnicodeDecodeError:
+			continue
+
+	return file_bytes.decode("latin-1")
 
 
 @frappe.whitelist()
@@ -425,7 +512,7 @@ def upload_mt940_file():
 
 	from fintech.swift import parse_mt940
 
-	mt940_data = file_bytes.decode()
+	mt940_data = decode_mt940_bytes(file_bytes)
 	statements: list[MT940Statement] = parse_mt940(mt940_data)
 
 	for statement in statements:
@@ -473,6 +560,8 @@ def create_mt940_bank_transaction(
 		description,
 	]
 
+	party_iban, party_account_number = get_iban_or_account_number(party_iban)
+
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=get_transaction_hash(values_to_hash),
@@ -486,7 +575,20 @@ def create_mt940_bank_transaction(
 		reference_number="" if reference == "NONREF" else reference,
 		bank_party_name=party_name,
 		bank_party_iban=party_iban,
+		bank_party_account_number=party_account_number,
 	)
+
+
+def get_iban_or_account_number(number: str) -> tuple[str | None, str | None]:
+	"""Return a tuple of (iban, account_number) for the given number.
+
+	If the number is a valid IBAN, account_number is None.
+	Otherwise, iban is None and account_number is the given number.
+	"""
+	if is_valid_iban(number):
+		return number, None
+
+	return None, number
 
 
 def create_bank_transaction(

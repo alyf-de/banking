@@ -108,6 +108,8 @@ override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transactio
 doc_events = {
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
+		"before_submit": "banking.overrides.bank_transaction.before_submit",
+		"on_cancel": "banking.overrides.bank_transaction.on_cancel",
 	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
@@ -194,6 +196,13 @@ before_tests = "banking.utils.before_tests"
 # ]
 
 export_python_type_annotations = True
+
+
+# Translation
+# ------------
+# List of apps whose translatable strings should be excluded from this app's translations.
+ignore_translatable_strings_from = ["frappe", "erpnext"]
+
 
 alyf_banking_property_setters = {
 	"Bank Account": [

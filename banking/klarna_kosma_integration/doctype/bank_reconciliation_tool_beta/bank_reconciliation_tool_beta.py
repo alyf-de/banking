@@ -10,6 +10,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	get_total_allocated_amount,
 )
 from erpnext.accounts.utils import get_account_currency
+from erpnext.setup.utils import get_exchange_rate
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
@@ -157,13 +158,6 @@ def create_journal_entry_bts(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
 		)
 
-	if second_account_currency != bank_account_currency:
-		frappe.throw(
-			_(
-				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
-			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
-		)
-
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.update(
 		{
@@ -206,6 +200,15 @@ def create_journal_entry_bts(
 
 	if allow_edit:
 		return journal_entry  # Return saved document
+
+	# This check happens here because the user should be able to make
+	# multicurrency entries when they edit the Journal Entry manually (`allow_edit` is True).
+	if second_account_currency != bank_account_currency:
+		frappe.throw(
+			_(
+				"The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
+			).format(second_account, second_account_currency, bank_gl_account, bank_account_currency)
+		)
 
 	journal_entry.submit()
 
@@ -480,6 +483,56 @@ def get_linked_payments(
 	return matching
 
 
+@frappe.whitelist()
+def get_reconcile_amount_context(bank_transaction_name: str, voucher_doctype: str, voucher_name: str) -> dict:
+	"""Return minimal server-authoritative prefill context for conversion dialog.
+
+	Business context: in the single-voucher cross-currency reconcile flow, the UI
+	needs only the voucher allocation currency plus a posting-date exchange-rate
+	prefill. Keeping this payload narrow avoids duplicating client-side state and
+	keeps server ownership of permission-checked, date-aware rate lookup.
+	"""
+	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction.check_permission("read")
+
+	target_currency = _get_voucher_allocation_currency(voucher_doctype, voucher_name)
+	source_currency = transaction.currency
+	exchange_rate = (
+		1
+		if source_currency == target_currency
+		else get_exchange_rate(
+			source_currency,
+			target_currency,
+			transaction.date,
+		)
+	)
+
+	return {
+		"voucher_currency": target_currency,
+		"exchange_rate": flt(exchange_rate),
+	}
+
+
+def _get_voucher_allocation_currency(voucher_doctype: str, voucher_name: str) -> str:
+	"""Resolve the settlement currency used for voucher-side allocation.
+
+	Business context: manual conversion must target the same currency that Payment
+	Entry allocation expects for the selected voucher type. Centralizing this
+	mapping keeps dialog prefill and downstream backend validation aligned.
+	"""
+	allowed_vouchers = {"Sales Invoice", "Purchase Invoice", "Expense Claim"}
+	if voucher_doctype not in allowed_vouchers:
+		frappe.throw(_("Unsupported voucher type for manual reconciliation: {0}").format(voucher_doctype))
+
+	voucher = frappe.get_doc(voucher_doctype, voucher_name)
+	voucher.check_permission("read")
+
+	if voucher_doctype in {"Sales Invoice", "Purchase Invoice"}:
+		return voucher.party_account_currency
+
+	return get_company_currency(voucher.company)
+
+
 def subtract_allocations(gl_account, vouchers):
 	"""Look up & subtract any existing Bank Transaction allocations.
 
@@ -658,6 +711,7 @@ def get_matching_queries(
 			filter_by_reference_date,
 			from_reference_date,
 			to_reference_date,
+			transaction.name,
 		)
 		queries.append(query)
 
@@ -965,6 +1019,7 @@ def get_je_matching_query(
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
+	bank_transaction_name: str | None = None,
 ):
 	# get matching journal entry query
 	# We have mapping at the bank level
@@ -1003,6 +1058,12 @@ def get_je_matching_query(
 		.groupby(je.name)
 		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
 	)
+
+	if bank_transaction_name:
+		# This filter ensures that Journal Entries that have been created
+		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
+		# other apps are not offered as matches.
+		subquery = subquery.where(je.cheque_no != bank_transaction_name)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
@@ -1133,10 +1194,34 @@ def get_unpaid_si_matching_query(
 	sales_invoice = frappe.qb.DocType("Sales Invoice")
 	description = common_filters.description
 
+	# When the invoice currency matches the bank currency but the party account
+	# currency differs, outstanding_amount (stored in party_account_currency) must
+	# be converted back to the invoice/bank currency for display and matching.
+	# In all other cases (e.g. party_account_currency matches bank currency),
+	# return the unchanged outstanding_amount and party_account_currency.
+	is_converted = (sales_invoice.currency == currency) & (
+		sales_invoice.party_account_currency != sales_invoice.currency
+	)
+
+	invoice_outstanding = (
+		frappe.qb.terms.Case()
+		.when(is_converted, sales_invoice.outstanding_amount / sales_invoice.conversion_rate)
+		.else_(sales_invoice.outstanding_amount)
+	)
+
+	display_currency = (
+		frappe.qb.terms.Case()
+		.when(is_converted, sales_invoice.currency)
+		.else_(sales_invoice.party_account_currency)
+	)
+	currency_match_condition = display_currency == currency
+	currency_match = frappe.qb.terms.Case().when(currency_match_condition, 1).else_(0)
+
 	party_filter = sales_invoice.customer == common_filters.party
 	party_rank = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	amount_rank = amount_rank_condition(sales_invoice.outstanding_amount, common_filters.amount)
+	base_amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	amount_rank = frappe.qb.terms.Case().when(currency_match_condition, base_amount_rank).else_(0)
 
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
@@ -1177,14 +1262,15 @@ def get_unpaid_si_matching_query(
 			rank_expression.as_("rank"),
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			sales_invoice.name.as_("name"),
-			sales_invoice.outstanding_amount.as_("paid_amount"),
+			invoice_outstanding.as_("paid_amount"),
 			sales_invoice[reference_field or "name"].as_("reference_no"),
 			sales_invoice.posting_date.as_("reference_date"),
 			sales_invoice.customer.as_("party"),
 			ConstantColumn("Customer").as_("party_type"),
 			sales_invoice.customer_name.as_("party_name"),
 			sales_invoice.posting_date,
-			sales_invoice.currency,
+			display_currency.as_("currency"),
+			currency_match.as_("currency_match"),
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
@@ -1195,7 +1281,6 @@ def get_unpaid_si_matching_query(
 		.where(sales_invoice.docstatus == 1)
 		.where(sales_invoice.company == company)  # because we do not have bank account check
 		.where(sales_invoice.outstanding_amount != 0.0)
-		.where(sales_invoice.currency == currency)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1203,7 +1288,7 @@ def get_unpaid_si_matching_query(
 	if include_only_returns:
 		query = query.where(sales_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(sales_invoice.outstanding_amount == common_filters.amount)
+		query = query.where(currency_match_condition).where(invoice_outstanding == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
@@ -1324,10 +1409,34 @@ def get_unpaid_pi_matching_query(
 	purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 	description = common_filters.description
 
+	# When the invoice currency matches the bank currency but the party account
+	# currency differs, outstanding_amount (stored in party_account_currency) must
+	# be converted back to the invoice/bank currency for display and matching.
+	# In all other cases (e.g. party_account_currency matches bank currency),
+	# return the unchanged outstanding_amount and party_account_currency.
+	is_converted = (purchase_invoice.currency == currency) & (
+		purchase_invoice.party_account_currency != purchase_invoice.currency
+	)
+
+	invoice_outstanding = (
+		frappe.qb.terms.Case()
+		.when(is_converted, purchase_invoice.outstanding_amount / purchase_invoice.conversion_rate)
+		.else_(purchase_invoice.outstanding_amount)
+	)
+
+	display_currency = (
+		frappe.qb.terms.Case()
+		.when(is_converted, purchase_invoice.currency)
+		.else_(purchase_invoice.party_account_currency)
+	)
+	currency_match_condition = display_currency == currency
+	currency_match = frappe.qb.terms.Case().when(currency_match_condition, 1).else_(0)
+
 	party_filter = purchase_invoice.supplier == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	amount_rank = amount_rank_condition(purchase_invoice.outstanding_amount, common_filters.amount)
+	base_amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	amount_rank = frappe.qb.terms.Case().when(currency_match_condition, base_amount_rank).else_(0)
 
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
@@ -1370,14 +1479,15 @@ def get_unpaid_pi_matching_query(
 			rank_expression.as_("rank"),
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name.as_("name"),
-			purchase_invoice.outstanding_amount.as_("paid_amount"),
+			invoice_outstanding.as_("paid_amount"),
 			purchase_invoice[reference_field].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
 			ConstantColumn("Supplier").as_("party_type"),
 			purchase_invoice.supplier_name.as_("party_name"),
 			purchase_invoice.posting_date,
-			purchase_invoice.currency,
+			display_currency.as_("currency"),
+			currency_match.as_("currency_match"),
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
@@ -1389,7 +1499,6 @@ def get_unpaid_pi_matching_query(
 		.where(purchase_invoice.company == company)
 		.where(purchase_invoice.outstanding_amount != 0.0)
 		.where(purchase_invoice.is_paid == 0)
-		.where(purchase_invoice.currency == currency)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1397,7 +1506,7 @@ def get_unpaid_pi_matching_query(
 	if include_only_returns:
 		query = query.where(purchase_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(purchase_invoice.outstanding_amount == common_filters.amount)
+		query = query.where(currency_match_condition).where(invoice_outstanding == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
