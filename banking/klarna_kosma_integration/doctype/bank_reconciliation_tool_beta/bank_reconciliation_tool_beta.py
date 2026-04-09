@@ -1462,9 +1462,7 @@ def get_unpaid_ec_matching_query(
 	company: str,
 	reference_field: str = "name",
 ):
-	if currency != get_company_currency(company):
-		# Expense claims are always in company currency
-		return ""
+	company_currency = get_company_currency(company)
 
 	expense_claim = frappe.qb.DocType("Expense Claim")
 
@@ -1513,7 +1511,7 @@ def get_unpaid_ec_matching_query(
 			ConstantColumn("Employee").as_("party_type"),
 			expense_claim.employee_name.as_("party_name"),
 			expense_claim.posting_date,
-			ConstantColumn(currency).as_("currency"),
+			ConstantColumn(company_currency).as_("currency"),
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			name_match.as_("name_in_desc_match"),
