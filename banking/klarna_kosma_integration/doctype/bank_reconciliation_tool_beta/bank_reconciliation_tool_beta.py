@@ -614,10 +614,11 @@ def check_matching(
 				# already covered in DB query
 				continue
 
-			# higher rank if voucher name is in bank transaction
+			# higher rank if voucher reference appears in bank transaction description
 			reference_no = voucher["reference_no"]
 			if reference_no and (reference_no.strip() in transaction.description):
 				voucher["name_in_desc_match"] = 1
+				voucher["rank"] += REF_MATCH_WEIGHT
 
 	return sorted(matching_vouchers, key=lambda x: x["rank"], reverse=True)
 
