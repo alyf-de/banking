@@ -1,6 +1,12 @@
 // Copyright (c) 2023, ALYF GmbH and contributors
 // For license information, please see license.txt
 
+const CURRENCY_CONVERSION_SUPPORTED_DOCTYPES = [
+	"Sales Invoice",
+	"Purchase Invoice",
+	"Expense Claim",
+];
+
 frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	setup: function (frm) {
 		frm.set_query("bank_account", function (doc) {
@@ -46,6 +52,39 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 			frm.set_value("from_reference_date", "");
 			frm.set_value("to_reference_date", "");
 		}
+	},
+
+	/**
+	 * Handles reconcile-time currency conversion for mismatched voucher selections.
+	 *
+	 * When selected voucher currency matches the bank transaction currency, this
+	 * hook exits without altering the default reconcile flow. For currency
+	 * mismatches, it enforces single-voucher selection, restricts conversion to
+	 * supported voucher types, fetches backend prefill context, and opens the
+	 * manual conversion dialog.
+	 */
+	before_reconcile: async function (frm, transaction, selected_vouchers) {
+		const mismatched_vouchers = get_currency_mismatched_vouchers(
+			transaction,
+			selected_vouchers
+		);
+
+		if (!mismatched_vouchers.length) {
+			return;
+		}
+
+		validate_single_voucher_selection(selected_vouchers);
+
+		const voucher = selected_vouchers[0];
+		validate_currency_conversion_voucher_type(voucher);
+
+		const context = await fetch_reconcile_amount_context(transaction, voucher);
+
+		return erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts(
+			context,
+			transaction,
+			voucher
+		);
 	},
 
 	refresh: function (frm) {
@@ -256,6 +295,66 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		});
 	},
 });
+
+function get_currency_mismatched_vouchers(transaction, selected_vouchers) {
+	return (selected_vouchers || []).filter(
+		(voucher) => voucher.currency && voucher.currency !== transaction.currency
+	);
+}
+
+function validate_single_voucher_selection(selected_vouchers) {
+	if ((selected_vouchers || []).length === 1) {
+		return;
+	}
+
+	frappe.show_alert({
+		message: __(
+			"Currency conversion reconcile is only supported for one voucher at a time."
+		),
+		indicator: "orange",
+	});
+	throw new Error("currency_mismatch_requires_single_voucher");
+}
+
+function validate_currency_conversion_voucher_type(voucher) {
+	if (
+		CURRENCY_CONVERSION_SUPPORTED_DOCTYPES.includes(voucher.payment_doctype)
+	) {
+		return;
+	}
+
+	frappe.show_alert({
+		message: __(
+			"Currency conversion reconcile is only available for Sales Invoice, Purchase Invoice, and Expense Claim."
+		),
+		indicator: "orange",
+	});
+	throw new Error("unsupported_voucher_type_for_currency_conversion");
+}
+
+async function fetch_reconcile_amount_context(transaction, voucher) {
+	const context = await frappe
+		.call({
+			method:
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_reconcile_amount_context",
+			args: {
+				bank_transaction_name: transaction.name,
+				voucher_doctype: voucher.payment_doctype,
+				voucher_name: voucher.payment_name,
+			},
+		})
+		.then((result) => result.message);
+
+	if (context) {
+		return context;
+	}
+
+	frappe.show_alert({
+		message: __("Unable to prepare conversion details for reconciliation."),
+		indicator: "red",
+	});
+	throw new Error("missing_reconcile_amount_context");
+}
 
 function show_camt_uploader(frm) {
 	if (!frm.doc.bank_account) {

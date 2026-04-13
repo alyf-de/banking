@@ -10,6 +10,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	get_total_allocated_amount,
 )
 from erpnext.accounts.utils import get_account_currency
+from erpnext.setup.utils import get_exchange_rate
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
@@ -474,6 +475,56 @@ def get_linked_payments(
 	subtract_allocations(gl_account, vouchers=matching)
 
 	return matching
+
+
+@frappe.whitelist()
+def get_reconcile_amount_context(bank_transaction_name: str, voucher_doctype: str, voucher_name: str) -> dict:
+	"""Return minimal server-authoritative prefill context for conversion dialog.
+
+	Business context: in the single-voucher cross-currency reconcile flow, the UI
+	needs only the voucher allocation currency plus a posting-date exchange-rate
+	prefill. Keeping this payload narrow avoids duplicating client-side state and
+	keeps server ownership of permission-checked, date-aware rate lookup.
+	"""
+	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	transaction.check_permission("read")
+
+	target_currency = _get_voucher_allocation_currency(voucher_doctype, voucher_name)
+	source_currency = transaction.currency
+	exchange_rate = (
+		1
+		if source_currency == target_currency
+		else get_exchange_rate(
+			source_currency,
+			target_currency,
+			transaction.date,
+		)
+	)
+
+	return {
+		"voucher_currency": target_currency,
+		"exchange_rate": flt(exchange_rate),
+	}
+
+
+def _get_voucher_allocation_currency(voucher_doctype: str, voucher_name: str) -> str:
+	"""Resolve the settlement currency used for voucher-side allocation.
+
+	Business context: manual conversion must target the same currency that Payment
+	Entry allocation expects for the selected voucher type. Centralizing this
+	mapping keeps dialog prefill and downstream backend validation aligned.
+	"""
+	allowed_vouchers = {"Sales Invoice", "Purchase Invoice", "Expense Claim"}
+	if voucher_doctype not in allowed_vouchers:
+		frappe.throw(_("Unsupported voucher type for manual reconciliation: {0}").format(voucher_doctype))
+
+	voucher = frappe.get_doc(voucher_doctype, voucher_name)
+	voucher.check_permission("read")
+
+	if voucher_doctype in {"Sales Invoice", "Purchase Invoice"}:
+		return voucher.party_account_currency
+
+	return get_company_currency(voucher.company)
 
 
 def subtract_allocations(gl_account, vouchers):
@@ -1146,11 +1197,14 @@ def get_unpaid_si_matching_query(
 		.when(is_converted, sales_invoice.currency)
 		.else_(sales_invoice.party_account_currency)
 	)
+	currency_match_condition = display_currency == currency
+	currency_match = frappe.qb.terms.Case().when(currency_match_condition, 1).else_(0)
 
 	party_filter = sales_invoice.customer == common_filters.party
 	party_rank = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	base_amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	amount_rank = frappe.qb.terms.Case().when(currency_match_condition, base_amount_rank).else_(0)
 
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
@@ -1175,7 +1229,9 @@ def get_unpaid_si_matching_query(
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank_expression = ref_rank + party_rank + amount_rank + date_rank + name_match + ref_match + 1
+	rank_expression = (
+		ref_rank + party_rank + currency_match + amount_rank + date_rank + name_match + ref_match + 1
+	)
 
 	query = (
 		frappe.qb.from_(sales_invoice)
@@ -1191,6 +1247,7 @@ def get_unpaid_si_matching_query(
 			sales_invoice.customer_name.as_("party_name"),
 			sales_invoice.posting_date,
 			display_currency.as_("currency"),
+			currency_match.as_("currency_match"),
 			party_rank.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
@@ -1201,7 +1258,6 @@ def get_unpaid_si_matching_query(
 		.where(sales_invoice.docstatus == 1)
 		.where(sales_invoice.company == company)  # because we do not have bank account check
 		.where(sales_invoice.outstanding_amount != 0.0)
-		.where((sales_invoice.currency == currency) | (sales_invoice.party_account_currency == currency))
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1209,7 +1265,7 @@ def get_unpaid_si_matching_query(
 	if include_only_returns:
 		query = query.where(sales_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(invoice_outstanding == common_filters.amount)
+		query = query.where(currency_match_condition).where(invoice_outstanding == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
@@ -1342,11 +1398,14 @@ def get_unpaid_pi_matching_query(
 		.when(is_converted, purchase_invoice.currency)
 		.else_(purchase_invoice.party_account_currency)
 	)
+	currency_match_condition = display_currency == currency
+	currency_match = frappe.qb.terms.Case().when(currency_match_condition, 1).else_(0)
 
 	party_filter = purchase_invoice.supplier == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	base_amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	amount_rank = frappe.qb.terms.Case().when(currency_match_condition, base_amount_rank).else_(0)
 
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
@@ -1373,7 +1432,9 @@ def get_unpaid_pi_matching_query(
 	)
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
 
-	rank_expression = ref_rank + party_match + amount_rank + date_rank + name_match + ref_match + 1
+	rank_expression = (
+		ref_rank + party_match + currency_match + amount_rank + date_rank + name_match + ref_match + 1
+	)
 
 	query = (
 		frappe.qb.from_(purchase_invoice)
@@ -1389,6 +1450,7 @@ def get_unpaid_pi_matching_query(
 			purchase_invoice.supplier_name.as_("party_name"),
 			purchase_invoice.posting_date,
 			display_currency.as_("currency"),
+			currency_match.as_("currency_match"),
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			date_rank.as_("date_match"),
@@ -1400,9 +1462,6 @@ def get_unpaid_pi_matching_query(
 		.where(purchase_invoice.company == company)
 		.where(purchase_invoice.outstanding_amount != 0.0)
 		.where(purchase_invoice.is_paid == 0)
-		.where(
-			(purchase_invoice.currency == currency) | (purchase_invoice.party_account_currency == currency)
-		)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1410,7 +1469,7 @@ def get_unpaid_pi_matching_query(
 	if include_only_returns:
 		query = query.where(purchase_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(invoice_outstanding == common_filters.amount)
+		query = query.where(currency_match_condition).where(invoice_outstanding == common_filters.amount)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
@@ -1424,9 +1483,7 @@ def get_unpaid_ec_matching_query(
 	company: str,
 	reference_field: str = "name",
 ):
-	if currency != get_company_currency(company):
-		# Expense claims are always in company currency
-		return ""
+	company_currency = get_company_currency(company)
 
 	expense_claim = frappe.qb.DocType("Expense Claim")
 
@@ -1475,7 +1532,7 @@ def get_unpaid_ec_matching_query(
 			ConstantColumn("Employee").as_("party_type"),
 			expense_claim.employee_name.as_("party_name"),
 			expense_claim.posting_date,
-			ConstantColumn(currency).as_("currency"),
+			ConstantColumn(company_currency).as_("currency"),
 			party_match.as_("party_match"),
 			amount_rank.as_("amount_match"),
 			name_match.as_("name_in_desc_match"),

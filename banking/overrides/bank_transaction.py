@@ -1,9 +1,11 @@
+import json
+
 import frappe
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTransaction
 from frappe import _
 from frappe.core.utils import find
 from frappe.utils import flt, getdate
-from frappe.utils.data import get_link_to_form
+from frappe.utils.data import evaluate_filters, get_link_to_form
 
 
 class CustomBankTransaction(BankTransaction):
@@ -142,10 +144,12 @@ def before_submit(doc: "CustomBankTransaction", method):
 
 	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
 	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
-	debit, credit = (doc.deposit, 0) if doc.deposit else (0, doc.withdrawal)
+	debit, credit = (flt(doc.deposit), 0.0) if flt(doc.deposit) else (0.0, flt(doc.withdrawal))
 
 	if flt(frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")):
 		create_je_bank_fees(doc, cost_center, date, account, debit, credit)
+
+	create_je_automatic_rules(doc, cost_center, date, account, debit, credit)
 
 
 def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
@@ -196,6 +200,85 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 		doc.status = "Reconciled"
 
 
+def on_cancel(doc, method):
+	"""Cancel the automatically created Journal Entries for this Bank Transaction."""
+	for journal_entry in frappe.get_all(
+		"Journal Entry",
+		filters=[
+			["Journal Entry", "docstatus", "=", 1],
+			["Journal Entry", "is_system_generated", "=", 1],
+			["Journal Entry Account", "reference_type", "=", "Bank Transaction"],
+			["Journal Entry Account", "reference_name", "=", doc.name],
+		],
+		pluck="name",
+		distinct=True,
+	):
+		frappe.get_doc("Journal Entry", journal_entry).cancel()
+
+
+def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
+	allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+	remaining_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - allocated_amount
+	if remaining_amount <= 0:
+		return
+
+	debit, credit = (remaining_amount, 0.0) if flt(doc.deposit) else (0.0, remaining_amount)
+
+	bank_reconciliation_rules = frappe.get_all(
+		"Bank Reconciliation Rule",
+		filters={
+			"disabled": 0,
+			"bank_account": doc.bank_account,
+			"docstatus": 1,
+			"filters": ("is", "set"),
+		},
+		fields=["name", "target_account", "filters"],
+		as_list=True,
+		order_by="priority DESC, creation ASC",
+	)
+
+	for br_rule_name, target_account, filters in bank_reconciliation_rules:
+		try:
+			filters = json.loads(filters)
+		except json.JSONDecodeError:
+			frappe.log_error(
+				title="Invalid Filters in Bank Reconciliation Rule",
+				message=f"The filters for the Bank Reconciliation Rule {br_rule_name} are not valid JSON: {filters}",
+				reference_doctype="Bank Reconciliation Rule",
+				reference_name=br_rule_name,
+			)
+			continue
+
+		if not evaluate_filters(doc, filters):
+			continue
+
+		je_auto_name = create_automatic_journal_entry(
+			company=doc.company,
+			bank_account=doc.bank_account,
+			bank_transaction=doc.name,
+			cost_center=cost_center,
+			date=date,
+			account=account,
+			target_account=target_account,
+			debit=debit,
+			credit=credit,
+			rule=br_rule_name,
+		)
+		doc.append(
+			"payment_entries",
+			{
+				"payment_document": "Journal Entry",
+				"payment_entry": je_auto_name,
+				"allocated_amount": debit + credit,
+			},
+		)
+		doc.allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+		doc.unallocated_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - doc.allocated_amount
+		if doc.unallocated_amount == 0:
+			doc.status = "Reconciled"
+		break
+
+
 def create_automatic_journal_entry(
 	company: str,
 	bank_account: str,
@@ -206,12 +289,19 @@ def create_automatic_journal_entry(
 	target_account: str,
 	debit: float = 0,
 	credit: float = 0,
+	rule: str | None = None,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Bank Entry"
 	journal_entry.posting_date = date
 	journal_entry.company = company
-	journal_entry.user_remark = _("Auto-created from Bank Transaction {0}").format(bank_transaction)
+	journal_entry.user_remark = (
+		_("Auto-created from Bank Transaction {0} by Bank Reconciliation Rule {1}").format(
+			bank_transaction, rule
+		)
+		if rule
+		else _("Auto-created from Bank Transaction {0}").format(bank_transaction)
+	)
 	journal_entry.is_system_generated = 1
 	journal_entry.cheque_no = bank_transaction
 	journal_entry.cheque_date = date

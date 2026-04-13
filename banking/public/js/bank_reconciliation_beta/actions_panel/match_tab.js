@@ -117,6 +117,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				},
 				{
 					content: row.paid_amount,
+					currency: row.currency,
 					format: (value) => {
 						let formatted_value = format_currency(value, row.currency);
 						let match_condition =
@@ -187,18 +188,24 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		let id = row[this.position_of("Voucher")].content;
 		let value = this.get_amount_from_row(row);
+		let currency = row[this.position_of("Outstanding")].currency;
 
 		// If `id` in summary_data, remove it (row was unchecked), else add it
 		if (id in this.summary_data) {
 			delete this.summary_data[id];
 		} else {
-			this.summary_data[id] = value;
+			this.summary_data[id] = { amount: value, currency: currency };
+		}
+
+		if (this.has_currency_mismatch_selection()) {
+			this.render_baseline_summary();
+			return;
 		}
 
 		// Total of selected row amounts in summary_data
 		// Cap total_allocated to unallocated amount
 		let total_allocated = Object.values(this.summary_data).reduce(
-			(a, b) => a + b,
+			(a, entry) => a + entry.amount,
 			0
 		);
 		let max_allocated = Math.min(
@@ -219,6 +226,23 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			flt(transaction_amount),
 			unallocated,
 			actual_unallocated,
+			this.transaction.currency
+		);
+	}
+
+	has_currency_mismatch_selection() {
+		return Object.values(this.summary_data).some(
+			(entry) => entry.currency && entry.currency !== this.transaction.currency
+		);
+	}
+
+	render_baseline_summary() {
+		let transaction_amount =
+			this.transaction.withdrawal || this.transaction.deposit;
+		this.render_transaction_amount_summary(
+			flt(transaction_amount),
+			flt(this.transaction.unallocated_amount),
+			flt(this.transaction.unallocated_amount),
 			this.transaction.currency
 		);
 	}
@@ -270,6 +294,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 					payment_doctype: row[this.position_of("Voucher")].doctype,
 					payment_name: row[this.position_of("Voucher")].content,
 					amount: this.get_amount_from_row(row),
+					currency: row[this.position_of("Outstanding")].currency,
 					party: row[this.position_of("Party")].content,
 					reference_no: row[this.position_of("Reference")].content,
 				});
@@ -300,11 +325,31 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			"Bank Reconciliation Tool Beta"
 		);
 		let extra_params = {};
-		for (const handler of handlers.new_style) {
-			let result = await handler(this.frm, this.transaction, selected_vouchers);
-			if (result) {
-				extra_params = { ...extra_params, ...result };
+		try {
+			for (const handler of handlers.new_style) {
+				let result = await handler(
+					this.frm,
+					this.transaction,
+					selected_vouchers
+				);
+				if (result) {
+					extra_params = { ...extra_params, ...result };
+				}
 			}
+		} catch (error) {
+			const ignored_errors = new Set([
+				"manual_reconcile_cancelled",
+				"currency_mismatch_requires_single_voucher",
+				"unsupported_voucher_type_for_currency_conversion",
+				"missing_reconcile_amount_context",
+			]);
+			if (!ignored_errors.has(error?.message)) {
+				frappe.show_alert({
+					message: __("Unable to prepare reconciliation details."),
+					indicator: "red",
+				});
+			}
+			return;
 		}
 
 		// If the vouchers have different parties prepare a prompt to reconcile multi-party
