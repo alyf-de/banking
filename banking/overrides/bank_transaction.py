@@ -159,6 +159,11 @@ def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
 	if included_fee is None or included_fee <= 0:
 		return
 
+	# Only create fee JEs for withdrawals. Deposit-side fees are deferred
+	# to reconciliation, where the correct counter-account is known.
+	if not flt(doc.withdrawal):
+		return
+
 	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
 	if not bank_fee_account:
 		frappe.throw(

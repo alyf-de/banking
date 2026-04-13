@@ -571,8 +571,12 @@ def check_matching(
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
 ):
+	matching_amount = transaction.unallocated_amount
+	if flt(transaction.deposit) > 0 and flt(transaction.included_fee) > 0:
+		matching_amount += flt(transaction.included_fee)
+
 	common_filters = frappe._dict(
-		amount=transaction.unallocated_amount,
+		amount=matching_amount,
 		payment_type=("Receive" if transaction.deposit > 0.0 else "Pay"),
 		reference_no=transaction.reference_number,
 		party_type=transaction.party_type,

@@ -1112,6 +1112,61 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
 
+	def test_deposit_with_included_fee_creates_jv_with_fee_row(self):
+		"""Reconciling a deposit with included_fee must create a JE that settles
+		the full invoice amount (deposit + fee) and books the fee to the bank fee account.
+
+		BT: deposit=75, included_fee=5
+		SI: 80
+		Expected JE: Dr Bank 75, Dr Bank Fees 5, Cr Receivable 80
+		"""
+		fee_account = create_bank_gl_account("_Test Bank Fee Account")
+		bank_account_with_fee = create_bank_account(
+			gl_account=self.gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer()
+		si = create_sales_invoice(
+			rate=80,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 75)
+		self.assertEqual(bt.status, "Reconciled")
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.docstatus, 1)
+
+		accounts = {}
+		for row in je.accounts:
+			accounts[row.account] = row
+
+		# Bank debited for deposit amount only
+		self.assertEqual(accounts[self.gl_account].debit_in_account_currency, 75)
+		# Fee account debited for the included fee
+		self.assertEqual(accounts[fee_account].debit_in_account_currency, 5)
+
+		si.reload()
+		self.assertEqual(si.outstanding_amount, 0)
+
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
@@ -1131,20 +1186,23 @@ def create_bank_transaction(
 	bank_account: str | None = None,
 	description: str | None = None,
 	currency: str = "INR",
+	included_fee: float | None = None,
 ):
-	doc = frappe.get_doc(
-		{
-			"doctype": "Bank Transaction",
-			"company": "_Test Company",
-			"description": description or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
-			"date": date or frappe.utils.nowdate(),
-			"deposit": deposit or 0.0,
-			"withdrawal": withdrawal or 0.0,
-			"currency": currency,
-			"bank_account": bank_account,
-			"reference_number": reference_no,
-		}
-	).insert()
+	values = {
+		"doctype": "Bank Transaction",
+		"company": "_Test Company",
+		"description": description or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
+		"date": date or frappe.utils.nowdate(),
+		"deposit": deposit or 0.0,
+		"withdrawal": withdrawal or 0.0,
+		"currency": currency,
+		"bank_account": bank_account,
+		"reference_number": reference_no,
+	}
+	if included_fee is not None:
+		values["included_fee"] = included_fee
+
+	doc = frappe.get_doc(values).insert()
 	return doc.submit()
 
 
@@ -1171,6 +1229,7 @@ def create_bank_account(
 	gl_account="_Test Bank - _TC",
 	bank_account_name="Personal Account",
 	company=None,
+	bank_fee_account=None,
 ) -> str:
 	if bank_account := frappe.db.exists(
 		"Bank Account",
@@ -1182,18 +1241,22 @@ def create_bank_account(
 			"is_company_account": 1,
 		},
 	):
+		if bank_fee_account:
+			frappe.db.set_value("Bank Account", bank_account, "bank_fee_account", bank_fee_account)
 		return bank_account
 
-	bank_account = frappe.get_doc(
-		{
-			"doctype": "Bank Account",
-			"account_name": bank_account_name,
-			"bank": bank_name,
-			"account": gl_account,
-			"company": company or "_Test Company",
-			"is_company_account": 1,
-		}
-	).insert()
+	values = {
+		"doctype": "Bank Account",
+		"account_name": bank_account_name,
+		"bank": bank_name,
+		"account": gl_account,
+		"company": company or "_Test Company",
+		"is_company_account": 1,
+	}
+	if bank_fee_account:
+		values["bank_fee_account"] = bank_fee_account
+
+	bank_account = frappe.get_doc(values).insert()
 	return bank_account.name
 
 

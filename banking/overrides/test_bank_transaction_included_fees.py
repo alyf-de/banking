@@ -190,8 +190,12 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(bt.allocated_amount, 4.0)
 		self.assertEqual(bt.unallocated_amount, 6.0)
 
-	def test_submit_creates_fee_journal_entry_for_deposit(self):
-		"""Submitting a deposit with an included fee must create a cleared fee JE without allocation."""
+	def test_submit_does_not_create_fee_journal_entry_for_deposit(self):
+		"""Submitting a deposit with an included fee must NOT create a fee JE.
+
+		The fee is deferred to reconciliation, where the correct counter-account
+		(e.g. receivable) is known.
+		"""
 		set_automatic_bank_fee_entries(True)
 
 		bt = create_bank_transaction(
@@ -212,36 +216,15 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(bt.allocated_amount, 0.0)
 		self.assertEqual(bt.unallocated_amount, 5.0)
 
-		journal_entries = frappe.get_all(
-			"Journal Entry Account",
-			filters={
-				"reference_type": "Bank Transaction",
-				"reference_name": bt.name,
-			},
-			pluck="parent",
-		)
-		self.assertEqual(len(journal_entries), 1)
-
-		je = frappe.get_doc("Journal Entry", journal_entries[0])
-		self.assertEqual(je.docstatus, 1)
-		self.assertEqual(je.voucher_type, "Bank Entry")
-		self.assertTrue(je.is_system_generated)
-		self.assertEqual(je.cheque_no, bt.name)
-		self.assertEqual(str(frappe.db.get_value("Journal Entry", je.name, "clearance_date")), str(bt.date))
-		self.assertTrue(
+		self.assertFalse(
 			frappe.db.exists(
 				"Journal Entry Account",
 				{
-					"parent": je.name,
 					"reference_type": "Bank Transaction",
 					"reference_name": bt.name,
 				},
 			)
 		)
-
-		accounts = {row.account: row for row in je.accounts}
-		self.assertEqual(accounts[self.account_main.name].credit_in_account_currency, 1.0)
-		self.assertEqual(accounts[self.account_fee.name].debit_in_account_currency, 1.0)
 
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
