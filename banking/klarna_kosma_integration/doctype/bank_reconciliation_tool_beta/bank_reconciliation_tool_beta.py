@@ -1057,11 +1057,6 @@ def get_je_matching_query(
 		) & ~is_auto_fee_journal_entry
 		subquery = subquery.where(~is_cheque_linked_custom_journal_entry)
 
-		if common_filters.payment_type == "Receive":
-			# Standard deposit fee JEs from the built-in bank-fee logic must stay
-			# hidden even if they are not identified by cheque_no.
-			subquery = subquery.where(~is_auto_fee_journal_entry)
-
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
 
