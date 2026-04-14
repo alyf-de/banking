@@ -44,6 +44,13 @@ doctype_list_js = {
 	"Expense Claim": "custom/expense_claim_list.js",
 	"Purchase Invoice": "custom/purchase_invoice_list.js",
 }
+<<<<<<< HEAD
+=======
+doctype_list_js = {
+	"Expense Claim": "custom/expense_claim_list.js",
+	"Purchase Invoice": "custom/purchase_invoice_list.js",
+}
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -264,7 +271,10 @@ alyf_banking_custom_records = [
 		"link_doctype": "SEPA Payment Order",
 		"link_fieldname": "reference_name",
 		"custom": 1,
+<<<<<<< HEAD
 		"_required_apps": ["hrms"],
+=======
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 	},
 	{
 		"doctype": "DocType Link",

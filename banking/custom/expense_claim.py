@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 from __future__ import annotations
 
+=======
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 from datetime import date
 from typing import TYPE_CHECKING
 
@@ -19,7 +22,11 @@ if TYPE_CHECKING:
 	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
 
+<<<<<<< HEAD
 @frappe.whitelist(methods=["POST"])
+=======
+@frappe.whitelist()
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 def make_sepa_payment_order(source_name: str, target_doc: str | Document | None = None):
 	if frappe.db.get_value("Expense Claim", source_name, "sepa_payment_order_status"):
 		frappe.throw(_("A SEPA Payment Order already exists for Expense Claim {0}.").format(source_name))
@@ -38,7 +45,11 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
+<<<<<<< HEAD
 	def process_payment(source: ExpenseClaimDetail, target: SEPAPayment, source_parent: ExpenseClaim):
+=======
+	def process_payment(source: "ExpenseClaimDetail", target: "SEPAPayment", source_parent: "ExpenseClaim"):
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 		claim = source_parent
 		target.recipient = claim.employee_name
 		target.purpose = _get_employee_purpose(claim)
@@ -88,10 +99,15 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 					"parent": "reference_name",
 					"parenttype": "reference_doctype",
 				},
+<<<<<<< HEAD
 				"condition": lambda row: (
 					row.idx == 1
 					and flt(row.parent_doc.grand_total) - flt(row.parent_doc.total_amount_reimbursed) > 0.0
 				),
+=======
+				"condition": lambda row: row.idx == 1
+				and flt(row.parent_doc.grand_total) - flt(row.parent_doc.total_amount_reimbursed) > 0.0,
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 				"postprocess": process_payment,
 			},
 		},
@@ -100,7 +116,11 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 	)
 
 
+<<<<<<< HEAD
 def _get_employee_purpose(claim: ExpenseClaim):
+=======
+def _get_employee_purpose(claim: "ExpenseClaim"):
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 	"""Return the bank transfer purpose for an expense claim reimbursement.
 
 	Example: "EC-00001, 2025-03-01"
@@ -109,7 +129,11 @@ def _get_employee_purpose(claim: ExpenseClaim):
 	return reference.strip()
 
 
+<<<<<<< HEAD
 def _get_recipients_bank_account(claim: ExpenseClaim):
+=======
+def _get_recipients_bank_account(claim: "ExpenseClaim"):
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 	return frappe.db.get_value(
 		"Bank Account",
 		{"party_type": "Employee", "party": claim.employee, "disabled": 0},
@@ -119,7 +143,11 @@ def _get_recipients_bank_account(claim: ExpenseClaim):
 	)
 
 
+<<<<<<< HEAD
 @frappe.whitelist(methods=["POST"])
+=======
+@frappe.whitelist()
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 def make_bulk_sepa_payment_order(source_names: str):
 	target_doc = None
 	for source_name in frappe.parse_json(source_names):
@@ -132,7 +160,11 @@ def make_bulk_sepa_payment_order(source_names: str):
 
 
 def sepa_payment_order_status_changed(
+<<<<<<< HEAD
 	doc: ExpenseClaim, method: str, reference_row_name: str, status: PaymentOrderStatus
+=======
+	doc: "ExpenseClaim", method: str, reference_row_name: str, status: PaymentOrderStatus
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 ):
 	"""Called via hooks when a linked SEPA Payment Order changes."""
 	doc.sepa_payment_order_status = status.value
@@ -140,7 +172,11 @@ def sepa_payment_order_status_changed(
 
 
 def get_sepa_payment_amount(
+<<<<<<< HEAD
 	doc: ExpenseClaim, method: str, reference_row_name: str, execution_date: date
+=======
+	doc: "ExpenseClaim", method: str, reference_row_name: str, execution_date: date
+>>>>>>> 938b226 (feat: create SEPA Payment Order from Expense Claim (#352))
 ) -> float:
 	"""Return outstanding amount. No discount logic."""
 	precision = doc.precision("grand_total")
