@@ -47,8 +47,9 @@ def get_payment_entries(
 			continue
 
 		outstanding_amount = get_outstanding_amount(voucher_type, voucher_name)
+		party = voucher.get("party") or get_voucher_party(voucher_type, voucher_name)
 		# Make PE against the unpaid invoice, link PE to Bank Transaction
-		invoices_to_bill.append((voucher_type, voucher_name, outstanding_amount, voucher.get("party")))
+		invoices_to_bill.append((voucher_type, voucher_name, outstanding_amount, party))
 
 	# Make single PE against multiple invoices
 	payments = []
@@ -89,6 +90,15 @@ def get_payment_entries(
 			)
 
 	return payments
+
+
+def get_voucher_party(voucher_type: str, voucher_name: str) -> str | None:
+	party_field = {
+		"Sales Invoice": "customer",
+		"Purchase Invoice": "supplier",
+		"Expense Claim": "employee",
+	}[voucher_type]
+	return frappe.db.get_value(voucher_type, voucher_name, party_field)
 
 
 def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list, included_fee: float = 0.0):
@@ -133,7 +143,7 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	journal_entry.company = company
 	journal_entry.posting_date = bt.date
 	journal_entry.cheque_date = bt.date
-	journal_entry.cheque_no = bt.reference_number
+	journal_entry.cheque_no = bt.reference_number or f"BT:{bt.name}"
 	journal_entry.title = bt.name
 	journal_entry.user_remark = bt.description
 
