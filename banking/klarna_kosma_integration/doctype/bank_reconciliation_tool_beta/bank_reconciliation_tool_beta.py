@@ -19,6 +19,9 @@ from frappe.utils import cint, flt, sbool
 from pypika import Order
 from pypika.terms import ExistsCriterion
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
+	get_deposit_included_fee,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
 	amount_rank_condition,
 	get_description_match_condition,
@@ -571,9 +574,7 @@ def check_matching(
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
 ):
-	matching_amount = transaction.unallocated_amount
-	if flt(transaction.deposit) > 0 and flt(transaction.included_fee) > 0:
-		matching_amount += flt(transaction.included_fee)
+	matching_amount = transaction.unallocated_amount + get_deposit_included_fee(transaction)
 
 	common_filters = frappe._dict(
 		amount=matching_amount,

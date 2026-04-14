@@ -55,7 +55,7 @@ def get_payment_entries(
 	payments = []
 	if invoices_to_bill:
 		bt.validate_period_closing()
-		included_fee = _get_deposit_included_fee(bt)
+		included_fee = get_deposit_included_fee(bt)
 
 		if reconcile_multi_party:
 			journal_entry = make_jv_against_invoices(bt, invoices_to_bill, included_fee=included_fee)
@@ -712,14 +712,19 @@ def _is_multi_currency_invoice(bt: "CustomBankTransaction", invoice: tuple) -> b
 	return party_account_currency != bank_account_currency
 
 
-def _get_deposit_included_fee(bt: "CustomBankTransaction") -> float:
-	"""Return the included fee amount if it should be settled during reconciliation.
+def get_deposit_included_fee(bt: "CustomBankTransaction") -> float:
+	"""Return the included fee amount when deposit-side fee handling is enabled.
 
-	Deposit-side fees are not booked at submit time — they are deferred to
-	reconciliation so the correct counter-account (e.g. receivable) is known.
-	Returns 0.0 when no fee handling is needed.
+	Deposit-side fees are only settled during reconciliation when the global
+	feature flag is enabled and the bank account provides a fee account.
+	Returns 0.0 when the legacy pre-feature behavior should be preserved.
 	"""
 	if not (flt(bt.deposit) > 0 and flt(bt.included_fee) > 0):
+		return 0.0
+
+	if not flt(
+		frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")
+	):
 		return 0.0
 
 	if not frappe.db.get_value("Bank Account", bt.bank_account, "bank_fee_account"):

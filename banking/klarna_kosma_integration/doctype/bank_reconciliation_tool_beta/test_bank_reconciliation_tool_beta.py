@@ -1056,6 +1056,8 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		SI: 80
 		Expected JE: Dr Bank 75, Dr Bank Fees 5, Cr Receivable 80
 		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
 		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
 		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
 		bank_account_with_fee = create_bank_account(
@@ -1077,6 +1079,15 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			cost_center="Main - _TC",
 			item="Reco Item",
 		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 80)
 
 		bulk_reconcile_vouchers(
 			bt.name,
@@ -1103,6 +1114,70 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 		si.reload()
 		self.assertEqual(si.outstanding_amount, 0)
+
+	def test_deposit_with_included_fee_uses_pre_feature_behavior_when_flag_disabled(self):
+		"""With the global feature flag disabled, deposit-side included fees must
+		not affect exact matching or reconciliation."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Disabled GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Disabled Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Disabled Fee Flag",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer("Fee Flag Disabled Customer")
+		si = create_sales_invoice(
+			rate=75,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		si_with_fee = create_sales_invoice(
+			rate=80,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		matched_names = [voucher["name"] for voucher in matched]
+		self.assertIn(si.name, matched_names)
+		self.assertNotIn(si_with_fee.name, matched_names)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 75)
+		self.assertEqual(bt.status, "Reconciled")
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.docstatus, 1)
+		self.assertFalse(pe.deductions)
+
+		si.reload()
+		si_with_fee.reload()
+		self.assertEqual(si.outstanding_amount, 0)
+		self.assertEqual(si_with_fee.outstanding_amount, 80)
 
 
 def get_pe_references(vouchers: list):

@@ -119,7 +119,7 @@
   },
   {
    "default": "0",
-   "description": "When a <b>Bank Transaction</b> with <i>Included Fee</i> is submitted, we'll automatically create a <b>Journal Entry</b> for the fee amount. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\"><b>Bank Account</b></a>.",
+   "description": "When enabled, included bank fees are handled automatically for <b>Bank Transactions</b>: withdrawals create a fee <b>Journal Entry</b> on submit, and deposits include the fee during reconciliation. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\"><b>Bank Account</b></a>.",
    "fieldname": "enable_automatic_journal_entries_for_bank_fees",
    "fieldtype": "Check",
    "label": "Enable Automatic Journal Entries for Bank Fees"
@@ -129,7 +129,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-17 23:56:13.629502",
+ "modified": "2026-04-14 13:09:54.246991",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",
