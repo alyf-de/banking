@@ -1056,11 +1056,12 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		SI: 80
 		Expected JE: Dr Bank 75, Dr Bank Fees 5, Cr Receivable 80
 		"""
-		fee_account = create_bank_gl_account("_Test Bank Fee Account")
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
 		bank_account_with_fee = create_bank_account(
-			gl_account=self.gl_account,
+			gl_account=fee_gl_account,
 			bank_account_name="Personal Account With Fee",
-			bank_fee_account=fee_account,
+			bank_fee_account=fee_expense_account,
 		)
 
 		bt = create_bank_transaction(
@@ -1096,9 +1097,9 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			accounts[row.account] = row
 
 		# Bank debited for deposit amount only
-		self.assertEqual(accounts[self.gl_account].debit_in_account_currency, 75)
+		self.assertEqual(accounts[fee_gl_account].debit_in_account_currency, 75)
 		# Fee account debited for the included fee
-		self.assertEqual(accounts[fee_account].debit_in_account_currency, 5)
+		self.assertEqual(accounts[fee_expense_account].debit_in_account_currency, 5)
 
 		si.reload()
 		self.assertEqual(si.outstanding_amount, 0)
