@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 import datetime
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
@@ -26,6 +26,12 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.util
 )
 
 if TYPE_CHECKING:
+	from erpnext.accounts.doctype.journal_entry.journal_entry import JournalEntry
+	from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry
+	from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
+	from erpnext.accounts.doctype.sales_invoice.sales_invoice import SalesInvoice
+	from hrms.hr.doctype.expense_claim.expense_claim import ExpenseClaim
+
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
@@ -63,9 +69,9 @@ def get_bank_transactions(
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
 	order_by: str | datetime.date | None = "date asc",
-):
+) -> tuple[dict[str, Any], ...] | None:
 	"""Return bank transactions for a bank account"""
-	filters = [
+	filters: list[list] = [
 		["docstatus", "=", 1],
 		["status", "not in", ["Reconciled", "Cancelled"]],
 	]
@@ -85,7 +91,7 @@ def get_bank_transactions(
 		filters.append(["company", "=", company])
 
 	if bank:
-		bank_accounts = frappe.get_list("Bank Account", filters={"bank": bank}, pluck="name")
+		bank_accounts: tuple[str, ...] = frappe.get_list("Bank Account", filters={"bank": bank}, pluck="name")
 		filters.append(["bank_account", "in", bank_accounts])
 
 	return frappe.get_list(
@@ -151,7 +157,7 @@ def create_journal_entry_bts(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
 		)
 
-	journal_entry = frappe.new_doc("Journal Entry")
+	journal_entry: JournalEntry = frappe.new_doc("Journal Entry")
 	journal_entry.update(
 		{
 			"voucher_type": entry_type,
@@ -252,7 +258,7 @@ def create_payment_entry_bts(
 		"paid_amount": paid_amount,
 		"received_amount": paid_amount,
 	}
-	payment_entry = frappe.new_doc("Payment Entry")
+	payment_entry: PaymentEntry = frappe.new_doc("Payment Entry")
 
 	payment_entry.update(payment_entry_dict)
 
@@ -517,7 +523,7 @@ def _get_voucher_allocation_currency(voucher_doctype: str, voucher_name: str) ->
 	if voucher_doctype not in allowed_vouchers:
 		frappe.throw(_("Unsupported voucher type for manual reconciliation: {0}").format(voucher_doctype))
 
-	voucher = frappe.get_doc(voucher_doctype, voucher_name)
+	voucher: SalesInvoice | PurchaseInvoice | ExpenseClaim = frappe.get_doc(voucher_doctype, voucher_name)
 	voucher.check_permission("read")
 
 	if voucher_doctype in {"Sales Invoice", "Purchase Invoice"}:
@@ -626,7 +632,7 @@ def get_queries(
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
-	common_filters: frappe._dict = None,
+	common_filters: frappe._dict | None = None,
 ):
 	# get queries to get matching vouchers
 	account_from_to = "paid_to" if transaction.deposit > 0.0 else "paid_from"
@@ -668,7 +674,7 @@ def get_matching_queries(
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
-	common_filters: frappe._dict = None,
+	common_filters: frappe._dict | None = None,
 ):
 	if not common_filters:
 		common_filters = frappe._dict()
@@ -1560,7 +1566,7 @@ def bank_query(doctype: str, txt: str, searchfield: str, start: int, page_len: i
 	if company := filters.get("company"):
 		filters.update({"company": company})
 
-	results = frappe.get_list(
+	results: tuple[str, ...] = frappe.get_list(
 		"Bank Account",
 		filters=filters,
 		pluck="bank",
