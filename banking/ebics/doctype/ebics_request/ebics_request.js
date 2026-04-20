@@ -16,8 +16,8 @@ frappe.ui.form.on("EBICS Request", {
 	download_files: function (frm) {
 		window.open(
 			`/api/method/banking.ebics.doctype.ebics_request.ebics_request.download_files?name=${encodeURIComponent(
-				frm.doc.name
-			)}`
+				frm.doc.name,
+			)}`,
 		);
 	},
 	re_import: async function (frm) {
@@ -62,10 +62,10 @@ function confirm_re_import(ebics_user) {
 					frappe.confirm(
 						__(
 							"<b>EBICS User</b> '{0}' has <i>Download Batch Transactions</i> enabled. Batch details are stored in separate <b>EBICS Requests</b>, so this re-import might be incomplete. Do you want to continue?",
-							[ebics_user]
+							[ebics_user],
 						),
 						() => resolve(),
-						() => reject()
+						() => reject(),
 					);
 				} else {
 					resolve();

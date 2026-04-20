@@ -25,7 +25,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 				.append(
 					`
 				<div class="actions-panel"></div>
-			`
+			`,
 				)
 				.find(".actions-panel");
 		}
@@ -115,7 +115,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 	after_transaction_reconcile(
 		message,
 		with_new_voucher = false,
-		document_type
+		document_type,
 	) {
 		// Actions after a transaction is matched with a voucher
 		// `with_new_voucher`: If a new voucher was created and reconciled with the transaction

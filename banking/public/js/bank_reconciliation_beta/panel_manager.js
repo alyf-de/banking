@@ -14,7 +14,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		const [transactions, document_types] = await Promise.all([
 			this.get_bank_transactions(),
 			frappe.xcall(
-				"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
+				"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation",
 			),
 		]);
 
@@ -26,7 +26,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			.append(
 				`
 			<div class="panel-container d-flex"></div>
-		`
+		`,
 			)
 			.find(".panel-container");
 
@@ -72,7 +72,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			Object.entries(this.document_types).map(([key, value]) => [
 				frappe.scrub(key),
 				value ? 1 : 0,
-			])
+			]),
 		);
 		this.actions_filters.exact_match = 0;
 		this.actions_filters.exact_party_match = 0;
@@ -161,8 +161,8 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 					<div class="d-flex">
 						<div class="w-50">
 							<span title="${__("Date")}">${frappe.format(transaction.date, {
-						fieldtype: "Date",
-					})}</span>
+								fieldtype: "Date",
+							})}</span>
 						</div>
 
 						<div class="w-50 bt-amount-contianer">
@@ -198,7 +198,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 						<span class="reference-value">${transaction.reference_number}</span>
 					</div>
 				</div>
-			`
+			`,
 				)
 				.find("#" + transaction.name);
 
@@ -207,7 +207,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 				// this.transaction's objects get updated, we want the latest values
 				this.active_transaction = this.transactions.find(
-					({ name }) => name === transaction.name
+					({ name }) => name === transaction.name,
 				);
 				this.render_actions_panel();
 			});
@@ -218,7 +218,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		updated_amount = null,
 		reference_number = null,
 		party_type = null,
-		party = null
+		party = null,
 	) {
 		// Update the transaction object's & view's unallocated_amount **OR** other details
 		let id = this.active_transaction.name;

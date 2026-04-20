@@ -20,7 +20,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 				() => {
 					frm.trigger("download_xml_file");
 				},
-				__("Actions")
+				__("Actions"),
 			);
 			// frm.add_custom_button(
 			// 	__("Send to Bank"),
@@ -134,7 +134,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 				"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.have_amounts_changed",
 				{
 					sepa_payment_order: frm.doc.name,
-				}
+				},
 			)
 			.then((amounts_changed) => {
 				if (!amounts_changed) {
@@ -144,13 +144,13 @@ frappe.ui.form.on("SEPA Payment Order", {
 				return new Promise((resolve, reject) => {
 					frappe.confirm(
 						__(
-							"Payment amounts have changed. Are you sure you want to submit without updating them first?"
+							"Payment amounts have changed. Are you sure you want to submit without updating them first?",
 						),
 						() => resolve(),
 						() => {
 							frappe.validated = false;
 							reject();
-						}
+						},
 					);
 				});
 			});
@@ -161,7 +161,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 			"/api/method/banking.ebics.doctype.sepa_payment_order.sepa_payment_order.download_xml_file",
 			{
 				sepa_payment_order: frm.doc.name,
-			}
+			},
 		);
 	},
 
@@ -231,7 +231,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 							ebics_user_id: values.ebics_user,
 							sig_passphrase: values.sig_passphrase,
 							passphrase: values.passphrase,
-						}
+						},
 					)
 					.then((r) => {
 						frappe.show_alert({
@@ -245,7 +245,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 							indicator: "red",
 						});
 					});
-			}
+			},
 		);
 	},
 

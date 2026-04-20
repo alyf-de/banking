@@ -6,8 +6,8 @@ frappe.ui.form.on("EBICS User", {
 		if (frm.doc.initialized && !frm.doc.bank_keys_activated) {
 			frm.dashboard.set_headline(
 				__(
-					"Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys."
-				)
+					"Please print the attached INI letter, send it to your bank and wait for confirmation. Then verify the bank keys.",
+				),
 			);
 		}
 
@@ -22,7 +22,7 @@ frappe.ui.form.on("EBICS User", {
 								label: __("Passphrase"),
 								fieldtype: "Password",
 								description: __(
-									"Set a new password for downloading bank statements from your bank."
+									"Set a new password for downloading bank statements from your bank.",
 								),
 							},
 							{
@@ -31,7 +31,7 @@ frappe.ui.form.on("EBICS User", {
 								fieldtype: "Check",
 								default: 1,
 								description: __(
-									"Store the passphrase in the ERPNext database to enable automated, regular download of bank statements."
+									"Store the passphrase in the ERPNext database to enable automated, regular download of bank statements.",
 								),
 							},
 							{
@@ -39,14 +39,14 @@ frappe.ui.form.on("EBICS User", {
 								label: __("Signature Passphrase"),
 								fieldtype: "Password",
 								description: __(
-									"Set a new password for uploading transactions to your bank."
+									"Set a new password for uploading transactions to your bank.",
 								),
 							},
 							{
 								fieldname: "info",
 								fieldtype: "HTML",
 								options: __(
-									"Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
+									"Note: When you lose these passwords, you will have to go through the initialization process with your bank again.",
 								),
 							},
 						],
@@ -61,10 +61,10 @@ frappe.ui.form.on("EBICS User", {
 							});
 						},
 						__("Initialize EBICS User"),
-						__("Initialize")
+						__("Initialize"),
 					);
 				},
-				frm.doc.initialized ? __("Actions") : null
+				frm.doc.initialized ? __("Actions") : null,
 			);
 		}
 
@@ -86,7 +86,7 @@ frappe.ui.form.on("EBICS User", {
 					}
 
 					const message = __(
-						"Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
+						"Please confirm that the following keys are identical to the ones mentioned on your bank's letter:",
 					);
 					frappe.confirm(
 						`<p>${message}</p>
@@ -94,10 +94,10 @@ frappe.ui.form.on("EBICS User", {
 						async () => {
 							await confirm_bank_keys(frm.doc.name, passphrase);
 							frm.reload_doc();
-						}
+						},
 					);
 				},
-				frm.doc.bank_keys_activated ? __("Actions") : null
+				frm.doc.bank_keys_activated ? __("Actions") : null,
 			);
 		}
 
@@ -155,10 +155,10 @@ frappe.ui.form.on("EBICS User", {
 							});
 						},
 						__("Change Protocol Version"),
-						__("Change")
+						__("Change"),
 					);
 				},
-				__("Actions")
+				__("Actions"),
 			);
 		}
 	},
@@ -179,7 +179,7 @@ function ask_for_passphrase() {
 				resolve(values.passphrase);
 			},
 			__("Enter Passphrase"),
-			__("Continue")
+			__("Continue"),
 		);
 	});
 }
@@ -188,7 +188,7 @@ async function get_bank_keys(ebics_user, passphrase) {
 	try {
 		return await frappe.xcall(
 			"banking.ebics.doctype.ebics_user.ebics_user.download_bank_keys",
-			{ ebics_user: ebics_user, passphrase: passphrase }
+			{ ebics_user: ebics_user, passphrase: passphrase },
 		);
 	} catch (e) {
 		frappe.show_alert({
@@ -202,7 +202,7 @@ async function confirm_bank_keys(ebics_user, passphrase) {
 	try {
 		await frappe.xcall(
 			"banking.ebics.doctype.ebics_user.ebics_user.confirm_bank_keys",
-			{ ebics_user: ebics_user, passphrase: passphrase }
+			{ ebics_user: ebics_user, passphrase: passphrase },
 		);
 		frappe.show_alert({
 			message: __("Bank keys confirmed"),
@@ -227,23 +227,23 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 				onchange: () => {
 					const from_date = dialog.get_value("from_date");
 					const empty_disclaimer = __(
-						"If no <a href='/app/bank-transaction' target='_blank'>Bank Transactions</a> are created, please check the <a href='/app/error-log' target='_blank'>Error Logs</a>. If there are no errors, the bank likely did not provide any (new) bank statements for this period."
+						"If no <a href='/app/bank-transaction' target='_blank'>Bank Transactions</a> are created, please check the <a href='/app/error-log' target='_blank'>Error Logs</a>. If there are no errors, the bank likely did not provide any (new) bank statements for this period.",
 					);
 					if (from_date == frappe.datetime.now_date()) {
 						dialog.set_df_property(
 							"note",
 							"options",
 							__(
-								"We'll try to download new transactions from today, using <code>camt.052</code>."
-							) + `<br><br>${empty_disclaimer}`
+								"We'll try to download new transactions from today, using <code>camt.052</code>.",
+							) + `<br><br>${empty_disclaimer}`,
 						);
 					} else {
 						dialog.set_df_property(
 							"note",
 							"options",
 							__(
-								"We'll try to download all transactions of completed days in the selected period, using <code>camt.053</code>."
-							) + `<br><br>${empty_disclaimer}`
+								"We'll try to download all transactions of completed days in the selected period, using <code>camt.053</code>.",
+							) + `<br><br>${empty_disclaimer}`,
 						);
 					}
 				},
@@ -278,11 +278,11 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 						from_date: values.from_date,
 						to_date: values.to_date,
 						passphrase: values.passphrase,
-					}
+					},
 				);
 				frappe.show_alert({
 					message: __(
-						"Bank statements are being downloaded in the background."
+						"Bank statements are being downloaded in the background.",
 					),
 					indicator: "blue",
 				});
@@ -294,6 +294,6 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 			}
 		},
 		__("Download Bank Statements"),
-		__("Download")
+		__("Download"),
 	);
 }

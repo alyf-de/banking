@@ -37,7 +37,7 @@ frappe.ui.form.on("Purchase Invoice", {
 			frm.add_custom_button(
 				__("SEPA Payment Order"),
 				() => frm.trigger("make_sepa_payment_order"),
-				__("Create")
+				__("Create"),
 			);
 		}
 	},
@@ -55,7 +55,7 @@ frappe.ui.form.on("Purchase Invoice", {
 			.create_party_bank_account(
 				"Supplier",
 				frm.doc.supplier,
-				frm.doc.supplier_name
+				frm.doc.supplier_name,
 			)
 			.then((bank_account) => {
 				frm.set_value("supplier_bank_account", bank_account);

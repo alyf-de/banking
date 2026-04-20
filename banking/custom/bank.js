@@ -17,7 +17,7 @@ frappe.ui.form.on("Bank", {
 						},
 					});
 				},
-				"EBICS"
+				"EBICS",
 			);
 		}
 	},

@@ -37,7 +37,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		let filter_fields = this.match_field_group.get_values();
 		let new_filters = Object.keys(filter_fields).filter(
-			(field) => filter_fields[field] === 1
+			(field) => filter_fields[field] === 1,
 		);
 
 		this.update_filters_in_state(new_filters);
@@ -52,7 +52,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			flt(transaction_amount),
 			flt(this.transaction.unallocated_amount),
 			flt(this.transaction.unallocated_amount),
-			this.transaction.currency
+			this.transaction.currency,
 		);
 	}
 
@@ -96,7 +96,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		this.actions_table = new frappe.DataTable(
 			this.match_field_group.get_field("vouchers").$wrapper[0],
-			datatable_options
+			datatable_options,
 		);
 
 		this.bind_row_check_event();
@@ -132,7 +132,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 							frappe.utils.add_link_title(
 								row.party_type,
 								row.party,
-								row.party_name
+								row.party_name,
 							);
 						}
 						let formatted_value = frappe.format(value, {
@@ -179,7 +179,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				let voucher_row = this.actions_table.getRows()[idx];
 
 				this.check_data_table_row(voucher_row);
-			}
+			},
 		);
 	}
 
@@ -206,11 +206,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		// Cap total_allocated to unallocated amount
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, entry) => a + entry.amount,
-			0
+			0,
 		);
 		let max_allocated = Math.min(
 			total_allocated,
-			this.transaction.unallocated_amount
+			this.transaction.unallocated_amount,
 		);
 
 		// Deduct allocated amount from transaction's unallocated amount
@@ -226,13 +226,13 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			flt(transaction_amount),
 			unallocated,
 			actual_unallocated,
-			this.transaction.currency
+			this.transaction.currency,
 		);
 	}
 
 	has_currency_mismatch_selection() {
 		return Object.values(this.summary_data).some(
-			(entry) => entry.currency && entry.currency !== this.transaction.currency
+			(entry) => entry.currency && entry.currency !== this.transaction.currency,
 		);
 	}
 
@@ -243,7 +243,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			flt(transaction_amount),
 			flt(this.transaction.unallocated_amount),
 			flt(this.transaction.unallocated_amount),
-			this.transaction.currency
+			this.transaction.currency,
 		);
 	}
 
@@ -251,10 +251,10 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		total_amount,
 		unallocated_amount,
 		actual_unallocated,
-		currency
+		currency,
 	) {
 		let summary_field = this.match_field_group.get_field(
-			"transaction_amount_summary"
+			"transaction_amount_summary",
 		).$wrapper;
 		summary_field.empty();
 
@@ -271,8 +271,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 					unallocated_amount < 0
 						? "text-danger"
 						: unallocated_amount > 0
-						? "text-blue"
-						: "text-success",
+						  ? "text-blue"
+						  : "text-success",
 					actual_unallocated,
 				],
 			},
@@ -310,7 +310,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		}
 
 		let voucher_types = new Set(
-			selected_vouchers.map((voucher) => voucher.payment_doctype)
+			selected_vouchers.map((voucher) => voucher.payment_doctype),
 		);
 		if (voucher_types.size > 1) {
 			frappe.show_alert({
@@ -322,7 +322,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		const handlers = await this.frm.script_manager.get_handlers(
 			"before_reconcile",
-			"Bank Reconciliation Tool Beta"
+			"Bank Reconciliation Tool Beta",
 		);
 		let extra_params = {};
 		try {
@@ -330,7 +330,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				let result = await handler(
 					this.frm,
 					this.transaction,
-					selected_vouchers
+					selected_vouchers,
 				);
 				if (result) {
 					extra_params = { ...extra_params, ...result };
@@ -366,7 +366,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	bulk_reconcile_vouchers(
 		selected_vouchers,
 		reconcile_multi_party,
-		extra_params
+		extra_params,
 	) {
 		let me = this;
 		frappe.call({
@@ -398,14 +398,14 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		return new Promise((resolve, reject) => {
 			frappe.confirm(
 				__(
-					"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry."
+					"Are you trying to reconcile vouchers of different parties? This action will reconcile vouchers using a Journal Entry.",
 				),
 				() => {
 					resolve();
 				},
 				() => {
 					reject();
-				}
+				},
 			);
 		});
 	}
@@ -435,7 +435,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		const party_title = await frappe.utils.fetch_link_title(
 			this.transaction.party_type,
-			this.transaction.party
+			this.transaction.party,
 		);
 
 		return [

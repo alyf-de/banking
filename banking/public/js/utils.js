@@ -3,7 +3,7 @@ frappe.provide("banking.utils");
 banking.utils.create_party_bank_account = function (
 	party_type,
 	party,
-	account_name
+	account_name,
 ) {
 	const GERMAN_IBAN_PREFIX = "DE";
 	const GERMAN_IBAN_LENGTH = 22;
@@ -50,7 +50,7 @@ banking.utils.create_party_bank_account = function (
 					})
 					.then((bank_account) => resolve(bank_account))
 					.catch(() => reject());
-			}
+			},
 		);
 
 		dialog.onhide = () => {

@@ -18,7 +18,7 @@ frappe.ui.form.on("Expense Claim", {
 			frm.add_custom_button(
 				__("SEPA Payment Order"),
 				() => frm.trigger("make_sepa_payment_order"),
-				__("Create")
+				__("Create"),
 			);
 		}
 	},

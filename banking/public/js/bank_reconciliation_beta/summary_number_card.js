@@ -32,7 +32,7 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 		} else {
 			$container = this.$wrapper
 				.append(
-					`<div class="report-summary ${this.wrapper_class || ""}"></div>`
+					`<div class="report-summary ${this.wrapper_class || ""}"></div>`,
 				)
 				.find(".report-summary");
 		}
@@ -47,20 +47,20 @@ erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
 					values[0],
 					df,
 					{ only_value: true },
-					{ currency: this.currency }
+					{ currency: this.currency },
 				);
 				let value_2 = frappe.format(
 					values[2],
 					df,
 					{ only_value: true },
-					{ currency: this.currency }
+					{ currency: this.currency },
 				);
 				let visible_value = `${value_1} (${value_2})`;
 				number_card = $(
 					`<div class="summary-item">
 						<div class="summary-label">${__(key)}</div>
 						<div class="summary-value">${visible_value}</div>
-					</div>`
+					</div>`,
 				);
 			} else {
 				let data = {

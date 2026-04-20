@@ -22,7 +22,7 @@ frappe.listview_settings["Purchase Invoice"].onload = function (listview) {
 						frappe.model.sync(r.message);
 						frappe.get_doc(
 							r.message.doctype,
-							r.message.name
+							r.message.name,
 						).__run_link_triggers = true;
 						frappe.set_route("Form", r.message.doctype, r.message.name);
 					}

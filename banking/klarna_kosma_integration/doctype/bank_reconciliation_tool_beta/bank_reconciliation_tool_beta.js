@@ -66,7 +66,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 	before_reconcile: async function (frm, transaction, selected_vouchers) {
 		const mismatched_vouchers = get_currency_mismatched_vouchers(
 			transaction,
-			selected_vouchers
+			selected_vouchers,
 		);
 
 		if (!mismatched_vouchers.length) {
@@ -83,7 +83,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		return erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts(
 			context,
 			transaction,
-			voucher
+			voucher,
 		);
 	},
 
@@ -99,7 +99,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		frm.page.add_menu_item(__("Auto Reconcile"), function () {
 			frappe.confirm(
 				__(
-					"Auto reconcile bank transactions based on matching reference numbers?"
+					"Auto reconcile bank transactions based on matching reference numbers?",
 				),
 				() => {
 					frappe.call({
@@ -123,24 +123,24 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 							}
 						},
 					});
-				}
+				},
 			);
 		});
 
 		frm.page.add_menu_item(__("Upload CSV / Excel file"), () =>
-			frm.events.route_to_bank_statement_import(frm)
+			frm.events.route_to_bank_statement_import(frm),
 		);
 
 		frm.page.add_menu_item(__("Upload CAMT file"), () =>
-			show_camt_uploader(frm)
+			show_camt_uploader(frm),
 		);
 
 		frm.page.add_menu_item(__("Upload MT940 file"), () =>
-			show_mt940_uploader(frm)
+			show_mt940_uploader(frm),
 		);
 
 		frm.$reconciliation_area = frm.get_field(
-			"reconciliation_action_area"
+			"reconciliation_action_area",
 		).$wrapper;
 		frm.events.setup_empty_state(frm);
 
@@ -200,7 +200,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 						frm.trigger("get_account_closing_balance");
 						frm.trigger("render_summary");
 					});
-				}
+				},
 			);
 		}
 
@@ -290,7 +290,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				{
 					frm: frm,
 					$wrapper: frm.$reconciliation_area,
-				}
+				},
 			);
 		});
 	},
@@ -298,7 +298,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 function get_currency_mismatched_vouchers(transaction, selected_vouchers) {
 	return (selected_vouchers || []).filter(
-		(voucher) => voucher.currency && voucher.currency !== transaction.currency
+		(voucher) => voucher.currency && voucher.currency !== transaction.currency,
 	);
 }
 
@@ -309,7 +309,7 @@ function validate_single_voucher_selection(selected_vouchers) {
 
 	frappe.show_alert({
 		message: __(
-			"Currency conversion reconcile is only supported for one voucher at a time."
+			"Currency conversion reconcile is only supported for one voucher at a time.",
 		),
 		indicator: "orange",
 	});
@@ -325,7 +325,7 @@ function validate_currency_conversion_voucher_type(voucher) {
 
 	frappe.show_alert({
 		message: __(
-			"Currency conversion reconcile is only available for Sales Invoice, Purchase Invoice, and Expense Claim."
+			"Currency conversion reconcile is only available for Sales Invoice, Purchase Invoice, and Expense Claim.",
 		),
 		indicator: "orange",
 	});

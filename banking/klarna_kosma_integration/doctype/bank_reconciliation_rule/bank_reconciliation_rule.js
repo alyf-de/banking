@@ -21,7 +21,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		} = await frappe.db.get_value(
 			"Bank Account",
 			frm.doc.bank_account,
-			"account"
+			"account",
 		);
 
 		if (!account) {
@@ -30,7 +30,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 					frappe.bold(__("Bank Account")),
 					frm.doc.bank_account,
 					__("Company Account"),
-				])
+				]),
 			);
 		}
 

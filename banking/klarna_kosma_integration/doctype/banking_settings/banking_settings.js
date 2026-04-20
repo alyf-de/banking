@@ -7,7 +7,7 @@ frappe.ui.form.on("Banking Settings", {
 	},
 	set_voucher_matching_defaults_query: async (frm) => {
 		const document_types = await frappe.xcall(
-			"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_doctypes_for_bank_reconciliation"
+			"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_doctypes_for_bank_reconciliation",
 		);
 		frm.set_query("voucher_matching_defaults", (doc) => {
 			return {
@@ -48,7 +48,7 @@ frappe.ui.form.on("Banking Settings", {
 					window.open(`${frm.doc.admin_endpoint}/banking-pricing`, "_blank");
 				},
 				null,
-				"primary"
+				"primary",
 			);
 		}
 
@@ -88,8 +88,8 @@ frappe.ui.form.on("Banking Settings", {
 					<p>
 						<b>${__("Ebics Users")}</b>:
 						${subscription.ebics_usage.used} (${__("Usage")}) / ${
-				subscription.ebics_usage.allowed
-			} (${__("Limit")})
+							subscription.ebics_usage.allowed
+						} (${__("Limit")})
 					</p>
 					<p>
 						<b>${__("Valid Till")}</b>:
@@ -176,7 +176,7 @@ function set_field_options(frm, cdt, cdn) {
 						label: __(field.label),
 					};
 				})
-				.sort((a, b) => a.label.localeCompare(b.label))
+				.sort((a, b) => a.label.localeCompare(b.label)),
 		);
 		frm.refresh_field("reference_fields");
 	});

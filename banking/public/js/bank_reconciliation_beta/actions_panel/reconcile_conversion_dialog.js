@@ -17,10 +17,10 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 			const target_currency = context.voucher_currency;
 			const max_source_amount = Math.max(
 				0,
-				flt(transaction.unallocated_amount)
+				flt(transaction.unallocated_amount),
 			);
 			const voucher_outstanding_amount = Math.abs(
-				flt(selected_voucher?.amount)
+				flt(selected_voucher?.amount),
 			);
 			const max_target_amount = voucher_outstanding_amount || 0;
 			const no_exchange_rate_available = !flt(context.exchange_rate);
@@ -67,7 +67,7 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 			const get_source_amount = () => {
 				return clamp_source_amount(
 					dialog.get_value("source_amount"),
-					max_source_amount
+					max_source_amount,
 				);
 			};
 			const get_exchange_rate = () => {
@@ -76,7 +76,7 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 			const get_target_amount = () => {
 				return clamp_target_amount(
 					dialog.get_value("target_amount"),
-					max_target_amount
+					max_target_amount,
 				);
 			};
 			const refresh_previews = (overrides = {}) => {
@@ -88,17 +88,17 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 					dialog,
 					source_amount,
 					source_currency,
-					max_source_amount
+					max_source_amount,
 				);
 				update_exchange_gain_loss_preview(
 					dialog,
 					get_exchange_gain_loss_amount(
 						source_amount,
 						exchange_rate,
-						target_amount
+						target_amount,
 					),
 					target_currency,
-					is_deposit
+					is_deposit,
 				);
 			};
 			const sync_target_with_source_and_rate = async (source_input = null) => {
@@ -106,7 +106,7 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 				const exchange_rate = get_exchange_rate();
 				const target_amount = clamp_target_amount(
 					source_amount * exchange_rate,
-					max_target_amount
+					max_target_amount,
 				);
 				const updates = {};
 
@@ -127,7 +127,7 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 				if (is_internal_update) return;
 
 				const source_input = round_reconcile_value(
-					dialog.get_value("source_amount")
+					dialog.get_value("source_amount"),
 				);
 				await sync_target_with_source_and_rate(source_input);
 			};
@@ -140,11 +140,11 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 				if (is_internal_update) return;
 
 				const target_input = round_reconcile_value(
-					dialog.get_value("target_amount")
+					dialog.get_value("target_amount"),
 				);
 				const target_amount = clamp_target_amount(
 					target_input,
-					max_target_amount
+					max_target_amount,
 				);
 				const updates = {};
 
@@ -220,18 +220,18 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 				primary_action(values) {
 					const source_amount = clamp_source_amount(
 						values.source_amount,
-						max_source_amount
+						max_source_amount,
 					);
 					const exchange_rate = round_reconcile_value(values.exchange_rate);
 					const target_amount = clamp_target_amount(
 						values.target_amount,
-						max_target_amount
+						max_target_amount,
 					);
 
 					if (source_amount <= 0 || exchange_rate <= 0 || target_amount <= 0) {
 						frappe.show_alert({
 							message: __(
-								"Source amount, exchange rate, and target amount must be greater than zero."
+								"Source amount, exchange rate, and target amount must be greater than zero.",
 							),
 							indicator: "red",
 						});
@@ -265,8 +265,8 @@ erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts =
 					.get_field("exchange_rate")
 					.set_description(
 						`<span class="text-danger">${__(
-							"No exchange rate found — please enter manually"
-						)}</span>`
+							"No exchange rate found — please enter manually",
+						)}</span>`,
 					);
 			}
 			refresh_previews({
@@ -287,7 +287,7 @@ function sanitize_exchange_rate(value) {
 
 function clamp_source_amount(value, max_source_amount) {
 	return round_reconcile_value(
-		Math.min(Math.max(flt(value), 0), max_source_amount)
+		Math.min(Math.max(flt(value), 0), max_source_amount),
 	);
 }
 
@@ -295,7 +295,7 @@ function clamp_target_amount(value, max_target_amount) {
 	const sanitized = Math.max(flt(value), 0);
 
 	return round_reconcile_value(
-		max_target_amount > 0 ? Math.min(sanitized, max_target_amount) : sanitized
+		max_target_amount > 0 ? Math.min(sanitized, max_target_amount) : sanitized,
 	);
 }
 
@@ -311,14 +311,14 @@ function update_to_allocate_preview(
 	dialog,
 	source_amount,
 	source_currency,
-	max_source_amount
+	max_source_amount,
 ) {
 	const to_allocate_amount = flt(max_source_amount) - flt(source_amount);
 	dialog.get_field("post_reconcile_to_allocate_preview").$wrapper.html(
 		`<div class="text-muted small">
 				${__("To Allocate after reconcile")}:
 				<strong>${format_currency(to_allocate_amount, source_currency)}</strong>
-			</div>`
+			</div>`,
 	);
 }
 
@@ -326,7 +326,7 @@ function update_exchange_gain_loss_preview(
 	dialog,
 	exchange_gain_loss_amount,
 	target_currency,
-	is_deposit
+	is_deposit,
 ) {
 	// For deposits (receipts): positive delta (target > source*rate) means
 	// we're writing off more receivable than received → Exchange Loss.
@@ -341,8 +341,8 @@ function update_exchange_gain_loss_preview(
 	const exchange_label = is_exchange_loss
 		? __("Exchange Loss")
 		: is_exchange_gain
-		? __("Exchange Gain")
-		: __("Exchange Gain/Loss");
+		  ? __("Exchange Gain")
+		  : __("Exchange Gain/Loss");
 	const display_amount =
 		is_exchange_loss || is_exchange_gain
 			? Math.abs(exchange_gain_loss_amount)
@@ -352,6 +352,6 @@ function update_exchange_gain_loss_preview(
 		`<div class="small text-muted">
 				${exchange_label}:
 				<strong>${format_currency(display_amount, target_currency)}</strong>
-			</div>`
+			</div>`,
 	);
 }

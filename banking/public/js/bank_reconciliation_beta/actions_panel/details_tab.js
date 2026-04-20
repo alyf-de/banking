@@ -55,11 +55,11 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 					null,
 					reference_number,
 					party_type,
-					party
+					party,
 				);
 
 				frappe.show_alert(
-					__("Bank Transaction {0} updated", [me.transaction.name])
+					__("Bank Transaction {0} updated", [me.transaction.name]),
 				);
 			},
 		});

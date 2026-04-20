@@ -13,7 +13,7 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 			},
 			() => {
 				frm.no_banking_redirect = true;
-			}
+			},
 		);
 	},
 });
