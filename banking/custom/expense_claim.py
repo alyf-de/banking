@@ -36,7 +36,7 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
-	def process_payment(source: "ExpenseClaimDetail", target: "SEPAPayment", source_parent: "ExpenseClaim"):
+	def process_payment(source: ExpenseClaimDetail, target: SEPAPayment, source_parent: ExpenseClaim):
 		claim = source_parent
 		target.recipient = claim.employee_name
 		target.purpose = _get_employee_purpose(claim)
@@ -86,8 +86,10 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 					"parent": "reference_name",
 					"parenttype": "reference_doctype",
 				},
-				"condition": lambda row: row.idx == 1
-				and flt(row.parent_doc.grand_total) - flt(row.parent_doc.total_amount_reimbursed) > 0.0,
+				"condition": lambda row: (
+					row.idx == 1
+					and flt(row.parent_doc.grand_total) - flt(row.parent_doc.total_amount_reimbursed) > 0.0
+				),
 				"postprocess": process_payment,
 			},
 		},
@@ -96,7 +98,7 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 	)
 
 
-def _get_employee_purpose(claim: "ExpenseClaim"):
+def _get_employee_purpose(claim: ExpenseClaim):
 	"""Return the bank transfer purpose for an expense claim reimbursement.
 
 	Example: "EC-00001, 2025-03-01"
@@ -105,7 +107,7 @@ def _get_employee_purpose(claim: "ExpenseClaim"):
 	return reference.strip()
 
 
-def _get_recipients_bank_account(claim: "ExpenseClaim"):
+def _get_recipients_bank_account(claim: ExpenseClaim):
 	return frappe.db.get_value(
 		"Bank Account",
 		{"party_type": "Employee", "party": claim.employee, "disabled": 0},
@@ -128,7 +130,7 @@ def make_bulk_sepa_payment_order(source_names: str):
 
 
 def sepa_payment_order_status_changed(
-	doc: "ExpenseClaim", method: str, reference_row_name: str, status: PaymentOrderStatus
+	doc: ExpenseClaim, method: str, reference_row_name: str, status: PaymentOrderStatus
 ):
 	"""Called via hooks when a linked SEPA Payment Order changes."""
 	doc.sepa_payment_order_status = status.value
@@ -136,7 +138,7 @@ def sepa_payment_order_status_changed(
 
 
 def get_sepa_payment_amount(
-	doc: "ExpenseClaim", method: str, reference_row_name: str, execution_date: date
+	doc: ExpenseClaim, method: str, reference_row_name: str, execution_date: date
 ) -> float:
 	"""Return outstanding amount. No discount logic."""
 	precision = doc.precision("grand_total")

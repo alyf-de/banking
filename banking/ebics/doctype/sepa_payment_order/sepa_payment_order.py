@@ -133,7 +133,7 @@ class SEPAPaymentOrder(Document):
 				doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
 				doc.run_method("sepa_payment_order_status_changed", payment.reference_row_name, status)
 
-	def to_sepa_credit_transfer(self) -> "SEPACreditTransfer":
+	def to_sepa_credit_transfer(self) -> SEPACreditTransfer:
 		"""
 		NOTE: call register_fintech() before calling this method.
 		"""
@@ -210,7 +210,7 @@ def have_amounts_changed(sepa_payment_order: str):
 	)
 
 
-def get_changed_payment_amount(payment: "SEPAPayment", execution_date: "date | None" = None) -> float | None:
+def get_changed_payment_amount(payment: SEPAPayment, execution_date: date | None = None) -> float | None:
 	"""Call the reference doc's `get_sepa_payment_amount` method to get the outstanding amount.
 
 	If the amount has changed, return the new amount. Otherwise, return None.

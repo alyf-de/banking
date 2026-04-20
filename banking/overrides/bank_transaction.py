@@ -110,7 +110,7 @@ def on_update_after_submit(doc, event):
 			)
 
 
-def before_submit(doc: "CustomBankTransaction", method):
+def before_submit(doc: CustomBankTransaction, method):
 	date = doc.date or frappe.utils.nowdate()
 
 	if not doc.bank_account:

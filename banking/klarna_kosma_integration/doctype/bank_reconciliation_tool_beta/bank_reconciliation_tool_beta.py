@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 import datetime
 import json
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
@@ -284,7 +284,7 @@ def bulk_reconcile_vouchers(
 	vouchers: str | list[dict],
 	reconcile_multi_party: bool = False,
 	extra_params: str | dict | None = None,
-) -> "CustomBankTransaction":
+) -> CustomBankTransaction:
 	"""
 	Reconcile multiple vouchers with a bank transaction.
 
@@ -320,7 +320,7 @@ def bulk_reconcile_vouchers(
 @frappe.whitelist()
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
-) -> Union[dict, "CustomBankTransaction"]:
+) -> dict | CustomBankTransaction:
 	"""Reconcile a entry with a bank transaction. Called on `doc_update` websocket event."""
 
 	# Newly created voucher was deleted
@@ -562,7 +562,7 @@ def get_allocated_amount(voucher_allocated_amounts, voucher, gl_account):
 def check_matching(
 	bank_account: str,
 	company: str,
-	transaction: "CustomBankTransaction",
+	transaction: CustomBankTransaction,
 	document_types: list,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
@@ -619,7 +619,7 @@ def check_matching(
 def get_queries(
 	bank_account: str,
 	company: str,
-	transaction: "CustomBankTransaction",
+	transaction: CustomBankTransaction,
 	document_types: list,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
@@ -659,7 +659,7 @@ def get_queries(
 def get_matching_queries(
 	bank_account: str,
 	company: str,
-	transaction: "CustomBankTransaction",
+	transaction: CustomBankTransaction,
 	document_types: list,
 	exact_match: bool = False,
 	account_from_to: str | None = None,

@@ -17,7 +17,7 @@ class EBICSRequest(Document):
 		ebics_user = frappe.get_doc("EBICS User", self.ebics_user)
 		try:
 			data = json.loads(self.response)
-		except (json.JSONDecodeError, TypeError):
+		except json.JSONDecodeError, TypeError:
 			frappe.throw(_("Invalid data for re-import."))
 
 		if not isinstance(data, dict):
@@ -68,7 +68,7 @@ def download_files(name: str):
 
 	try:
 		data = json.loads(doc.response)
-	except (json.JSONDecodeError, TypeError):
+	except json.JSONDecodeError, TypeError:
 		frappe.throw(_("No data available for download."))
 
 	if not isinstance(data, dict):

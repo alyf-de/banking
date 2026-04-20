@@ -34,10 +34,10 @@ if TYPE_CHECKING:
 
 
 def get_ebics_manager(
-	ebics_user: "EBICSUser",
+	ebics_user: EBICSUser,
 	passphrase: str | None = None,
 	sig_passphrase: str | None = None,
-) -> "EBICSManager":
+) -> EBICSManager:
 	"""Get an EBICSManager instance for the given EBICS User.
 
 	:param ebics_user: The EBICS User record.
@@ -100,7 +100,7 @@ def execute_ebics_download(
 	ebics_request: EbicsRequest,
 	requested_by: Literal["User", "System"],
 	permitted_types: list[str],
-) -> tuple[dict | None, "EBICSRequestDoc"]:
+) -> tuple[dict | None, EBICSRequestDoc]:
 	"""Execute a single EBICS download request with logging and error handling.
 
 	Args:
@@ -224,7 +224,7 @@ def sync_ebics_transactions(
 	manager.confirm_download(success=True)
 
 
-def import_ebics_json(user: "EBICSUser", main_data: dict, batch_data: dict | None = None):
+def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None = None):
 	"""Import EBICS transactions from the given JSON data, considering user settings.
 
 	NOTE: fintech needs to be registered before calling this function.
@@ -285,10 +285,10 @@ def get_bank_account(iban: str, bank: str, company: str) -> str | None:
 
 
 def process_camt_document(
-	camt_document: "CAMTDocument",
+	camt_document: CAMTDocument,
 	bank_account: str,
-	company: "str | None" = None,
-	earliest_date: "date | None" = None,
+	company: str | None = None,
+	earliest_date: date | None = None,
 	split_batch_transactions: bool = False,
 ):
 	if not company:
@@ -332,10 +332,10 @@ def process_camt_document(
 def create_sepa_bank_transaction(
 	bank_account: str,
 	company: str,
-	sepa_transaction: "SEPATransaction",
+	sepa_transaction: SEPATransaction,
 	transaction_id: str,
 	subtransaction_id: str | None = None,
-	start_date: "date | None" = None,
+	start_date: date | None = None,
 ):
 	"""Create an ERPNext Bank Transaction from a given fintech.sepa.SEPATransaction.
 
@@ -371,9 +371,7 @@ def create_sepa_bank_transaction(
 	)
 
 
-def parse_included_fees(
-	sepa_transaction: "SEPATransaction", transaction_currency: str | None = None
-) -> float:
+def parse_included_fees(sepa_transaction: SEPATransaction, transaction_currency: str | None = None) -> float:
 	def _parse_amount(value) -> float:
 		if isinstance(value, str):
 			normalized_value = value.strip().replace(",", ".")
@@ -416,7 +414,7 @@ def get_transaction_hash(transaction: list):
 	return sha.hexdigest()
 
 
-def get_transaction_id(sepa_transaction: "SEPATransaction", subtransaction_index: int | None = None):
+def get_transaction_id(sepa_transaction: SEPATransaction, subtransaction_index: int | None = None):
 	"""Return a transaction ID for the given SEPA transaction.
 
 	If a subtransaction index is provided, the transaction is treated as a sub-transaction.

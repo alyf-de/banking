@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 @frappe.whitelist()
-def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | None" = None):
+def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | None = None):
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
@@ -31,7 +31,7 @@ def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | No
 				target.iban = bank_account.get("iban")
 				target.bank = bank_account.get("bank")
 
-	def process_payment(source: "PaymentSchedule", target: "SEPAPayment", source_parent: "PurchaseInvoice"):
+	def process_payment(source: PaymentSchedule, target: SEPAPayment, source_parent: PurchaseInvoice):
 		pi = source_parent
 		pay_to_employee = all(
 			(
@@ -90,7 +90,7 @@ def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | No
 	)
 
 
-def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
+def _get_employee_purpose(purchase_invoice: PurchaseInvoice):
 	"""Return the bank transfer purpose for an invoice reimbursed to an employee.
 
 	Example: "Example AG, 123456, 2025-01-01 (BT-0001)"
@@ -105,7 +105,7 @@ def _get_employee_purpose(purchase_invoice: "PurchaseInvoice"):
 	return invoice_reference.strip()
 
 
-def _get_recipients_bank_account(purchase_invoice: "PurchaseInvoice", pay_to_employee: bool):
+def _get_recipients_bank_account(purchase_invoice: PurchaseInvoice, pay_to_employee: bool):
 	"""
 	Get the recipient's bank account based on whether it's an employee advance payment or regular supplier payment.
 	"""
@@ -148,7 +148,7 @@ def make_bulk_sepa_payment_order(source_names: str):
 
 
 def sepa_payment_order_status_changed(
-	doc: "PurchaseInvoice", method: str, payment_schedule_row_name: str, status: PaymentOrderStatus
+	doc: PurchaseInvoice, method: str, payment_schedule_row_name: str, status: PaymentOrderStatus
 ):
 	"""Called via hooks when a linked SEPA Payment Order changes."""
 	for scheduled_payment in doc.payment_schedule:
@@ -160,7 +160,7 @@ def sepa_payment_order_status_changed(
 
 
 def get_sepa_payment_amount(
-	doc: "PurchaseInvoice", method: str, payment_schedule_row_name: str, execution_date: date
+	doc: PurchaseInvoice, method: str, payment_schedule_row_name: str, execution_date: date
 ) -> float:
 	scheduled_payment = next((p for p in doc.payment_schedule if p.name == payment_schedule_row_name), None)
 	if not scheduled_payment:

@@ -152,7 +152,7 @@ class EBICSUser(Document):
 
 		try:
 			passphrase = self.get_password("passphrase")
-		except (frappe.exceptions.AuthenticationError, frappe.exceptions.ValidationError):
+		except frappe.exceptions.AuthenticationError, frappe.exceptions.ValidationError:
 			return None
 
 		return passphrase or None

@@ -22,7 +22,7 @@ SUPPORTED_RECONCILIATION_DOCTYPES = ("Sales Invoice", "Purchase Invoice", "Expen
 
 
 def get_payment_entries(
-	bt: "CustomBankTransaction",
+	bt: CustomBankTransaction,
 	vouchers: list,
 	reconcile_multi_party: bool = False,
 	extra_params: dict | None = None,
@@ -83,10 +83,10 @@ def get_payment_entries(
 	return payments
 
 
-def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list):
+def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list):
 	"""Make Journal Entry against multiple invoices."""
 
-	def _attach_invoice(row: dict, journal_entry: "Document") -> None:
+	def _attach_invoice(row: dict, journal_entry: Document) -> None:
 		second_account = get_debtor_creditor_account(row)
 		second_account_currency = frappe.db.get_value("Account", second_account, "account_currency")
 		if second_account_currency != company_currency:
@@ -143,13 +143,13 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 
 
 def make_pe_against_invoices(
-	bt: "CustomBankTransaction",
+	bt: CustomBankTransaction,
 	invoices_to_bill: list,
 	manual_reconcile_amounts: dict | None = None,
-) -> tuple["Document", float | None]:
+) -> tuple[Document, float | None]:
 	"""Make Payment Entry against multiple invoices."""
 
-	def _attach_invoice(row: dict, payment_entry: "Document") -> None:
+	def _attach_invoice(row: dict, payment_entry: Document) -> None:
 		row.reference_doctype = row.voucher_type
 		row.reference_name = row.voucher_no
 		payment_entry.append("references", row)
@@ -263,11 +263,11 @@ def make_pe_against_invoices(
 
 
 def _create_multi_currency_pe(
-	bt: "CustomBankTransaction",
+	bt: CustomBankTransaction,
 	invoice: tuple,
 	invoice_details: frappe._dict,
 	bank_account: str,
-) -> "Document":
+) -> Document:
 	"""Create a Payment Entry for a multi-currency invoice.
 
 	When the party account currency (e.g. EUR) differs from the invoice/bank
@@ -322,7 +322,7 @@ def get_manual_reconcile_amounts(extra_params: dict | None) -> dict | None:
 
 
 def get_capped_manual_reconcile_amounts(
-	bt: "CustomBankTransaction",
+	bt: CustomBankTransaction,
 	first_invoice: tuple,
 	manual_reconcile_amounts: dict,
 ) -> tuple[float, float]:
@@ -364,7 +364,7 @@ def get_capped_manual_reconcile_amounts(
 
 
 def validate_manual_reconcile_currencies(
-	bt: "CustomBankTransaction",
+	bt: CustomBankTransaction,
 	first_invoice: tuple,
 	manual_reconcile_amounts: dict,
 ) -> None:
@@ -409,8 +409,8 @@ def get_expected_target_currency(first_invoice: tuple) -> str | None:
 
 
 def apply_manual_exchange_rate_to_payment_entry(
-	payment_entry: "Document",
-	bt: "CustomBankTransaction",
+	payment_entry: Document,
+	bt: CustomBankTransaction,
 	manual_reconcile_amounts: dict,
 ) -> None:
 	"""Apply user-approved FX rates so PE reflects statement-time economics.
@@ -453,7 +453,7 @@ def apply_manual_exchange_rate_to_payment_entry(
 
 
 def get_company_rate_for_currency(
-	payment_entry: "Document", currency: str, company_currency: str, posting_date
+	payment_entry: Document, currency: str, company_currency: str, posting_date
 ) -> float:
 	"""Get a reliable currency-to-company rate for manual cross-rate derivation.
 
@@ -535,9 +535,9 @@ def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, inv
 
 
 def adjust_and_allocate_invoices(
-	bt: "CustomBankTransaction",
+	bt: CustomBankTransaction,
 	invoices: list,
-	payment_voucher: "Document",
+	payment_voucher: Document,
 	action: Callable[[dict, Document], None],
 ) -> None:
 	"""
