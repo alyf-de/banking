@@ -1,0 +1,23 @@
+{
+ "app": "banking",
+ "bg_color": "gray",
+ "creation": "2026-04-20 23:40:02.120080",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "income",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "ALYF Banking",
+ "link_to": "ALYF Banking",
+ "link_type": "Workspace Sidebar",
+ "logo_url": "/assets/banking/images/logo.png",
+ "modified": "2026-04-20 21:09:55.080562",
+ "modified_by": "Administrator",
+ "name": "ALYF Banking",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "sidebar": "ALYF Banking",
+ "standard": 1
+}
