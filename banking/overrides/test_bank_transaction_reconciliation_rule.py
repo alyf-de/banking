@@ -70,19 +70,19 @@ class TestBankTransactionReconciliationRule(FrappeTestCase):
 		brr_1 = create_bank_reconciliation_rule(
 			self.bank_account.name,
 			self.account_target.name,
-			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			'[["Bank Transaction","description","=","FLAG-TRUE"]]',
 		)
 
 		create_bank_reconciliation_rule(
 			self.bank_account.name,
 			self.account_main.name,
-			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			'[["Bank Transaction","description","=","FLAG-TRUE"]]',
 			disabled=1,
 		)
 		create_bank_reconciliation_rule(
 			self.bank_account.name,
 			self.account_main.name,
-			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			'[["Bank Transaction","description","=","FLAG-TRUE"]]',
 			submit=False,
 		)
 
@@ -123,7 +123,7 @@ class TestBankTransactionReconciliationRule(FrappeTestCase):
 		brr_1 = create_bank_reconciliation_rule(
 			self.bank_account.name,
 			self.account_target.name,
-			'[["Bank Transaction","description","=","FLAG-TRUE",false]]',
+			'[["Bank Transaction","description","=","FLAG-TRUE"]]',
 		)
 
 		bt = create_bank_transaction(
