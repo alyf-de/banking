@@ -9,6 +9,15 @@ from frappe.utils.data import evaluate_filters
 
 
 class CustomBankTransaction(BankTransaction):
+	"""Mixin applied to **Bank Transaction** via the `extend_doctype_class` hook.
+
+	Inherits from `BankTransaction` so type checkers and IDEs can resolve all
+	DocType fields and inherited methods. At runtime Frappe builds a class
+	`ExtendedBankTransaction(CustomBankTransaction, BankTransaction)`; the
+	resulting MRO is well-defined (classic diamond) and `super()` calls from
+	this mixin still chain into the original `BankTransaction` methods.
+	"""
+
 	def before_validate(self):
 		"""Normalize imported signs before ERPNext computes fees and balances.
 

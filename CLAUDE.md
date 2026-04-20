@@ -82,7 +82,7 @@ bench --site [sitename] uninstall-app banking
     - `unpaid_vouchers.py`: Payment Entry/Journal Entry creation
 
 **`banking/overrides/`** - ERPNext DocType customizations
-- `bank_transaction.py`: Enhanced reconciliation validation (CustomBankTransaction)
+- `bank_transaction.py`: Enhanced reconciliation validation (`CustomBankTransaction`, mixed in via `extend_doctype_class`)
 - `bank_account.py`: IBAN validation hooks
 
 **`banking/connectors/`** - External service communication
@@ -174,7 +174,7 @@ Tests run against ERPNext's shipped `_Test Company` (INR). Inherit from `frappe.
 
 ### Hooks Configuration
 Key hooks in `hooks.py`:
-- `override_doctype_class`: Replace Bank Transaction with CustomBankTransaction
+- `extend_doctype_class`: Mix `CustomBankTransaction` into Bank Transaction (preferred over `override_doctype_class` in v16+)
 - `doc_events`: Validation and status change hooks
 - `bank_reconciliation_doctypes`: Register Bank Transaction for reconciliation
 - `get_matching_queries`: Point to custom matching logic

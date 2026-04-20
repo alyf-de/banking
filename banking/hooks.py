@@ -101,9 +101,11 @@ before_uninstall = "banking.uninstall.before_uninstall"
 
 # DocType Class
 # ---------------
-# Override standard doctype classes
+# Extend standard doctype classes
 
-override_doctype_class = {"Bank Transaction": "banking.overrides.bank_transaction.CustomBankTransaction"}
+extend_doctype_class = {
+	"Bank Transaction": ["banking.overrides.bank_transaction.CustomBankTransaction"],
+}
 
 # Document Events
 # ---------------
