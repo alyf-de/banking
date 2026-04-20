@@ -1,5 +1,7 @@
 # Copyright (c) 2025, ALYF GmbH and contributors
 # For license information, please see license.txt
+from __future__ import annotations
+
 import contextlib
 from enum import StrEnum
 from typing import TYPE_CHECKING
