@@ -170,7 +170,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.util
 Custom properties are defined in `hooks.py` as `alyf_banking_property_setters` and automatically reset on uninstall.
 
 ### Testing Setup
-Tests use `before_tests()` in `utils.py` to initialize a test company with German settings. Inherit from `frappe.tests.utils.FrappeTestCase`.
+Tests run against ERPNext's shipped `_Test Company` (INR). Inherit from `frappe.tests.utils.FrappeTestCase`. For multi-currency scenarios, create sub-accounts in the required currency under any group account of `_Test Company` (see `banking.testing_utils.create_currency_account`).
 
 ### Hooks Configuration
 Key hooks in `hooks.py`:

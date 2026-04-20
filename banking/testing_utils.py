@@ -3,14 +3,13 @@
 
 import frappe
 
-TEST_COMPANY = "Bolt Trades"
-
 
 def create_currency_account(currency: str, parent_account: str, account_name: str):
 	acc = frappe.new_doc("Account")
 	acc.account_name = account_name
 	acc.account_currency = currency
 	acc.parent_account = parent_account
+	acc.company = frappe.db.get_value("Account", parent_account, "company")
 	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
 	return acc
 
@@ -21,5 +20,6 @@ def create_bank_account(account: str):
 	ba.account = account
 	ba.bank = "_Test_Bank"
 	ba.is_company_account = 1
+	ba.company = frappe.db.get_value("Account", account, "company")
 	ba.insert(ignore_permissions=True, ignore_links=True)
 	return ba

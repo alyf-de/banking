@@ -17,13 +17,13 @@ class TestKosma(FrappeTestCase):
 		doc.admin_endpoint = "http://banking-admin:8000"
 		doc.save()
 
-		default_bank_account = frappe.db.get_value("Company", "Bolt Trades", "default_bank_account")
+		default_bank_account = frappe.db.get_value("Company", "_Test Company", "default_bank_account")
 		if default_bank_account is None:
 			frappe.db.set_value(
 				"Company",
-				"Bolt Trades",
+				"_Test Company",
 				"default_bank_account",
-				get_default_bank_cash_account("Bolt Trades", "Cash").get("account"),
+				get_default_bank_cash_account("_Test Company", "Cash").get("account"),
 			)
 
 		return super().setUpClass()

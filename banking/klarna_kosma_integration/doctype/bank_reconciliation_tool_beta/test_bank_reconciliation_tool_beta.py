@@ -44,6 +44,12 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		cls.customer = create_customer(customer_name="ABC Inc.")
 
 		cls.create_item(cls, item_name="Reco Item", company="_Test Company", warehouse="Finished Goods - _TC")
+
+		# Required for the USD-invoice tests, which book USD invoices against INR party accounts.
+		frappe.db.set_single_value(
+			"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account", 1
+		)
+
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	def tearDown(self) -> None:

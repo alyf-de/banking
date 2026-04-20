@@ -6,7 +6,9 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from banking.testing_utils import TEST_COMPANY, create_bank_account, create_currency_account
+from banking.testing_utils import create_bank_account, create_currency_account
+
+test_dependencies = ["Company", "Account"]
 
 
 def create_bank_reconciliation_rule(bank_account, target_account, filters, disabled=0, submit=True):
@@ -25,7 +27,7 @@ def create_bank_reconciliation_rule(bank_account, target_account, filters, disab
 
 def create_bank_transaction(insert=True, **values):
 	doc = frappe.new_doc("Bank Transaction")
-	doc.company = TEST_COMPANY
+	doc.company = "_Test Company"
 	doc.update(values)
 	if insert:
 		doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
@@ -37,9 +39,9 @@ class TestBankTransactionReconciliationRule(FrappeTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		cls.account_main = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
-		cls.account_target = create_currency_account("EUR", parent_account, "_Test_Account_EUR_Target")
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": "_Test Company"})
+		cls.account_main = create_currency_account("INR", parent_account, "_Test_Account_INR")
+		cls.account_target = create_currency_account("INR", parent_account, "_Test_Account_INR_Target")
 		cls.bank_account = create_bank_account(cls.account_main.name)
 
 	@patch("banking.overrides.bank_transaction.create_je_automatic_rules")
