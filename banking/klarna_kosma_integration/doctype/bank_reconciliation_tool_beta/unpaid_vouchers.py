@@ -9,7 +9,7 @@ import frappe
 from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	get_payment_entry,
-	split_invoices_based_on_payment_terms,
+	split_refdocs_based_on_payment_terms,
 )
 from erpnext.setup.utils import get_exchange_rate
 from frappe import _
@@ -125,7 +125,7 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list):
 	journal_entry.title = bt.name
 	journal_entry.user_remark = bt.description
 
-	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
+	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
 	adjust_and_allocate_invoices(bt, invoices, journal_entry, action=_attach_invoice)
 
 	total_allocated_amount = sum(row.allocated_amount for row in invoices)
@@ -251,7 +251,7 @@ def make_pe_against_invoices(
 	else:
 		# clear references to allocate invoices correctly with splits
 		payment_entry.references = []
-		invoices = split_invoices_based_on_payment_terms(
+		invoices = split_refdocs_based_on_payment_terms(
 			prepare_invoices_to_split(invoices_to_bill), bt.company
 		)
 		adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
