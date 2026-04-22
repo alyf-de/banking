@@ -104,7 +104,7 @@ jobs:
       - name: Uninstall app
         working-directory: /home/runner/frappe-bench
         run: |
-          bench --site test_site uninstall-app --yes banking
+          bench --site test_site uninstall-app --yes --no-backup banking
         env:
           TYPE: server
 
