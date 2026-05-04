@@ -113,6 +113,26 @@ def on_update_after_submit(doc, event):
 			)
 
 
+def has_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") -> bool:
+	return (
+		doc.get_rounded("deposit") == 0
+		and doc.get_rounded("withdrawal") == 0
+		and doc.get_rounded("included_fee") > 0
+	)
+
+
+def log_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") -> None:
+	frappe.log_error(
+		title=_("Unsupported Bank Transaction with included fee"),
+		message=_(
+			"Bank Transaction {0} has no deposit or withdrawal but has an included fee of {1}. "
+			"Automatic bank fee reconciliation was skipped; please review manually."
+		).format(doc.name, doc.get_formatted("included_fee")),
+		reference_doctype="Bank Transaction",
+		reference_name=doc.name,
+	)
+
+
 def before_submit(doc: "CustomBankTransaction", method):
 	date = doc.date or frappe.utils.nowdate()
 
@@ -122,6 +142,10 @@ def before_submit(doc: "CustomBankTransaction", method):
 				_(doc.meta.get_label("bank_account"))
 			)
 		)
+
+	if has_zero_transaction_amount_with_included_fee(doc):
+		log_zero_transaction_amount_with_included_fee(doc)
+		return
 
 	if doc.get_rounded("deposit") == 0 and doc.get_rounded("withdrawal") == 0:
 		return

@@ -226,6 +226,28 @@ class TestIncludedBankFees(FrappeTestCase):
 			)
 		)
 
+	@patch("banking.overrides.bank_transaction.frappe.log_error")
+	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
+	def test_zero_amount_with_included_fee_logs_warning(self, mock_create_bank_fees, mock_log_error):
+		set_automatic_bank_fee_entries(True)
+
+		bt = create_bank_transaction(
+			bank_account=self.bank_account.name,
+			deposit=0.004,
+			withdrawal=0.0,
+			included_fee=1.0,
+			date=frappe.utils.nowdate(),
+			currency="EUR",
+			description="Zero-amount transaction with included bank fee",
+		)
+
+		bt.submit()
+
+		mock_create_bank_fees.assert_not_called()
+		mock_log_error.assert_called_once()
+		self.assertEqual(mock_log_error.call_args.kwargs["reference_doctype"], "Bank Transaction")
+		self.assertEqual(mock_log_error.call_args.kwargs["reference_name"], bt.name)
+
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
 	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
