@@ -94,6 +94,9 @@ class CustomBankTransaction(BankTransaction):
 		for fieldname in ["deposit", "withdrawal", "included_fee", "excluded_fee"]:
 			self.convert_to_positive_value(fieldname)
 
+	def get_rounded(self, fieldname: str) -> float:
+		return flt(self.get(fieldname), self.precision(fieldname))
+
 
 def on_update_after_submit(doc, event):
 	"""Validate if the Bank Transaction is over-allocated."""
@@ -120,22 +123,18 @@ def before_submit(doc: "CustomBankTransaction", method):
 			)
 		)
 
-	if doc.deposit == 0 and doc.withdrawal == 0:
+	if doc.get_rounded("deposit") == 0 and doc.get_rounded("withdrawal") == 0:
 		return
 
 	for fieldname in ["deposit", "withdrawal", "included_fee"]:
-		value = doc.get(fieldname)
-		if value is None:
-			continue
-
-		if value < 0:
+		if doc.get_rounded(fieldname) < 0:
 			frappe.throw(
 				_("The field {0} is negative. Please verify the input data.").format(
 					_(doc.meta.get_label(fieldname))
 				)
 			)
 
-	if flt(doc.withdrawal) and flt(doc.included_fee) > flt(doc.withdrawal):
+	if doc.get_rounded("withdrawal") and doc.get_rounded("included_fee") > doc.get_rounded("withdrawal"):
 		frappe.throw(
 			_("The field {0} cannot be greater than {1}. Please verify the input data.").format(
 				_(doc.meta.get_label("included_fee")), _(doc.meta.get_label("withdrawal"))
@@ -144,7 +143,11 @@ def before_submit(doc: "CustomBankTransaction", method):
 
 	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
 	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
-	debit, credit = (flt(doc.deposit), 0.0) if flt(doc.deposit) else (0.0, flt(doc.withdrawal))
+	debit, credit = (
+		(doc.get_rounded("deposit"), 0.0)
+		if doc.get_rounded("deposit")
+		else (0.0, doc.get_rounded("withdrawal"))
+	)
 
 	if flt(frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")):
 		create_je_bank_fees(doc, cost_center, date, account, debit, credit)
