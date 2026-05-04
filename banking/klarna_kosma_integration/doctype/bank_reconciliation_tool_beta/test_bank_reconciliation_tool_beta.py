@@ -1115,6 +1115,102 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		si.reload()
 		self.assertEqual(si.outstanding_amount, 0)
 
+	def test_deposit_with_included_fee_rejects_partial_reconciliation(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Partial GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Partial Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Partial Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=110,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer("Fee Partial Customer")
+		si = create_sales_invoice(
+			rate=120,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError,
+			"included bank fees must be fully reconciled in one step",
+		):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			)
+
+		bt.reload()
+		si.reload()
+		self.assertFalse(bt.payment_entries)
+		self.assertEqual(bt.unallocated_amount, 110)
+		self.assertEqual(si.outstanding_amount, 120)
+
+	def test_deposit_with_included_fee_rejects_followup_reconciliation(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Followup GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Followup Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Followup Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=110,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer("Fee Followup Customer")
+		si = create_sales_invoice(
+			rate=120,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		si2 = create_sales_invoice(
+			rate=120,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bt.append(
+			"payment_entries",
+			{
+				"payment_document": "Sales Invoice",
+				"payment_entry": si.name,
+				"allocated_amount": 107,
+			},
+		)
+		bt.allocated_amount = 107
+		bt.unallocated_amount = 3
+		bt.save()
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError,
+			"included bank fees must be fully reconciled in one step",
+		):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si2.name}]),
+			)
+
+		si2.reload()
+		self.assertEqual(si2.outstanding_amount, 120)
+
 	def test_deposit_with_included_fee_uses_pre_feature_behavior_when_flag_disabled(self):
 		"""With the global feature flag disabled, deposit-side included fees must
 		not affect exact matching or reconciliation."""

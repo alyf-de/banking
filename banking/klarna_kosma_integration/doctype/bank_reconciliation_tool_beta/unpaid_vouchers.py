@@ -56,6 +56,7 @@ def get_payment_entries(
 	if invoices_to_bill:
 		bt.validate_period_closing()
 		included_fee = get_deposit_included_fee(bt)
+		validate_included_fee_reconciliation(bt, included_fee)
 
 		if reconcile_multi_party:
 			journal_entry = make_jv_against_invoices(bt, invoices_to_bill, included_fee=included_fee)
@@ -155,6 +156,7 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 
 	total_allocated_amount = sum(row.allocated_amount for row in invoices)
 	bank_amount = total_allocated_amount - included_fee
+	validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 
 	journal_entry.append(
 		"accounts",
@@ -345,6 +347,9 @@ def _create_multi_currency_pe(
 	currency_precision = cint(frappe.db.get_default("currency_precision")) or 2
 	effective_bank_amount = bank_amount + included_fee
 	max_party_amount = flt(effective_bank_amount * invoice_details.conversion_rate, currency_precision)
+	if included_fee and flt(party_amount, currency_precision) < max_party_amount:
+		throw_included_fee_full_reconciliation_required()
+
 	party_amount = min(party_amount, max_party_amount)
 
 	return get_payment_entry(
@@ -656,6 +661,33 @@ def validate_invoices_to_bill(invoices_to_bill: list, allow_multi_party: bool = 
 	unique_parties = {invoice[PARTY] for invoice in invoices_to_bill}
 	if len(unique_parties) > 1:
 		frappe.throw(frappe._("Cannot make Reconciliation Payment Entry against multiple parties"))
+
+
+def validate_included_fee_reconciliation(bt: "CustomBankTransaction", included_fee: float) -> None:
+	if not included_fee:
+		return
+
+	if bt.payment_entries:
+		throw_included_fee_full_reconciliation_required()
+
+
+def validate_included_fee_bank_allocation(
+	bt: "CustomBankTransaction", included_fee: float, bank_amount: float
+) -> None:
+	if not included_fee:
+		return
+
+	precision = bt.precision("unallocated_amount")
+	if flt(bank_amount, precision) != flt(bt.unallocated_amount, precision):
+		throw_included_fee_full_reconciliation_required()
+
+
+def throw_included_fee_full_reconciliation_required() -> None:
+	frappe.throw(
+		_(
+			"Bank Transactions with included bank fees must be fully reconciled in one step. Select all matching vouchers at once or unreconcile existing vouchers first."
+		)
+	)
 
 
 def get_debtor_creditor_account(invoice: dict) -> str | None:
