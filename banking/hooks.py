@@ -6,6 +6,8 @@ app_email = "hallo@alyf.de"
 app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
+required_apps = ["erpnext", "hrms"]
+
 # Includes in <head>
 # ------------------
 
@@ -211,7 +213,7 @@ export_python_type_annotations = True
 # Translation
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
-ignore_translatable_strings_from = ["frappe", "erpnext"]
+ignore_translatable_strings_from = ["frappe", "erpnext", "hrms"]
 
 
 alyf_banking_property_setters = {
