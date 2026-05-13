@@ -169,13 +169,15 @@ def get_sepa_payment_amount(
 		# No Payment Schedule to check.
 		return 0
 
+	# Also consider doc.outstanding_amount to avoid overpaying (typical case: Return PIs reduced the outstanding amount)
+	outstanding = min(scheduled_payment.outstanding, doc.outstanding_amount)
 	if not scheduled_payment.discount_date or getdate(scheduled_payment.discount_date) < execution_date:
 		# If no discount is given or it's too late for the discount: Use the outstanding amount
 		# This is default, but needs to be reset (in case expected_transaction_date changed etc.)
-		return scheduled_payment.outstanding
+		return outstanding
 	else:
 		# Use the discounted amount
 		return round(
-			scheduled_payment.outstanding * ((100 - scheduled_payment.discount) / 100),
+			outstanding * ((100 - scheduled_payment.discount) / 100),
 			scheduled_payment.precision("outstanding"),
 		)
