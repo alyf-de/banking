@@ -1,3 +1,5 @@
+import frappe
+
 app_name = "banking"
 app_title = "ALYF Banking"
 app_publisher = "ALYF GmbH"
@@ -6,7 +8,9 @@ app_email = "hallo@alyf.de"
 app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
-required_apps = ["erpnext", "hrms"]
+required_apps = ["erpnext"]
+
+_hrms_is_installed = "hrms" in frappe.get_installed_apps()
 
 # Includes in <head>
 # ------------------
@@ -32,16 +36,19 @@ app_include_js = "banking.bundle.js"
 # include js in doctype views
 doctype_js = {
 	"Bank": "custom/bank.js",
-	"Expense Claim": "custom/expense_claim.js",
 	"Purchase Invoice": "custom/purchase_invoice.js",
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
 }
+if _hrms_is_installed:
+	doctype_js["Expense Claim"] = "custom/expense_claim.js"
+
 doctype_list_js = {
-	"Expense Claim": "custom/expense_claim_list.js",
 	"Purchase Invoice": "custom/purchase_invoice_list.js",
 }
+if _hrms_is_installed:
+	doctype_list_js["Expense Claim"] = "custom/expense_claim_list.js"
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -125,15 +132,16 @@ doc_events = {
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
 	},
-	"Expense Claim": {
-		"sepa_payment_order_status_changed": "banking.custom.expense_claim.sepa_payment_order_status_changed",
-		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
-	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
 		"get_sepa_payment_amount": "banking.custom.purchase_invoice.get_sepa_payment_amount",
 	},
 }
+if _hrms_is_installed:
+	doc_events["Expense Claim"] = {
+		"sepa_payment_order_status_changed": "banking.custom.expense_claim.sepa_payment_order_status_changed",
+		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
+	}
 
 # Scheduled Tasks
 # ---------------
@@ -213,7 +221,7 @@ export_python_type_annotations = True
 # Translation
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
-ignore_translatable_strings_from = ["frappe", "erpnext", "hrms"]
+ignore_translatable_strings_from = ["frappe", "erpnext"]
 
 
 alyf_banking_property_setters = {
@@ -252,16 +260,6 @@ get_payment_entries = "banking.klarna_kosma_integration.doctype.bank_reconciliat
 alyf_banking_custom_records = [
 	{
 		"doctype": "DocType Link",
-		"parent": "Expense Claim",
-		"parentfield": "links",
-		"parenttype": "Customize Form",
-		"group": "Payment",
-		"link_doctype": "SEPA Payment Order",
-		"link_fieldname": "reference_name",
-		"custom": 1,
-	},
-	{
-		"doctype": "DocType Link",
 		"parent": "Purchase Invoice",
 		"parentfield": "links",
 		"parenttype": "Customize Form",
@@ -271,3 +269,16 @@ alyf_banking_custom_records = [
 		"custom": 1,
 	},
 ]
+if _hrms_is_installed:
+	alyf_banking_custom_records.append(
+		{
+			"doctype": "DocType Link",
+			"parent": "Expense Claim",
+			"parentfield": "links",
+			"parenttype": "Customize Form",
+			"group": "Payment",
+			"link_doctype": "SEPA Payment Order",
+			"link_fieldname": "reference_name",
+			"custom": 1,
+		}
+	)
