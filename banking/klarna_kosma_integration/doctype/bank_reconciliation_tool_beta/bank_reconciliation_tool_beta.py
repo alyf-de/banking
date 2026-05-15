@@ -53,6 +53,9 @@ def _merge_accounting_dimensions_into_je_accounts(
 		if key not in allowed or not value:
 			continue
 		for row in account_rows:
+			# Do not tag the bank GL line (like Payment Entry): dimensions belong on the other leg only.
+			if row.get("bank_account"):
+				continue
 			row[key] = value
 
 

@@ -10,6 +10,9 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	make() {
 		this.panel_manager.actions_tab = "create_voucher-tab";
 
+		this.dimension_fieldnames = [];
+		this._build_field_group([], {});
+
 		const me = this;
 		frappe.call({
 			method:
@@ -19,11 +22,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				const dimensions = (r.message && r.message[0]) || [];
 				const company_defaults_map = (r.message && r.message[1]) || {};
 				me.dimension_fieldnames = dimensions.map((d) => d.fieldname);
-				me._build_field_group(dimensions, company_defaults_map);
+				me._append_accounting_dimensions(dimensions, company_defaults_map);
 			},
 			error: () => {
 				me.dimension_fieldnames = [];
-				me._build_field_group([], {});
 			},
 		});
 	}
@@ -35,16 +37,75 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			card_layout: true,
 		});
 		this.create_field_group.make();
-		// Same key as Section (css_class + "-closed"); unset = first visit → start collapsed.
+	}
+
+	_append_accounting_dimensions(dimensions, company_defaults_map) {
+		if (!this.create_field_group) {
+			return;
+		}
+		const dimension_section = this._accounting_dimension_section_fields(
+			dimensions,
+			company_defaults_map
+		);
+		if (!dimension_section.length) {
+			return;
+		}
+
+		this.create_field_group.add_fields(dimension_section);
+
+		const hidden = this.create_field_group.get_field("hidden_field");
+		const $footer =
+			hidden && hidden.$wrapper && hidden.$wrapper.closest(".form-section");
+		const $dim = this.create_field_group.wrapper
+			.find(".bank-br-create-accounting-dimensions")
+			.closest(".form-section");
+		if ($footer && $footer.length && $dim && $dim.length) {
+			$dim.insertBefore($footer);
+		}
+
+		this.create_field_group.refresh_dependency();
+
 		const dim_section_closed_key =
 			"bank-br-create-accounting-dimensions-closed";
 		if (dimensions.length) {
-			const sec =
-				this.create_field_group.sections_dict?.accounting_dimensions_section;
-			if (sec && localStorage.getItem(dim_section_closed_key) === null) {
-				sec.collapse(true);
-			}
+			const collapse_default = () => {
+				if (localStorage.getItem(dim_section_closed_key) !== null) {
+					return;
+				}
+				const sec =
+					this.create_field_group.sections_dict
+						?.accounting_dimensions_section ||
+					this.create_field_group.sections?.find(
+						(s) => s.df?.fieldname === "accounting_dimensions_section"
+					);
+				if (sec && typeof sec.collapse === "function") {
+					sec.collapse(true);
+				}
+			};
+			collapse_default();
+			setTimeout(collapse_default, 0);
 		}
+	}
+
+	_accounting_dimension_section_fields(dimensions, company_defaults_map) {
+		const dimension_fields = this.get_accounting_dimension_fields(
+			dimensions,
+			company_defaults_map
+		);
+		if (!dimension_fields.length) {
+			return [];
+		}
+		return [
+			{
+				fieldtype: "Section Break",
+				fieldname: "accounting_dimensions_section",
+				label: __("Accounting Dimensions"),
+				collapsible: 1,
+				depends_on: "eval: doc.document_type == 'Journal Entry'",
+				css_class: "bank-br-create-accounting-dimensions",
+			},
+			...this.layout_accounting_dimension_fields_two_columns(dimension_fields),
+		];
 	}
 
 	get_accounting_dimension_fields(dimensions, company_defaults_map) {
@@ -231,26 +292,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		let party_type =
 			this.transaction.party_type ||
 			(flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
-		const dimension_fields = this.get_accounting_dimension_fields(
+		const dimension_section = this._accounting_dimension_section_fields(
 			dimensions,
 			company_defaults_map
 		);
-		const dimension_section =
-			dimension_fields.length > 0
-				? [
-						{
-							fieldtype: "Section Break",
-							fieldname: "accounting_dimensions_section",
-							label: __("Accounting Dimensions"),
-							collapsible: 1,
-							depends_on: "eval: doc.document_type == 'Journal Entry'",
-							css_class: "bank-br-create-accounting-dimensions",
-						},
-						...this.layout_accounting_dimension_fields_two_columns(
-							dimension_fields
-						),
-				  ]
-				: [];
 		return [
 			{
 				label: __("Document Type"),
