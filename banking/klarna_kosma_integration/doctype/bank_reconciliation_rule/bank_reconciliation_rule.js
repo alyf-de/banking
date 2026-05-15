@@ -79,8 +79,8 @@ async function brr_fetch_and_show_match_stats(frm) {
 	if (!frm.doc.bank_account) {
 		$el.html(
 			`<p class="text-muted small mb-0">${__(
-				"Set a Bank Account to see match counts."
-			)}</p>`
+				"Set a Bank Account to see match counts.",
+			)}</p>`,
 		);
 		return;
 	}
@@ -95,8 +95,8 @@ async function brr_fetch_and_show_match_stats(frm) {
 	if (!user_filters.length) {
 		$el.html(
 			`<p class="text-muted small mb-0">${__(
-				"Add at least one filter to see match counts."
-			)}</p>`
+				"Add at least one filter to see match counts.",
+			)}</p>`,
 		);
 		return;
 	}
@@ -128,8 +128,8 @@ async function brr_fetch_and_show_match_stats(frm) {
 		if (request_id === frm._brr_stats_request_id) {
 			$el.html(
 				`<p class="text-danger small mb-0">${__(
-					"Could not load match counts."
-				)}</p>`
+					"Could not load match counts.",
+				)}</p>`,
 			);
 		}
 		return;
@@ -142,13 +142,13 @@ async function brr_fetch_and_show_match_stats(frm) {
 	const title = __("Submitted Bank Transactions matching this rule:");
 	const counts = __(
 		"{0} in the last 30 days, {1} in the last 12 months (365 days).",
-		[String(data.last_30_days), String(data.last_12_months)]
+		[String(data.last_30_days), String(data.last_12_months)],
 	);
 
 	$el.html(
 		`<p class="text-muted small mb-0"><strong>${frappe.utils.escape_html(
-			title
-		)}</strong> ${frappe.utils.escape_html(counts)}</p>`
+			title,
+		)}</strong> ${frappe.utils.escape_html(counts)}</p>`,
 	);
 }
 
@@ -190,7 +190,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		} = await frappe.db.get_value(
 			"Bank Account",
 			frm.doc.bank_account,
-			"account"
+			"account",
 		);
 
 		if (!account) {
@@ -199,7 +199,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 					frappe.bold(__("Bank Account")),
 					frm.doc.bank_account,
 					__("Company Account"),
-				])
+				]),
 			);
 		}
 
@@ -221,10 +221,15 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		const parent = frm.fields_dict.filter_area.$wrapper;
 		parent.empty();
 
-		const filters =
-			frm.doc.filters && frm.doc.filters !== "[]"
-				? JSON.parse(frm.doc.filters)
-				: [];
+		let filters = [];
+		try {
+			if (frm.doc.filters && frm.doc.filters !== "[]") {
+				const parsed = JSON.parse(frm.doc.filters);
+				filters = Array.isArray(parsed) ? parsed : [];
+			}
+		} catch (e) {
+			filters = [];
+		}
 
 		frappe.model.with_doctype("Bank Transaction", () => {
 			if (!frm._brr_stats_debounced) {
@@ -263,8 +268,8 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 				frappe
 					.run_serially(
 						filters.map(
-							(f) => () => filter_group.add_filter(f[0], f[1], f[2], f[3])
-						)
+							(f) => () => filter_group.add_filter(f[0], f[1], f[2], f[3]),
+						),
 					)
 					.then(() => {
 						filter_group.update_filters();

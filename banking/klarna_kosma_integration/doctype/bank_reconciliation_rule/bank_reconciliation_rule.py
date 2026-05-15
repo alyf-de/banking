@@ -9,6 +9,7 @@ from frappe import _
 from frappe.exceptions import ValidationError
 from frappe.model.document import Document
 from frappe.utils import add_days, getdate, today
+from frappe.utils.data import get_filter
 
 from banking.exceptions import CurrencyMismatchError
 
@@ -25,10 +26,8 @@ def _normalize_filter_rows(raw_filters: list) -> list[list[Any]]:
 		doctype = row[0]
 		if doctype != "Bank Transaction":
 			frappe.throw(_("Invalid filter: only Bank Transaction fields are supported"))
-		fieldname = row[1]
-		operator = row[2]
-		value = row[3]
-		normalized.append([doctype, fieldname, operator, value])
+		fd = get_filter(doctype, row)
+		normalized.append([fd.doctype, fd.fieldname, fd.operator, fd.value])
 	return normalized
 
 
@@ -122,5 +121,11 @@ class BankReconciliationRule(Document):
 			)
 
 	def validate_filters(self):
-		if not self.filters or not json.loads(self.filters):
+		if not self.filters:
+			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
+		try:
+			parsed = json.loads(self.filters)
+		except json.JSONDecodeError:
+			frappe.throw(_("Invalid filters"), NoFiltersError)
+		if not parsed:
 			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
