@@ -83,6 +83,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "description": "If multiple rules match a <b>Bank Transaction</b>, only the one with the highest priority is executed.",
    "fieldname": "priority",
    "fieldtype": "Int",
@@ -95,8 +96,8 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-28 02:28:06.918430",
- "modified_by": "Administrator",
+ "modified": "2026-05-15 14:33:05.591103",
+ "modified_by": "dominik@alyf.de",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Rule",
  "owner": "Administrator",

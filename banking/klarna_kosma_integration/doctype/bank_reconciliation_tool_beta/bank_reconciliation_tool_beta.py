@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, Union
 
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+	get_accounting_dimensions,
+)
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	get_total_allocated_amount,
 )
@@ -29,6 +32,28 @@ if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
+
+
+def _merge_accounting_dimensions_into_je_accounts(
+	account_rows: list[dict], accounting_dimensions: str | None
+) -> None:
+	if not accounting_dimensions:
+		return
+
+	try:
+		dimensions = json.loads(accounting_dimensions)
+	except (TypeError, json.JSONDecodeError):
+		return
+
+	if not isinstance(dimensions, dict):
+		return
+
+	allowed = set(get_accounting_dimensions(as_list=True))
+	for key, value in dimensions.items():
+		if key not in allowed or not value:
+			continue
+		for row in account_rows:
+			row[key] = value
 
 
 class BankReconciliationToolBeta(Document):
@@ -124,6 +149,7 @@ def create_journal_entry_bts(
 	party_type: str | None = None,
 	party: str | None = None,
 	allow_edit: bool | str = False,
+	accounting_dimensions: str | None = None,
 ):
 	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
 	if isinstance(allow_edit, str):
@@ -163,26 +189,25 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
-	journal_entry.set(
-		"accounts",
-		[
-			{
-				"account": second_account,
-				"credit_in_account_currency": bank_debit_amount,
-				"debit_in_account_currency": bank_credit_amount,
-				"party_type": party_type,
-				"party": party,
-				"cost_center": get_default_cost_center(company),
-			},
-			{
-				"account": bank_gl_account,
-				"bank_account": bank_transaction.bank_account,
-				"credit_in_account_currency": bank_credit_amount,
-				"debit_in_account_currency": bank_debit_amount,
-				"cost_center": get_default_cost_center(company),
-			},
-		],
-	)
+	account_rows = [
+		{
+			"account": second_account,
+			"credit_in_account_currency": bank_debit_amount,
+			"debit_in_account_currency": bank_credit_amount,
+			"party_type": party_type,
+			"party": party,
+			"cost_center": get_default_cost_center(company),
+		},
+		{
+			"account": bank_gl_account,
+			"bank_account": bank_transaction.bank_account,
+			"credit_in_account_currency": bank_credit_amount,
+			"debit_in_account_currency": bank_debit_amount,
+			"cost_center": get_default_cost_center(company),
+		},
+	]
+	_merge_accounting_dimensions_into_je_accounts(account_rows, accounting_dimensions)
+	journal_entry.set("accounts", account_rows)
 
 	company_currency = get_company_currency(company)
 	journal_entry.multi_currency = (
