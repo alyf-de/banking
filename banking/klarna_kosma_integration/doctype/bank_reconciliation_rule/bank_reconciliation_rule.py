@@ -23,6 +23,8 @@ def _normalize_filter_rows(raw_filters: list) -> list[list[Any]]:
 		if not isinstance(row, list | tuple) or len(row) < 4:
 			frappe.throw(_("Invalid filter"))
 		doctype = row[0]
+		if doctype != "Bank Transaction":
+			frappe.throw(_("Invalid filter: only Bank Transaction fields are supported"))
 		fieldname = row[1]
 		operator = row[2]
 		value = row[3]
@@ -67,7 +69,7 @@ def get_bank_transaction_match_stats(
 	except json.JSONDecodeError:
 		frappe.throw(_("Invalid filters"))
 
-	if not user_filters:
+	if not isinstance(user_filters, list) or not user_filters:
 		frappe.throw(_("Please define at least one filter"))
 
 	as_of = getdate(today())

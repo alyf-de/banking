@@ -37,10 +37,7 @@ function brr_open_bank_transaction_list(frm) {
 		frappe.throw(__("Please define at least one filter."));
 	}
 	const merged = brr_merge_list_filters(frm, user_filters);
-	localStorage.setItem(
-		"route_options",
-		JSON.stringify(brr_filters_to_route_options(merged))
-	);
+	frappe.route_options = brr_filters_to_route_options(merged);
 	frappe.set_route("List", "Bank Transaction");
 }
 
@@ -106,7 +103,9 @@ async function brr_fetch_and_show_match_stats(frm) {
 
 	const request_id = (frm._brr_stats_request_id =
 		(frm._brr_stats_request_id || 0) + 1);
-	$el.html(`<p class="text-muted small mb-0">${__("Updating...")}</p>`);
+	if (!$el.text().trim()) {
+		$el.html(`<p class="text-muted small mb-0">${__("Updating...")}</p>`);
+	}
 
 	const filters_str = JSON.stringify(user_filters);
 	const method =
@@ -145,7 +144,7 @@ async function brr_fetch_and_show_match_stats(frm) {
 	);
 
 	$el.html(
-		`<br><p class="text-muted small mb-0"><strong>${frappe.utils.escape_html(
+		`<p class="text-muted small mb-0"><strong>${frappe.utils.escape_html(
 			title
 		)}</strong> ${frappe.utils.escape_html(counts)}</p>`
 	);
