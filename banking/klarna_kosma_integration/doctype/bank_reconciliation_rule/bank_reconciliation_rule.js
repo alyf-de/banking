@@ -118,7 +118,9 @@ async function brr_fetch_and_show_match_stats(frm) {
 			args: {
 				bank_account: frm.doc.bank_account,
 				filters: filters_str,
-				...(frm.doc.name ? { bank_reconciliation_rule: frm.doc.name } : {}),
+				...(!frm.is_new() && frm.doc.name
+					? { bank_reconciliation_rule: frm.doc.name }
+					: {}),
 			},
 		});
 		data = res.message;

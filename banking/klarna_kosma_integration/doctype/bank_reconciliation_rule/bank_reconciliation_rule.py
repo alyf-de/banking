@@ -59,7 +59,7 @@ def get_bank_transaction_match_stats(
 
 	frappe.has_permission("Bank Transaction", ptype="read", throw=True)
 
-	if bank_reconciliation_rule:
+	if bank_reconciliation_rule and frappe.db.exists("Bank Reconciliation Rule", bank_reconciliation_rule):
 		rule = frappe.get_doc("Bank Reconciliation Rule", bank_reconciliation_rule)
 		if rule.bank_account != bank_account:
 			frappe.throw(_("Bank Account does not match this Bank Reconciliation Rule"))
