@@ -83,7 +83,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_on_submit": 1,
    "description": "If multiple rules match a <b>Bank Transaction</b>, only the one with the highest priority is executed.",
    "fieldname": "priority",
    "fieldtype": "Int",

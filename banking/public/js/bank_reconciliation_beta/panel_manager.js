@@ -11,15 +11,19 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	async init_panels() {
-		const [transactions, document_types] = await Promise.all([
-			this.get_bank_transactions(),
-			frappe.xcall(
-				"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
-			),
-		]);
+		const [transactions, document_types, dimensions_message] =
+			await Promise.all([
+				this.get_bank_transactions(),
+				frappe.xcall(
+					"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
+				),
+				this.get_accounting_dimensions(),
+			]);
 
 		this.transactions = transactions;
 		this.document_types = document_types;
+		this.accounting_dimensions = dimensions_message?.[0] || [];
+		this.accounting_dimension_defaults = dimensions_message?.[1] || {};
 
 		this.$wrapper.empty();
 		this.$panel_wrapper = this.$wrapper
@@ -31,6 +35,18 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			.find(".panel-container");
 
 		this.render_panels();
+	}
+
+	/** Load dimension metadata once per reco session (incl. project and cost_center). */
+	async get_accounting_dimensions() {
+		const response = await frappe.call({
+			method:
+				"erpnext.accounts.doctype.accounting_dimension.accounting_dimension.get_dimensions",
+			args: {
+				with_cost_center_and_project: true,
+			},
+		});
+		return response.message;
 	}
 
 	async get_bank_transactions() {

@@ -33,23 +33,48 @@ if TYPE_CHECKING:
 
 MAX_QUERY_RESULTS = 150
 
+STANDARD_ACCOUNTING_DIMENSION_FIELDS = frozenset({"project", "cost_center"})
 
-def _merge_accounting_dimensions_into_je_accounts(
-	account_rows: list[dict], accounting_dimensions: str | None
-) -> None:
+
+def _get_allowed_accounting_dimension_fields() -> set[str]:
+	"""Return whitelisted dimension fieldnames (custom + project + cost_center)."""
+	return set(get_accounting_dimensions(as_list=True)) | STANDARD_ACCOUNTING_DIMENSION_FIELDS
+
+
+def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict:
+	"""Parse accounting_dimensions JSON from the reco UI; return {} on invalid input."""
 	if not accounting_dimensions:
-		return
+		return {}
 
 	try:
 		dimensions = json.loads(accounting_dimensions)
 	except (TypeError, json.JSONDecodeError):
-		return
+		return {}
 
 	if not isinstance(dimensions, dict):
-		return
+		return {}
 
-	allowed = set(get_accounting_dimensions(as_list=True))
-	for key, value in dimensions.items():
+	return dimensions
+
+
+def _merge_accounting_dimensions_into_payment_entry(
+	payment_entry: Document, accounting_dimensions: str | None
+) -> None:
+	"""Stamp selected accounting dimensions onto Payment Entry header fields."""
+	allowed = _get_allowed_accounting_dimension_fields()
+	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
+		if key not in allowed or not value:
+			continue
+		if payment_entry.meta.get_field(key):
+			payment_entry.set(key, value)
+
+
+def _merge_accounting_dimensions_into_je_accounts(
+	account_rows: list[dict], accounting_dimensions: str | None
+) -> None:
+	"""Stamp selected accounting dimensions onto non-bank Journal Entry Account rows."""
+	allowed = _get_allowed_accounting_dimension_fields()
+	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
 		if key not in allowed or not value:
 			continue
 		for row in account_rows:
@@ -154,7 +179,11 @@ def create_journal_entry_bts(
 	allow_edit: bool | str = False,
 	accounting_dimensions: str | None = None,
 ):
-	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
+	"""Create a new Journal Entry for reconciling the Bank Transaction.
+
+	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
+		(applied to non-bank account rows only).
+	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
@@ -252,8 +281,14 @@ def create_payment_entry_bts(
 	mode_of_payment: str | None = None,
 	project: str | None = None,
 	cost_center: str | None = None,
+	accounting_dimensions: str | None = None,
 	allow_edit: bool = False,
 ):
+	"""Create a new Payment Entry for reconciling the Bank Transaction.
+
+	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
+		(applied to Payment Entry header fields).
+	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
@@ -286,10 +321,13 @@ def create_payment_entry_bts(
 
 	if mode_of_payment:
 		payment_entry.mode_of_payment = mode_of_payment
+
+	_merge_accounting_dimensions_into_payment_entry(payment_entry, accounting_dimensions)
 	if project:
 		payment_entry.project = project
 	if cost_center:
 		payment_entry.cost_center = cost_center
+
 	if payment_type == "Receive":
 		payment_entry.paid_to = company_account
 	else:

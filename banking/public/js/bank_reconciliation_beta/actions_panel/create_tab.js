@@ -7,43 +7,37 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		this.make();
 	}
 
+	/** Build the create form and append cached accounting dimension fields. */
 	make() {
 		this.panel_manager.actions_tab = "create_voucher-tab";
 
-		this.dimension_fieldnames = [];
-		this._build_field_group([], {});
+		const dimensions = this.accounting_dimensions || [];
+		const company_defaults_map = this.accounting_dimension_defaults || {};
+		this.dimension_fieldnames = dimensions.map((d) => d.fieldname);
 
-		const me = this;
-		frappe.call({
-			method:
-				"erpnext.accounts.doctype.accounting_dimension.accounting_dimension.get_dimensions",
-			args: {},
-			callback: (r) => {
-				const dimensions = (r.message && r.message[0]) || [];
-				const company_defaults_map = (r.message && r.message[1]) || {};
-				me.dimension_fieldnames = dimensions.map((d) => d.fieldname);
-				me._append_accounting_dimensions(dimensions, company_defaults_map);
-			},
-			error: () => {
-				me.dimension_fieldnames = [];
-			},
-		});
+		this.build_field_group();
+		this.append_accounting_dimensions(dimensions, company_defaults_map);
 	}
 
-	_build_field_group(dimensions, company_defaults_map) {
+	/** Render the main create-voucher fields (without accounting dimensions). */
+	build_field_group() {
 		this.create_field_group = new frappe.ui.FieldGroup({
-			fields: this.get_create_tab_fields(dimensions, company_defaults_map),
+			fields: this.get_create_tab_fields(),
 			body: this.actions_panel.$tab_content,
 			card_layout: true,
 		});
 		this.create_field_group.make();
 	}
 
-	_append_accounting_dimensions(dimensions, company_defaults_map) {
+	/**
+	 * Add the collapsible accounting dimensions section after the base form;
+	 * placed above the footer so Create stays at the bottom.
+	 */
+	append_accounting_dimensions(dimensions, company_defaults_map) {
 		if (!this.create_field_group) {
 			return;
 		}
-		const dimension_section = this._accounting_dimension_section_fields(
+		const dimension_section = this.build_accounting_dimension_section_fields(
 			dimensions,
 			company_defaults_map
 		);
@@ -87,7 +81,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		}
 	}
 
-	_accounting_dimension_section_fields(dimensions, company_defaults_map) {
+	/** Field definitions for the accounting dimensions section break and link fields. */
+	build_accounting_dimension_section_fields(dimensions, company_defaults_map) {
 		const dimension_fields = this.get_accounting_dimension_fields(
 			dimensions,
 			company_defaults_map
@@ -101,13 +96,13 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldname: "accounting_dimensions_section",
 				label: __("Accounting Dimensions"),
 				collapsible: 1,
-				depends_on: "eval: doc.document_type == 'Journal Entry'",
 				css_class: "bank-br-create-accounting-dimensions",
 			},
 			...this.layout_accounting_dimension_fields_two_columns(dimension_fields),
 		];
 	}
 
+	/** Map ERPNext dimension metadata to Link field definitions with company defaults. */
 	get_accounting_dimension_fields(dimensions, company_defaults_map) {
 		const defaults_for_company =
 			company_defaults_map && this.company && company_defaults_map[this.company]
@@ -117,9 +112,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			const df = {
 				fieldname: dimension.fieldname,
 				fieldtype: "Link",
-				label: __(dimension.label),
+				label: __(dimension.label || frappe.model.unscrub(dimension.fieldname)),
 				options: dimension.document_type,
-				depends_on: "eval: doc.document_type == 'Journal Entry'",
 			};
 			const default_dim = defaults_for_company[dimension.fieldname];
 			if (default_dim) {
@@ -146,13 +140,16 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	}
 
 	create_voucher() {
-		var me = this;
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
 		this.create_voucher_bts(false, (message) =>
-			me.actions_panel.after_transaction_reconcile(message, true, document_type)
+			this.actions_panel.after_transaction_reconcile(
+				message,
+				true,
+				document_type
+			)
 		);
 	}
 
@@ -177,6 +174,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
+	/** Collect non-empty dimension values from the form for the create API call. */
 	get_selected_accounting_dimensions(values) {
 		const dim_payload = {};
 		for (const fn of this.dimension_fieldnames || []) {
@@ -187,10 +185,16 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		return dim_payload;
 	}
 
+	/**
+	 * Create Payment Entry or Journal Entry and run `success_callback`.
+	 * Sends selected dimensions as accounting_dimensions JSON for both doctypes.
+	 */
 	create_voucher_bts(allow_edit = false, success_callback) {
-		// Create PE or JV and run `success_callback`
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
+		const dim_payload = this.get_selected_accounting_dimensions(values);
+		const accounting_dimensions =
+			Object.keys(dim_payload).length > 0 ? JSON.stringify(dim_payload) : null;
 		let method =
 			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
 		let args = {
@@ -202,26 +206,17 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			posting_date: values.posting_date,
 			mode_of_payment: values.mode_of_payment,
 			allow_edit: allow_edit,
+			accounting_dimensions: accounting_dimensions,
 		};
 
 		if (document_type === "Payment Entry") {
 			method = method + ".create_payment_entry_bts";
-			args = {
-				...args,
-				project: values.project,
-				cost_center: values.cost_center,
-			};
 		} else {
 			method = method + ".create_journal_entry_bts";
-			const dim_payload = this.get_selected_accounting_dimensions(values);
 			args = {
 				...args,
 				entry_type: values.journal_entry_type,
 				second_account: values.second_account,
-				accounting_dimensions:
-					Object.keys(dim_payload).length > 0
-						? JSON.stringify(dim_payload)
-						: null,
 			};
 		}
 
@@ -249,7 +244,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		// If no response, newly created doc is in draft state
 		// If deleted in response, newly created doc is deleted
 		// If doc object in response, newly created doc is submitted (can be reconciled)
-		var me = this;
 		frappe.call({
 			method:
 				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
@@ -264,7 +258,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 					frappe.show_alert({
 						message: __("Failed to reconcile new {0} against {1}", [
 							doctype,
-							me.transaction.name,
+							this.transaction.name,
 						]),
 						indicator: "red",
 					});
@@ -278,7 +272,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 						return;
 					}
 
-					me.actions_panel.after_transaction_reconcile(
+					this.actions_panel.after_transaction_reconcile(
 						response.message,
 						true,
 						doctype
@@ -288,14 +282,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
-	get_create_tab_fields(dimensions, company_defaults_map) {
+	get_create_tab_fields() {
 		let party_type =
 			this.transaction.party_type ||
 			(flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
-		const dimension_section = this._accounting_dimension_section_fields(
-			dimensions,
-			company_defaults_map
-		);
 		return [
 			{
 				label: __("Document Type"),
@@ -414,21 +404,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: party_type,
 				reqd: 1,
 			},
-			{
-				fieldname: "project",
-				fieldtype: "Link",
-				label: "Project",
-				options: "Project",
-				depends_on: "eval: doc.document_type == 'Payment Entry'",
-			},
-			{
-				fieldname: "cost_center",
-				fieldtype: "Link",
-				label: "Cost Center",
-				options: "Cost Center",
-				depends_on: "eval: doc.document_type == 'Payment Entry'",
-			},
-			...dimension_section,
 			{
 				fieldtype: "Section Break",
 			},

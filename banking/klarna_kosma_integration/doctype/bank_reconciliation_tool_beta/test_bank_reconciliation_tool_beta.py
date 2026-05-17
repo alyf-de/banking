@@ -19,6 +19,8 @@ from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
+	_merge_accounting_dimensions_into_je_accounts,
+	_merge_accounting_dimensions_into_payment_entry,
 	auto_reconcile_vouchers,
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,
@@ -264,6 +266,44 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 100)
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.status, "Reconciled")
+
+	def test_merge_accounting_dimensions_into_payment_entry(self):
+		payment_entry = frappe.new_doc("Payment Entry")
+		payment_entry.company = "_Test Company"
+		_merge_accounting_dimensions_into_payment_entry(
+			payment_entry,
+			json.dumps(
+				{
+					"project": "PROJ-TEST",
+					"cost_center": "Main - _TC",
+					"not_a_real_dimension": "ignored",
+				}
+			),
+		)
+
+		self.assertEqual(payment_entry.project, "PROJ-TEST")
+		self.assertEqual(payment_entry.cost_center, "Main - _TC")
+
+	def test_merge_accounting_dimensions_into_je_accounts(self):
+		account_rows = [
+			{"account": "Debtors - _TC"},
+			{"account": "Bank - _TC", "bank_account": self.bank_account},
+		]
+		_merge_accounting_dimensions_into_je_accounts(
+			account_rows,
+			json.dumps(
+				{
+					"project": "PROJ-TEST",
+					"cost_center": "Main - _TC",
+					"not_a_real_dimension": "ignored",
+				}
+			),
+		)
+
+		self.assertEqual(account_rows[0]["project"], "PROJ-TEST")
+		self.assertEqual(account_rows[0]["cost_center"], "Main - _TC")
+		self.assertNotIn("project", account_rows[1])
+		self.assertNotIn("not_a_real_dimension", account_rows[0])
 
 	def test_jv_against_transaction(self):
 		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
