@@ -1,159 +1,219 @@
 // Copyright (c) 2025, ALYF GmbH and contributors
 // For license information, please see license.txt
 
-function brr_filters_to_route_options(filters) {
-	const opts = {};
-	for (const row of filters) {
-		if (!Array.isArray(row) || row.length < 4) {
-			continue;
-		}
-		const field = row[1];
-		const op = row[2];
-		const value = row[3];
-		if (Object.prototype.hasOwnProperty.call(opts, field)) {
-			continue;
-		}
-		if (op === "=") {
-			opts[field] = value;
-		} else {
-			opts[field] = [op, value];
-		}
+class BankReconciliationRuleStatsManager {
+	constructor(frm) {
+		this.frm = frm;
+		this.request_id = 0;
+		this.$stats_el = null;
+		this.filter_group = null;
+		this._debounced_fetch = null;
+		this.rendered_for = null;
 	}
-	return opts;
-}
 
-function brr_merge_list_filters(frm, user_filters) {
-	const merged = user_filters.map((row) => row.slice(0, 4));
-	merged.push(["Bank Transaction", "bank_account", "=", frm.doc.bank_account]);
-	return merged;
-}
-
-function brr_open_bank_transaction_list(frm) {
-	if (!frm.doc.bank_account) {
-		frappe.throw(__("Set a Bank Account first."));
+	teardown() {
+		this.filter_group = null;
+		this.$stats_el = null;
+		this.rendered_for = null;
 	}
-	const user_filters = brr_get_user_filters_for_stats(frm);
-	if (!user_filters.length) {
-		frappe.throw(__("Please define at least one filter."));
-	}
-	const merged = brr_merge_list_filters(frm, user_filters);
-	frappe.route_options = brr_filters_to_route_options(merged);
-	frappe.set_route("List", "Bank Transaction");
-}
 
-function brr_stats_host_is_live(frm) {
-	const parent = frm.fields_dict?.filter_area?.$wrapper;
-	const el = frm._brr_match_stats_$el;
-	if (!parent?.length || !el?.length) {
+	needs_filter_rerender() {
+		if (!this.host_is_live() || !this.filter_group) {
+			return true;
+		}
+		if (this.rendered_for !== this.frm.docname) {
+			return true;
+		}
+		// Submitted rules disable filter controls; duplicate as draft must rebuild editable UI.
+		if (
+			this.frm.doc.docstatus === 0 &&
+			this.frm.fields_dict?.filter_area?.$wrapper?.find(
+				".form-control:disabled"
+			).length
+		) {
+			return true;
+		}
 		return false;
 	}
-	return $.contains(parent[0], el[0]);
-}
 
-function brr_get_user_filters_for_stats(frm) {
-	let from_ui = [];
-	if (frm._bank_transaction_filter_group) {
+	static filters_to_route_options(filters) {
+		const opts = {};
+		for (const row of filters) {
+			if (!Array.isArray(row) || row.length < 4) {
+				continue;
+			}
+			const field = row[1];
+			const op = row[2];
+			const value = row[3];
+			if (Object.prototype.hasOwnProperty.call(opts, field)) {
+				continue;
+			}
+			if (op === "=") {
+				opts[field] = value;
+			} else {
+				opts[field] = [op, value];
+			}
+		}
+		return opts;
+	}
+
+	merge_list_filters(user_filters) {
+		const merged = user_filters.map((row) => row.slice(0, 4));
+		merged.push([
+			"Bank Transaction",
+			"bank_account",
+			"=",
+			this.frm.doc.bank_account,
+		]);
+		return merged;
+	}
+
+	open_bank_transaction_list() {
+		if (!this.frm.doc.bank_account) {
+			frappe.throw(__("Set a Bank Account first."));
+		}
+		const user_filters = this.get_user_filters();
+		if (!user_filters.length) {
+			frappe.throw(__("Please define at least one filter."));
+		}
+		const merged = this.merge_list_filters(user_filters);
+		frappe.route_options =
+			BankReconciliationRuleStatsManager.filters_to_route_options(merged);
+		frappe.set_route("List", "Bank Transaction");
+	}
+
+	host_is_live() {
+		const parent = this.frm.fields_dict?.filter_area?.$wrapper;
+		if (!parent?.length || !this.$stats_el?.length) {
+			return false;
+		}
+		return $.contains(parent[0], this.$stats_el[0]);
+	}
+
+	get_user_filters() {
+		if (this.filter_group) {
+			try {
+				const from_ui = this.filter_group.get_filters() || [];
+				if (from_ui.length) {
+					return from_ui;
+				}
+			} catch (e) {
+				// fall through to saved filters
+			}
+		}
 		try {
-			from_ui = frm._bank_transaction_filter_group.get_filters() || [];
+			const parsed = JSON.parse(this.frm.doc.filters || "[]");
+			return Array.isArray(parsed) ? parsed : [];
 		} catch (e) {
-			from_ui = [];
+			return [];
 		}
 	}
-	if (from_ui.length) {
-		return from_ui;
-	}
-	try {
-		const parsed = JSON.parse(frm.doc.filters || "[]");
-		return Array.isArray(parsed) ? parsed : [];
-	} catch (e) {
-		return [];
-	}
-}
 
-async function brr_fetch_and_show_match_stats(frm) {
-	const $el = frm._brr_match_stats_$el;
-	if (!$el || !$el.length || !brr_stats_host_is_live(frm)) {
-		return;
-	}
-
-	if (!frm.doc.bank_account) {
-		$el.html(
-			`<p class="text-muted small mb-0">${__(
-				"Set a Bank Account to see match counts."
-			)}</p>`
-		);
-		return;
-	}
-
-	let user_filters = [];
-	try {
-		user_filters = brr_get_user_filters_for_stats(frm);
-	} catch (e) {
-		user_filters = [];
-	}
-
-	if (!user_filters.length) {
-		$el.html(
-			`<p class="text-muted small mb-0">${__(
-				"Add at least one filter to see match counts."
-			)}</p>`
-		);
-		return;
-	}
-
-	const request_id = (frm._brr_stats_request_id =
-		(frm._brr_stats_request_id || 0) + 1);
-	if (!$el.text().trim()) {
-		$el.html(`<p class="text-muted small mb-0">${__("Updating...")}</p>`);
-	}
-
-	const filters_str = JSON.stringify(user_filters);
-	const method =
-		"banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule.get_bank_transaction_match_stats";
-
-	let data;
-	try {
-		const res = await frappe.call({
-			method,
-			args: {
-				bank_account: frm.doc.bank_account,
-				filters: filters_str,
-				...(!frm.is_new() && frm.doc.name
-					? { bank_reconciliation_rule: frm.doc.name }
-					: {}),
-			},
-		});
-		data = res.message;
-	} catch (e) {
-		if (request_id === frm._brr_stats_request_id) {
-			$el.html(
-				`<p class="text-danger small mb-0">${__(
-					"Could not load match counts."
-				)}</p>`
+	get_debounced_fetch() {
+		if (!this._debounced_fetch) {
+			this._debounced_fetch = frappe.utils.debounce(
+				() => this.fetch_and_show(),
+				400
 			);
 		}
-		return;
+		return this._debounced_fetch;
 	}
 
-	if (request_id !== frm._brr_stats_request_id) {
-		return;
+	async fetch_and_show() {
+		const $el = this.$stats_el;
+		if (!$el?.length || !this.host_is_live()) {
+			return;
+		}
+
+		if (!this.frm.doc.bank_account) {
+			$el.html(
+				`<p class="text-muted small mb-0">${__(
+					"Set a Bank Account to see match counts."
+				)}</p>`
+			);
+			return;
+		}
+
+		let user_filters = [];
+		try {
+			user_filters = this.get_user_filters();
+		} catch (e) {
+			user_filters = [];
+		}
+
+		if (!user_filters.length) {
+			$el.html(
+				`<p class="text-muted small mb-0">${__(
+					"Add at least one filter to see match counts."
+				)}</p>`
+			);
+			return;
+		}
+
+		const request_id = ++this.request_id;
+		if (!$el.text().trim()) {
+			$el.html(`<p class="text-muted small mb-0">${__("Updating...")}</p>`);
+		}
+
+		const filters_str = JSON.stringify(user_filters);
+		const method =
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule.get_bank_transaction_match_stats";
+
+		let data;
+		try {
+			const res = await frappe.call({
+				method,
+				args: {
+					bank_account: this.frm.doc.bank_account,
+					filters: filters_str,
+					...(!this.frm.is_new() && this.frm.doc.name
+						? { bank_reconciliation_rule: this.frm.doc.name }
+						: {}),
+				},
+			});
+			data = res.message;
+		} catch (e) {
+			if (request_id === this.request_id) {
+				$el.html(
+					`<p class="text-danger small mb-0">${__(
+						"Could not load match counts."
+					)}</p>`
+				);
+			}
+			return;
+		}
+
+		if (request_id !== this.request_id) {
+			return;
+		}
+
+		const title = __("Submitted Bank Transactions matching this rule:");
+		const counts = __(
+			"{0} in the last 30 days, {1} in the last 12 months (365 days).",
+			[String(data.last_30_days), String(data.last_12_months)]
+		);
+
+		$el.html(
+			`<p class="text-muted small mb-0"><strong>${frappe.utils.escape_html(
+				title
+			)}</strong> ${frappe.utils.escape_html(counts)}</p>`
+		);
 	}
 
-	const title = __("Submitted Bank Transactions matching this rule:");
-	const counts = __(
-		"{0} in the last 30 days, {1} in the last 12 months (365 days).",
-		[String(data.last_30_days), String(data.last_12_months)]
-	);
-
-	$el.html(
-		`<p class="text-muted small mb-0"><strong>${frappe.utils.escape_html(
-			title
-		)}</strong> ${frappe.utils.escape_html(counts)}</p>`
-	);
+	mount(parent) {
+		this.$stats_el = $('<div class="brr-match-stats form-group"></div>');
+		parent.append(this.$stats_el);
+		this.fetch_and_show();
+	}
 }
 
 frappe.ui.form.on("Bank Reconciliation Rule", {
 	refresh(frm) {
+		if (!frm.stats_manager) {
+			frm.stats_manager = new BankReconciliationRuleStatsManager(frm);
+		}
+		const stats = frm.stats_manager;
+
 		frm.trigger("set_target_account_query");
 		frm.remove_custom_button(__("Open Matches"));
 		const filters_json =
@@ -166,19 +226,19 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		}
 		if (frm.doc.bank_account && has_filters) {
 			frm.add_custom_button(__("Open Matches"), () => {
-				brr_open_bank_transaction_list(frm);
+				stats.open_bank_transaction_list();
 			});
 		}
 
-		if (!brr_stats_host_is_live(frm)) {
+		if (stats.needs_filter_rerender()) {
 			frm.trigger("render_bt_filters");
 		} else {
-			brr_fetch_and_show_match_stats(frm);
+			stats.fetch_and_show();
 		}
 	},
 	bank_account(frm) {
 		frm.trigger("set_target_account_query");
-		frm._brr_stats_debounced?.();
+		frm.stats_manager?.get_debounced_fetch()();
 	},
 	async set_target_account_query(frm) {
 		if (!frm.doc.bank_account) {
@@ -218,6 +278,9 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		}));
 	},
 	render_bt_filters(frm) {
+		const stats = frm.stats_manager;
+		stats.teardown();
+
 		const parent = frm.fields_dict.filter_area.$wrapper;
 		parent.empty();
 
@@ -232,22 +295,16 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		}
 
 		frappe.model.with_doctype("Bank Transaction", () => {
-			if (!frm._brr_stats_debounced) {
-				frm._brr_stats_debounced = frappe.utils.debounce(() => {
-					brr_fetch_and_show_match_stats(frm);
-				}, 400);
-			}
-
 			const filter_group = new frappe.ui.FilterGroup({
 				parent: parent,
 				doctype: "Bank Transaction",
 				on_change: () => {
 					frm.set_value("filters", JSON.stringify(filter_group.get_filters()));
-					frm._brr_stats_debounced?.();
+					stats.get_debounced_fetch()();
 				},
 			});
 
-			frm._bank_transaction_filter_group = filter_group;
+			stats.filter_group = filter_group;
 
 			const after_filters_ready = () => {
 				if (frm.doc.docstatus === 1) {
@@ -257,10 +314,8 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 					parent.find(".form-control").prop("disabled", true);
 				}
 
-				const $stats = $('<div class="brr-match-stats form-group"></div>');
-				parent.append($stats);
-				frm._brr_match_stats_$el = $stats;
-				brr_fetch_and_show_match_stats(frm);
+				stats.rendered_for = frm.docname;
+				stats.mount(parent);
 			};
 
 			if (filters.length) {

@@ -37,9 +37,13 @@ def _bank_transaction_stats_filters(
 	min_date: str,
 ) -> list[list[Any]]:
 	filters = _normalize_filter_rows(user_filters)
-	filters.append(["Bank Transaction", "bank_account", "=", bank_account])
-	filters.append(["Bank Transaction", "docstatus", "=", 1])
-	filters.append(["Bank Transaction", "date", ">=", min_date])
+	filters.extend(
+		[
+			["Bank Transaction", "bank_account", "=", bank_account],
+			["Bank Transaction", "docstatus", "=", 1],
+			["Bank Transaction", "date", ">=", min_date],
+		]
+	)
 	return filters
 
 

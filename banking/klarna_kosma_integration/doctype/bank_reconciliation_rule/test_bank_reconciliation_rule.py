@@ -17,26 +17,23 @@ from banking.testing_utils import TEST_COMPANY, create_bank_account, create_curr
 
 
 def _group_account_with_parent(company: str) -> str:
-	row = frappe.db.sql(
-		"""
-		select name from `tabAccount`
-		where company = %s and is_group = 1 and ifnull(parent_account, '') != ''
-		limit 1
-		""",
-		(company,),
+	name = frappe.db.get_value(
+		"Account",
+		{"company": company, "is_group": 1, "parent_account": ["!=", ""]},
+		"name",
 	)
-	if not row:
+	if not name:
 		raise RuntimeError(f"No suitable group Account found for company {company!r}")
-	return row[0][0]
+	return name
 
 
 def _resolved_test_company() -> str:
 	if frappe.db.exists("Company", TEST_COMPANY):
 		return TEST_COMPANY
-	row = frappe.db.sql("select name from `tabCompany` order by creation asc limit 1")
-	if not row:
+	name = frappe.db.get_value("Company", {}, "name", order_by="creation asc")
+	if not name:
 		raise RuntimeError("No Company found for banking tests")
-	return row[0][0]
+	return name
 
 
 class TestBankReconciliationRule(FrappeTestCase):
