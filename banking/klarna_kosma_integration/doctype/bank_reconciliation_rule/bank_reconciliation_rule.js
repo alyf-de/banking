@@ -37,7 +37,7 @@ class BankReconciliationRuleStatsManager {
 	}
 
 	static filters_to_route_options(filters) {
-		const opts = {};
+		const by_field = {};
 		for (const row of filters) {
 			if (!Array.isArray(row) || row.length < 4) {
 				continue;
@@ -45,13 +45,17 @@ class BankReconciliationRuleStatsManager {
 			const field = row[1];
 			const op = row[2];
 			const value = row[3];
-			if (Object.prototype.hasOwnProperty.call(opts, field)) {
-				continue;
-			}
-			if (op === "=") {
-				opts[field] = value;
+			(by_field[field] ||= []).push([op, value]);
+		}
+		const opts = {};
+		for (const [field, conditions] of Object.entries(by_field)) {
+			if (conditions.length === 1) {
+				const [op, value] = conditions[0];
+				opts[field] = op === "=" ? value : [op, value];
 			} else {
-				opts[field] = [op, value];
+				opts[field] = conditions.map(([op, value]) =>
+					JSON.stringify([op, value])
+				);
 			}
 		}
 		return opts;
