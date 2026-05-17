@@ -212,6 +212,14 @@ function banking_brr_show_reorder_dialog(listview, bank_accounts_with_rules) {
 				"banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule.get_rules_for_reorder",
 			args: { bank_account: account },
 			callback: function (r) {
+				if (r.exc) {
+					dialog.fields_dict.rules_list_html.$wrapper.html(
+						`<p class="text-danger">${__(
+							"Failed to load rules. Please try again."
+						)}</p>`
+					);
+					return;
+				}
 				if (r.message) {
 					banking_brr_render(r.message);
 					banking_brr_init_sortable();

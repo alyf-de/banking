@@ -124,8 +124,6 @@ def reorder_bank_reconciliation_rule_priorities(
 
 	n = len(ordered)
 	for name in ordered:
-		if frappe.db.get_value("Bank Reconciliation Rule", name, "bank_account") != bank_account:
-			frappe.throw(_("Rule {0} does not belong to the selected bank account.").format(name))
 		if not frappe.has_permission("Bank Reconciliation Rule", "write", name):
 			frappe.throw(_("Not permitted to update {0}.").format(name), frappe.PermissionError)
 
