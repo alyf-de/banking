@@ -137,6 +137,4 @@ def reorder_bank_reconciliation_rule_priorities(
 	step = 10
 	for idx, name in enumerate(ordered):
 		priority = cint(n - idx) * step
-		rule = cast(BankReconciliationRule, frappe.get_doc("Bank Reconciliation Rule", name))
-		rule.priority = priority
-		rule.save()
+		frappe.db.set_value("Bank Reconciliation Rule", name, "priority", priority)

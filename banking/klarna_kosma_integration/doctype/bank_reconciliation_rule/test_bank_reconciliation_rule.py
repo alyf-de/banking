@@ -63,3 +63,20 @@ class TestBankReconciliationRule(FrappeTestCase):
 		)
 		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "priority"), 20)
 		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "priority"), 10)
+
+	def test_reorder_priorities_submitted(self):
+		frappe.db.delete("Bank Reconciliation Rule", {"bank_account": self.ba.name})
+		r1 = self._insert_draft_rule("BRR-REORDER-SUB-1", 2)
+		r2 = self._insert_draft_rule("BRR-REORDER-SUB-2", 1)
+		r1.submit()
+		r2.submit()
+		self.assertEqual(r1.docstatus, 1)
+		self.assertEqual(r2.docstatus, 1)
+
+		reorder_bank_reconciliation_rule_priorities(
+			bank_account=self.ba.name, ordered_names=[r2.name, r1.name]
+		)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "priority"), 20)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "priority"), 10)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "docstatus"), 1)
