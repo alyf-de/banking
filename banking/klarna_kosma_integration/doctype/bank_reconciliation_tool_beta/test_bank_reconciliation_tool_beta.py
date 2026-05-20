@@ -18,6 +18,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
+from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
 	auto_reconcile_vouchers,
 	bulk_reconcile_vouchers,
@@ -1050,10 +1051,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(si_match["paid_amount"], 113)
 
 		frappe.db.savepoint("before_multicurrency_included_fee_reconcile")
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"Payment Entry deductions must be in company currency \\(INR\\), but this Bank Transaction fee is in USD",
-		):
+		with self.assertRaises(CurrencyMismatchError):
 			bulk_reconcile_vouchers(
 				bt.name,
 				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
@@ -1260,10 +1258,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			item="Reco Item",
 		)
 
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"included bank fees must be fully reconciled in one step",
-		):
+		with self.assertRaises(FullReconciliationRequiredError):
 			bulk_reconcile_vouchers(
 				bt.name,
 				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
@@ -1319,10 +1314,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		bt.unallocated_amount = 3
 		bt.save()
 
-		with self.assertRaisesRegex(
-			frappe.ValidationError,
-			"included bank fees must be fully reconciled in one step",
-		):
+		with self.assertRaises(FullReconciliationRequiredError):
 			bulk_reconcile_vouchers(
 				bt.name,
 				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si2.name}]),

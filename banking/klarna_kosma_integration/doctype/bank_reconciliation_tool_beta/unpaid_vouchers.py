@@ -14,6 +14,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt
 
+from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
+
 if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
@@ -702,7 +704,8 @@ def validate_included_fee_reconciliation(
 		frappe.throw(
 			_(
 				"Automatic handling of the included bank fee is not supported for foreign-currency bank accounts when reconciling this voucher. Payment Entry deductions must be in company currency ({0}), but this Bank Transaction fee is in {1}. Please reconcile and book the fee manually with a Journal Entry if appropriate."
-			).format(company_currency, bank_account_currency)
+			).format(company_currency, bank_account_currency),
+			exc=CurrencyMismatchError,
 		)
 
 
@@ -721,7 +724,8 @@ def throw_included_fee_full_reconciliation_required() -> None:
 	frappe.throw(
 		_(
 			"Bank Transactions with included bank fees must be fully reconciled in one step. Select all matching vouchers at once or unreconcile existing vouchers first."
-		)
+		),
+		exc=FullReconciliationRequiredError,
 	)
 
 
