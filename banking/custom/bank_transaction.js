@@ -17,9 +17,9 @@ frappe.ui.form.on("Bank Transaction", {
 
 		frm.dashboard.set_headline(
 			__(
-				"This transaction has an <i>Included Fee</i> but no <i>Deposit</i> or <i>Withdrawal</i>. Automatic bank fee reconciliation was skipped; please review manually."
+				"This transaction has an <i>Included Fee</i> but no <i>Deposit</i> or <i>Withdrawal</i>. Automatic bank fee reconciliation was skipped; please review manually.",
 			),
-			"orange"
+			"orange",
 		);
 	},
 
@@ -35,7 +35,7 @@ frappe.ui.form.on("Bank Transaction", {
 		const { message } = await frappe.db.get_value(
 			"Company",
 			frm.doc.company,
-			"default_currency"
+			"default_currency",
 		);
 		if (
 			!message?.default_currency ||
@@ -46,9 +46,9 @@ frappe.ui.form.on("Bank Transaction", {
 
 		frm.dashboard.set_headline(
 			__(
-				"This transaction has an <i>Included Fee</i> in a foreign currency. Automatic reconciliation cannot consider that fee in Payment Entry deductions; reconcile and book the fee manually with a Journal Entry if appropriate."
+				"This transaction has an <i>Included Fee</i> in a foreign currency. Automatic reconciliation cannot consider that fee in Payment Entry deductions; reconcile and book the fee manually with a Journal Entry if appropriate.",
 			),
-			"orange"
+			"orange",
 		);
 	},
 });
