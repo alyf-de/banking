@@ -35,6 +35,8 @@ doctype_js = {
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
+	"Bank Account": "custom/bank_account.js",
+	"Bank Transaction": "custom/bank_transaction.js",
 }
 doctype_list_js = {
 	"Expense Claim": "custom/expense_claim_list.js",
@@ -117,6 +119,7 @@ doc_events = {
 	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
+		"validate": "banking.overrides.bank_account.validate",
 	},
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
