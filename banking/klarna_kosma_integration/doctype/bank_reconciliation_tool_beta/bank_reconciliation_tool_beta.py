@@ -19,7 +19,11 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
 from frappe.utils import cint, flt, sbool
 from pypika import Order
+from pypika.terms import ExistsCriterion
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
+	get_deposit_included_fee,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
 	amount_rank_condition,
 	get_description_match_condition,
@@ -578,8 +582,10 @@ def check_matching(
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
 ):
+	matching_amount = transaction.unallocated_amount + get_deposit_included_fee(transaction)
+
 	common_filters = frappe._dict(
-		amount=transaction.unallocated_amount,
+		amount=matching_amount,
 		payment_type=("Receive" if transaction.deposit > 0.0 else "Pay"),
 		reference_no=transaction.reference_number,
 		party_type=transaction.party_type,
@@ -1040,10 +1046,25 @@ def get_je_matching_query(
 	)
 
 	if bank_transaction_name:
-		# This filter ensures that Journal Entries that have been created
-		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
-		# other apps are not offered as matches.
-		subquery = subquery.where(je.cheque_no != bank_transaction_name)
+		je_reference = frappe.qb.DocType("Journal Entry Account")
+		has_bank_transaction_reference = ExistsCriterion(
+			frappe.qb.from_(je_reference)
+			.select(je_reference.name)
+			.where(
+				(je_reference.parent == je.name)
+				& (je_reference.reference_type == "Bank Transaction")
+				& (je_reference.reference_name == bank_transaction_name)
+			)
+		)
+		is_auto_fee_journal_entry = (je.is_system_generated == 1) & has_bank_transaction_reference
+		# Journal Entries that other apps create for the Bank Transaction
+		# (e.g. to Cash In Transit) are often linked via cheque_no and should
+		# not be offered as matches. Standard withdrawal fee JEs are excluded
+		# from this bucket because they should reappear after unreconciliation.
+		is_cheque_linked_custom_journal_entry = (
+			je.cheque_no == bank_transaction_name
+		) & ~is_auto_fee_journal_entry
+		subquery = subquery.where(~is_cheque_linked_custom_journal_entry)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)

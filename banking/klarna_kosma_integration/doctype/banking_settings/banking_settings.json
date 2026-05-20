@@ -19,6 +19,7 @@
   "fintech_licensee_name",
   "fintech_license_key",
   "bank_reconciliation_tab",
+  "enable_automatic_journal_entries_for_bank_fees",
   "advanced_section",
   "reference_fields",
   "voucher_matching_defaults"
@@ -115,13 +116,20 @@
    "fieldtype": "Table MultiSelect",
    "label": "Voucher Matching Defaults",
    "options": "Voucher Matching Default"
+  },
+  {
+   "default": "0",
+   "description": "When enabled, included bank fees are handled automatically for <b>Bank Transactions</b>: withdrawals create a fee <b>Journal Entry</b> on submit, and deposits include the fee during reconciliation. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\"><b>Bank Account</b></a>.",
+   "fieldname": "enable_automatic_journal_entries_for_bank_fees",
+   "fieldtype": "Check",
+   "label": "Enable Automatic Journal Entries for Bank Fees"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-07 18:44:07.181312",
+ "modified": "2026-04-14 13:09:54.246991",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",
