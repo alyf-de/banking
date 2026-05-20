@@ -947,6 +947,126 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(pe.paid_from_account_currency, "INR")
 		self.assertEqual(pe.paid_to_account_currency, "USD")
 
+	def test_usd_sales_invoice_paid_in_inr_with_fee(self):
+		"""Company-currency bank fees can be represented as PE deductions."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test INR Bank Fee USD Invoice GL")
+		fee_expense_account = create_bank_gl_account("_Test INR Bank Fee USD Invoice Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="INR Account With USD Invoice Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		customer = create_customer("USD Invoice Fee Client", "USD")
+
+		si = create_sales_invoice(
+			customer=customer,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=7987,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 8000)
+		self.assertEqual(si_match["currency"], "INR")
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(si.outstanding_amount, 0)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 7987)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 7987)
+		self.assertEqual(pe.received_amount, 7987)
+		self.assertEqual(pe.difference_amount, 0)
+
+		fee_deductions = [row for row in pe.deductions if row.account == fee_expense_account]
+		self.assertEqual(len(fee_deductions), 1)
+		self.assertEqual(fee_deductions[0].amount, 13)
+		self.assertFalse(fee_deductions[0].is_exchange_gain_loss)
+
+	def test_rejects_foreign_fee(self):
+		"""PE deductions are company-currency only, but this BT fee is in USD."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank USD Fee", swift_number="CITIUS37")
+		gl_account = create_bank_gl_account("_Test USD Bank Fee Reco", "USD")
+		fee_account = create_bank_gl_account("_Test USD Bank Fee Expense Reco", "USD")
+		usd_bank_account = create_bank_account(
+			bank.name,
+			gl_account,
+			"USD Reco Fee Account",
+			bank_fee_account=fee_account,
+		)
+		customer = create_customer("USD Fee Client Inc.", "USD")
+		create_currency_exchange("USD", "INR", 90)
+
+		si = create_sales_invoice(
+			customer=customer,
+			currency="USD",
+			conversion_rate=80,
+			rate=113,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=100,
+			included_fee=13,
+			bank_account=usd_bank_account,
+			currency="USD",
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 113)
+
+		frappe.db.savepoint("before_multicurrency_included_fee_reconcile")
+		with self.assertRaisesRegex(
+			frappe.ValidationError,
+			"Payment Entry deductions must be in company currency \\(INR\\), but this Bank Transaction fee is in USD",
+		):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			)
+		frappe.db.rollback(save_point="before_multicurrency_included_fee_reconcile")
+
+		bt.reload()
+		si.reload()
+
+		self.assertFalse(bt.payment_entries)
+		self.assertEqual(bt.unallocated_amount, 100)
+		self.assertEqual(si.outstanding_amount, 9040)
+
 	def test_usd_sales_invoice_paid_in_company_currency(self):
 		"""Reconcile a USD Sales Invoice via an INR bank account.
 

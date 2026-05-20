@@ -56,7 +56,7 @@ def get_payment_entries(
 	if invoices_to_bill:
 		bt.validate_period_closing()
 		included_fee = get_deposit_included_fee(bt)
-		validate_included_fee_reconciliation(bt, included_fee)
+		validate_included_fee_reconciliation(bt, included_fee, invoices_to_bill)
 
 		if reconcile_multi_party:
 			journal_entry = make_jv_against_invoices(bt, invoices_to_bill, included_fee=included_fee)
@@ -202,6 +202,9 @@ def make_pe_against_invoices(
 
 	bank_account = frappe.db.get_value("Bank Account", bt.bank_account, "account")
 	first_invoice = invoices_to_bill[0]
+	requires_payment_entry_for_included_fee = included_fee and _requires_payment_entry_for_included_fee(
+		bt, first_invoice
+	)
 
 	# Detect multi-currency: the bank account currency differs from the
 	# party (payable/receivable) account currency.  A USD invoice with a EUR
@@ -298,13 +301,26 @@ def make_pe_against_invoices(
 		invoices = split_invoices_based_on_payment_terms(
 			prepare_invoices_to_split(invoices_to_bill), bt.company
 		)
-		adjust_and_allocate_invoices(bt, invoices, payment_entry, action=_attach_invoice)
+		effective_unallocated = (
+			bt.unallocated_amount + included_fee if requires_payment_entry_for_included_fee else None
+		)
+		adjust_and_allocate_invoices(
+			bt,
+			invoices,
+			payment_entry,
+			action=_attach_invoice,
+			effective_unallocated=effective_unallocated,
+		)
 
-		payment_entry.paid_amount = abs(
-			sum(row.allocated_amount for row in payment_entry.references)
-		)  # should not be negative
+		total_allocated_amount = sum(row.allocated_amount for row in payment_entry.references)
+		payment_entry.paid_amount = abs(total_allocated_amount)  # should not be negative
+		if requires_payment_entry_for_included_fee:
+			bank_amount = total_allocated_amount - included_fee
+			validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
+			payment_entry.paid_amount = abs(bank_amount)
+			payment_entry.received_amount = abs(bank_amount)
 
-	if included_fee and is_multi_currency:
+	if requires_payment_entry_for_included_fee:
 		bank_fee_account = frappe.db.get_value("Bank Account", bt.bank_account, "bank_fee_account")
 		payment_entry.append(
 			"deductions",
@@ -314,6 +330,7 @@ def make_pe_against_invoices(
 				"amount": included_fee,
 			},
 		)
+		payment_entry.set_amounts()
 
 	payment_entry.submit()
 	return payment_entry, manual_bank_amount
@@ -663,12 +680,30 @@ def validate_invoices_to_bill(invoices_to_bill: list, allow_multi_party: bool = 
 		frappe.throw(frappe._("Cannot make Reconciliation Payment Entry against multiple parties"))
 
 
-def validate_included_fee_reconciliation(bt: "CustomBankTransaction", included_fee: float) -> None:
+def validate_included_fee_reconciliation(
+	bt: "CustomBankTransaction", included_fee: float, invoices_to_bill: list | None = None
+) -> None:
 	if not included_fee:
 		return
 
 	if bt.payment_entries:
 		throw_included_fee_full_reconciliation_required()
+
+	if not invoices_to_bill:
+		return
+
+	first_invoice = invoices_to_bill[0]
+	if not _requires_payment_entry_for_included_fee(bt, first_invoice):
+		return
+
+	bank_account_currency = get_bank_account_currency(bt)
+	company_currency = get_company_currency(bt.company)
+	if bank_account_currency != company_currency:
+		frappe.throw(
+			_(
+				"Automatic handling of the included bank fee is not supported for foreign-currency bank accounts when reconciling this voucher. Payment Entry deductions must be in company currency ({0}), but this Bank Transaction fee is in {1}. Please reconcile and book the fee manually with a Journal Entry if appropriate."
+			).format(company_currency, bank_account_currency)
+		)
 
 
 def validate_included_fee_bank_allocation(
@@ -719,14 +754,13 @@ def _reconcile_with_included_fee(
 	"""Reconcile a deposit with an included fee.
 
 	Single-currency invoices use a Journal Entry so the fee and receivable
-	clearing happen in one entry.  Multi-currency invoices use a Payment
-	Entry with a deduction row because JEs cannot handle exchange-rate
-	calculations automatically.
+	clearing happen in one entry. Foreign-currency or PE multi-currency invoices
+	use a Payment Entry with a deduction row because JEs cannot handle
+	exchange-rate calculations automatically.
 	"""
 	first_invoice = invoices_to_bill[0]
-	is_multi_currency = _is_multi_currency_invoice(bt, first_invoice)
 
-	if is_multi_currency:
+	if _requires_payment_entry_for_included_fee(bt, first_invoice):
 		payment_entry, _ = make_pe_against_invoices(bt, invoices_to_bill, included_fee=included_fee)
 		return "Payment Entry", payment_entry.name, payment_entry.paid_amount
 
@@ -739,9 +773,22 @@ def _is_multi_currency_invoice(bt: "CustomBankTransaction", invoice: tuple) -> b
 		return False
 
 	party_account_currency = frappe.db.get_value(invoice[DOCTYPE], invoice[DOCNAME], "party_account_currency")
-	bank_gl_account = frappe.db.get_value("Bank Account", bt.bank_account, "account")
-	bank_account_currency = frappe.db.get_value("Account", bank_gl_account, "account_currency")
+	bank_account_currency = get_bank_account_currency(bt)
 	return party_account_currency != bank_account_currency
+
+
+def _requires_payment_entry_for_included_fee(bt: "CustomBankTransaction", invoice: tuple) -> bool:
+	if invoice[DOCTYPE] == "Expense Claim":
+		return False
+
+	invoice_currency = frappe.db.get_value(invoice[DOCTYPE], invoice[DOCNAME], "currency")
+	company_currency = get_company_currency(bt.company)
+	return invoice_currency != company_currency or _is_multi_currency_invoice(bt, invoice)
+
+
+def get_bank_account_currency(bt: "CustomBankTransaction") -> str:
+	bank_gl_account = frappe.db.get_value("Bank Account", bt.bank_account, "account")
+	return frappe.db.get_value("Account", bank_gl_account, "account_currency")
 
 
 def get_deposit_included_fee(bt: "CustomBankTransaction") -> float:

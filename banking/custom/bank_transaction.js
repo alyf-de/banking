@@ -5,6 +5,7 @@ frappe.ui.form.on("Bank Transaction", {
 	refresh(frm) {
 		if (frm.doc.docstatus === 1) {
 			frm.trigger("set_included_fee_headline");
+			frm.trigger("set_foreign_currency_included_fee_headline");
 		}
 	},
 
@@ -21,7 +22,43 @@ frappe.ui.form.on("Bank Transaction", {
 			"orange"
 		);
 	},
+
+	async set_foreign_currency_included_fee_headline(frm) {
+		if (
+			!has_deposit_with_included_fee(frm) ||
+			!frm.doc.company ||
+			!frm.doc.currency
+		) {
+			return;
+		}
+
+		const { message } = await frappe.db.get_value(
+			"Company",
+			frm.doc.company,
+			"default_currency"
+		);
+		if (
+			!message?.default_currency ||
+			frm.doc.currency === message.default_currency
+		) {
+			return;
+		}
+
+		frm.dashboard.set_headline(
+			__(
+				"This transaction has an <i>Included Fee</i> in a foreign currency. Automatic reconciliation cannot consider that fee in Payment Entry deductions; reconcile and book the fee manually with a Journal Entry if appropriate."
+			),
+			"orange"
+		);
+	},
 });
+
+function has_deposit_with_included_fee(frm) {
+	return (
+		get_rounded_amount(frm, "deposit") > 0 &&
+		get_rounded_amount(frm, "included_fee") > 0
+	);
+}
 
 function has_zero_amount_with_included_fee(frm) {
 	return (
