@@ -59,7 +59,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		mock_create_bank_fees.assert_called_once()
 
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
-	def test_before_submit_with_disabled_automatic_fee_entries(self, mock_create_bank_fees):
+	def test_before_submit_skips_fee_entries_when_disabled(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
 		set_automatic_bank_fee_entries(False)
@@ -74,7 +74,7 @@ class TestIncludedBankFees(FrappeTestCase):
 
 		mock_create_bank_fees.assert_not_called()
 
-	def test_submit_without_fee_account_when_automatic_fee_entries_are_disabled(self):
+	def test_submit_without_fee_account_when_disabled(self):
 		"""Ensure a Bank Transaction can be submitted without a bank fee account
 		when automatic bank fee journal entries are disabled, and assert that
 		no linked fee Journal Entry is created."""
@@ -105,7 +105,7 @@ class TestIncludedBankFees(FrappeTestCase):
 			)
 		)
 
-	def test_submit_creates_and_reconciles_fee_journal_entry_for_withdrawal(self):
+	def test_withdrawal_creates_reconciled_fee_journal_entry(self):
 		"""Submitting a withdrawal with an included fee must create and reconcile the fee JE."""
 		set_automatic_bank_fee_entries(True)
 
@@ -149,7 +149,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(accounts[self.account_main.name].credit_in_account_currency, 1.0)
 		self.assertEqual(accounts[self.account_fee.name].debit_in_account_currency, 1.0)
 
-	def test_cancel_bank_transaction_cancels_linked_fee_journal_entry(self):
+	def test_cancel_transaction_cancels_fee_journal_entry(self):
 		set_automatic_bank_fee_entries(True)
 
 		bt = create_bank_transaction(
@@ -174,7 +174,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		"banking.overrides.bank_transaction.create_automatic_journal_entry",
 		return_value="ACC-JV-TEST-FEE",
 	)
-	def test_create_je_bank_fees_preserves_existing_allocations(self, mock_create_automatic_journal_entry):
+	def test_fee_journal_entry_preserves_allocations(self, mock_create_automatic_journal_entry):
 		from banking.overrides.bank_transaction import create_je_bank_fees
 
 		bt = make_bank_transaction(
@@ -211,7 +211,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(bt.allocated_amount, 4.0)
 		self.assertEqual(bt.unallocated_amount, 6.0)
 
-	def test_submit_does_not_create_fee_journal_entry_for_deposit(self):
+	def test_deposit_skips_fee_journal_entry(self):
 		"""Submitting a deposit with an included fee must NOT create a fee JE.
 
 		The fee is deferred to reconciliation, where the correct counter-account
@@ -249,7 +249,7 @@ class TestIncludedBankFees(FrappeTestCase):
 
 	@patch("banking.overrides.bank_transaction.frappe.log_error")
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
-	def test_zero_amount_with_included_fee_logs_warning(self, mock_create_bank_fees, mock_log_error):
+	def test_zero_amount_included_fee_logs_warning(self, mock_create_bank_fees, mock_log_error):
 		set_automatic_bank_fee_entries(True)
 
 		bt = create_bank_transaction(
@@ -270,7 +270,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(mock_log_error.call_args.kwargs["reference_name"], bt.name)
 
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
-	def test_before_submit_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
+	def test_rejects_fee_larger_than_withdrawal(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
 		set_automatic_bank_fee_entries(True)
@@ -287,7 +287,7 @@ class TestIncludedBankFees(FrappeTestCase):
 		mock_create_bank_fees.assert_not_called()
 
 	@patch("banking.overrides.bank_transaction.create_je_bank_fees")
-	def test_before_submit_allows_missing_deposit_for_withdrawal_with_fee(self, mock_create_bank_fees):
+	def test_withdrawal_fee_allows_missing_deposit(self, mock_create_bank_fees):
 		from banking.overrides.bank_transaction import before_submit
 
 		set_automatic_bank_fee_entries(True)

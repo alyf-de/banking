@@ -683,7 +683,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["name"], journal_entry.name)
 		self.assertEqual(first_match["paid_amount"], 200.0)
 
-	def test_auto_generated_fee_journal_entry_is_offered_again_after_unreconcile(self):
+	def test_unreconcile_reoffers_fee_journal_entry(self):
 		"""Withdrawal fee JEs must be offered again once unreconciled from the BT."""
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 
@@ -1168,7 +1168,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
 
-	def test_deposit_with_included_fee_creates_jv_with_fee_row(self):
+	def test_included_fee_deposit_creates_jv_with_fee_row(self):
 		"""Reconciling a deposit with included_fee must create a JE that settles
 		the full invoice amount (deposit + fee) and books the fee to the bank fee account.
 
@@ -1235,7 +1235,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		si.reload()
 		self.assertEqual(si.outstanding_amount, 0)
 
-	def test_deposit_with_included_fee_rejects_partial_reconciliation(self):
+	def test_included_fee_deposit_rejects_partial_reconciliation(self):
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 
 		fee_gl_account = create_bank_gl_account("_Test Bank Fee Partial GL")
@@ -1275,7 +1275,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.unallocated_amount, 110)
 		self.assertEqual(si.outstanding_amount, 120)
 
-	def test_deposit_with_included_fee_rejects_followup_reconciliation(self):
+	def test_included_fee_deposit_rejects_followup_reconciliation(self):
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 
 		fee_gl_account = create_bank_gl_account("_Test Bank Fee Followup GL")
@@ -1331,7 +1331,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		si2.reload()
 		self.assertEqual(si2.outstanding_amount, 120)
 
-	def test_deposit_with_included_fee_uses_pre_feature_behavior_when_flag_disabled(self):
+	def test_included_fee_deposit_ignores_fee_when_disabled(self):
 		"""With the global feature flag disabled, deposit-side included fees must
 		not affect exact matching or reconciliation."""
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)

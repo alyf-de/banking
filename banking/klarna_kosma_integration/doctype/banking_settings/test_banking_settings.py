@@ -46,7 +46,7 @@ class TestBankingSettings(FrappeTestCase):
 			self.assertTrue(successful_request_exists(None, request.order_type, date(2025, 1, 1)))
 			self.assertFalse(successful_request_exists(None, request.order_type, date(2025, 1, 2)))
 
-	def test_cannot_enable_automatic_fee_entries_without_fee_accounts_for_all_company_bank_accounts(
+	def test_requires_fee_accounts_when_enabling_fee_entries(
 		self,
 	):
 		settings = frappe.get_single("Banking Settings")
