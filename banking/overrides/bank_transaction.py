@@ -122,10 +122,7 @@ def on_update_after_submit(doc, event):
 			)
 
 
-<<<<<<< HEAD
-def before_submit(doc: CustomBankTransaction, method):
-=======
-def has_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") -> bool:
+def has_zero_transaction_amount_with_included_fee(doc: CustomBankTransaction) -> bool:
 	return (
 		doc.get_rounded("deposit") == 0
 		and doc.get_rounded("withdrawal") == 0
@@ -133,7 +130,7 @@ def has_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") 
 	)
 
 
-def log_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") -> None:
+def log_zero_transaction_amount_with_included_fee(doc: CustomBankTransaction) -> None:
 	frappe.log_error(
 		title=_("Unsupported Bank Transaction with included fee"),
 		message=_(
@@ -145,8 +142,7 @@ def log_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") 
 	)
 
 
-def before_submit(doc: "CustomBankTransaction", method):
->>>>>>> 3b3cf37 (feat(Bank Transaction): auto-book included bank fees (#346))
+def before_submit(doc: CustomBankTransaction, method):
 	date = doc.date or frappe.utils.nowdate()
 
 	if not doc.bank_account:

@@ -97,10 +97,6 @@ def get_payment_entries(
 	return payments
 
 
-<<<<<<< HEAD
-def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list):
-	"""Make Journal Entry against multiple invoices."""
-=======
 def get_voucher_party(voucher_type: str, voucher_name: str) -> str | None:
 	party_field = {
 		"Sales Invoice": "customer",
@@ -110,7 +106,7 @@ def get_voucher_party(voucher_type: str, voucher_name: str) -> str | None:
 	return frappe.db.get_value(voucher_type, voucher_name, party_field)
 
 
-def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list, included_fee: float = 0.0):
+def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, included_fee: float = 0.0):
 	"""Make Journal Entry against multiple invoices.
 
 	When ``included_fee`` is positive the allocation budget is increased so the
@@ -118,7 +114,6 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	account row is debited only for the deposit amount while the fee is booked
 	to the configured bank-fee expense account.
 	"""
->>>>>>> 3b3cf37 (feat(Bank Transaction): auto-book included bank fees (#346))
 
 	def _attach_invoice(row: dict, journal_entry: Document) -> None:
 		second_account = get_debtor_creditor_account(row)
@@ -157,16 +152,11 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	journal_entry.title = bt.name
 	journal_entry.user_remark = bt.description
 
-<<<<<<< HEAD
-	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
-	adjust_and_allocate_invoices(bt, invoices, journal_entry, action=_attach_invoice)
-=======
 	effective_unallocated = bt.unallocated_amount + included_fee
-	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
+	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
 	adjust_and_allocate_invoices(
 		bt, invoices, journal_entry, action=_attach_invoice, effective_unallocated=effective_unallocated
 	)
->>>>>>> 3b3cf37 (feat(Bank Transaction): auto-book included bank fees (#346))
 
 	total_allocated_amount = sum(row.allocated_amount for row in invoices)
 	bank_amount = total_allocated_amount - included_fee
@@ -203,12 +193,8 @@ def make_pe_against_invoices(
 	bt: CustomBankTransaction,
 	invoices_to_bill: list,
 	manual_reconcile_amounts: dict | None = None,
-<<<<<<< HEAD
-) -> tuple[Document, float | None]:
-=======
 	included_fee: float = 0.0,
-) -> tuple["Document", float | None]:
->>>>>>> 3b3cf37 (feat(Bank Transaction): auto-book included bank fees (#346))
+) -> tuple[Document, float | None]:
 	"""Make Payment Entry against multiple invoices."""
 
 	def _attach_invoice(row: dict, payment_entry: Document) -> None:
@@ -359,12 +345,8 @@ def _create_multi_currency_pe(
 	invoice: tuple,
 	invoice_details: frappe._dict,
 	bank_account: str,
-<<<<<<< HEAD
-) -> Document:
-=======
 	included_fee: float = 0.0,
-) -> "Document":
->>>>>>> 3b3cf37 (feat(Bank Transaction): auto-book included bank fees (#346))
+) -> Document:
 	"""Create a Payment Entry for a multi-currency invoice.
 
 	When the party account currency (e.g. EUR) differs from the invoice/bank
@@ -703,7 +685,7 @@ def validate_invoices_to_bill(invoices_to_bill: list, allow_multi_party: bool = 
 
 
 def validate_included_fee_reconciliation(
-	bt: "CustomBankTransaction", included_fee: float, invoices_to_bill: list | None = None
+	bt: CustomBankTransaction, included_fee: float, invoices_to_bill: list | None = None
 ) -> None:
 	if not included_fee:
 		return
@@ -730,7 +712,7 @@ def validate_included_fee_reconciliation(
 
 
 def validate_included_fee_bank_allocation(
-	bt: "CustomBankTransaction", included_fee: float, bank_amount: float
+	bt: CustomBankTransaction, included_fee: float, bank_amount: float
 ) -> None:
 	if not included_fee:
 		return
@@ -773,7 +755,7 @@ def get_outstanding_amount(payment_doctype, payment_name) -> float:
 
 
 def _reconcile_with_included_fee(
-	bt: "CustomBankTransaction", invoices_to_bill: list, included_fee: float
+	bt: CustomBankTransaction, invoices_to_bill: list, included_fee: float
 ) -> tuple[str, str, float]:
 	"""Reconcile a deposit with an included fee.
 
@@ -792,7 +774,7 @@ def _reconcile_with_included_fee(
 	return "Journal Entry", journal_entry.name, journal_entry.total_debit
 
 
-def _is_multi_currency_invoice(bt: "CustomBankTransaction", invoice: tuple) -> bool:
+def _is_multi_currency_invoice(bt: CustomBankTransaction, invoice: tuple) -> bool:
 	if invoice[DOCTYPE] == "Expense Claim":
 		return False
 
@@ -801,7 +783,7 @@ def _is_multi_currency_invoice(bt: "CustomBankTransaction", invoice: tuple) -> b
 	return party_account_currency != bank_account_currency
 
 
-def _requires_payment_entry_for_included_fee(bt: "CustomBankTransaction", invoice: tuple) -> bool:
+def _requires_payment_entry_for_included_fee(bt: CustomBankTransaction, invoice: tuple) -> bool:
 	if invoice[DOCTYPE] == "Expense Claim":
 		return False
 
@@ -810,12 +792,12 @@ def _requires_payment_entry_for_included_fee(bt: "CustomBankTransaction", invoic
 	return invoice_currency != company_currency or _is_multi_currency_invoice(bt, invoice)
 
 
-def get_bank_account_currency(bt: "CustomBankTransaction") -> str:
+def get_bank_account_currency(bt: CustomBankTransaction) -> str:
 	bank_gl_account = frappe.db.get_value("Bank Account", bt.bank_account, "account")
 	return frappe.db.get_value("Account", bank_gl_account, "account_currency")
 
 
-def get_deposit_included_fee(bt: "CustomBankTransaction") -> float:
+def get_deposit_included_fee(bt: CustomBankTransaction) -> float:
 	"""Return the included fee amount when deposit-side fee handling is enabled.
 
 	Deposit-side fees are only settled during reconciliation when the global

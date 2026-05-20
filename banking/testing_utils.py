@@ -4,28 +4,9 @@
 import frappe
 from erpnext.accounts.doctype.account.test_account import create_account
 
-
-<<<<<<< HEAD
-def create_currency_account(currency: str, parent_account: str, account_name: str):
-	acc = frappe.new_doc("Account")
-	acc.account_name = account_name
-	acc.account_currency = currency
-	acc.parent_account = parent_account
-	acc.company = frappe.db.get_value("Account", parent_account, "company")
-	acc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
-	return acc
+TEST_COMPANY = "Bolt Trades"
 
 
-def create_bank_account(account: str):
-	ba = frappe.new_doc("Bank Account")
-	ba.account_name = "_Test_B_Account"
-	ba.account = account
-	ba.bank = "_Test_Bank"
-	ba.is_company_account = 1
-	ba.company = frappe.db.get_value("Account", account, "company")
-	ba.insert(ignore_permissions=True, ignore_links=True)
-	return ba
-=======
 def set_automatic_bank_fee_entries(enabled: bool) -> None:
 	frappe.db.set_single_value(
 		"Banking Settings",
@@ -99,4 +80,3 @@ def create_bank_transaction(
 	)
 	doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
 	return doc
->>>>>>> 3b3cf37 (feat(Bank Transaction): auto-book included bank fees (#346))
