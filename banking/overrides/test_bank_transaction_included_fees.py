@@ -149,6 +149,27 @@ class TestIncludedBankFees(FrappeTestCase):
 		self.assertEqual(accounts[self.account_main.name].credit_in_account_currency, 1.0)
 		self.assertEqual(accounts[self.account_fee.name].debit_in_account_currency, 1.0)
 
+	def test_cancel_bank_transaction_cancels_linked_fee_journal_entry(self):
+		set_automatic_bank_fee_entries(True)
+
+		bt = create_bank_transaction(
+			bank_account=self.bank_account.name,
+			withdrawal=5.0,
+			included_fee=1.0,
+			date=frappe.utils.nowdate(),
+			currency="EUR",
+			description="Withdrawal fee Journal Entry should cancel with transaction",
+		)
+		bt.submit()
+		bt.reload()
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+
+		bt.cancel()
+		je.reload()
+
+		self.assertEqual(bt.docstatus, 2)
+		self.assertEqual(je.docstatus, 2)
+
 	@patch(
 		"banking.overrides.bank_transaction.create_automatic_journal_entry",
 		return_value="ACC-JV-TEST-FEE",
