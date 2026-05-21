@@ -177,7 +177,7 @@ def on_doctype_update():
 	frappe.db.add_unique("EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
 	ensure_ebics_is_enabled()
 
@@ -208,7 +208,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 	user.db_set("initialized", 1)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 	ensure_ebics_is_enabled()
 
@@ -220,7 +220,7 @@ def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 	return manager.download_bank_keys()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def confirm_bank_keys(ebics_user: str, passphrase: str | None = None):
 	ensure_ebics_is_enabled()
 
@@ -232,7 +232,7 @@ def confirm_bank_keys(ebics_user: str, passphrase: str | None = None):
 	user.db_set("bank_keys_activated", 1)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def download_bank_statements(
 	ebics_user: str,
 	from_date: str | None = None,
@@ -258,7 +258,7 @@ def download_bank_statements(
 	)
 
 
-@frappe.whitelist(methods=["PUT"])
+@frappe.whitelist(methods=["POST"])
 def change_protocol_version(ebics_user: str, protocol_version: str, passphrase: str | None = None):
 	ensure_ebics_is_enabled()
 
