@@ -370,7 +370,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 	) {
 		let me = this;
 		frappe.call({
-			type: "POST",
 			method:
 				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.bulk_reconcile_vouchers",
 			args: {

@@ -52,7 +52,6 @@ frappe.ui.form.on("EBICS User", {
 						],
 						(values) => {
 							frappe.call({
-								type: "POST",
 								method:
 									"banking.ebics.doctype.ebics_user.ebics_user.initialize",
 								args: { ebics_user: frm.doc.name, ...values },

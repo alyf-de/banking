@@ -87,7 +87,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		}
 
 		frappe.call({
-			type: "POST",
 			method: method,
 			args: args,
 			callback: (response) => {
@@ -113,7 +112,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		// If doc object in response, newly created doc is submitted (can be reconciled)
 		var me = this;
 		frappe.call({
-			type: "POST",
 			method:
 				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
 			args: {
