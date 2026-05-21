@@ -120,7 +120,7 @@ def get_bank_transactions(
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_journal_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str | None = None,
@@ -221,7 +221,7 @@ def create_journal_entry_bts(
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_payment_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str | None = None,
@@ -286,7 +286,7 @@ def create_payment_entry_bts(
 	return reconcile_voucher(bank_transaction_name, paid_amount, "Payment Entry", payment_entry.name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
@@ -325,7 +325,7 @@ def bulk_reconcile_vouchers(
 	return transaction
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
 ) -> dict | CustomBankTransaction:
@@ -351,7 +351,7 @@ def reconcile_voucher(
 	return bulk_reconcile_vouchers(transaction_name, vouchers)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def upload_bank_statement(**args):
 	args = frappe._dict(args)
 	bsi = frappe.new_doc("Bank Statement Import")
@@ -370,7 +370,7 @@ def upload_bank_statement(**args):
 	return bsi  # Return saved document
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def auto_reconcile_vouchers(
 	company: str | None = None,
 	bank: str | None = None,

@@ -103,6 +103,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 				),
 				() => {
 					frappe.call({
+						type: "POST",
 						method:
 							"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.auto_reconcile_vouchers",
 						args: {
@@ -161,6 +162,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 		// Route to saved Import Record in new tab
 		frappe.call({
+			type: "POST",
 			method:
 				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.upload_bank_statement",
 			args: {
