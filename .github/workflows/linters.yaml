@@ -17,6 +17,12 @@ jobs:
           python-version: '3.14'
           cache: pip
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          check-latest: true
+
       - name: Install and Run Pre-commit
         uses: pre-commit/action@v3.0.1
 
