@@ -26,16 +26,19 @@
    "reqd": 1
   }
  ],
+ "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-11-20 17:12:39.739249",
+ "modified": "2026-05-21 02:05:38.899161",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Reference Mapping",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }

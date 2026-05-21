@@ -30,8 +30,8 @@ class BankReconciliationRule(Document):
 		filters: DF.Code | None
 		priority: DF.Int
 		target_account: DF.Link
-
 	# end: auto-generated types
+
 	def validate(self):
 		self.validate_account_currencies()
 		self.validate_filters()
