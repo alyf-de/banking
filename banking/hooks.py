@@ -4,7 +4,17 @@ app_publisher = "ALYF GmbH"
 app_description = "Banking Integration by ALYF GmbH"
 app_email = "hallo@alyf.de"
 app_license = "GPLv3"
+app_home = "/desk/alyf-banking"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
+
+add_to_apps_screen = [
+	{
+		"name": app_name,
+		"logo": "/assets/banking/images/logo.png",
+		"title": app_title,
+		"route": app_home,
+	}
+]
 
 # Includes in <head>
 # ------------------
