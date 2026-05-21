@@ -65,7 +65,7 @@ class BankingSettings(Document):
 		self.fintech_license_key = None
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def sync_all_accounts_and_transactions():
 	"""
 	Refresh all Bank accounts and enqueue their transactions sync.

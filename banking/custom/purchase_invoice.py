@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 	from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import SEPAPaymentOrder
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | None = None):
 	def set_missing_values(source, target):
 		if not target.bank_account:
@@ -137,7 +137,7 @@ def _get_recipients_bank_account(purchase_invoice: PurchaseInvoice, pay_to_emplo
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def make_bulk_sepa_payment_order(source_names: str):
 	target_doc = None
 	for source_name in frappe.parse_json(source_names):
