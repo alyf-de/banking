@@ -75,7 +75,7 @@ class SEPAPaymentOrder(Document):
 		self.validate_ibans()
 		self.validate_account_currency()
 
-	@frappe.whitelist()
+	@frappe.whitelist(methods=["POST"])
 	def update_payment_amounts(self):
 		for payment in self.payments:
 			new_amount = get_changed_payment_amount(payment, self.execution_date)
