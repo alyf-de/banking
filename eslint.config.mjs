@@ -4,8 +4,8 @@ import { createRequire } from "node:module";
 // pre-commit installs ESLint dependencies next to the ESLint binary, not in the repo.
 const eslintRequire = createRequire(realpathSync(process.argv[1]));
 
-const js = eslintRequire("@eslint/js");
-const globals = eslintRequire("globals");
+const js = (await import(eslintRequire.resolve("@eslint/js"))).default;
+const globals = (await import(eslintRequire.resolve("globals"))).default;
 
 export default [
 	js.configs.recommended,
