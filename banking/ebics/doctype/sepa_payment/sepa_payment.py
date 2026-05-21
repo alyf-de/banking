@@ -30,4 +30,5 @@ class SEPAPayment(Document):
 		reference_row_name: DF.Data | None
 		swift_number: DF.Data | None
 	# end: auto-generated types
+
 	pass

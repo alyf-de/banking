@@ -162,13 +162,14 @@
    "label": "Download Batch Transactions"
   }
  ],
+ "grid_page_length": 50,
  "links": [
   {
    "link_doctype": "EBICS Request",
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2025-10-08 15:37:25.273496",
+ "modified": "2026-05-21 02:05:40.039153",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
@@ -200,8 +201,9 @@
   }
  ],
  "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "search_fields": "full_name,bank,company",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "full_name"
