@@ -258,7 +258,7 @@ def download_bank_statements(
 	)
 
 
-@frappe.whitelist(methods=["POST"])
+@frappe.whitelist(methods=["PUT"])
 def change_protocol_version(ebics_user: str, protocol_version: str, passphrase: str | None = None):
 	ensure_ebics_is_enabled()
 
