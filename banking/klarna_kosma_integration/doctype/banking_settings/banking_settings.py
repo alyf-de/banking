@@ -41,8 +41,8 @@ class BankingSettings(Document):
 		fintech_licensee_name: DF.Data | None
 		reference_fields: DF.Table[BankingReferenceMapping]
 		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
-
 	# end: auto-generated types
+
 	def validate(self):
 		self.validate_automatic_fee_entry_configuration()
 
