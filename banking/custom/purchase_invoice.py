@@ -15,13 +15,8 @@ if TYPE_CHECKING:
 	from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import SEPAPaymentOrder
 
 
-<<<<<<< HEAD
-@frappe.whitelist()
-def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | None" = None):
-=======
 @frappe.whitelist(methods=["POST"])
-def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | None = None):
->>>>>>> 59e17fc (fix: require POST for mutating whitelisted methods (#370))
+def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | None" = None):
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
