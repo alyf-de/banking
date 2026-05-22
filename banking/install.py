@@ -14,6 +14,24 @@ def after_install():
 	insert_custom_records()
 
 
+def after_app_install(app_name):
+	if app_name == "banking":
+		return
+
+	print(f"Installing {app_name}-specific Banking customizations ...")
+
+	app_custom_fields = {}
+	for doctype, fields in get_custom_fields().items():
+		module = frappe.db.get_value("DocType", doctype, "module")
+		if module and frappe.db.get_value("Module Def", module, "app_name") == app_name:
+			app_custom_fields[doctype] = fields
+
+	if app_custom_fields:
+		create_custom_fields(app_custom_fields)
+
+	insert_custom_records()
+
+
 def make_property_setters():
 	for doctypes, property_setters in frappe.get_hooks("alyf_banking_property_setters", {}).items():
 		if isinstance(doctypes, str):

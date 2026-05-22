@@ -76,11 +76,13 @@ doctype_list_js = {
 
 # before_install = "banking.install.before_install"
 after_install = "banking.install.after_install"
+after_app_install = "banking.install.after_app_install"
 
 # Uninstallation
 # ------------
 
 before_uninstall = "banking.uninstall.before_uninstall"
+before_app_uninstall = "banking.uninstall.before_app_uninstall"
 # after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
