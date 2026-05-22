@@ -94,6 +94,14 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
 
+      - name: Install hrms after banking
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site install-app banking
+          bench --site test_site install-app hrms
+        env:
+          TYPE: server
+
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
         run: |
@@ -102,10 +110,15 @@ jobs:
         env:
           TYPE: server
 
-      - name: Uninstall app
+      - name: Uninstall hrms before banking
         working-directory: /home/runner/frappe-bench
         run: |
+<<<<<<< HEAD
           bench --site test_site uninstall-app --yes banking
+=======
+          bench --site test_site uninstall-app --yes --no-backup hrms
+          bench --site test_site uninstall-app --yes --no-backup banking
+>>>>>>> 933380a (fix: use "Expense Claim" features only if hrms is installed (#363))
         env:
           TYPE: server
 
