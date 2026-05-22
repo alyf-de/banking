@@ -6,6 +6,8 @@ app_email = "hallo@alyf.de"
 app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
+required_apps = ["frappe/erpnext"]
+
 # Includes in <head>
 # ------------------
 
@@ -74,11 +76,13 @@ doctype_list_js = {
 
 # before_install = "banking.install.before_install"
 after_install = "banking.install.after_install"
+after_app_install = "banking.install.after_app_install"
 
 # Uninstallation
 # ------------
 
 before_uninstall = "banking.uninstall.before_uninstall"
+before_app_uninstall = "banking.uninstall.before_app_uninstall"
 # after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
@@ -257,6 +261,7 @@ alyf_banking_custom_records = [
 		"link_doctype": "SEPA Payment Order",
 		"link_fieldname": "reference_name",
 		"custom": 1,
+		"_required_apps": ["hrms"],
 	},
 	{
 		"doctype": "DocType Link",
