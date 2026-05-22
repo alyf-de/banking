@@ -32,18 +32,16 @@ app_include_js = "banking.bundle.js"
 # include js in doctype views
 doctype_js = {
 	"Bank": "custom/bank.js",
+	"Expense Claim": "custom/expense_claim.js",
 	"Purchase Invoice": "custom/purchase_invoice.js",
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
-	"Expense Claim": "custom/expense_claim.js",
 }
-
 doctype_list_js = {
-	"Purchase Invoice": "custom/purchase_invoice_list.js",
 	"Expense Claim": "custom/expense_claim_list.js",
+	"Purchase Invoice": "custom/purchase_invoice_list.js",
 }
-
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -127,13 +125,13 @@ doc_events = {
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
 	},
-	"Purchase Invoice": {
-		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
-		"get_sepa_payment_amount": "banking.custom.purchase_invoice.get_sepa_payment_amount",
-	},
 	"Expense Claim": {
 		"sepa_payment_order_status_changed": "banking.custom.expense_claim.sepa_payment_order_status_changed",
 		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
+	},
+	"Purchase Invoice": {
+		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
+		"get_sepa_payment_amount": "banking.custom.purchase_invoice.get_sepa_payment_amount",
 	},
 }
 
