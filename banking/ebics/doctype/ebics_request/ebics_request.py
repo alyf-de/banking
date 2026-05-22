@@ -11,7 +11,23 @@ from banking.ebics.utils import import_ebics_json, register_fintech
 
 
 class EBICSRequest(Document):
-	@frappe.whitelist()
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		ebics_user: DF.Link | None
+		order_type: DF.Data | None
+		parameters: DF.Code | None
+		requested_by: DF.Literal["System", "User"]
+		response: DF.Code | None
+		status: DF.Literal["Successful", "No Data Available", "Failed", "Skipped"]
+	# end: auto-generated types
+
+	@frappe.whitelist(methods=["POST"])
 	def re_import(self):
 		"""Re-import the EBICS transactions from the response."""
 		ebics_user = frappe.get_doc("EBICS User", self.ebics_user)
