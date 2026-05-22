@@ -8,7 +8,7 @@ app_email = "hallo@alyf.de"
 app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
-required_apps = ["erpnext"]
+required_apps = ["frappe/erpnext"]
 
 _hrms_is_installed = "hrms" in frappe.get_installed_apps()
 
