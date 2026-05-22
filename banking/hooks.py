@@ -254,16 +254,6 @@ get_payment_entries = "banking.klarna_kosma_integration.doctype.bank_reconciliat
 alyf_banking_custom_records = [
 	{
 		"doctype": "DocType Link",
-		"parent": "Purchase Invoice",
-		"parentfield": "links",
-		"parenttype": "Customize Form",
-		"group": "Payment",
-		"link_doctype": "SEPA Payment Order",
-		"link_fieldname": "reference_name",
-		"custom": 1,
-	},
-	{
-		"doctype": "DocType Link",
 		"parent": "Expense Claim",
 		"parentfield": "links",
 		"parenttype": "Customize Form",
@@ -272,5 +262,15 @@ alyf_banking_custom_records = [
 		"link_fieldname": "reference_name",
 		"custom": 1,
 		"_required_apps": ["hrms"],
+	},
+	{
+		"doctype": "DocType Link",
+		"parent": "Purchase Invoice",
+		"parentfield": "links",
+		"parenttype": "Customize Form",
+		"group": "Payment",
+		"link_doctype": "SEPA Payment Order",
+		"link_fieldname": "reference_name",
+		"custom": 1,
 	},
 ]
