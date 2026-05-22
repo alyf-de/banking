@@ -11,7 +11,7 @@ from banking.ebics.utils import import_ebics_json, register_fintech
 
 
 class EBICSRequest(Document):
-	@frappe.whitelist()
+	@frappe.whitelist(methods=["POST"])
 	def re_import(self):
 		"""Re-import the EBICS transactions from the response."""
 		ebics_user = frappe.get_doc("EBICS User", self.ebics_user)
