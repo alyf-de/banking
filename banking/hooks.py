@@ -1,5 +1,3 @@
-import frappe
-
 app_name = "banking"
 app_title = "ALYF Banking"
 app_publisher = "ALYF GmbH"
@@ -9,8 +7,6 @@ app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
 required_apps = ["frappe/erpnext"]
-
-_hrms_is_installed = "hrms" in frappe.get_installed_apps()
 
 # Includes in <head>
 # ------------------
@@ -266,17 +262,15 @@ alyf_banking_custom_records = [
 		"link_fieldname": "reference_name",
 		"custom": 1,
 	},
+	{
+		"doctype": "DocType Link",
+		"parent": "Expense Claim",
+		"parentfield": "links",
+		"parenttype": "Customize Form",
+		"group": "Payment",
+		"link_doctype": "SEPA Payment Order",
+		"link_fieldname": "reference_name",
+		"custom": 1,
+		"_required_apps": ["hrms"],
+	},
 ]
-if _hrms_is_installed:
-	alyf_banking_custom_records.append(
-		{
-			"doctype": "DocType Link",
-			"parent": "Expense Claim",
-			"parentfield": "links",
-			"parenttype": "Customize Form",
-			"group": "Payment",
-			"link_doctype": "SEPA Payment Order",
-			"link_fieldname": "reference_name",
-			"custom": 1,
-		}
-	)

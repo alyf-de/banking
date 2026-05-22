@@ -31,6 +31,11 @@ def make_property_setters():
 
 def insert_custom_records():
 	for custom_record in frappe.get_hooks("alyf_banking_custom_records"):
+		if required_apps := custom_record.pop("_required_apps", None):
+			installed_apps = frappe.get_installed_apps()
+			if any(app not in installed_apps for app in required_apps):
+				continue
+
 		filters = custom_record.copy()
 		# Clean up filters. They need to be a plain dict without nested dicts or lists.
 		for key, value in custom_record.items():
