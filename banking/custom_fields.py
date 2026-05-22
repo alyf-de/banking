@@ -5,7 +5,7 @@ from banking.utils import identity as _
 
 
 def get_custom_fields():
-	fields = {
+	custom_fields = {
 		"Bank": [
 			dict(
 				fieldname="ebics_section",
@@ -92,7 +92,7 @@ def get_custom_fields():
 	}
 
 	if "hrms" in frappe.get_installed_apps():
-		fields["Expense Claim"] = [
+		custom_fields["Expense Claim"] = [
 			dict(
 				fieldname="sepa_payment_order_status",
 				label=_("SEPA Payment Order Status"),
@@ -105,4 +105,4 @@ def get_custom_fields():
 			),
 		]
 
-	return fields
+	return custom_fields
