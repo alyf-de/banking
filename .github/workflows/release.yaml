@@ -9,14 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Entire Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false # https://github.com/semantic-release/semantic-release/blob/master/docs/recipes/ci-configurations/github-actions.md#pushing-packagejson-changes-to-a-master-branch
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "lts/*"
+          node-version: "24"
+          check-latest: true
       - name: Setup dependencies
         run: |
           npm install @semantic-release/git @semantic-release/exec --no-save
