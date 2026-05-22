@@ -40,15 +40,14 @@ doctype_js = {
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
+	"Expense Claim": "custom/expense_claim.js",
 }
-if _hrms_is_installed:
-	doctype_js["Expense Claim"] = "custom/expense_claim.js"
 
 doctype_list_js = {
 	"Purchase Invoice": "custom/purchase_invoice_list.js",
+	"Expense Claim": "custom/expense_claim_list.js",
 }
-if _hrms_is_installed:
-	doctype_list_js["Expense Claim"] = "custom/expense_claim_list.js"
+
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -136,12 +135,11 @@ doc_events = {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
 		"get_sepa_payment_amount": "banking.custom.purchase_invoice.get_sepa_payment_amount",
 	},
-}
-if _hrms_is_installed:
-	doc_events["Expense Claim"] = {
+	"Expense Claim": {
 		"sepa_payment_order_status_changed": "banking.custom.expense_claim.sepa_payment_order_status_changed",
 		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
-	}
+	},
+}
 
 # Scheduled Tasks
 # ---------------
