@@ -35,10 +35,3 @@ bench setup requirements --dev
 
 bench start &> bench_start.log &
 bench new-site --db-root-password root --admin-password admin test_site --install-app erpnext
-<<<<<<< HEAD
-bench --site test_site install-app hrms
-bench --site test_site install-app banking
-bench setup requirements --dev
-=======
-bench --site test_site install-app payments
->>>>>>> 933380a (fix: use "Expense Claim" features only if hrms is installed (#363))
