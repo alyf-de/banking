@@ -1,5 +1,14 @@
 frappe.provide("erpnext.accounts.bank_reconciliation");
 
+const STANDARD_ACCOUNTING_DIMENSION_FIELDS = [
+	{ fieldname: "project", label: __("Project"), document_type: "Project" },
+	{
+		fieldname: "cost_center",
+		label: __("Cost Center"),
+		document_type: "Cost Center",
+	},
+];
+
 erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	constructor(opts) {
 		Object.assign(this, opts);
@@ -11,12 +20,18 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	make() {
 		this.panel_manager.actions_tab = "create_voucher-tab";
 
-		const dimensions = this.accounting_dimensions || [];
+		const custom_dimensions = this.accounting_dimensions || [];
 		const company_defaults_map = this.accounting_dimension_defaults || {};
-		this.dimension_fieldnames = dimensions.map((d) => d.fieldname);
+		this.custom_dimension_fieldnames = custom_dimensions.map(
+			(d) => d.fieldname
+		);
+		this.dimension_fieldnames = [
+			...STANDARD_ACCOUNTING_DIMENSION_FIELDS.map((d) => d.fieldname),
+			...this.custom_dimension_fieldnames,
+		];
 
 		this.build_field_group();
-		this.append_accounting_dimensions(dimensions, company_defaults_map);
+		this.append_accounting_dimensions(custom_dimensions, company_defaults_map);
 	}
 
 	/** Render the main create-voucher fields (without accounting dimensions). */
@@ -61,35 +76,60 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 		const dim_section_closed_key =
 			"bank-br-create-accounting-dimensions-closed";
-		if (dimensions.length) {
-			const collapse_default = () => {
-				if (localStorage.getItem(dim_section_closed_key) !== null) {
-					return;
-				}
-				const sec =
-					this.create_field_group.sections_dict
-						?.accounting_dimensions_section ||
-					this.create_field_group.sections?.find(
-						(s) => s.df?.fieldname === "accounting_dimensions_section"
-					);
-				if (sec && typeof sec.collapse === "function") {
-					sec.collapse(true);
-				}
-			};
-			collapse_default();
-			setTimeout(collapse_default, 0);
-		}
+		const collapse_default = () => {
+			if (localStorage.getItem(dim_section_closed_key) !== null) {
+				return;
+			}
+			const sec =
+				this.create_field_group.sections_dict?.accounting_dimensions_section ||
+				this.create_field_group.sections?.find(
+					(s) => s.df?.fieldname === "accounting_dimensions_section"
+				);
+			if (sec && typeof sec.collapse === "function") {
+				sec.collapse(true);
+			}
+		};
+		collapse_default();
+		setTimeout(collapse_default, 0);
 	}
 
 	/** Field definitions for the accounting dimensions section break and link fields. */
-	build_accounting_dimension_section_fields(dimensions, company_defaults_map) {
-		const dimension_fields = this.get_accounting_dimension_fields(
-			dimensions,
+	build_accounting_dimension_section_fields(
+		custom_dimensions,
+		company_defaults_map
+	) {
+		const standard_fields = this.get_accounting_dimension_fields(
+			STANDARD_ACCOUNTING_DIMENSION_FIELDS,
 			company_defaults_map
 		);
-		if (!dimension_fields.length) {
+		const custom_fields = this.get_accounting_dimension_fields(
+			custom_dimensions,
+			company_defaults_map
+		);
+		const left_column = standard_fields[0] ? [standard_fields[0]] : [];
+		const right_column = standard_fields[1] ? [standard_fields[1]] : [];
+
+		custom_fields.forEach((field, index) => {
+			if (index % 2 === 0) {
+				left_column.push(field);
+			} else {
+				right_column.push(field);
+			}
+		});
+
+		if (!left_column.length && !right_column.length) {
 			return [];
 		}
+
+		const fields = [...left_column];
+		if (right_column.length) {
+			fields.push({
+				fieldname: "column_break_accounting_dimensions",
+				fieldtype: "Column Break",
+			});
+			fields.push(...right_column);
+		}
+
 		return [
 			{
 				fieldtype: "Section Break",
@@ -98,7 +138,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				collapsible: 1,
 				css_class: "bank-br-create-accounting-dimensions",
 			},
-			...this.layout_accounting_dimension_fields_two_columns(dimension_fields),
+			...fields,
 		];
 	}
 
@@ -121,22 +161,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			}
 			return df;
 		});
-	}
-
-	/** Split dimension Link fields across two columns inside the collapsible section. */
-	layout_accounting_dimension_fields_two_columns(dimension_fields) {
-		if (dimension_fields.length <= 1) {
-			return dimension_fields;
-		}
-		const split_at = Math.ceil(dimension_fields.length / 2);
-		return [
-			...dimension_fields.slice(0, split_at),
-			{
-				fieldname: "column_break_accounting_dimensions",
-				fieldtype: "Column Break",
-			},
-			...dimension_fields.slice(split_at),
-		];
 	}
 
 	create_voucher() {
@@ -174,10 +198,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
-	/** Collect non-empty dimension values from the form for the create API call. */
-	get_selected_accounting_dimensions(values) {
+	/** Collect non-empty dimension values for the given fieldnames. */
+	get_selected_accounting_dimensions(values, fieldnames) {
 		const dim_payload = {};
-		for (const fn of this.dimension_fieldnames || []) {
+		for (const fn of fieldnames || []) {
 			if (values[fn]) {
 				dim_payload[fn] = values[fn];
 			}
@@ -185,16 +209,20 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		return dim_payload;
 	}
 
+	serialize_accounting_dimensions(dim_payload) {
+		return Object.keys(dim_payload).length > 0
+			? JSON.stringify(dim_payload)
+			: null;
+	}
+
 	/**
 	 * Create Payment Entry or Journal Entry and run `success_callback`.
-	 * Sends selected dimensions as accounting_dimensions JSON for both doctypes.
+	 * Payment Entry: project/cost_center as explicit args; custom dims as JSON.
+	 * Journal Entry: all dimensions (standard + custom) as JSON.
 	 */
 	create_voucher_bts(allow_edit = false, success_callback) {
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
-		const dim_payload = this.get_selected_accounting_dimensions(values);
-		const accounting_dimensions =
-			Object.keys(dim_payload).length > 0 ? JSON.stringify(dim_payload) : null;
 		let method =
 			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
 		let args = {
@@ -206,17 +234,33 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			posting_date: values.posting_date,
 			mode_of_payment: values.mode_of_payment,
 			allow_edit: allow_edit,
-			accounting_dimensions: accounting_dimensions,
 		};
 
 		if (document_type === "Payment Entry") {
 			method = method + ".create_payment_entry_bts";
+			const custom_payload = this.get_selected_accounting_dimensions(
+				values,
+				this.custom_dimension_fieldnames
+			);
+			args = {
+				...args,
+				project: values.project,
+				cost_center: values.cost_center,
+				accounting_dimensions:
+					this.serialize_accounting_dimensions(custom_payload),
+			};
 		} else {
 			method = method + ".create_journal_entry_bts";
+			const dim_payload = this.get_selected_accounting_dimensions(
+				values,
+				this.dimension_fieldnames
+			);
 			args = {
 				...args,
 				entry_type: values.journal_entry_type,
 				second_account: values.second_account,
+				accounting_dimensions:
+					this.serialize_accounting_dimensions(dim_payload),
 			};
 		}
 
