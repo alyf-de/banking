@@ -156,6 +156,10 @@ def create_journal_entry_bts(
 	second_account_type, second_account_currency = frappe.db.get_value(
 		"Account", second_account, ["account_type", "account_currency"]
 	)
+
+	if not cost_center:
+		cost_center = get_default_cost_center(company)
+
 	if second_account_type in ["Receivable", "Payable"] and not (party_type and party):
 		frappe.throw(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
@@ -182,7 +186,7 @@ def create_journal_entry_bts(
 				"debit_in_account_currency": bank_credit_amount,
 				"party_type": party_type,
 				"party": party,
-				"cost_center": cost_center or get_default_cost_center(company),
+				"cost_center": cost_center,
 				"project": project,
 			},
 			{
@@ -190,6 +194,7 @@ def create_journal_entry_bts(
 				"bank_account": bank_transaction.bank_account,
 				"credit_in_account_currency": bank_credit_amount,
 				"debit_in_account_currency": bank_debit_amount,
+				"cost_center": cost_center,
 			},
 		],
 	)
