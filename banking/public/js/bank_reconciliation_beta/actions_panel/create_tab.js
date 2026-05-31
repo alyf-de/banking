@@ -68,15 +68,12 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			posting_date: values.posting_date,
 			mode_of_payment: values.mode_of_payment,
 			allow_edit: allow_edit,
+			project: values.project,
+			cost_center: values.cost_center,
 		};
 
 		if (document_type === "Payment Entry") {
 			method = method + ".create_payment_entry_bts";
-			args = {
-				...args,
-				project: values.project,
-				cost_center: values.cost_center,
-			};
 		} else {
 			method = method + ".create_journal_entry_bts";
 			args = {
@@ -210,14 +207,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: "Mode of Payment",
 			},
 			{
-				fieldname: "edit_in_full_page",
-				fieldtype: "Button",
-				label: __("Edit in Full Page"),
-				click: () => {
-					this.edit_in_full_page();
-				},
-			},
-			{
 				fieldname: "column_break_7",
 				fieldtype: "Column Break",
 			},
@@ -272,27 +261,53 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				reqd: 1,
 			},
 			{
-				fieldname: "project",
-				fieldtype: "Link",
-				label: "Project",
-				options: "Project",
-				depends_on: "eval: doc.document_type == 'Payment Entry'",
+				fieldname: "accounting_dimensions_section",
+				fieldtype: "Section Break",
+				label: __("Accounting Dimensions"),
+				collapsible: 1,
+				collapsed: 1,
 			},
 			{
 				fieldname: "cost_center",
 				fieldtype: "Link",
-				label: "Cost Center",
+				label: __("Cost Center"),
 				options: "Cost Center",
-				depends_on: "eval: doc.document_type == 'Payment Entry'",
+				get_query: () => {
+					return {
+						filters: {
+							company: this.company,
+							is_group: 0,
+						},
+					};
+				},
+			},
+			{
+				fieldname: "dimension_col_break",
+				fieldtype: "Column Break",
+			},
+			{
+				fieldname: "project",
+				fieldtype: "Link",
+				label: __("Project"),
+				options: "Project",
+				get_query: () => {
+					return {
+						filters: {
+							company: this.company,
+						},
+					};
+				},
 			},
 			{
 				fieldtype: "Section Break",
 			},
 			{
-				label: __("Hidden field for alignment"),
-				fieldname: "hidden_field",
-				fieldtype: "Data",
-				hidden: 1,
+				fieldname: "edit_in_full_page",
+				fieldtype: "Button",
+				label: __("Edit in Full Page"),
+				click: () => {
+					this.edit_in_full_page();
+				},
 			},
 			{
 				fieldtype: "Column Break",

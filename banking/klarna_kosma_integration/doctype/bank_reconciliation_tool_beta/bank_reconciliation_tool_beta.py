@@ -131,6 +131,8 @@ def create_journal_entry_bts(
 	mode_of_payment: str | None = None,
 	party_type: str | None = None,
 	party: str | None = None,
+	project: str | None = None,
+	cost_center: str | None = None,
 	allow_edit: bool | str = False,
 ):
 	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
@@ -180,14 +182,14 @@ def create_journal_entry_bts(
 				"debit_in_account_currency": bank_credit_amount,
 				"party_type": party_type,
 				"party": party,
-				"cost_center": get_default_cost_center(company),
+				"cost_center": cost_center or get_default_cost_center(company),
+				"project": project,
 			},
 			{
 				"account": bank_gl_account,
 				"bank_account": bank_transaction.bank_account,
 				"credit_in_account_currency": bank_credit_amount,
 				"debit_in_account_currency": bank_debit_amount,
-				"cost_center": get_default_cost_center(company),
 			},
 		],
 	)
