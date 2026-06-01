@@ -15,6 +15,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			card_layout: true,
 		});
 		this.create_field_group.make();
+		this.create_field_group.refresh_section_collapse();
 	}
 
 	create_voucher() {
@@ -265,7 +266,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldtype: "Section Break",
 				label: __("Accounting Dimensions"),
 				collapsible: 1,
-				collapsed: 1,
 			},
 			{
 				fieldname: "cost_center",
