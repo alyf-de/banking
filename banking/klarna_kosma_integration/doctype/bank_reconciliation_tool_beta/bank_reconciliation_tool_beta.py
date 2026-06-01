@@ -67,7 +67,7 @@ class BankReconciliationToolBeta(Document):
 
 def get_bank_transaction_order_by(order_by: str | None) -> str:
 	"""Validate client-provided transaction sorting before passing it to get_list."""
-	if not order_by:
+	if not order_by or order_by == "date asc":
 		return "date asc"
 
 	parts = order_by.strip().split()
