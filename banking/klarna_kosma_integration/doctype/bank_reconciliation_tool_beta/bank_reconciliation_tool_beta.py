@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
+BANK_TRANSACTION_SORT_FIELDS = {"date", "withdrawal", "deposit", "unallocated_amount"}
+BANK_TRANSACTION_SORT_DIRECTIONS = {"asc", "desc"}
 
 
 class BankReconciliationToolBeta(Document):
@@ -59,6 +61,23 @@ class BankReconciliationToolBeta(Document):
 	pass
 
 
+def get_bank_transaction_order_by(order_by: str | None) -> str:
+	"""Validate client-provided transaction sorting before passing it to get_list."""
+	if not order_by or order_by == "date asc":
+		return "date asc"
+
+	parts = order_by.strip().split()
+	if len(parts) != 2:
+		frappe.throw(_("Invalid sort order."))
+
+	fieldname, direction = parts
+	direction = direction.lower()
+	if fieldname not in BANK_TRANSACTION_SORT_FIELDS or direction not in BANK_TRANSACTION_SORT_DIRECTIONS:
+		frappe.throw(_("Invalid sort order."))
+
+	return f"{fieldname} {direction}"
+
+
 @frappe.whitelist()
 def get_bank_transactions(
 	company: str | None = None,
@@ -66,8 +85,13 @@ def get_bank_transactions(
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
+<<<<<<< HEAD
 	order_by: str | datetime.date | None = "date asc",
 ):
+=======
+	order_by: str | None = "date asc",
+) -> tuple[dict[str, Any], ...] | None:
+>>>>>>> 7dc7d24 (fix: harden reconciliation query sorting (#373))
 	"""Return bank transactions for a bank account"""
 	filters = [
 		["docstatus", "=", 1],
@@ -112,7 +136,7 @@ def get_bank_transactions(
 			"bank_party_iban",
 		],
 		filters=filters,
-		order_by=order_by,
+		order_by=get_bank_transaction_order_by(order_by),
 	)
 
 
@@ -817,9 +841,8 @@ def get_bt_matching_query(exact_match: bool, common_filters: frappe._dict, trans
 
 def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
-	matching_party = (
-		loan_disbursement.applicant_type == common_filters.party_type
-		and loan_disbursement.applicant == common_filters.matching_party
+	matching_party = (loan_disbursement.applicant_type == common_filters.party_type) & (
+		loan_disbursement.applicant == common_filters.matching_party
 	)
 
 	date_condition = (
@@ -857,18 +880,17 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	)
 
 	if exact_match:
-		query.where(loan_disbursement.disbursed_amount == common_filters.amount)
+		query = query.where(loan_disbursement.disbursed_amount == common_filters.amount)
 	else:
-		query.where(loan_disbursement.disbursed_amount > 0.0)
+		query = query.where(loan_disbursement.disbursed_amount > 0.0)
 
 	return query
 
 
 def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_repayment = frappe.qb.DocType("Loan Repayment")
-	matching_party = (
-		loan_repayment.applicant_type == common_filters.party_type
-		and loan_repayment.applicant == common_filters.party
+	matching_party = (loan_repayment.applicant_type == common_filters.party_type) & (
+		loan_repayment.applicant == common_filters.party
 	)
 
 	date_condition = (
@@ -909,9 +931,9 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 		query = query.where(loan_repayment.repay_from_salary == 0)
 
 	if exact_match:
-		query.where(loan_repayment.amount_paid == common_filters.amount)
+		query = query.where(loan_repayment.amount_paid == common_filters.amount)
 	else:
-		query.where(loan_repayment.amount_paid > 0.0)
+		query = query.where(loan_repayment.amount_paid > 0.0)
 
 	return query
 
@@ -1073,7 +1095,15 @@ def get_je_matching_query(
 	query = (
 		frappe.qb.from_(subquery)
 		.select(
-			"*",
+			subquery.paid_amount,
+			subquery.doctype,
+			subquery.name,
+			subquery.reference_no,
+			subquery.reference_date,
+			subquery.party,
+			subquery.party_type,
+			subquery.posting_date,
+			subquery.currency,
 			rank_expression.as_("rank"),
 			ref_rank.as_("reference_number_match"),
 			amount_rank.as_("amount_match"),
