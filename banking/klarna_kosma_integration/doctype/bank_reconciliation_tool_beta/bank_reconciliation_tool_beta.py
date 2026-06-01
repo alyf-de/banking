@@ -928,9 +928,9 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 		query = query.where(loan_repayment.repay_from_salary == 0)
 
 	if exact_match:
-		query.where(loan_repayment.amount_paid == common_filters.amount)
+		query = query.where(loan_repayment.amount_paid == common_filters.amount)
 	else:
-		query.where(loan_repayment.amount_paid > 0.0)
+		query = query.where(loan_repayment.amount_paid > 0.0)
 
 	return query
 
