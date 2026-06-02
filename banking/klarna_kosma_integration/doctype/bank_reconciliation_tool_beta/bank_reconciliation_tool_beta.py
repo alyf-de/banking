@@ -214,6 +214,7 @@ def create_journal_entry_bts(
 				"credit_in_account_currency": bank_credit_amount,
 				"debit_in_account_currency": bank_debit_amount,
 				"cost_center": cost_center,
+				"project": project,
 			},
 		],
 	)
