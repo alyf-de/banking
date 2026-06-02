@@ -847,7 +847,7 @@ def get_bt_matching_query(exact_match: bool, common_filters: frappe._dict, trans
 def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
 	matching_party = (loan_disbursement.applicant_type == common_filters.party_type) & (
-		loan_disbursement.applicant == common_filters.matching_party
+		loan_disbursement.applicant == common_filters.party
 	)
 
 	date_condition = (
