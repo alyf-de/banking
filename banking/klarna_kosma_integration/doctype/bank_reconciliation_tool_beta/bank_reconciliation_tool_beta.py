@@ -17,7 +17,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
-from frappe.utils import cint, flt, sbool
+from frappe.utils import flt, sbool
 from pypika import Order
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
@@ -404,9 +404,6 @@ def auto_reconcile_vouchers(
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: str | bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 ):
 	# Auto reconcile vouchers with matching reference numbers
 	frappe.flags.auto_reconcile_vouchers = True
@@ -419,11 +416,6 @@ def auto_reconcile_vouchers(
 		linked_payments = get_linked_payments(
 			transaction.name,
 			["payment_entry", "journal_entry"],
-			from_date,
-			to_date,
-			filter_by_reference_date,
-			from_reference_date,
-			to_reference_date,
 		)
 
 		if not linked_payments:
@@ -478,11 +470,6 @@ def auto_reconcile_vouchers(
 def get_linked_payments(
 	bank_transaction_name: str,
 	document_types: str | list,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: str | bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 ) -> list:
 	"""Get all matching payments for a bank transaction"""
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
@@ -500,11 +487,6 @@ def get_linked_payments(
 		company,
 		transaction,
 		document_types,
-		from_date,
-		to_date,
-		sbool(filter_by_reference_date),
-		from_reference_date,
-		to_reference_date,
 	)
 	subtract_allocations(gl_account, vouchers=matching)
 
@@ -599,11 +581,6 @@ def check_matching(
 	company: str,
 	transaction: CustomBankTransaction,
 	document_types: list,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 ):
 	common_filters = frappe._dict(
 		amount=transaction.unallocated_amount,
@@ -621,11 +598,6 @@ def check_matching(
 		company,
 		transaction,
 		document_types,
-		from_date,
-		to_date,
-		filter_by_reference_date,
-		from_reference_date,
-		to_reference_date,
 		common_filters,
 	)
 
@@ -656,11 +628,6 @@ def get_queries(
 	company: str,
 	transaction: CustomBankTransaction,
 	document_types: list,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 	common_filters: frappe._dict | None = None,
 ):
 	# get queries to get matching vouchers
@@ -678,12 +645,7 @@ def get_queries(
 				document_types,
 				exact_match,
 				account_from_to,
-				from_date,
-				to_date,
-				filter_by_reference_date,
-				from_reference_date,
-				to_reference_date,
-				common_filters,
+				common_filters=common_filters,
 			)
 			or []
 		)
@@ -698,12 +660,8 @@ def get_matching_queries(
 	document_types: list,
 	exact_match: bool = False,
 	account_from_to: str | None = None,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 	common_filters: frappe._dict | None = None,
+	**kwargs,
 ):
 	if not common_filters:
 		common_filters = frappe._dict()
@@ -722,11 +680,6 @@ def get_matching_queries(
 			exact_match,
 			common_filters,
 			account_from_to,
-			from_date,
-			to_date,
-			filter_by_reference_date,
-			from_reference_date,
-			to_reference_date,
 		)
 		queries.append(query)
 
@@ -735,11 +688,6 @@ def get_matching_queries(
 		query = get_je_matching_query(
 			exact_match,
 			common_filters,
-			from_date,
-			to_date,
-			filter_by_reference_date,
-			from_reference_date,
-			to_reference_date,
 			transaction.name,
 		)
 		queries.append(query)
@@ -947,11 +895,6 @@ def get_pe_matching_query(
 	exact_match: bool,
 	common_filters: frappe._dict,
 	account_from_to: str,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 ):
 	pe = frappe.qb.DocType("Payment Entry")
 	to_from = "to" if common_filters.payment_type == "Receive" else "from"
@@ -969,10 +912,6 @@ def get_pe_matching_query(
 		& (pe.party.isnotnull())
 	)
 	party_rank = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
-
-	filter_by_date = pe.posting_date.between(from_date, to_date)
-	if cint(filter_by_reference_date):
-		filter_by_date = pe.reference_date.between(from_reference_date, to_reference_date)
 
 	date_condition = Coalesce(pe.reference_date, pe.posting_date) == common_filters.date
 	date_rank = frappe.qb.terms.Case().when(date_condition, 1).else_(0)
@@ -1003,7 +942,6 @@ def get_pe_matching_query(
 		.where(pe.clearance_date.isnull())
 		.where(getattr(pe, account_from_to) == common_filters.bank_account)
 		.where(amount_filter)
-		.where(filter_by_date)
 		.orderby(rank_expression, order=Order.desc)
 		.limit(MAX_QUERY_RESULTS)
 	)
@@ -1019,11 +957,6 @@ def get_pe_matching_query(
 def get_je_matching_query(
 	exact_match: bool,
 	common_filters: frappe._dict,
-	from_date: str | datetime.date | None = None,
-	to_date: str | datetime.date | None = None,
-	filter_by_reference_date: bool = False,
-	from_reference_date: str | datetime.date | None = None,
-	to_reference_date: str | datetime.date | None = None,
 	bank_transaction_name: str | None = None,
 ):
 	# get matching journal entry query
@@ -1035,10 +968,6 @@ def get_je_matching_query(
 
 	cr_or_dr = "credit" if common_filters.payment_type == "Pay" else "debit"
 	amount_field = getattr(jea, f"{cr_or_dr}_in_account_currency")
-
-	filter_by_date = je.posting_date.between(from_date, to_date)
-	if cint(filter_by_reference_date):
-		filter_by_date = je.cheque_date.between(from_reference_date, to_reference_date)
 
 	subquery = (
 		frappe.qb.from_(jea)
@@ -1059,9 +988,8 @@ def get_je_matching_query(
 		.where(je.voucher_type != "Opening Entry")
 		.where(je.clearance_date.isnull())
 		.where(jea.account == common_filters.bank_account)
-		.where(filter_by_date)
 		.groupby(je.name)
-		.orderby(je.cheque_date if cint(filter_by_reference_date) else je.posting_date)
+		.orderby(je.posting_date)
 	)
 
 	if bank_transaction_name:
