@@ -85,7 +85,7 @@ def get_bank_transactions(
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
-	order_by: str | datetime.date | None = "date asc",
+	order_by: str | None = "date asc",
 ):
 	"""Return bank transactions for a bank account"""
 	filters = [
