@@ -643,6 +643,11 @@ def get_queries(
 				document_types,
 				exact_match,
 				account_from_to,
+				from_date=None,
+				to_date=None,
+				filter_by_reference_date=False,
+				from_reference_date=None,
+				to_reference_date=None,
 				common_filters=common_filters,
 			)
 			or []
@@ -658,8 +663,12 @@ def get_matching_queries(
 	document_types: list,
 	exact_match: bool = False,
 	account_from_to: str | None = None,
+	from_date: str | datetime.date | None = None,
+	to_date: str | datetime.date | None = None,
+	filter_by_reference_date: bool = False,
+	from_reference_date: str | datetime.date | None = None,
+	to_reference_date: str | datetime.date | None = None,
 	common_filters: frappe._dict | None = None,
-	**kwargs,
 ):
 	if not common_filters:
 		common_filters = frappe._dict()
