@@ -58,10 +58,8 @@ class BankReconciliationToolBeta(Document):
 		bank_statement_from_date: DF.Date | None
 		bank_statement_to_date: DF.Date | None
 		company: DF.Link | None
-		filter_by_reference_date: DF.Check
-		from_reference_date: DF.Date | None
-		to_reference_date: DF.Date | None
 	# end: auto-generated types
+
 	pass
 
 
