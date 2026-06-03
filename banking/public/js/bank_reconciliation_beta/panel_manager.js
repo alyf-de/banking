@@ -39,7 +39,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			this.accounting_dimensions = dimensions_message?.[0] || [];
 			this.accounting_dimension_defaults = dimensions_message?.[1] || {};
 		}
-		this.company_default_cost_center = company_defaults?.cost_center;
+		this.company_default_cost_center = company_defaults?.message?.cost_center;
 
 		this.$wrapper.empty();
 		this.$panel_wrapper = this.$wrapper

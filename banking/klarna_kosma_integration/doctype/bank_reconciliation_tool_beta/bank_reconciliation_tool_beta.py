@@ -241,8 +241,6 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
-	if not cost_center:
-		cost_center = get_default_cost_center(company)
 
 	# Do not tag the bank GL line: dimensions (incl. project/cost_center) belong on the other leg only.
 	account_rows = [
