@@ -195,6 +195,8 @@ def create_journal_entry_bts(
 ):
 	"""Create a new Journal Entry for reconciling the Bank Transaction.
 
+	:param project: Project applied to the non-bank account row.
+	:param cost_center: Cost Center applied to the non-bank account row; defaults to company default.
 	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
 		(applied to non-bank account rows only).
 	"""
@@ -239,6 +241,9 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
+	if not cost_center:
+		cost_center = get_default_cost_center(company)
+
 	# Do not tag the bank GL line: dimensions (incl. project/cost_center) belong on the other leg only.
 	account_rows = [
 		{
@@ -247,7 +252,8 @@ def create_journal_entry_bts(
 			"debit_in_account_currency": bank_credit_amount,
 			"party_type": party_type,
 			"party": party,
-			"cost_center": get_default_cost_center(company),
+			"cost_center": cost_center,
+			"project": project,
 		},
 		{
 			"account": bank_gl_account,
