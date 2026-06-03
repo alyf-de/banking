@@ -40,13 +40,7 @@ MAX_QUERY_RESULTS = 150
 STANDARD_ACCOUNTING_DIMENSION_FIELDS = frozenset({"project", "cost_center"})
 
 
-def _get_allowed_accounting_dimension_fields() -> set[str]:
-	"""Return whitelisted dimension fieldnames (custom + project + cost_center)."""
-	return set(get_accounting_dimensions(as_list=True)) | STANDARD_ACCOUNTING_DIMENSION_FIELDS
-
-
 def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict:
-	"""Parse accounting_dimensions JSON from the reco UI; return {} on invalid input."""
 	if not accounting_dimensions:
 		return {}
 
@@ -55,29 +49,24 @@ def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict
 	except (TypeError, json.JSONDecodeError):
 		return {}
 
-	if not isinstance(dimensions, dict):
-		return {}
-
-	return dimensions
+	return dimensions if isinstance(dimensions, dict) else {}
 
 
 def _merge_accounting_dimensions_into_payment_entry(
 	payment_entry: Document, accounting_dimensions: str | None
 ) -> None:
-	"""Stamp selected accounting dimensions onto Payment Entry header fields."""
-	allowed = _get_allowed_accounting_dimension_fields()
-	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
-		if key not in allowed or not value:
-			continue
-		if payment_entry.meta.get_field(key):
-			payment_entry.set(key, value)
+	dimensions = _parse_accounting_dimensions_json(accounting_dimensions)
+	for fieldname in get_accounting_dimensions(as_list=True):
+		value = dimensions.get(fieldname)
+		if value:
+			payment_entry.set(fieldname, value)
 
 
 def _merge_accounting_dimensions_into_je_accounts(
 	account_rows: list[dict], accounting_dimensions: str | None
 ) -> None:
 	"""Stamp selected accounting dimensions onto non-bank Journal Entry Account rows."""
-	allowed = _get_allowed_accounting_dimension_fields()
+	allowed = set(get_accounting_dimensions(as_list=True)) | STANDARD_ACCOUNTING_DIMENSION_FIELDS
 	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
 		if key not in allowed or not value:
 			continue
@@ -225,6 +214,7 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
+	# Do not tag the bank GL line: dimensions (incl. project/cost_center) belong on the other leg only.
 	account_rows = [
 		{
 			"account": second_account,
@@ -239,7 +229,6 @@ def create_journal_entry_bts(
 			"bank_account": bank_transaction.bank_account,
 			"credit_in_account_currency": bank_credit_amount,
 			"debit_in_account_currency": bank_debit_amount,
-			"cost_center": get_default_cost_center(company),
 		},
 	]
 	_merge_accounting_dimensions_into_je_accounts(account_rows, accounting_dimensions)
@@ -326,7 +315,6 @@ def create_payment_entry_bts(
 	if mode_of_payment:
 		payment_entry.mode_of_payment = mode_of_payment
 
-	_merge_accounting_dimensions_into_payment_entry(payment_entry, accounting_dimensions)
 	if project:
 		payment_entry.project = project
 	if cost_center:
@@ -336,6 +324,8 @@ def create_payment_entry_bts(
 		payment_entry.paid_to = company_account
 	else:
 		payment_entry.paid_from = company_account
+
+	_merge_accounting_dimensions_into_payment_entry(payment_entry, accounting_dimensions)
 
 	payment_entry.validate()
 	payment_entry.insert()

@@ -271,23 +271,31 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	def test_merge_accounting_dimensions_into_payment_entry(self):
 		payment_entry = frappe.new_doc("Payment Entry")
 		payment_entry.company = "_Test Company"
-		_merge_accounting_dimensions_into_payment_entry(
-			payment_entry,
-			json.dumps(
-				{
-					"project": "PROJ-TEST",
-					"cost_center": "Main - _TC",
-					"not_a_real_dimension": "ignored",
-				}
-			),
-		)
+		frappe.flags.accounting_dimensions = [
+			frappe._dict(fieldname="test_dim", label="Test Dim", disabled=0, document_type="Customer")
+		]
+		try:
+			_merge_accounting_dimensions_into_payment_entry(
+				payment_entry,
+				json.dumps(
+					{
+						"test_dim": "DIM-001",
+						"project": "PROJ-TEST",
+						"cost_center": "Main - _TC",
+						"not_a_real_dimension": "ignored",
+					}
+				),
+			)
+		finally:
+			frappe.flags.accounting_dimensions = None
 
-		self.assertEqual(payment_entry.project, "PROJ-TEST")
-		self.assertEqual(payment_entry.cost_center, "Main - _TC")
+		self.assertEqual(payment_entry.get("test_dim"), "DIM-001")
+		self.assertFalse(payment_entry.get("project"))
+		self.assertFalse(payment_entry.get("cost_center"))
 
 	def test_merge_accounting_dimensions_into_je_accounts(self):
 		account_rows = [
-			{"account": "Debtors - _TC"},
+			{"account": "Debtors - _TC", "cost_center": "Default - _TC"},
 			{"account": "Bank - _TC", "bank_account": self.bank_account},
 		]
 		_merge_accounting_dimensions_into_je_accounts(
@@ -304,6 +312,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(account_rows[0]["project"], "PROJ-TEST")
 		self.assertEqual(account_rows[0]["cost_center"], "Main - _TC")
 		self.assertNotIn("project", account_rows[1])
+		self.assertNotIn("cost_center", account_rows[1])
 		self.assertNotIn("not_a_real_dimension", account_rows[0])
 
 	def test_jv_against_transaction(self):

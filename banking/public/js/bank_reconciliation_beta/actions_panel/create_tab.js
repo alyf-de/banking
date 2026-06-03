@@ -1,166 +1,32 @@
 frappe.provide("erpnext.accounts.bank_reconciliation");
 
-const STANDARD_ACCOUNTING_DIMENSION_FIELDS = [
-	{ fieldname: "project", label: __("Project"), document_type: "Project" },
-	{
-		fieldname: "cost_center",
-		label: __("Cost Center"),
-		document_type: "Cost Center",
-	},
-];
-
 erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	constructor(opts) {
 		Object.assign(this, opts);
-		this.dimension_fieldnames = [];
+		this.accounting_dimensions = (this.accounting_dimensions || []).filter(
+			(dimension) => dimension.fieldname && dimension.document_type
+		);
+		this.custom_dimension_fieldnames = this.accounting_dimensions.map(
+			(dimension) => dimension.fieldname
+		);
+		this.dimension_fieldnames = [
+			"cost_center",
+			"project",
+			...this.custom_dimension_fieldnames,
+		];
 		this.make();
 	}
 
-	/** Build the create form and append cached accounting dimension fields. */
 	make() {
 		this.panel_manager.actions_tab = "create_voucher-tab";
 
-		const custom_dimensions = this.accounting_dimensions || [];
-		const company_defaults_map = this.accounting_dimension_defaults || {};
-		this.custom_dimension_fieldnames = custom_dimensions.map(
-			(d) => d.fieldname
-		);
-		this.dimension_fieldnames = [
-			...STANDARD_ACCOUNTING_DIMENSION_FIELDS.map((d) => d.fieldname),
-			...this.custom_dimension_fieldnames,
-		];
-
-		this.build_field_group();
-		this.append_accounting_dimensions(custom_dimensions, company_defaults_map);
-	}
-
-	/** Render the main create-voucher fields (without accounting dimensions). */
-	build_field_group() {
 		this.create_field_group = new frappe.ui.FieldGroup({
 			fields: this.get_create_tab_fields(),
 			body: this.actions_panel.$tab_content,
 			card_layout: true,
 		});
 		this.create_field_group.make();
-	}
-
-	/**
-	 * Add the collapsible accounting dimensions section after the base form;
-	 * placed above the footer so Create stays at the bottom.
-	 */
-	append_accounting_dimensions(dimensions, company_defaults_map) {
-		if (!this.create_field_group) {
-			return;
-		}
-		const dimension_section = this.build_accounting_dimension_section_fields(
-			dimensions,
-			company_defaults_map
-		);
-		if (!dimension_section.length) {
-			return;
-		}
-
-		this.create_field_group.add_fields(dimension_section);
-
-		const hidden = this.create_field_group.get_field("hidden_field");
-		const $footer =
-			hidden && hidden.$wrapper && hidden.$wrapper.closest(".form-section");
-		const $dim = this.create_field_group.wrapper
-			.find(".bank-br-create-accounting-dimensions")
-			.closest(".form-section");
-		if ($footer && $footer.length && $dim && $dim.length) {
-			$dim.insertBefore($footer);
-		}
-
-		this.create_field_group.refresh_dependency();
-
-		const dim_section_closed_key =
-			"bank-br-create-accounting-dimensions-closed";
-		const collapse_default = () => {
-			if (localStorage.getItem(dim_section_closed_key) !== null) {
-				return;
-			}
-			const sec =
-				this.create_field_group.sections_dict?.accounting_dimensions_section ||
-				this.create_field_group.sections?.find(
-					(s) => s.df?.fieldname === "accounting_dimensions_section"
-				);
-			if (sec && typeof sec.collapse === "function") {
-				sec.collapse(true);
-			}
-		};
-		collapse_default();
-		setTimeout(collapse_default, 0);
-	}
-
-	/** Field definitions for the accounting dimensions section break and link fields. */
-	build_accounting_dimension_section_fields(
-		custom_dimensions,
-		company_defaults_map
-	) {
-		const standard_fields = this.get_accounting_dimension_fields(
-			STANDARD_ACCOUNTING_DIMENSION_FIELDS,
-			company_defaults_map
-		);
-		const custom_fields = this.get_accounting_dimension_fields(
-			custom_dimensions,
-			company_defaults_map
-		);
-		const left_column = standard_fields[0] ? [standard_fields[0]] : [];
-		const right_column = standard_fields[1] ? [standard_fields[1]] : [];
-
-		custom_fields.forEach((field, index) => {
-			if (index % 2 === 0) {
-				left_column.push(field);
-			} else {
-				right_column.push(field);
-			}
-		});
-
-		if (!left_column.length && !right_column.length) {
-			return [];
-		}
-
-		const fields = [...left_column];
-		if (right_column.length) {
-			fields.push({
-				fieldname: "column_break_accounting_dimensions",
-				fieldtype: "Column Break",
-			});
-			fields.push(...right_column);
-		}
-
-		return [
-			{
-				fieldtype: "Section Break",
-				fieldname: "accounting_dimensions_section",
-				label: __("Accounting Dimensions"),
-				collapsible: 1,
-				css_class: "bank-br-create-accounting-dimensions",
-			},
-			...fields,
-		];
-	}
-
-	/** Map ERPNext dimension metadata to Link field definitions with company defaults. */
-	get_accounting_dimension_fields(dimensions, company_defaults_map) {
-		const defaults_for_company =
-			company_defaults_map && this.company && company_defaults_map[this.company]
-				? company_defaults_map[this.company]
-				: {};
-		return (dimensions || []).map((dimension) => {
-			const df = {
-				fieldname: dimension.fieldname,
-				fieldtype: "Link",
-				label: __(dimension.label || frappe.model.unscrub(dimension.fieldname)),
-				options: dimension.document_type,
-			};
-			const default_dim = defaults_for_company[dimension.fieldname];
-			if (default_dim) {
-				df.default = default_dim;
-			}
-			return df;
-		});
+		this.create_field_group.refresh_section_collapse();
 	}
 
 	create_voucher() {
@@ -198,12 +64,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
-	/** Collect non-empty dimension values for the given fieldnames. */
 	get_selected_accounting_dimensions(values, fieldnames) {
 		const dim_payload = {};
-		for (const fn of fieldnames || []) {
-			if (values[fn]) {
-				dim_payload[fn] = values[fn];
+		for (const fieldname of fieldnames || []) {
+			if (values[fieldname]) {
+				dim_payload[fieldname] = values[fieldname];
 			}
 		}
 		return dim_payload;
@@ -215,12 +80,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			: null;
 	}
 
-	/**
-	 * Create Payment Entry or Journal Entry and run `success_callback`.
-	 * Payment Entry: project/cost_center as explicit args; custom dims as JSON.
-	 * Journal Entry: all dimensions (standard + custom) as JSON.
-	 */
 	create_voucher_bts(allow_edit = false, success_callback) {
+		// Create PE or JV and run `success_callback`
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
 		let method =
@@ -238,7 +99,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 		if (document_type === "Payment Entry") {
 			method = method + ".create_payment_entry_bts";
-			const custom_payload = this.get_selected_accounting_dimensions(
+			const dim_payload = this.get_selected_accounting_dimensions(
 				values,
 				this.custom_dimension_fieldnames
 			);
@@ -247,7 +108,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				project: values.project,
 				cost_center: values.cost_center,
 				accounting_dimensions:
-					this.serialize_accounting_dimensions(custom_payload),
+					this.serialize_accounting_dimensions(dim_payload),
 			};
 		} else {
 			method = method + ".create_journal_entry_bts";
@@ -326,10 +187,42 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
+	get_split_accounting_dimension_fields() {
+		const company_defaults =
+			(this.accounting_dimension_defaults || {})[this.company] || {};
+		const to_link_field = (dimension) => {
+			const df = {
+				fieldname: dimension.fieldname,
+				fieldtype: "Link",
+				label: __(dimension.label || frappe.model.unscrub(dimension.fieldname)),
+				options: dimension.document_type,
+			};
+			if (company_defaults[dimension.fieldname]) {
+				df.default = company_defaults[dimension.fieldname];
+			}
+			return df;
+		};
+		const split_at = Math.ceil(this.accounting_dimensions.length / 2);
+
+		return {
+			left_custom_dimension_fields: this.accounting_dimensions
+				.slice(0, split_at)
+				.map(to_link_field),
+			right_custom_dimension_fields: this.accounting_dimensions
+				.slice(split_at)
+				.map(to_link_field),
+		};
+	}
+
 	get_create_tab_fields() {
 		let party_type =
 			this.transaction.party_type ||
 			(flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
+		const company_defaults =
+			(this.accounting_dimension_defaults || {})[this.company] || {};
+		const { left_custom_dimension_fields, right_custom_dimension_fields } =
+			this.get_split_accounting_dimension_fields();
+
 		return [
 			{
 				label: __("Document Type"),
@@ -448,6 +341,48 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: party_type,
 				reqd: 1,
 			},
+			{
+				fieldname: "accounting_dimensions_section",
+				fieldtype: "Section Break",
+				label: __("Accounting Dimensions"),
+				collapsible: 1,
+			},
+			{
+				fieldname: "cost_center",
+				fieldtype: "Link",
+				label: __("Cost Center"),
+				options: "Cost Center",
+				default:
+					company_defaults.cost_center || this.company_default_cost_center,
+				get_query: () => {
+					return {
+						filters: {
+							company: this.company,
+							is_group: 0,
+						},
+					};
+				},
+			},
+			...left_custom_dimension_fields,
+			{
+				fieldname: "dimension_col_break",
+				fieldtype: "Column Break",
+			},
+			{
+				fieldname: "project",
+				fieldtype: "Link",
+				label: __("Project"),
+				options: "Project",
+				default: company_defaults.project,
+				get_query: () => {
+					return {
+						filters: {
+							company: this.company,
+						},
+					};
+				},
+			},
+			...right_custom_dimension_fields,
 			{
 				fieldtype: "Section Break",
 			},
