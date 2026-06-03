@@ -95,6 +95,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			posting_date: values.posting_date,
 			mode_of_payment: values.mode_of_payment,
 			allow_edit: allow_edit,
+			project: values.project,
+			cost_center: values.cost_center,
 		};
 
 		if (document_type === "Payment Entry") {
@@ -280,14 +282,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: "Mode of Payment",
 			},
 			{
-				fieldname: "edit_in_full_page",
-				fieldtype: "Button",
-				label: __("Edit in Full Page"),
-				click: () => {
-					this.edit_in_full_page();
-				},
-			},
-			{
 				fieldname: "column_break_7",
 				fieldtype: "Column Break",
 			},
@@ -387,10 +381,12 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldtype: "Section Break",
 			},
 			{
-				label: __("Hidden field for alignment"),
-				fieldname: "hidden_field",
-				fieldtype: "Data",
-				hidden: 1,
+				fieldname: "edit_in_full_page",
+				fieldtype: "Button",
+				label: __("Edit in Full Page"),
+				click: () => {
+					this.edit_in_full_page();
+				},
 			},
 			{
 				fieldtype: "Column Break",

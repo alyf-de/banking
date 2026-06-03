@@ -1,0 +1,13 @@
+{
+    "disabledLabels": [
+        "conflicts"
+    ],
+    "context": {
+        "repos": [
+            "frappe/frappe",
+            "frappe/erpnext",
+            "frappe/hrms",
+            "frappe/lending"
+        ]
+    }
+}
