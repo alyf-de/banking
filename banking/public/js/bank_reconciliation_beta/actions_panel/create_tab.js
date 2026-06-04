@@ -107,8 +107,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			);
 			args = {
 				...args,
-				project: values.project,
-				cost_center: values.cost_center,
 				accounting_dimensions:
 					this.serialize_accounting_dimensions(dim_payload),
 			};

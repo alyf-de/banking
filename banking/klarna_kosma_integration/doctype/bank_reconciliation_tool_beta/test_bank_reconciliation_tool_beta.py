@@ -1,6 +1,7 @@
 # Copyright (c) 2023, ALYF GmbH and Contributors
 # See license.txt
 import json
+from unittest.mock import patch
 
 import frappe
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
@@ -268,27 +269,26 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.status, "Reconciled")
 
-	def test_merge_accounting_dimensions_into_payment_entry(self):
+	@patch(
+		"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_accounting_dimensions"
+	)
+	def test_merge_accounting_dimensions_into_payment_entry(self, mock_get_accounting_dimensions):
+		mock_get_accounting_dimensions.return_value = ["test_dim"]
 		payment_entry = frappe.new_doc("Payment Entry")
 		payment_entry.company = "_Test Company"
-		frappe.flags.accounting_dimensions = [
-			frappe._dict(fieldname="test_dim", label="Test Dim", disabled=0, document_type="Customer")
-		]
-		try:
-			_merge_accounting_dimensions_into_payment_entry(
-				payment_entry,
-				json.dumps(
-					{
-						"test_dim": "DIM-001",
-						"project": "PROJ-TEST",
-						"cost_center": "Main - _TC",
-						"not_a_real_dimension": "ignored",
-					}
-				),
-			)
-		finally:
-			frappe.flags.accounting_dimensions = None
+		_merge_accounting_dimensions_into_payment_entry(
+			payment_entry,
+			json.dumps(
+				{
+					"test_dim": "DIM-001",
+					"project": "PROJ-TEST",
+					"cost_center": "Main - _TC",
+					"not_a_real_dimension": "ignored",
+				}
+			),
+		)
 
+		mock_get_accounting_dimensions.assert_called_once_with(as_list=True)
 		self.assertEqual(payment_entry.get("test_dim"), "DIM-001")
 		self.assertFalse(payment_entry.get("project"))
 		self.assertFalse(payment_entry.get("cost_center"))
