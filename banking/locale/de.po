@@ -485,7 +485,7 @@ msgstr "Fehler beim Erstellen von {0} gegen {1}"
 
 #: banking/ebics/doctype/ebics_request/ebics_request.js:49
 msgid "Failed to re-import EBICS transactions."
-msgstr "Fehler beim erneuten Importieren von EBICS-Transaktionen."
+msgstr ""
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:124
 msgid "Failed to reconcile new {0} against {1}"
