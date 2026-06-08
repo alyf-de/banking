@@ -67,15 +67,12 @@ def _merge_accounting_dimensions_into_payment_entry(
 def _merge_accounting_dimensions_into_je_accounts(
 	account_rows: list[dict], accounting_dimensions: str | None
 ) -> None:
-	"""Stamp selected accounting dimensions onto non-bank Journal Entry Account rows."""
+	"""Stamp selected accounting dimensions onto all Journal Entry Account rows."""
 	allowed = set(get_accounting_dimensions(as_list=True)) | STANDARD_ACCOUNTING_DIMENSION_FIELDS
 	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
 		if key not in allowed or not value:
 			continue
 		for row in account_rows:
-			# Do not tag the bank GL line (like Payment Entry): dimensions belong on the other leg only.
-			if row.get("bank_account"):
-				continue
 			row[key] = value
 
 
@@ -195,10 +192,10 @@ def create_journal_entry_bts(
 ):
 	"""Create a new Journal Entry for reconciling the Bank Transaction.
 
-	:param project: Project applied to the non-bank account row.
-	:param cost_center: Cost Center applied to the non-bank account row; defaults to company default.
+	:param project: Project applied to all Journal Entry Account rows.
+	:param cost_center: Cost Center applied to all Journal Entry Account rows; defaults to company default.
 	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
-		(applied to non-bank account rows only).
+		(applied to all Journal Entry Account rows).
 	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
@@ -242,7 +239,6 @@ def create_journal_entry_bts(
 		}
 	)
 
-	# Do not tag the bank GL line: dimensions (incl. project/cost_center) belong on the other leg only.
 	account_rows = [
 		{
 			"account": second_account,
@@ -258,6 +254,8 @@ def create_journal_entry_bts(
 			"bank_account": bank_transaction.bank_account,
 			"credit_in_account_currency": bank_credit_amount,
 			"debit_in_account_currency": bank_debit_amount,
+			"cost_center": cost_center,
+			"project": project,
 		},
 	]
 	_merge_accounting_dimensions_into_je_accounts(account_rows, accounting_dimensions)

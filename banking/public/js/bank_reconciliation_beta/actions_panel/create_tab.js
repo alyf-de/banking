@@ -9,11 +9,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		this.custom_dimension_fieldnames = this.accounting_dimensions.map(
 			(dimension) => dimension.fieldname
 		);
-		this.dimension_fieldnames = [
-			"cost_center",
-			"project",
-			...this.custom_dimension_fieldnames,
-		];
 		this.make();
 	}
 
@@ -86,6 +81,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		let document_type = values.document_type;
 		let method =
 			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
+		const dim_payload = this.get_selected_accounting_dimensions(
+			values,
+			this.custom_dimension_fieldnames
+		);
 		let args = {
 			bank_transaction_name: this.transaction.name,
 			reference_number: values.reference_number,
@@ -97,31 +96,17 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			allow_edit: allow_edit,
 			project: values.project,
 			cost_center: values.cost_center,
+			accounting_dimensions: this.serialize_accounting_dimensions(dim_payload),
 		};
 
 		if (document_type === "Payment Entry") {
 			method = method + ".create_payment_entry_bts";
-			const dim_payload = this.get_selected_accounting_dimensions(
-				values,
-				this.custom_dimension_fieldnames
-			);
-			args = {
-				...args,
-				accounting_dimensions:
-					this.serialize_accounting_dimensions(dim_payload),
-			};
 		} else {
 			method = method + ".create_journal_entry_bts";
-			const dim_payload = this.get_selected_accounting_dimensions(
-				values,
-				this.dimension_fieldnames
-			);
 			args = {
 				...args,
 				entry_type: values.journal_entry_type,
 				second_account: values.second_account,
-				accounting_dimensions:
-					this.serialize_accounting_dimensions(dim_payload),
 			};
 		}
 

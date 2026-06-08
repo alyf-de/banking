@@ -293,7 +293,11 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertFalse(payment_entry.get("project"))
 		self.assertFalse(payment_entry.get("cost_center"))
 
-	def test_merge_accounting_dimensions_into_je_accounts(self):
+	@patch(
+		"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_accounting_dimensions"
+	)
+	def test_merge_accounting_dimensions_into_je_accounts(self, mock_get_accounting_dimensions):
+		mock_get_accounting_dimensions.return_value = ["test_dim"]
 		account_rows = [
 			{"account": "Debtors - _TC", "cost_center": "Default - _TC"},
 			{"account": "Bank - _TC", "bank_account": self.bank_account},
@@ -302,6 +306,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			account_rows,
 			json.dumps(
 				{
+					"test_dim": "DIM-001",
 					"project": "PROJ-TEST",
 					"cost_center": "Main - _TC",
 					"not_a_real_dimension": "ignored",
@@ -309,11 +314,62 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			),
 		)
 
+		mock_get_accounting_dimensions.assert_called_once_with(as_list=True)
+		self.assertEqual(account_rows[0]["test_dim"], "DIM-001")
+		self.assertEqual(account_rows[1]["test_dim"], "DIM-001")
 		self.assertEqual(account_rows[0]["project"], "PROJ-TEST")
 		self.assertEqual(account_rows[0]["cost_center"], "Main - _TC")
-		self.assertNotIn("project", account_rows[1])
-		self.assertNotIn("cost_center", account_rows[1])
+		self.assertEqual(account_rows[1]["project"], "PROJ-TEST")
+		self.assertEqual(account_rows[1]["cost_center"], "Main - _TC")
 		self.assertNotIn("not_a_real_dimension", account_rows[0])
+		self.assertNotIn("not_a_real_dimension", account_rows[1])
+
+	def test_create_journal_entry_bts_applies_accounting_dimensions_to_all_rows(self):
+		project_name = frappe.db.get_value("Project", {"project_name": "_Test Bank Reco Project"}, "name")
+		if not project_name:
+			project_name = (
+				frappe.get_doc(
+					{
+						"doctype": "Project",
+						"project_name": "_Test Bank Reco Project",
+						"company": "_Test Company",
+					}
+				)
+				.insert()
+				.name
+			)
+
+		bt = frappe.get_doc(
+			{
+				"doctype": "Bank Transaction",
+				"company": "_Test Company",
+				"date": frappe.utils.nowdate(),
+				"deposit": 200,
+				"withdrawal": 0,
+				"currency": "INR",
+				"bank_account": self.bank_account,
+				"reference_number": "jv-dim-test",
+			}
+		).insert()
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.reference_number,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			project=project_name,
+			cost_center="Main - _TC",
+			allow_edit=True,
+		)
+
+		self.assertEqual(journal_entry.accounts[0].project, project_name)
+		self.assertEqual(journal_entry.accounts[0].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[1].project, project_name)
+		self.assertEqual(journal_entry.accounts[1].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[1].bank_account, self.bank_account)
 
 	def test_jv_against_transaction(self):
 		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
