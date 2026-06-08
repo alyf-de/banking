@@ -339,18 +339,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 				.name
 			)
 
-		bt = frappe.get_doc(
-			{
-				"doctype": "Bank Transaction",
-				"company": "_Test Company",
-				"date": frappe.utils.nowdate(),
-				"deposit": 200,
-				"withdrawal": 0,
-				"currency": "INR",
-				"bank_account": self.bank_account,
-				"reference_number": "jv-dim-test",
-			}
-		).insert()
+		bt = create_bank_transaction(deposit=200, reference_no="jv-dim-test", bank_account=self.bank_account)
 		journal_entry = create_journal_entry_bts(
 			bank_transaction_name=bt.name,
 			party_type="Customer",
@@ -367,9 +356,11 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 		self.assertEqual(journal_entry.accounts[0].project, project_name)
 		self.assertEqual(journal_entry.accounts[0].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[0].credit_in_account_currency, 200)
 		self.assertEqual(journal_entry.accounts[1].project, project_name)
 		self.assertEqual(journal_entry.accounts[1].cost_center, "Main - _TC")
 		self.assertEqual(journal_entry.accounts[1].bank_account, self.bank_account)
+		self.assertEqual(journal_entry.accounts[1].debit_in_account_currency, 200)
 
 	def test_jv_against_transaction(self):
 		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
