@@ -52,26 +52,10 @@ def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict
 	return dimensions if isinstance(dimensions, dict) else {}
 
 
-def _merge_accounting_dimensions_into_payment_entry(
-	payment_entry: Document, accounting_dimensions: str | None
-) -> None:
-	dimensions = _parse_accounting_dimensions_json(accounting_dimensions)
-	for fieldname in get_accounting_dimensions(as_list=True):
-		value = dimensions.get(fieldname)
-		if value:
-			payment_entry.set(fieldname, value)
-
-
-def _merge_accounting_dimensions_into_je_accounts(
-	account_rows: list[dict], accounting_dimensions: str | None
-) -> None:
-	"""Stamp selected accounting dimensions onto all Journal Entry Account rows."""
-	allowed = set(get_accounting_dimensions(as_list=True))
-	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
-		if key not in allowed or not value:
-			continue
-		for row in account_rows:
-			row[key] = value
+def _get_valid_accounting_dimensions(accounting_dimensions: str | None) -> dict:
+	allowed = get_accounting_dimensions(as_list=True)
+	parsed = _parse_accounting_dimensions_json(accounting_dimensions)
+	return {fieldname: parsed[fieldname] for fieldname in allowed if parsed.get(fieldname)}
 
 
 class BankReconciliationToolBeta(Document):
@@ -256,7 +240,9 @@ def create_journal_entry_bts(
 			"project": project,
 		},
 	]
-	_merge_accounting_dimensions_into_je_accounts(account_rows, accounting_dimensions)
+	dimensions = _get_valid_accounting_dimensions(accounting_dimensions)
+	for row in account_rows:
+		row.update(dimensions)
 	journal_entry.set("accounts", account_rows)
 
 	company_currency = get_company_currency(company)
@@ -350,7 +336,7 @@ def create_payment_entry_bts(
 	else:
 		payment_entry.paid_from = company_account
 
-	_merge_accounting_dimensions_into_payment_entry(payment_entry, accounting_dimensions)
+	payment_entry.update(_get_valid_accounting_dimensions(accounting_dimensions))
 
 	payment_entry.validate()
 	payment_entry.insert()
