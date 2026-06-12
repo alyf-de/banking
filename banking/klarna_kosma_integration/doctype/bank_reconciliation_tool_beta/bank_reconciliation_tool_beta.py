@@ -39,8 +39,6 @@ MAX_QUERY_RESULTS = 150
 BANK_TRANSACTION_SORT_FIELDS = {"date", "withdrawal", "deposit", "unallocated_amount"}
 BANK_TRANSACTION_SORT_DIRECTIONS = {"asc", "desc"}
 
-STANDARD_ACCOUNTING_DIMENSION_FIELDS = frozenset({"project", "cost_center"})
-
 
 def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict:
 	if not accounting_dimensions:
@@ -68,7 +66,7 @@ def _merge_accounting_dimensions_into_je_accounts(
 	account_rows: list[dict], accounting_dimensions: str | None
 ) -> None:
 	"""Stamp selected accounting dimensions onto all Journal Entry Account rows."""
-	allowed = set(get_accounting_dimensions(as_list=True)) | STANDARD_ACCOUNTING_DIMENSION_FIELDS
+	allowed = set(get_accounting_dimensions(as_list=True))
 	for key, value in _parse_accounting_dimensions_json(accounting_dimensions).items():
 		if key not in allowed or not value:
 			continue
