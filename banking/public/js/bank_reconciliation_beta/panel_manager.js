@@ -11,15 +11,35 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	async init_panels() {
-		const [transactions, document_types] = await Promise.all([
-			this.get_bank_transactions(),
-			frappe.xcall(
-				"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
-			),
-		]);
+		const dimensions_cached = this.accounting_dimensions != null;
+		const document_types_cached = this.document_types != null;
+
+		const [transactions, document_types, dimensions_message, company_defaults] =
+			await Promise.all([
+				this.get_bank_transactions(),
+				document_types_cached
+					? Promise.resolve(this.document_types)
+					: frappe.xcall(
+							"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
+					  ),
+				dimensions_cached
+					? Promise.resolve([
+							this.accounting_dimensions,
+							this.accounting_dimension_defaults,
+					  ])
+					: this.get_accounting_dimensions(),
+				frappe.db.get_value("Company", this.frm.doc.company, "cost_center"),
+			]);
 
 		this.transactions = transactions;
-		this.document_types = document_types;
+		if (!document_types_cached) {
+			this.document_types = document_types;
+		}
+		if (!dimensions_cached) {
+			this.accounting_dimensions = dimensions_message?.[0] || [];
+			this.accounting_dimension_defaults = dimensions_message?.[1] || {};
+		}
+		this.company_default_cost_center = company_defaults?.message?.cost_center;
 
 		this.$wrapper.empty();
 		this.$panel_wrapper = this.$wrapper
@@ -31,6 +51,43 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			.find(".panel-container");
 
 		this.render_panels();
+	}
+
+	/** Re-fetch and re-render the transaction list (e.g. after sort change). */
+	async reload_transactions() {
+		this.transactions = await this.get_bank_transactions();
+		const active_name = this.active_transaction?.name;
+
+		if (!this.transactions?.length) {
+			this.active_transaction = null;
+			this.$panel_wrapper.empty();
+			this.render_no_transactions();
+			return;
+		}
+
+		this.$list_container.empty();
+		this.render_transactions_list();
+
+		const $row = active_name
+			? this.$list_container.find("#" + active_name)
+			: $();
+		if ($row.length) {
+			$row.click();
+		} else {
+			this.$list_container.find(".transaction-row").first().click();
+		}
+	}
+
+	/** Load custom accounting dimension metadata once per reco session. */
+	async get_accounting_dimensions() {
+		const response = await frappe.call({
+			method:
+				"erpnext.accounts.doctype.accounting_dimension.accounting_dimension.get_dimensions",
+			args: {
+				with_cost_center_and_project: false,
+			},
+		});
+		return response.message;
 	}
 
 	async get_bank_transactions() {
@@ -140,8 +197,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				me.order_direction = sort_order || me.order_direction || "asc";
 				me.order = me.order_by + " " + me.order_direction;
 
-				// Re-render the list
-				me.init_panels();
+				me.reload_transactions();
 			},
 		});
 	}
