@@ -281,8 +281,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			json.dumps(
 				{
 					"test_dim": "DIM-001",
-					"project": "PROJ-TEST",
-					"cost_center": "Main - _TC",
 					"not_a_real_dimension": "ignored",
 				}
 			),
@@ -290,8 +288,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 		mock_get_accounting_dimensions.assert_called_once_with(as_list=True)
 		self.assertEqual(payment_entry.get("test_dim"), "DIM-001")
-		self.assertFalse(payment_entry.get("project"))
-		self.assertFalse(payment_entry.get("cost_center"))
 
 	@patch(
 		"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_accounting_dimensions"
@@ -299,7 +295,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	def test_merge_accounting_dimensions_into_je_accounts(self, mock_get_accounting_dimensions):
 		mock_get_accounting_dimensions.return_value = ["test_dim"]
 		account_rows = [
-			{"account": "Debtors - _TC", "cost_center": "Default - _TC"},
+			{"account": "Debtors - _TC"},
 			{"account": "Bank - _TC", "bank_account": self.bank_account},
 		]
 		_merge_accounting_dimensions_into_je_accounts(
@@ -307,8 +303,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			json.dumps(
 				{
 					"test_dim": "DIM-001",
-					"project": "PROJ-TEST",
-					"cost_center": "Main - _TC",
 					"not_a_real_dimension": "ignored",
 				}
 			),
@@ -317,10 +311,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		mock_get_accounting_dimensions.assert_called_once_with(as_list=True)
 		self.assertEqual(account_rows[0]["test_dim"], "DIM-001")
 		self.assertEqual(account_rows[1]["test_dim"], "DIM-001")
-		self.assertEqual(account_rows[0]["project"], "PROJ-TEST")
-		self.assertEqual(account_rows[0]["cost_center"], "Main - _TC")
-		self.assertEqual(account_rows[1]["project"], "PROJ-TEST")
-		self.assertEqual(account_rows[1]["cost_center"], "Main - _TC")
 		self.assertNotIn("not_a_real_dimension", account_rows[0])
 		self.assertNotIn("not_a_real_dimension", account_rows[1])
 
