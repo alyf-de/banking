@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+	get_accounting_dimensions,
+)
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	get_total_allocated_amount,
 )
@@ -43,6 +46,24 @@ if TYPE_CHECKING:
 MAX_QUERY_RESULTS = 150
 BANK_TRANSACTION_SORT_FIELDS = {"date", "withdrawal", "deposit", "unallocated_amount"}
 BANK_TRANSACTION_SORT_DIRECTIONS = {"asc", "desc"}
+
+
+def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict:
+	if not accounting_dimensions:
+		return {}
+
+	try:
+		dimensions = json.loads(accounting_dimensions)
+	except (TypeError, json.JSONDecodeError):
+		return {}
+
+	return dimensions if isinstance(dimensions, dict) else {}
+
+
+def _get_valid_accounting_dimensions(accounting_dimensions: str | None) -> dict:
+	allowed = get_accounting_dimensions(as_list=True)
+	parsed = _parse_accounting_dimensions_json(accounting_dimensions)
+	return {fieldname: parsed[fieldname] for fieldname in allowed if parsed.get(fieldname)}
 
 
 class BankReconciliationToolBeta(Document):
@@ -155,8 +176,15 @@ def create_journal_entry_bts(
 	project: str | None = None,
 	cost_center: str | None = None,
 	allow_edit: bool | str = False,
+	accounting_dimensions: str | None = None,
 ):
-	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
+	"""Create a new Journal Entry for reconciling the Bank Transaction.
+
+	:param project: Project applied to all Journal Entry Account rows.
+	:param cost_center: Cost Center applied to all Journal Entry Account rows; defaults to company default.
+	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
+		(applied to all Journal Entry Account rows).
+	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
@@ -198,28 +226,30 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
-	journal_entry.set(
-		"accounts",
-		[
-			{
-				"account": second_account,
-				"credit_in_account_currency": bank_debit_amount,
-				"debit_in_account_currency": bank_credit_amount,
-				"party_type": party_type,
-				"party": party,
-				"cost_center": cost_center,
-				"project": project,
-			},
-			{
-				"account": bank_gl_account,
-				"bank_account": bank_transaction.bank_account,
-				"credit_in_account_currency": bank_credit_amount,
-				"debit_in_account_currency": bank_debit_amount,
-				"cost_center": cost_center,
-				"project": project,
-			},
-		],
-	)
+
+	account_rows = [
+		{
+			"account": second_account,
+			"credit_in_account_currency": bank_debit_amount,
+			"debit_in_account_currency": bank_credit_amount,
+			"party_type": party_type,
+			"party": party,
+			"cost_center": cost_center,
+			"project": project,
+		},
+		{
+			"account": bank_gl_account,
+			"bank_account": bank_transaction.bank_account,
+			"credit_in_account_currency": bank_credit_amount,
+			"debit_in_account_currency": bank_debit_amount,
+			"cost_center": cost_center,
+			"project": project,
+		},
+	]
+	dimensions = _get_valid_accounting_dimensions(accounting_dimensions)
+	for row in account_rows:
+		row.update(dimensions)
+	journal_entry.set("accounts", account_rows)
 
 	company_currency = get_company_currency(company)
 	journal_entry.multi_currency = (
@@ -261,8 +291,14 @@ def create_payment_entry_bts(
 	mode_of_payment: str | None = None,
 	project: str | None = None,
 	cost_center: str | None = None,
+	accounting_dimensions: str | None = None,
 	allow_edit: bool = False,
 ):
+	"""Create a new Payment Entry for reconciling the Bank Transaction.
+
+	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
+		(applied to Payment Entry header fields).
+	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
@@ -295,14 +331,18 @@ def create_payment_entry_bts(
 
 	if mode_of_payment:
 		payment_entry.mode_of_payment = mode_of_payment
+
 	if project:
 		payment_entry.project = project
 	if cost_center:
 		payment_entry.cost_center = cost_center
+
 	if payment_type == "Receive":
 		payment_entry.paid_to = company_account
 	else:
 		payment_entry.paid_from = company_account
+
+	payment_entry.update(_get_valid_accounting_dimensions(accounting_dimensions))
 
 	payment_entry.validate()
 	payment_entry.insert()
