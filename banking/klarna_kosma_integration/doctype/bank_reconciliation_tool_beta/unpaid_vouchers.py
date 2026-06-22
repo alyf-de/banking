@@ -81,6 +81,7 @@ def get_payment_entries(
 				bt,
 				invoices_to_bill,
 				manual_reconcile_amounts=manual_reconcile_amounts,
+				included_fee=included_fee,
 			)
 			payments.append(
 				{
