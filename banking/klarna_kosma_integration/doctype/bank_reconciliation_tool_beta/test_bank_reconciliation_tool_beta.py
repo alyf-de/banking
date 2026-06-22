@@ -1015,6 +1015,74 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(fee_deductions[0].amount, 13)
 		self.assertFalse(fee_deductions[0].is_exchange_gain_loss)
 
+	def test_manual_fx_included_fee_deposit_adds_pe_deduction(self):
+		"""Manual FX reconciliation must still book the included fee deduction."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Manual FX Fee Bank GL")
+		fee_expense_account = create_bank_gl_account("_Test Manual FX Fee Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Manual FX Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		usd_receivable_account = frappe.get_doc(
+			{
+				"doctype": "Account",
+				"company": "_Test Company",
+				"parent_account": "Accounts Receivable - _TC",
+				"account_type": "Receivable",
+				"is_group": 0,
+				"account_name": "Manual FX USD Receivable - _TC",
+				"account_currency": "USD",
+			}
+		).insert()
+		customer = create_customer("Manual FX Fee Customer", "USD")
+		create_currency_exchange("USD", "INR", 80)
+
+		si = create_sales_invoice(
+			customer=customer,
+			debit_to=usd_receivable_account.name,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=7987,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			extra_params={
+				"manual_reconcile_amounts": {
+					"source_amount": 7987,
+					"exchange_rate": 0.0125,
+					"target_amount": 100,
+					"source_currency": "INR",
+					"target_currency": "USD",
+				}
+			},
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 7987)
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		fee_deductions = [row for row in pe.deductions if row.account == fee_expense_account]
+		self.assertEqual(len(fee_deductions), 1)
+		self.assertEqual(fee_deductions[0].amount, 13)
+		self.assertFalse(fee_deductions[0].is_exchange_gain_loss)
+
 	def test_rejects_foreign_fee(self):
 		"""PE deductions are company-currency only, but this BT fee is in USD."""
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
