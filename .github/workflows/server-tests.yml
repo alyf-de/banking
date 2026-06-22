@@ -51,15 +51,15 @@ jobs:
 
     steps:
       - name: Clone
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.14'
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           check-latest: true
@@ -69,7 +69,7 @@ jobs:
           echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
@@ -81,7 +81,7 @@ jobs:
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -93,6 +93,14 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
 
+      - name: Install hrms after banking
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site install-app banking
+          bench --site test_site install-app hrms
+        env:
+          TYPE: server
+
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
         run: |
@@ -101,9 +109,10 @@ jobs:
         env:
           TYPE: server
 
-      - name: Uninstall app
+      - name: Uninstall hrms before banking
         working-directory: /home/runner/frappe-bench
         run: |
+          bench --site test_site uninstall-app --yes --no-backup hrms
           bench --site test_site uninstall-app --yes --no-backup banking
         env:
           TYPE: server
