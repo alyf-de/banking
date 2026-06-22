@@ -4,8 +4,6 @@
 import frappe
 from erpnext.accounts.doctype.account.test_account import create_account
 
-TEST_COMPANY = "Bolt Trades"
-
 
 def set_automatic_bank_fee_entries(enabled: bool) -> None:
 	frappe.db.set_single_value(
@@ -15,12 +13,12 @@ def set_automatic_bank_fee_entries(enabled: bool) -> None:
 	)
 
 
-def get_bank_parent_account(company: str = TEST_COMPANY) -> str:
+def get_bank_parent_account(company: str = "_Test Company") -> str:
 	return frappe.db.get_value("Account", {"account_type": "Bank", "is_group": 1, "company": company})
 
 
 def create_currency_account(
-	currency: str, parent_account: str, account_name: str, company: str = TEST_COMPANY
+	currency: str, parent_account: str, account_name: str, company: str = "_Test Company"
 ):
 	account = create_account(
 		account_name=account_name,
@@ -37,7 +35,7 @@ def create_bank_account(
 	account_name: str = "_Test_B_Account",
 	*,
 	bank_fee_account: str | None = None,
-	company: str = TEST_COMPANY,
+	company: str = "_Test Company",
 	bank: str = "_Test_Bank",
 ):
 	bank_account = frappe.new_doc("Bank Account")
@@ -54,7 +52,7 @@ def create_bank_account(
 
 def make_bank_transaction(
 	*,
-	company: str | None = TEST_COMPANY,
+	company: str | None = "_Test Company",
 	run_before_validate: bool = False,
 	**values,
 ):
@@ -69,7 +67,7 @@ def make_bank_transaction(
 
 def create_bank_transaction(
 	*,
-	company: str = TEST_COMPANY,
+	company: str = "_Test Company",
 	run_before_validate: bool = False,
 	**values,
 ):

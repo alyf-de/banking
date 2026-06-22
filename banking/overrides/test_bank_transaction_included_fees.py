@@ -7,7 +7,6 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from banking.testing_utils import (
-	TEST_COMPANY,
 	create_bank_account,
 	create_bank_transaction,
 	create_currency_account,
@@ -196,7 +195,7 @@ class TestIncludedBankFees(FrappeTestCase):
 
 		create_je_bank_fees(
 			bt,
-			cost_center=frappe.get_cached_value("Company", TEST_COMPANY, "cost_center"),
+			cost_center=frappe.get_cached_value("Company", "_Test Company", "cost_center"),
 			date="2025-01-01",
 			account=self.account_main.name,
 			debit=0.0,
