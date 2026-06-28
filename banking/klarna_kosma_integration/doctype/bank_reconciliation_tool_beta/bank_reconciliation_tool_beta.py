@@ -1153,11 +1153,7 @@ def get_si_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(si[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(si[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1250,11 +1246,7 @@ def get_unpaid_si_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(sales_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(sales_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1349,11 +1341,7 @@ def get_pi_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(purchase_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(purchase_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1451,11 +1439,7 @@ def get_unpaid_pi_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(purchase_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(purchase_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1542,11 +1526,7 @@ def get_unpaid_ec_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(expense_claim[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(expense_claim[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once

@@ -645,6 +645,35 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["amount_match"], 1)
 		self.assertEqual(first_match["ref_in_desc_match"], 0)
 
+	def test_default_reference_field_matches_bank_transaction_reference_number(self):
+		si = create_sales_invoice(
+			rate=300,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			date=getdate(),
+			deposit=300,
+			reference_no=si.name,
+			bank_account=self.bank_account,
+			description="Customer transfer",
+		)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+			from_date=add_days(getdate(), -1),
+			to_date=add_days(getdate(), 1),
+		)
+		first_match = matched_vouchers[0]
+
+		self.assertEqual(first_match["reference_no"], si.name)
+		self.assertEqual(first_match["name"], si.name)
+		self.assertEqual(first_match["rank"], 5)
+		self.assertEqual(first_match["reference_number_match"], 1)
+
 	def test_split_jv_match_against_transaction(self):
 		"""
 		Test if a split JV shows up as a single consolidated row in the tool
