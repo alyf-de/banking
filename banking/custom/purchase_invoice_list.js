@@ -10,7 +10,6 @@ frappe.listview_settings["Purchase Invoice"].onload = function (listview) {
 				.filter((item) => item.status !== "Paid" && item.docstatus === 1)
 				.map((item) => item.name);
 			frappe.call({
-				type: "POST",
 				method: "banking.custom.purchase_invoice.make_bulk_sepa_payment_order",
 				args: {
 					source_names: invoices_to_pay,

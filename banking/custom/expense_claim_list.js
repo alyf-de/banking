@@ -34,7 +34,6 @@ frappe.listview_settings["Expense Claim"].onload = function (listview) {
 				return;
 			}
 			frappe.call({
-				type: "POST",
 				method: "banking.custom.expense_claim.make_bulk_sepa_payment_order",
 				args: {
 					source_names: claims_to_pay,

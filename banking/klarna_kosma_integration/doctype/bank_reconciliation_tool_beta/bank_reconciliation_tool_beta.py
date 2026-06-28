@@ -19,7 +19,11 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
 from frappe.utils import cint, flt, sbool
 from pypika import Order
+from pypika.terms import ExistsCriterion
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
+	get_deposit_included_fee,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
 	amount_rank_condition,
 	get_description_match_condition,
@@ -37,6 +41,8 @@ if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
+BANK_TRANSACTION_SORT_FIELDS = {"date", "withdrawal", "deposit", "unallocated_amount"}
+BANK_TRANSACTION_SORT_DIRECTIONS = {"asc", "desc"}
 
 
 class BankReconciliationToolBeta(Document):
@@ -63,6 +69,23 @@ class BankReconciliationToolBeta(Document):
 	pass
 
 
+def get_bank_transaction_order_by(order_by: str | None) -> str:
+	"""Validate client-provided transaction sorting before passing it to get_list."""
+	if not order_by or order_by == "date asc":
+		return "date asc"
+
+	parts = order_by.strip().split()
+	if len(parts) != 2:
+		frappe.throw(_("Invalid sort order."))
+
+	fieldname, direction = parts
+	direction = direction.lower()
+	if fieldname not in BANK_TRANSACTION_SORT_FIELDS or direction not in BANK_TRANSACTION_SORT_DIRECTIONS:
+		frappe.throw(_("Invalid sort order."))
+
+	return f"{fieldname} {direction}"
+
+
 @frappe.whitelist()
 def get_bank_transactions(
 	company: str | None = None,
@@ -70,7 +93,7 @@ def get_bank_transactions(
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
-	order_by: str | datetime.date | None = "date asc",
+	order_by: str | None = "date asc",
 ) -> tuple[dict[str, Any], ...] | None:
 	"""Return bank transactions for a bank account"""
 	filters: list[list] = [
@@ -116,11 +139,11 @@ def get_bank_transactions(
 			"bank_party_iban",
 		],
 		filters=filters,
-		order_by=order_by,
+		order_by=get_bank_transaction_order_by(order_by),
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_journal_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str | None = None,
@@ -131,6 +154,8 @@ def create_journal_entry_bts(
 	mode_of_payment: str | None = None,
 	party_type: str | None = None,
 	party: str | None = None,
+	project: str | None = None,
+	cost_center: str | None = None,
 	allow_edit: bool | str = False,
 ):
 	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
@@ -154,6 +179,10 @@ def create_journal_entry_bts(
 	second_account_type, second_account_currency = frappe.db.get_value(
 		"Account", second_account, ["account_type", "account_currency"]
 	)
+
+	if not cost_center:
+		cost_center = get_default_cost_center(company)
+
 	if second_account_type in ["Receivable", "Payable"] and not (party_type and party):
 		frappe.throw(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
@@ -180,14 +209,16 @@ def create_journal_entry_bts(
 				"debit_in_account_currency": bank_credit_amount,
 				"party_type": party_type,
 				"party": party,
-				"cost_center": get_default_cost_center(company),
+				"cost_center": cost_center,
+				"project": project,
 			},
 			{
 				"account": bank_gl_account,
 				"bank_account": bank_transaction.bank_account,
 				"credit_in_account_currency": bank_credit_amount,
 				"debit_in_account_currency": bank_debit_amount,
-				"cost_center": get_default_cost_center(company),
+				"cost_center": cost_center,
+				"project": project,
 			},
 		],
 	)
@@ -221,7 +252,7 @@ def create_journal_entry_bts(
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_payment_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str | None = None,
@@ -286,7 +317,7 @@ def create_payment_entry_bts(
 	return reconcile_voucher(bank_transaction_name, paid_amount, "Payment Entry", payment_entry.name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
@@ -325,7 +356,7 @@ def bulk_reconcile_vouchers(
 	return transaction
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
 ) -> dict | CustomBankTransaction:
@@ -351,7 +382,7 @@ def reconcile_voucher(
 	return bulk_reconcile_vouchers(transaction_name, vouchers)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def upload_bank_statement(**args):
 	args = frappe._dict(args)
 	bsi = frappe.new_doc("Bank Statement Import")
@@ -370,7 +401,7 @@ def upload_bank_statement(**args):
 	return bsi  # Return saved document
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def auto_reconcile_vouchers(
 	company: str | None = None,
 	bank: str | None = None,
@@ -578,8 +609,10 @@ def check_matching(
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
 ):
+	matching_amount = transaction.unallocated_amount + get_deposit_included_fee(transaction)
+
 	common_filters = frappe._dict(
-		amount=transaction.unallocated_amount,
+		amount=matching_amount,
 		payment_type=("Receive" if transaction.deposit > 0.0 else "Pay"),
 		reference_no=transaction.reference_number,
 		party_type=transaction.party_type,
@@ -819,9 +852,8 @@ def get_bt_matching_query(exact_match: bool, common_filters: frappe._dict, trans
 
 def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
-	matching_party = (
-		loan_disbursement.applicant_type == common_filters.party_type
-		and loan_disbursement.applicant == common_filters.matching_party
+	matching_party = (loan_disbursement.applicant_type == common_filters.party_type) & (
+		loan_disbursement.applicant == common_filters.party
 	)
 
 	date_condition = (
@@ -859,18 +891,17 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	)
 
 	if exact_match:
-		query.where(loan_disbursement.disbursed_amount == common_filters.amount)
+		query = query.where(loan_disbursement.disbursed_amount == common_filters.amount)
 	else:
-		query.where(loan_disbursement.disbursed_amount > 0.0)
+		query = query.where(loan_disbursement.disbursed_amount > 0.0)
 
 	return query
 
 
 def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_repayment = frappe.qb.DocType("Loan Repayment")
-	matching_party = (
-		loan_repayment.applicant_type == common_filters.party_type
-		and loan_repayment.applicant == common_filters.party
+	matching_party = (loan_repayment.applicant_type == common_filters.party_type) & (
+		loan_repayment.applicant == common_filters.party
 	)
 
 	date_condition = (
@@ -911,9 +942,9 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 		query = query.where(loan_repayment.repay_from_salary == 0)
 
 	if exact_match:
-		query.where(loan_repayment.amount_paid == common_filters.amount)
+		query = query.where(loan_repayment.amount_paid == common_filters.amount)
 	else:
-		query.where(loan_repayment.amount_paid > 0.0)
+		query = query.where(loan_repayment.amount_paid > 0.0)
 
 	return query
 
@@ -1040,10 +1071,25 @@ def get_je_matching_query(
 	)
 
 	if bank_transaction_name:
-		# This filter ensures that Journal Entries that have been created
-		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
-		# other apps are not offered as matches.
-		subquery = subquery.where(je.cheque_no != bank_transaction_name)
+		je_reference = frappe.qb.DocType("Journal Entry Account")
+		has_bank_transaction_reference = ExistsCriterion(
+			frappe.qb.from_(je_reference)
+			.select(je_reference.name)
+			.where(
+				(je_reference.parent == je.name)
+				& (je_reference.reference_type == "Bank Transaction")
+				& (je_reference.reference_name == bank_transaction_name)
+			)
+		)
+		is_auto_fee_journal_entry = (je.is_system_generated == 1) & has_bank_transaction_reference
+		# Journal Entries that other apps create for the Bank Transaction
+		# (e.g. to Cash In Transit) are often linked via cheque_no and should
+		# not be offered as matches. Standard withdrawal fee JEs are excluded
+		# from this bucket because they should reappear after unreconciliation.
+		is_cheque_linked_custom_journal_entry = (
+			je.cheque_no == bank_transaction_name
+		) & ~is_auto_fee_journal_entry
+		subquery = subquery.where(~is_cheque_linked_custom_journal_entry)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
@@ -1060,7 +1106,15 @@ def get_je_matching_query(
 	query = (
 		frappe.qb.from_(subquery)
 		.select(
-			"*",
+			subquery.paid_amount,
+			subquery.doctype,
+			subquery.name,
+			subquery.reference_no,
+			subquery.reference_date,
+			subquery.party,
+			subquery.party_type,
+			subquery.posting_date,
+			subquery.currency,
 			rank_expression.as_("rank"),
 			ref_rank.as_("reference_number_match"),
 			amount_rank.as_("amount_match"),

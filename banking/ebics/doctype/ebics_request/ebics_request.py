@@ -27,7 +27,7 @@ class EBICSRequest(Document):
 		status: DF.Literal["Successful", "No Data Available", "Failed", "Skipped"]
 	# end: auto-generated types
 
-	@frappe.whitelist()
+	@frappe.whitelist(methods=["POST"])
 	def re_import(self):
 		"""Re-import the EBICS transactions from the response."""
 		ebics_user = frappe.get_doc("EBICS User", self.ebics_user)
