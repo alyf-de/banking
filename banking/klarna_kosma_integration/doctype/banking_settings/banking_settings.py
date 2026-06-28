@@ -12,6 +12,7 @@ from requests import HTTPError
 from semantic_version import Version
 
 from banking.klarna_kosma_integration.admin import Admin
+from banking.overrides.bank_account import get_company_bank_accounts_without_fee_account
 
 
 class BankingSettings(Document):
@@ -33,6 +34,7 @@ class BankingSettings(Document):
 		admin_endpoint: DF.Data | None
 		api_token: DF.Password | None
 		customer_id: DF.Data | None
+		enable_automatic_journal_entries_for_bank_fees: DF.Check
 		enable_ebics: DF.Check
 		enabled: DF.Check
 		fintech_license_key: DF.Password | None
@@ -41,8 +43,26 @@ class BankingSettings(Document):
 		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
 
 	# end: auto-generated types
+	def validate(self):
+		self.validate_automatic_fee_entry_configuration()
+
 	def before_validate(self):
 		self.update_fintech_license()
+
+	def validate_automatic_fee_entry_configuration(self):
+		if not self.enable_automatic_journal_entries_for_bank_fees:
+			return
+
+		if not self.has_value_changed("enable_automatic_journal_entries_for_bank_fees"):
+			return
+
+		missing_fee_accounts = get_company_bank_accounts_without_fee_account()
+		if missing_fee_accounts:
+			frappe.throw(
+				_(
+					"Automatic journal entries for bank fees can only be enabled when all company Bank Accounts have a Bank Fee Account."
+				)
+			)
 
 	def update_fintech_license(self):
 		if not self.enabled:
@@ -65,7 +85,7 @@ class BankingSettings(Document):
 		self.fintech_license_key = None
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def sync_all_accounts_and_transactions():
 	"""
 	Refresh all Bank accounts and enqueue their transactions sync.
@@ -114,32 +134,29 @@ def daily_sync_ebics():
 
 
 def successful_request_exists(ebics_user: str | None, order_type: str, request_date: date) -> bool:
-	existing_request = frappe.db.get_value(
+	existing_requests = frappe.get_all(
 		"EBICS Request",
-		{
+		filters={
 			"ebics_user": ebics_user,
 			"order_type": order_type,
 			"status": "Successful",
 		},
-		["name", "parameters"],
-		as_dict=True,
+		fields=["parameters"],
 	)
 
-	if not existing_request:
-		return False
-
-	try:
-		params = json.loads(existing_request.parameters)
-		start_date = params.get("start_date")
-		end_date = params.get("end_date")
-		if (
-			start_date
-			and end_date
-			and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
-		):
-			return True
-	except json.JSONDecodeError:
-		pass  # If we can't parse, let the sync attempt
+	for existing_request in existing_requests:
+		try:
+			params = json.loads(existing_request.parameters)
+			start_date = params.get("start_date")
+			end_date = params.get("end_date")
+			if (
+				start_date
+				and end_date
+				and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
+			):
+				return True
+		except json.JSONDecodeError:
+			pass  # If we can't parse, let the sync attempt
 
 	return False
 

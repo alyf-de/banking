@@ -19,7 +19,7 @@ build-backend = "flit_core.buildapi"
 
 [tool.bench.frappe-dependencies]
 frappe = ">=15.60.0,<16.0.0"
-erpnext = ">=15.57.0,<16.0.0"
+erpnext = ">=15.99.0,<16.0.0"
 
 [tool.ruff]
 line-length = 110

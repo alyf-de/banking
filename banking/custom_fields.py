@@ -1,9 +1,11 @@
+import frappe
+
 from banking.ebics.doctype.sepa_payment_order.sepa_payment_order import PaymentOrderStatus
 from banking.utils import identity as _
 
 
 def get_custom_fields():
-	return {
+	custom_fields = {
 		"Bank": [
 			dict(
 				fieldname="ebics_section",
@@ -66,18 +68,6 @@ def get_custom_fields():
 				depends_on="eval:doc.docstatus === 0 && doc.business_trip_employee && !doc.employee_bank_account && doc.pay_to_employee && frappe.model.can_create('Bank Account')",
 			),
 		],
-		"Expense Claim": [
-			dict(
-				fieldname="sepa_payment_order_status",
-				label=_("SEPA Payment Order Status"),
-				fieldtype="Select",
-				options="\n".join(PaymentOrderStatus),
-				insert_after="payable_account",
-				no_copy=1,
-				read_only=1,
-				allow_on_submit=1,
-			),
-		],
 		"Payment Schedule": [
 			dict(
 				fieldname="sepa_payment_order_status",
@@ -99,4 +89,30 @@ def get_custom_fields():
 				insert_after="transaction_id",
 			),
 		],
+		"Bank Account": [
+			dict(
+				fieldname="bank_fee_account",
+				fieldtype="Link",
+				label=_("Bank Fee Account"),
+				options="Account",
+				depends_on="eval:doc.is_company_account && doc.account",
+				insert_after="account_subtype",
+			),
+		],
 	}
+
+	if "hrms" in frappe.get_installed_apps():
+		custom_fields["Expense Claim"] = [
+			dict(
+				fieldname="sepa_payment_order_status",
+				label=_("SEPA Payment Order Status"),
+				fieldtype="Select",
+				options="\n".join(PaymentOrderStatus),
+				insert_after="payable_account",
+				no_copy=1,
+				read_only=1,
+				allow_on_submit=1,
+			),
+		]
+
+	return custom_fields
