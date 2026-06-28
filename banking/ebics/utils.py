@@ -475,7 +475,7 @@ def get_protocol_versions(ebics_host_id: str, ebics_url: str):
 	return bank.get_protocol_versions()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def upload_camt_file():
 	frappe.has_permission("Bank Transaction", "create", throw=True)
 
@@ -501,7 +501,7 @@ def decode_mt940_bytes(file_bytes: bytes) -> str:
 	return file_bytes.decode("latin-1")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def upload_mt940_file():
 	frappe.has_permission("Bank Transaction", "create", throw=True)
 

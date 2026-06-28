@@ -1,5 +1,5 @@
 [pre_model_sync]
-banking.patches.recreate_custom_fields # 2025-10-23
+banking.patches.recreate_custom_fields # 2026-04-14
 banking.patches.remove_spaces_from_iban
 
 [post_model_sync]
@@ -8,7 +8,7 @@ execute:frappe.delete_doc_if_exists("DocType", "Bank Consent")
 execute:frappe.delete_doc_if_exists("DocType", "Klarna Kosma Session")
 execute:frappe.delete_doc_if_exists("Custom Field", "Bank Account-kosma_account_id")
 execute:frappe.delete_doc_if_exists("Custom Field", "Bank Transaction-kosma_party_name")
-execute:from banking.install import insert_custom_records; insert_custom_records()
+execute:from banking.install import insert_custom_records; insert_custom_records() #2026-03-27
 banking.patches.set_voucher_matching_defaults
 banking.patches.download_batch_transactions
 execute:from banking.install import make_property_setters; make_property_setters()

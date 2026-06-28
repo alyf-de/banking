@@ -6,6 +6,8 @@ app_email = "hallo@alyf.de"
 app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
+required_apps = ["frappe/erpnext"]
+
 # Includes in <head>
 # ------------------
 
@@ -30,12 +32,18 @@ app_include_js = "/assets/banking/js/utils.js"
 # include js in doctype views
 doctype_js = {
 	"Bank": "custom/bank.js",
+	"Expense Claim": "custom/expense_claim.js",
 	"Purchase Invoice": "custom/purchase_invoice.js",
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
+	"Bank Account": "custom/bank_account.js",
+	"Bank Transaction": "custom/bank_transaction.js",
 }
-doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
+doctype_list_js = {
+	"Expense Claim": "custom/expense_claim_list.js",
+	"Purchase Invoice": "custom/purchase_invoice_list.js",
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -70,11 +78,13 @@ doctype_list_js = {"Purchase Invoice": "custom/purchase_invoice_list.js"}
 
 # before_install = "banking.install.before_install"
 after_install = "banking.install.after_install"
+after_app_install = "banking.install.after_app_install"
 
 # Uninstallation
 # ------------
 
 before_uninstall = "banking.uninstall.before_uninstall"
+before_app_uninstall = "banking.uninstall.before_app_uninstall"
 # after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
@@ -113,9 +123,14 @@ doc_events = {
 	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
+		"validate": "banking.overrides.bank_account.validate",
 	},
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
+	},
+	"Expense Claim": {
+		"sepa_payment_order_status_changed": "banking.custom.expense_claim.sepa_payment_order_status_changed",
+		"get_sepa_payment_amount": "banking.custom.expense_claim.get_sepa_payment_amount",
 	},
 	"Purchase Invoice": {
 		"sepa_payment_order_status_changed": "banking.custom.purchase_invoice.sepa_payment_order_status_changed",
@@ -238,6 +253,17 @@ get_matching_queries = "banking.klarna_kosma_integration.doctype.bank_reconcilia
 get_payment_entries = "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers.get_payment_entries"
 
 alyf_banking_custom_records = [
+	{
+		"doctype": "DocType Link",
+		"parent": "Expense Claim",
+		"parentfield": "links",
+		"parenttype": "Customize Form",
+		"group": "Payment",
+		"link_doctype": "SEPA Payment Order",
+		"link_fieldname": "reference_name",
+		"custom": 1,
+		"_required_apps": ["hrms"],
+	},
 	{
 		"doctype": "DocType Link",
 		"parent": "Purchase Invoice",

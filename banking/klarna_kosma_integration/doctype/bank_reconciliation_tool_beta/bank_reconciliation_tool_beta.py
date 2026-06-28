@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, Union
 
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+	get_accounting_dimensions,
+)
 from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 	get_total_allocated_amount,
 )
@@ -17,7 +20,11 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
 from frappe.utils import cint, flt, sbool
 from pypika import Order
+from pypika.terms import ExistsCriterion
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
+	get_deposit_included_fee,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
 	amount_rank_condition,
 	get_description_match_condition,
@@ -29,6 +36,26 @@ if TYPE_CHECKING:
 	from banking.overrides.bank_transaction import CustomBankTransaction
 
 MAX_QUERY_RESULTS = 150
+BANK_TRANSACTION_SORT_FIELDS = {"date", "withdrawal", "deposit", "unallocated_amount"}
+BANK_TRANSACTION_SORT_DIRECTIONS = {"asc", "desc"}
+
+
+def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict:
+	if not accounting_dimensions:
+		return {}
+
+	try:
+		dimensions = json.loads(accounting_dimensions)
+	except (TypeError, json.JSONDecodeError):
+		return {}
+
+	return dimensions if isinstance(dimensions, dict) else {}
+
+
+def _get_valid_accounting_dimensions(accounting_dimensions: str | None) -> dict:
+	allowed = get_accounting_dimensions(as_list=True)
+	parsed = _parse_accounting_dimensions_json(accounting_dimensions)
+	return {fieldname: parsed[fieldname] for fieldname in allowed if parsed.get(fieldname)}
 
 
 class BankReconciliationToolBeta(Document):
@@ -55,6 +82,23 @@ class BankReconciliationToolBeta(Document):
 	pass
 
 
+def get_bank_transaction_order_by(order_by: str | None) -> str:
+	"""Validate client-provided transaction sorting before passing it to get_list."""
+	if not order_by or order_by == "date asc":
+		return "date asc"
+
+	parts = order_by.strip().split()
+	if len(parts) != 2:
+		frappe.throw(_("Invalid sort order."))
+
+	fieldname, direction = parts
+	direction = direction.lower()
+	if fieldname not in BANK_TRANSACTION_SORT_FIELDS or direction not in BANK_TRANSACTION_SORT_DIRECTIONS:
+		frappe.throw(_("Invalid sort order."))
+
+	return f"{fieldname} {direction}"
+
+
 @frappe.whitelist()
 def get_bank_transactions(
 	company: str | None = None,
@@ -62,7 +106,7 @@ def get_bank_transactions(
 	bank_account: str | None = None,
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
-	order_by: str | datetime.date | None = "date asc",
+	order_by: str | None = "date asc",
 ):
 	"""Return bank transactions for a bank account"""
 	filters = [
@@ -108,11 +152,11 @@ def get_bank_transactions(
 			"bank_party_iban",
 		],
 		filters=filters,
-		order_by=order_by,
+		order_by=get_bank_transaction_order_by(order_by),
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_journal_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str | None = None,
@@ -123,9 +167,18 @@ def create_journal_entry_bts(
 	mode_of_payment: str | None = None,
 	party_type: str | None = None,
 	party: str | None = None,
+	project: str | None = None,
+	cost_center: str | None = None,
 	allow_edit: bool | str = False,
+	accounting_dimensions: str | None = None,
 ):
-	"""Create a new Journal Entry for Reconciling the Bank Transaction"""
+	"""Create a new Journal Entry for reconciling the Bank Transaction.
+
+	:param project: Project applied to all Journal Entry Account rows.
+	:param cost_center: Cost Center applied to all Journal Entry Account rows; defaults to company default.
+	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
+		(applied to all Journal Entry Account rows).
+	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
@@ -146,6 +199,10 @@ def create_journal_entry_bts(
 	second_account_type, second_account_currency = frappe.db.get_value(
 		"Account", second_account, ["account_type", "account_currency"]
 	)
+
+	if not cost_center:
+		cost_center = get_default_cost_center(company)
+
 	if second_account_type in ["Receivable", "Payable"] and not (party_type and party):
 		frappe.throw(
 			_("Party Type and Party is required for Receivable / Payable account {0}").format(second_account)
@@ -163,26 +220,30 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
-	journal_entry.set(
-		"accounts",
-		[
-			{
-				"account": second_account,
-				"credit_in_account_currency": bank_debit_amount,
-				"debit_in_account_currency": bank_credit_amount,
-				"party_type": party_type,
-				"party": party,
-				"cost_center": get_default_cost_center(company),
-			},
-			{
-				"account": bank_gl_account,
-				"bank_account": bank_transaction.bank_account,
-				"credit_in_account_currency": bank_credit_amount,
-				"debit_in_account_currency": bank_debit_amount,
-				"cost_center": get_default_cost_center(company),
-			},
-		],
-	)
+
+	account_rows = [
+		{
+			"account": second_account,
+			"credit_in_account_currency": bank_debit_amount,
+			"debit_in_account_currency": bank_credit_amount,
+			"party_type": party_type,
+			"party": party,
+			"cost_center": cost_center,
+			"project": project,
+		},
+		{
+			"account": bank_gl_account,
+			"bank_account": bank_transaction.bank_account,
+			"credit_in_account_currency": bank_credit_amount,
+			"debit_in_account_currency": bank_debit_amount,
+			"cost_center": cost_center,
+			"project": project,
+		},
+	]
+	dimensions = _get_valid_accounting_dimensions(accounting_dimensions)
+	for row in account_rows:
+		row.update(dimensions)
+	journal_entry.set("accounts", account_rows)
 
 	company_currency = get_company_currency(company)
 	journal_entry.multi_currency = (
@@ -213,7 +274,7 @@ def create_journal_entry_bts(
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_payment_entry_bts(
 	bank_transaction_name: str,
 	reference_number: str | None = None,
@@ -224,8 +285,14 @@ def create_payment_entry_bts(
 	mode_of_payment: str | None = None,
 	project: str | None = None,
 	cost_center: str | None = None,
+	accounting_dimensions: str | None = None,
 	allow_edit: bool = False,
 ):
+	"""Create a new Payment Entry for reconciling the Bank Transaction.
+
+	:param accounting_dimensions: JSON object mapping dimension fieldnames to values
+		(applied to Payment Entry header fields).
+	"""
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
@@ -258,14 +325,18 @@ def create_payment_entry_bts(
 
 	if mode_of_payment:
 		payment_entry.mode_of_payment = mode_of_payment
+
 	if project:
 		payment_entry.project = project
 	if cost_center:
 		payment_entry.cost_center = cost_center
+
 	if payment_type == "Receive":
 		payment_entry.paid_to = company_account
 	else:
 		payment_entry.paid_from = company_account
+
+	payment_entry.update(_get_valid_accounting_dimensions(accounting_dimensions))
 
 	payment_entry.validate()
 	payment_entry.insert()
@@ -278,7 +349,7 @@ def create_payment_entry_bts(
 	return reconcile_voucher(bank_transaction_name, paid_amount, "Payment Entry", payment_entry.name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def bulk_reconcile_vouchers(
 	bank_transaction_name: str,
 	vouchers: str | list[dict],
@@ -317,7 +388,7 @@ def bulk_reconcile_vouchers(
 	return transaction
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
 ) -> Union[dict, "CustomBankTransaction"]:
@@ -343,7 +414,7 @@ def reconcile_voucher(
 	return bulk_reconcile_vouchers(transaction_name, vouchers)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def upload_bank_statement(**args):
 	args = frappe._dict(args)
 	bsi = frappe.new_doc("Bank Statement Import")
@@ -362,7 +433,7 @@ def upload_bank_statement(**args):
 	return bsi  # Return saved document
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def auto_reconcile_vouchers(
 	company: str | None = None,
 	bank: str | None = None,
@@ -570,8 +641,10 @@ def check_matching(
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
 ):
+	matching_amount = transaction.unallocated_amount + get_deposit_included_fee(transaction)
+
 	common_filters = frappe._dict(
-		amount=transaction.unallocated_amount,
+		amount=matching_amount,
 		payment_type=("Receive" if transaction.deposit > 0.0 else "Pay"),
 		reference_no=transaction.reference_number,
 		party_type=transaction.party_type,
@@ -811,9 +884,8 @@ def get_bt_matching_query(exact_match: bool, common_filters: frappe._dict, trans
 
 def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
-	matching_party = (
-		loan_disbursement.applicant_type == common_filters.party_type
-		and loan_disbursement.applicant == common_filters.matching_party
+	matching_party = (loan_disbursement.applicant_type == common_filters.party_type) & (
+		loan_disbursement.applicant == common_filters.party
 	)
 
 	date_condition = (
@@ -851,18 +923,17 @@ def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	)
 
 	if exact_match:
-		query.where(loan_disbursement.disbursed_amount == common_filters.amount)
+		query = query.where(loan_disbursement.disbursed_amount == common_filters.amount)
 	else:
-		query.where(loan_disbursement.disbursed_amount > 0.0)
+		query = query.where(loan_disbursement.disbursed_amount > 0.0)
 
 	return query
 
 
 def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_repayment = frappe.qb.DocType("Loan Repayment")
-	matching_party = (
-		loan_repayment.applicant_type == common_filters.party_type
-		and loan_repayment.applicant == common_filters.party
+	matching_party = (loan_repayment.applicant_type == common_filters.party_type) & (
+		loan_repayment.applicant == common_filters.party
 	)
 
 	date_condition = (
@@ -903,9 +974,9 @@ def get_lr_matching_query(exact_match: bool, common_filters: frappe._dict):
 		query = query.where(loan_repayment.repay_from_salary == 0)
 
 	if exact_match:
-		query.where(loan_repayment.amount_paid == common_filters.amount)
+		query = query.where(loan_repayment.amount_paid == common_filters.amount)
 	else:
-		query.where(loan_repayment.amount_paid > 0.0)
+		query = query.where(loan_repayment.amount_paid > 0.0)
 
 	return query
 
@@ -1032,10 +1103,25 @@ def get_je_matching_query(
 	)
 
 	if bank_transaction_name:
-		# This filter ensures that Journal Entries that have been created
-		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
-		# other apps are not offered as matches.
-		subquery = subquery.where(je.cheque_no != bank_transaction_name)
+		je_reference = frappe.qb.DocType("Journal Entry Account")
+		has_bank_transaction_reference = ExistsCriterion(
+			frappe.qb.from_(je_reference)
+			.select(je_reference.name)
+			.where(
+				(je_reference.parent == je.name)
+				& (je_reference.reference_type == "Bank Transaction")
+				& (je_reference.reference_name == bank_transaction_name)
+			)
+		)
+		is_auto_fee_journal_entry = (je.is_system_generated == 1) & has_bank_transaction_reference
+		# Journal Entries that other apps create for the Bank Transaction
+		# (e.g. to Cash In Transit) are often linked via cheque_no and should
+		# not be offered as matches. Standard withdrawal fee JEs are excluded
+		# from this bucket because they should reappear after unreconciliation.
+		is_cheque_linked_custom_journal_entry = (
+			je.cheque_no == bank_transaction_name
+		) & ~is_auto_fee_journal_entry
+		subquery = subquery.where(~is_cheque_linked_custom_journal_entry)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
@@ -1052,7 +1138,15 @@ def get_je_matching_query(
 	query = (
 		frappe.qb.from_(subquery)
 		.select(
-			"*",
+			subquery.paid_amount,
+			subquery.doctype,
+			subquery.name,
+			subquery.reference_no,
+			subquery.reference_date,
+			subquery.party,
+			subquery.party_type,
+			subquery.posting_date,
+			subquery.currency,
 			rank_expression.as_("rank"),
 			ref_rank.as_("reference_number_match"),
 			amount_rank.as_("amount_match"),
@@ -1091,11 +1185,7 @@ def get_si_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(si[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(si[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1188,11 +1278,7 @@ def get_unpaid_si_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(sales_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(sales_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1287,11 +1373,7 @@ def get_pi_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(purchase_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(purchase_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1389,11 +1471,7 @@ def get_unpaid_pi_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(purchase_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(purchase_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1480,11 +1558,7 @@ def get_unpaid_ec_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(expense_claim[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(expense_claim[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
