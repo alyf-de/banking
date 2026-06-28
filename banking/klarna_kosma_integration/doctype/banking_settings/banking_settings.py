@@ -134,32 +134,29 @@ def daily_sync_ebics():
 
 
 def successful_request_exists(ebics_user: str | None, order_type: str, request_date: date) -> bool:
-	existing_request = frappe.db.get_value(
+	existing_requests = frappe.get_all(
 		"EBICS Request",
-		{
+		filters={
 			"ebics_user": ebics_user,
 			"order_type": order_type,
 			"status": "Successful",
 		},
-		["name", "parameters"],
-		as_dict=True,
+		fields=["parameters"],
 	)
 
-	if not existing_request:
-		return False
-
-	try:
-		params = json.loads(existing_request.parameters)
-		start_date = params.get("start_date")
-		end_date = params.get("end_date")
-		if (
-			start_date
-			and end_date
-			and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
-		):
-			return True
-	except json.JSONDecodeError:
-		pass  # If we can't parse, let the sync attempt
+	for existing_request in existing_requests:
+		try:
+			params = json.loads(existing_request.parameters)
+			start_date = params.get("start_date")
+			end_date = params.get("end_date")
+			if (
+				start_date
+				and end_date
+				and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
+			):
+				return True
+		except json.JSONDecodeError:
+			pass  # If we can't parse, let the sync attempt
 
 	return False
 

@@ -60,6 +60,11 @@ class TestBankingSettings(FrappeTestCase):
 			0,
 		)
 
+	def test_successful_request_exists_checks_all_matching_requests(self):
+		with create_successful_request("C53", date(2025, 1, 2), date(2025, 1, 2)):
+			with create_successful_request("C53", date(2025, 1, 1), date(2025, 1, 1)):
+				self.assertTrue(successful_request_exists(None, "C53", date(2025, 1, 1)))
+
 
 @contextmanager
 def create_successful_request(order_type: str, start_date: date, end_date: date):
