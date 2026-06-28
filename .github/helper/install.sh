@@ -31,9 +31,7 @@ bench get-app payments --branch version-15
 bench get-app erpnext --branch version-15
 bench get-app hrms --branch version-15
 bench get-app banking "${GITHUB_WORKSPACE}"
+bench setup requirements --dev
 
 bench start &> bench_start.log &
 bench new-site --db-root-password root --admin-password admin test_site --install-app erpnext
-bench --site test_site install-app hrms
-bench --site test_site install-app banking
-bench setup requirements --dev
