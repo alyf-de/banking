@@ -692,16 +692,12 @@ def get_queries(
 	company: str,
 	transaction: "CustomBankTransaction",
 	document_types: list,
-<<<<<<< HEAD
 	from_date: str | datetime.date | None = None,
 	to_date: str | datetime.date | None = None,
 	filter_by_reference_date: bool = False,
 	from_reference_date: str | datetime.date | None = None,
 	to_reference_date: str | datetime.date | None = None,
-	common_filters: frappe._dict = None,
-=======
 	common_filters: frappe._dict | None = None,
->>>>>>> 85dac55 (fix!: remove date filter from matched vouchers (#386))
 ):
 	# get queries to get matching vouchers
 	account_from_to = "paid_to" if transaction.deposit > 0.0 else "paid_from"

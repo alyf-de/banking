@@ -100,11 +100,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2025-10-14 17:12:13.850366",
-=======
  "modified": "2026-06-02 06:51:36.041676",
->>>>>>> 85dac55 (fix!: remove date filter from matched vouchers (#386))
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Tool Beta",
