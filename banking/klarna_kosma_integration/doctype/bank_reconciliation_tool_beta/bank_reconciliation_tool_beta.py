@@ -525,11 +525,9 @@ def get_linked_payments(
 			to_reference_date,
 		)
 	):
-		from frappe.deprecation_dumpster import deprecation_warning
+		from frappe.utils.deprecations import deprecation_warning
 
 		deprecation_warning(
-			"2026-06-29",
-			"v17",
 			"Date filter arguments for get_linked_payments are deprecated and ignored. "
 			"Use statement date filters only when fetching Bank Transactions.",
 		)

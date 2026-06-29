@@ -20,7 +20,6 @@ from erpnext.accounts.report.trial_balance.test_trial_balance import (
 )
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
-from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
@@ -743,7 +742,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 	def test_legacy_date_filters_emit_deprecation_warning(self):
 		bt = create_bank_transaction(deposit=300, bank_account=self.bank_account)
 
-		with self.assertWarns(PendingFrappeDeprecationWarning):
+		with self.assertWarns(DeprecationWarning):
 			get_linked_payments(
 				bank_transaction_name=bt.name,
 				document_types=["sales_invoice", "unpaid_invoices"],
