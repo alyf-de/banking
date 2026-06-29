@@ -14,6 +14,7 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 )
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
@@ -467,7 +468,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			bank_account=self.bank_account,
 			from_date=day_before_yesterday,
 			to_date=add_days(getdate(), 1),
-			filter_by_reference_date=False,
 		)
 		bt.reload()
 
@@ -589,8 +589,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		first_match, second_match = matched_vouchers[0], matched_vouchers[1]
 
@@ -632,8 +630,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		first_match = matched_vouchers[0]
 
@@ -664,8 +660,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		first_match = matched_vouchers[0]
 
@@ -673,6 +667,17 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["name"], si.name)
 		self.assertEqual(first_match["rank"], 5)
 		self.assertEqual(first_match["reference_number_match"], 1)
+
+	def test_legacy_date_filters_emit_deprecation_warning(self):
+		bt = create_bank_transaction(deposit=300, bank_account=self.bank_account)
+
+		with self.assertWarns(PendingFrappeDeprecationWarning):
+			get_linked_payments(
+				bank_transaction_name=bt.name,
+				document_types=["sales_invoice", "unpaid_invoices"],
+				from_date=add_days(getdate(), -1),
+				to_date=add_days(getdate(), 1),
+			)
 
 	def test_split_jv_match_against_transaction(self):
 		"""
@@ -709,8 +714,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["journal_entry"],
-			from_date=getdate(),
-			to_date=getdate(),
 		)
 		first_match = matched_vouchers[0]
 
@@ -769,8 +772,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["journal_entry"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		matched_names = [voucher["name"] for voucher in matched_vouchers]
 
@@ -813,8 +814,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["journal_entry"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		matched_names = [voucher["name"] for voucher in matched_vouchers]
 
@@ -851,8 +850,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["purchase_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		pi_match = next(m for m in matched if m["name"] == pi.name)
 		self.assertEqual(pi_match["paid_amount"], 100)  # converted from 8000 INR
@@ -903,8 +900,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["purchase_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		pi_match = next(m for m in matched if m["name"] == pi.name)
 		self.assertEqual(pi_match["paid_amount"], 8000)  # INR, unchanged
@@ -959,8 +954,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 100)  # converted from 8000 INR
@@ -1014,8 +1007,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 8000)
@@ -1147,8 +1138,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 113)
@@ -1197,8 +1186,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 8000)  # INR, unchanged
@@ -1304,8 +1291,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 80)
@@ -1463,8 +1448,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		matched_names = [voucher["name"] for voucher in matched]
 		self.assertIn(si.name, matched_names)
