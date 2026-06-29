@@ -472,8 +472,36 @@ def auto_reconcile_vouchers(
 def get_linked_payments(
 	bank_transaction_name: str,
 	document_types: str | list,
+	from_date: str | datetime.date | None = None,
+	to_date: str | datetime.date | None = None,
+	filter_by_reference_date: str | bool | None = None,
+	from_reference_date: str | datetime.date | None = None,
+	to_reference_date: str | datetime.date | None = None,
 ) -> list:
-	"""Get all matching payments for a bank transaction"""
+	"""Get all matching payments for a bank transaction.
+
+	Date arguments are accepted for compatibility with stale clients, but voucher
+	matching is intentionally not date-filtered.
+	"""
+	if any(
+		arg is not None
+		for arg in (
+			from_date,
+			to_date,
+			filter_by_reference_date,
+			from_reference_date,
+			to_reference_date,
+		)
+	):
+		from frappe.deprecation_dumpster import deprecation_warning
+
+		deprecation_warning(
+			"2026-06-29",
+			"v17",
+			"Date filter arguments for get_linked_payments are deprecated and ignored. "
+			"Use statement date filters only when fetching Bank Transactions.",
+		)
+
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	transaction.check_permission("read")
 
