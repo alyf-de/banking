@@ -44,16 +44,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		}
 	},
 
-	filter_by_reference_date: function (frm) {
-		if (frm.doc.filter_by_reference_date) {
-			frm.set_value("bank_statement_from_date", "");
-			frm.set_value("bank_statement_to_date", "");
-		} else {
-			frm.set_value("from_reference_date", "");
-			frm.set_value("to_reference_date", "");
-		}
-	},
-
 	/**
 	 * Handles reconcile-time currency conversion for mismatched voucher selections.
 	 *
@@ -111,9 +101,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 							bank_account: frm.doc.bank_account,
 							from_date: frm.doc.bank_statement_from_date,
 							to_date: frm.doc.bank_statement_to_date,
-							filter_by_reference_date: frm.doc.filter_by_reference_date,
-							from_reference_date: frm.doc.from_reference_date,
-							to_reference_date: frm.doc.to_reference_date,
 						},
 						freeze: true,
 						freeze_message: __("Auto Reconciling ..."),

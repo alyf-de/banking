@@ -16,9 +16,6 @@
   "column_break_1",
   "bank_statement_from_date",
   "bank_statement_to_date",
-  "from_reference_date",
-  "to_reference_date",
-  "filter_by_reference_date",
   "section_break_1",
   "reconciliation_tool_cards",
   "reconciliation_action_area"
@@ -70,34 +67,14 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval: !doc.filter_by_reference_date",
    "fieldname": "bank_statement_from_date",
    "fieldtype": "Date",
    "label": "From Date"
   },
   {
-   "depends_on": "eval: !doc.filter_by_reference_date",
    "fieldname": "bank_statement_to_date",
    "fieldtype": "Date",
    "label": "To Date"
-  },
-  {
-   "depends_on": "eval:doc.filter_by_reference_date",
-   "fieldname": "from_reference_date",
-   "fieldtype": "Date",
-   "label": "From Reference Date"
-  },
-  {
-   "depends_on": "eval:doc.filter_by_reference_date",
-   "fieldname": "to_reference_date",
-   "fieldtype": "Date",
-   "label": "To Reference Date"
-  },
-  {
-   "default": "0",
-   "fieldname": "filter_by_reference_date",
-   "fieldtype": "Check",
-   "label": "Filter by Reference Date"
   },
   {
    "fieldname": "section_break_1",
@@ -123,7 +100,11 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2025-10-14 17:12:13.850366",
+=======
+ "modified": "2026-06-02 06:51:36.041676",
+>>>>>>> 85dac55 (fix!: remove date filter from matched vouchers (#386))
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Bank Reconciliation Tool Beta",
