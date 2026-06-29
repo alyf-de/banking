@@ -19,7 +19,11 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
 from frappe.utils import flt, sbool
 from pypika import Order
+from pypika.terms import ExistsCriterion
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
+	get_deposit_included_fee,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
 	amount_rank_condition,
 	get_description_match_condition,
@@ -580,8 +584,10 @@ def check_matching(
 	transaction: CustomBankTransaction,
 	document_types: list,
 ):
+	matching_amount = transaction.unallocated_amount + get_deposit_included_fee(transaction)
+
 	common_filters = frappe._dict(
-		amount=transaction.unallocated_amount,
+		amount=matching_amount,
 		payment_type=("Receive" if transaction.deposit > 0.0 else "Pay"),
 		reference_no=transaction.reference_number,
 		party_type=transaction.party_type,
@@ -802,7 +808,7 @@ def get_bt_matching_query(exact_match: bool, common_filters: frappe._dict, trans
 def get_ld_matching_query(exact_match: bool, common_filters: frappe._dict):
 	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
 	matching_party = (loan_disbursement.applicant_type == common_filters.party_type) & (
-		loan_disbursement.applicant == common_filters.matching_party
+		loan_disbursement.applicant == common_filters.party
 	)
 
 	date_condition = (
@@ -1000,10 +1006,25 @@ def get_je_matching_query(
 	)
 
 	if bank_transaction_name:
-		# This filter ensures that Journal Entries that have been created
-		# automatically for the Bank Transaction (e.g. to Cash In Transit) via
-		# other apps are not offered as matches.
-		subquery = subquery.where(je.cheque_no != bank_transaction_name)
+		je_reference = frappe.qb.DocType("Journal Entry Account")
+		has_bank_transaction_reference = ExistsCriterion(
+			frappe.qb.from_(je_reference)
+			.select(je_reference.name)
+			.where(
+				(je_reference.parent == je.name)
+				& (je_reference.reference_type == "Bank Transaction")
+				& (je_reference.reference_name == bank_transaction_name)
+			)
+		)
+		is_auto_fee_journal_entry = (je.is_system_generated == 1) & has_bank_transaction_reference
+		# Journal Entries that other apps create for the Bank Transaction
+		# (e.g. to Cash In Transit) are often linked via cheque_no and should
+		# not be offered as matches. Standard withdrawal fee JEs are excluded
+		# from this bucket because they should reappear after unreconciliation.
+		is_cheque_linked_custom_journal_entry = (
+			je.cheque_no == bank_transaction_name
+		) & ~is_auto_fee_journal_entry
+		subquery = subquery.where(~is_cheque_linked_custom_journal_entry)
 
 	if frappe.flags.auto_reconcile_vouchers:
 		subquery = subquery.where(je.cheque_no == common_filters.reference_no)
@@ -1067,11 +1088,7 @@ def get_si_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(si[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(si[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1164,11 +1181,7 @@ def get_unpaid_si_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(sales_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(sales_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1263,11 +1276,7 @@ def get_pi_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(purchase_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(purchase_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1365,11 +1374,7 @@ def get_unpaid_pi_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(purchase_invoice[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(purchase_invoice[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
@@ -1456,11 +1461,7 @@ def get_unpaid_ec_matching_query(
 	# Check reference field equality with common_filters.reference_no
 	reference_field_is_set = reference_field and reference_field != "name"
 	reference_number = common_filters.reference_no
-	ref_rank = (
-		ref_equality_condition(expense_claim[reference_field], reference_number)
-		if (reference_number and reference_field_is_set)
-		else Cast(0, "int")
-	)
+	ref_rank = ref_equality_condition(expense_claim[reference_field or "name"], reference_number)
 
 	# if ref field is configured (!= name), perform desc-name and desc-ref match
 	# otherwise (== name), then perform desc-name match once
