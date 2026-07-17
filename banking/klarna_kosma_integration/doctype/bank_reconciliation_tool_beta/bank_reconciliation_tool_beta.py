@@ -660,7 +660,7 @@ def check_matching(
 		company,
 		transaction,
 		document_types,
-		common_filters,
+		common_filters=common_filters,
 	)
 
 	matching_vouchers = []
