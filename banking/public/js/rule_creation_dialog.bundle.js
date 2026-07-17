@@ -21,12 +21,7 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 		"bank_party_iban",
 	];
 
-	constructor(frm) {
-		this.frm = frm;
-		this.menu_link = null;
-	}
-
-	field_has_value(df, value) {
+	static field_has_value(df, value) {
 		if (value === undefined || value === null) {
 			return false;
 		}
@@ -40,14 +35,14 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 		return String(value).trim() !== "";
 	}
 
-	get_visible_field_rows() {
+	static get_visible_field_rows(doc) {
 		const rows = [];
-		for (const fieldname of this.constructor.CANDIDATE_FIELDS) {
+		for (const fieldname of this.CANDIDATE_FIELDS) {
 			const df = frappe.meta.get_docfield("Bank Transaction", fieldname);
 			if (!df) {
 				continue;
 			}
-			const value = this.frm.doc[fieldname];
+			const value = doc[fieldname];
 			if (!this.field_has_value(df, value)) {
 				continue;
 			}
@@ -56,19 +51,13 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 		return rows;
 	}
 
-	format_cell(df, value) {
-		const formatted = frappe.format(
-			value,
-			df,
-			{ only_value: true },
-			this.frm.doc
-		);
+	static format_cell(df, value, doc) {
+		const formatted = frappe.format(value, df, { only_value: true }, doc);
 		return frappe.utils.escape_html(String(formatted ?? ""));
 	}
 
-	show() {
-		const frm = this.frm;
-		if (!frm.doc.bank_account) {
+	static show(doc) {
+		if (!doc.bank_account) {
 			frappe.throw(__("Set a Bank Account first."));
 		}
 		if (!frappe.model.can_create("Bank Reconciliation Rule")) {
@@ -77,7 +66,7 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 			);
 		}
 
-		const field_rows = this.get_visible_field_rows();
+		const field_rows = this.get_visible_field_rows(doc);
 		if (!field_rows.length) {
 			frappe.msgprint(
 				__("No filterable field values are set on this Bank Transaction.")
@@ -85,13 +74,12 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 			return;
 		}
 
-		const body_id = `rule-creation-picker-${frappe.utils.get_random(10)}`;
 		const table_rows = field_rows
 			.map((row) => {
 				const label = frappe.utils.escape_html(
 					__(row.df.label) || row.fieldname
 				);
-				const display = this.format_cell(row.df, row.value);
+				const display = this.format_cell(row.df, row.value, doc);
 				return `<tr class="rule-creation-filter-row">
 				<td class="text-center" style="width:3rem;">
 					<input type="checkbox" class="rule-creation-filter-cb" data-fieldname="${frappe.utils.escape_html(
@@ -104,7 +92,7 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 			})
 			.join("");
 
-		const html = `<div id="${body_id}" style="max-height:22rem; overflow:auto;">
+		const html = `<div style="max-height:22rem; overflow:auto;">
 		<table class="table table-bordered table-condensed mb-0">
 			<thead>
 				<tr>
@@ -132,7 +120,7 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 								"Bank Transaction",
 								fieldname,
 								"=",
-								frm.doc[fieldname],
+								doc[fieldname],
 							]);
 						}
 					});
@@ -142,7 +130,7 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 				}
 				dialog.hide();
 				frappe.route_options = {
-					bank_account: frm.doc.bank_account,
+					bank_account: doc.bank_account,
 					filters: JSON.stringify(selected),
 				};
 				frappe.set_route("Form", "Bank Reconciliation Rule", "new");
@@ -151,22 +139,5 @@ banking.bank_reconciliation.RuleCreationDialogManager = class RuleCreationDialog
 
 		dialog.fields_dict.picker_html.$wrapper.html(html);
 		dialog.show();
-	}
-
-	refresh_menu() {
-		if (this.menu_link) {
-			this.menu_link.closest("li").remove();
-			this.menu_link = null;
-		}
-		if (
-			!this.frm.doc.bank_account ||
-			!frappe.model.can_create("Bank Reconciliation Rule")
-		) {
-			return;
-		}
-		this.menu_link = this.frm.page.add_menu_item(
-			__("Create Reconciliation Rule"),
-			() => this.show()
-		);
 	}
 };
