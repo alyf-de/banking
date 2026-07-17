@@ -69,7 +69,7 @@ function refresh_rule_creation_menu(frm) {
 		}
 		frm._rule_creation_menu_link = frm.page.add_menu_item(
 			__("Create Reconciliation Rule"),
-			() => banking.bank_reconciliation.RuleCreationDialogManager.show(frm.doc)
+			() => banking.bank_reconciliation.show_rule_creation_dialog(frm.doc)
 		);
 	});
 }
