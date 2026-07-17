@@ -14,24 +14,28 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		const dimensions_cached = this.accounting_dimensions != null;
 		const document_types_cached = this.document_types != null;
 
-		const [transactions, document_types, dimensions_message, company_defaults] =
-			await Promise.all([
-				this.get_bank_transactions(),
-				document_types_cached
-					? Promise.resolve(this.document_types)
-					: frappe.xcall(
-							"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
-					  ),
-				dimensions_cached
-					? Promise.resolve([
-							this.accounting_dimensions,
-							this.accounting_dimension_defaults,
-					  ])
-					: this.get_accounting_dimensions(),
-				frappe.db.get_value("Company", this.frm.doc.company, "cost_center"),
-			]);
+		const [
+			transaction_data,
+			document_types,
+			dimensions_message,
+			company_defaults,
+		] = await Promise.all([
+			this.get_bank_transactions(),
+			document_types_cached
+				? Promise.resolve(this.document_types)
+				: frappe.xcall(
+						"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
+				  ),
+			dimensions_cached
+				? Promise.resolve([
+						this.accounting_dimensions,
+						this.accounting_dimension_defaults,
+				  ])
+				: this.get_accounting_dimensions(),
+			frappe.db.get_value("Company", this.frm.doc.company, "cost_center"),
+		]);
 
-		this.transactions = transactions;
+		this.transactions = transaction_data.transactions;
 		if (!document_types_cached) {
 			this.document_types = document_types;
 		}
@@ -51,22 +55,33 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			.find(".panel-container");
 
 		this.render_panels();
+		this.sync_reserved_voucher_watches();
 	}
 
 	/** Re-fetch and re-render the transaction list (e.g. after sort change). */
 	async reload_transactions() {
-		this.transactions = await this.get_bank_transactions();
+		const transaction_data = await this.get_bank_transactions();
+		this.transactions = transaction_data.transactions;
 		const active_name = this.active_transaction?.name;
 
 		if (!this.transactions?.length) {
 			this.active_transaction = null;
 			this.$panel_wrapper.empty();
 			this.render_no_transactions();
+			this.sync_reserved_voucher_watches();
 			return;
 		}
 
-		this.$list_container.empty();
-		this.render_transactions_list();
+		if (!this.$list_container?.length) {
+			this.$panel_wrapper.empty();
+			this.set_actions_panel_default_states();
+			this.render_list_panel();
+		} else {
+			this.$list_container.empty();
+			this.render_transactions_list();
+		}
+
+		this.sync_reserved_voucher_watches();
 
 		const $row = active_name
 			? this.$list_container.find("#" + active_name)
@@ -91,7 +106,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	async get_bank_transactions() {
-		let transactions = await frappe
+		let message = await frappe
 			.call({
 				method:
 					"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_bank_transactions",
@@ -107,7 +122,13 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				freeze_message: __("Fetching Bank Transactions"),
 			})
 			.then((response) => response.message);
-		return transactions;
+
+		if (Array.isArray(message)) {
+			return { transactions: message };
+		}
+		return {
+			transactions: message?.transactions || [],
+		};
 	}
 
 	render_panels() {
@@ -168,6 +189,205 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			});
 	}
 
+	/**
+	 * Watch a reserved draft voucher until it is submitted or deleted, then reload.
+	 * Uses realtime doc_update (primary) plus focus/route checks (fallback).
+	 */
+	watch_voucher_until_settled(doctype, docname) {
+		if (!doctype || !docname) {
+			return;
+		}
+
+		if (!this._watched_vouchers) {
+			this._watched_vouchers = new Map();
+		}
+
+		const key = this._voucher_watch_key(doctype, docname);
+		if (this._watched_vouchers.has(key)) {
+			return;
+		}
+
+		this._watched_vouchers.set(key, {
+			doctype,
+			docname,
+			in_flight: false,
+		});
+		this._subscribe_voucher_doc(doctype, docname);
+		this.ensure_voucher_watch_listeners();
+	}
+
+	/** Subscribe to every reserved voucher currently in the transaction list. */
+	sync_reserved_voucher_watches() {
+		const wanted = new Set();
+		for (const transaction of this.transactions || []) {
+			if (!transaction.reserved_voucher || !transaction.reserved_voucher_type) {
+				continue;
+			}
+			const key = this._voucher_watch_key(
+				transaction.reserved_voucher_type,
+				transaction.reserved_voucher
+			);
+			wanted.add(key);
+			this.watch_voucher_until_settled(
+				transaction.reserved_voucher_type,
+				transaction.reserved_voucher
+			);
+		}
+
+		for (const [key, state] of [...(this._watched_vouchers || [])]) {
+			if (!wanted.has(key)) {
+				this.unwatch_voucher(state.doctype, state.docname);
+			}
+		}
+	}
+
+	_voucher_watch_key(doctype, docname) {
+		return `${doctype}::${docname}`;
+	}
+
+	_subscribe_voucher_doc(doctype, docname) {
+		const open_key = `${doctype}:${docname}`;
+		if (frappe.realtime.open_docs?.has(open_key)) {
+			return;
+		}
+		// doc_subscribe throttles to 1/sec; emit directly so multi-draft loads work
+		if (frappe.flags.doc_subscribe) {
+			frappe.realtime.emit("doc_subscribe", doctype, docname);
+			frappe.realtime.open_docs.add(open_key);
+		} else {
+			frappe.realtime.doc_subscribe(doctype, docname);
+		}
+	}
+
+	unwatch_voucher(doctype, docname) {
+		const key = this._voucher_watch_key(doctype, docname);
+		if (!this._watched_vouchers?.has(key)) {
+			return;
+		}
+		this._watched_vouchers.delete(key);
+		frappe.realtime.doc_unsubscribe(doctype, docname);
+	}
+
+	ensure_voucher_watch_listeners() {
+		if (this._voucher_watch_bound) {
+			return;
+		}
+		this._voucher_watch_bound = true;
+
+		this._on_voucher_doc_update = (data) => {
+			if (!this._voucher_watch_bound) {
+				return;
+			}
+			this.on_voucher_doc_update(data);
+		};
+		frappe.realtime.on("doc_update", this._on_voucher_doc_update);
+
+		$(window).on("focus.brt_voucher_watch", () => {
+			if (!this._voucher_watch_bound) {
+				return;
+			}
+			this.run_voucher_watch_check();
+		});
+		// frappe.router.off cannot remove a specific handler; guard with _voucher_watch_bound
+		this._on_voucher_route_change = () => {
+			if (!this._voucher_watch_bound) {
+				return;
+			}
+			const route = frappe.get_route_str();
+			if (route.startsWith("Form/Bank Reconciliation Tool Beta")) {
+				this.run_voucher_watch_check();
+			} else {
+				this.cleanup_voucher_watches();
+			}
+		};
+		frappe.router.on("change", this._on_voucher_route_change);
+	}
+
+	on_voucher_doc_update(data) {
+		if (!data?.doctype || !data?.name || !this._watched_vouchers?.size) {
+			return;
+		}
+		const key = this._voucher_watch_key(data.doctype, data.name);
+		if (!this._watched_vouchers.has(key)) {
+			return;
+		}
+		this.check_voucher_settled(data.doctype, data.name);
+	}
+
+	async run_voucher_watch_check() {
+		if (!this._watched_vouchers?.size) {
+			return;
+		}
+		const watches = [...this._watched_vouchers.values()];
+		for (const state of watches) {
+			await this.check_voucher_settled(state.doctype, state.docname);
+		}
+	}
+
+	async check_voucher_settled(doctype, docname) {
+		const key = this._voucher_watch_key(doctype, docname);
+		const state = this._watched_vouchers?.get(key);
+		if (!state || state.in_flight) {
+			return;
+		}
+
+		state.in_flight = true;
+		try {
+			const exists = await frappe.db.exists(doctype, docname);
+			if (!exists) {
+				await this.handle_voucher_settled(doctype, docname);
+				return;
+			}
+
+			const response = await frappe.db.get_value(doctype, docname, "docstatus");
+			const docstatus = cint(response?.message?.docstatus);
+			if (docstatus === 1 || docstatus === 2) {
+				await this.handle_voucher_settled(doctype, docname);
+			}
+		} finally {
+			const current = this._watched_vouchers?.get(key);
+			if (current === state) {
+				state.in_flight = false;
+			}
+		}
+	}
+
+	async handle_voucher_settled(doctype, docname) {
+		this.unwatch_voucher(doctype, docname);
+		await this.reload_transactions_after_voucher_settled();
+	}
+
+	async reload_transactions_after_voucher_settled() {
+		// Deduplicate socket + focus/route fallback firing together
+		if (this._voucher_settled_reload) {
+			return this._voucher_settled_reload;
+		}
+		this._voucher_settled_reload = this.reload_transactions().finally(() => {
+			this._voucher_settled_reload = null;
+		});
+		return this._voucher_settled_reload;
+	}
+
+	cleanup_voucher_watches() {
+		for (const state of [...(this._watched_vouchers?.values() || [])]) {
+			frappe.realtime.doc_unsubscribe(state.doctype, state.docname);
+		}
+		this._watched_vouchers = new Map();
+
+		if (this._on_voucher_doc_update) {
+			frappe.realtime.off("doc_update", this._on_voucher_doc_update);
+			this._on_voucher_doc_update = null;
+		}
+		$(window).off("focus.brt_voucher_watch");
+		// Route listener is guarded by _voucher_watch_bound (router.off is unreliable)
+		this._voucher_watch_bound = false;
+		this._voucher_settled_reload = null;
+	}
+
+	clear_voucher_watch() {
+		this.cleanup_voucher_watches();
+	}
+
 	render_sort_area() {
 		this.$sort_area = this.$panel_wrapper.find(".sort-by");
 		this.$sort_area.append(`
@@ -208,17 +428,25 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.transactions.map((transaction) => {
 			let amount = transaction.deposit || transaction.withdrawal;
 			let symbol = transaction.withdrawal ? "-" : "+";
+			const draft_badge = transaction.reserved_voucher
+				? `<span class="indicator-pill yellow filterable no-indicator-dot ellipsis reserved-draft-badge">${__(
+						"Draft"
+				  )}</span>`
+				: "";
 
 			let $row = this.$list_container
 				.append(
 					`
-				<div id="${transaction.name}" class="transaction-row p-10">
+				<div id="${transaction.name}" class="transaction-row p-10${
+						transaction.reserved_voucher ? " is-reserved" : ""
+					}">
 					<!-- Date & Amount -->
 					<div class="d-flex">
 						<div class="w-50">
 							<span title="${__("Date")}">${frappe.format(transaction.date, {
 						fieldtype: "Date",
 					})}</span>
+							${draft_badge}
 						</div>
 
 						<div class="w-50 bt-amount-contianer">

@@ -88,6 +88,48 @@ def get_custom_fields():
 				fieldtype="Data",
 				insert_after="transaction_id",
 			),
+			dict(
+				fieldname="reserved_voucher_type",
+				label=_("Reserved Voucher Type"),
+				fieldtype="Link",
+				options="DocType",
+				insert_after="subtransaction_id",
+				read_only=1,
+				allow_on_submit=1,
+				no_copy=1,
+			),
+			dict(
+				fieldname="reserved_voucher",
+				label=_("Reserved Voucher"),
+				fieldtype="Dynamic Link",
+				options="reserved_voucher_type",
+				insert_after="reserved_voucher_type",
+				read_only=1,
+				allow_on_submit=1,
+				no_copy=1,
+			),
+		],
+		"Journal Entry": [
+			dict(
+				fieldname="created_from_bank_transaction",
+				label=_("Created From Bank Transaction"),
+				fieldtype="Link",
+				options="Bank Transaction",
+				insert_after="cheque_no",
+				read_only=1,
+				no_copy=1,
+			),
+		],
+		"Payment Entry": [
+			dict(
+				fieldname="created_from_bank_transaction",
+				label=_("Created From Bank Transaction"),
+				fieldtype="Link",
+				options="Bank Transaction",
+				insert_after="reference_no",
+				read_only=1,
+				no_copy=1,
+			),
 		],
 		"Bank Account": [
 			dict(
