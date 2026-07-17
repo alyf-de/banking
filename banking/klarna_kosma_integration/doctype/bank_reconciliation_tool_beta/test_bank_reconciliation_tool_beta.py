@@ -1,6 +1,7 @@
 # Copyright (c) 2023, ALYF GmbH and Contributors
 # See license.txt
 import json
+from unittest.mock import patch
 
 import frappe
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
@@ -21,6 +22,7 @@ from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
+	_get_valid_accounting_dimensions,
 	auto_reconcile_vouchers,
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,
@@ -52,7 +54,32 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account", 1
 		)
 
+		dimension = frappe.get_doc("Accounting Dimension", "Branch")
+		dimension.disabled = 0
+		dimension.set("dimension_defaults", [])
+		dimension.append(
+			"dimension_defaults",
+			{
+				"company": "_Test Company",
+				"automatically_post_balancing_accounting_entry": 1,
+				"offsetting_account": frappe.db.get_value(
+					"Company", "_Test Company", "default_receivable_account"
+				),
+			},
+		)
+		dimension.save()
+
+		cls.branch = "_Test Bank Reco Branch"
+		frappe.get_doc({"doctype": "Branch", "branch": cls.branch}).insert(ignore_if_duplicate=True)
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
+
+	@classmethod
+	def tearDownClass(cls) -> None:
+		dimension = frappe.get_doc("Accounting Dimension", "Branch")
+		dimension.set("dimension_defaults", [])
+		dimension.disabled = 1
+		dimension.save()
+		super().tearDownClass()
 
 	def tearDown(self) -> None:
 		"""Runs after each test."""
@@ -272,6 +299,65 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 100)
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.status, "Reconciled")
+
+	@patch(
+		"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_accounting_dimensions"
+	)
+	def test_get_valid_accounting_dimensions(self, mock_get_accounting_dimensions):
+		mock_get_accounting_dimensions.return_value = ["test_dim", "empty_dim"]
+		dimensions_json = json.dumps(
+			{
+				"test_dim": "DIM-001",
+				"empty_dim": "",
+				"not_a_real_dimension": "ignored",
+			}
+		)
+
+		dimensions = _get_valid_accounting_dimensions(dimensions_json)
+
+		mock_get_accounting_dimensions.assert_called_once_with(as_list=True)
+		self.assertEqual(dimensions, {"test_dim": "DIM-001"})
+
+	def test_create_journal_entry_bts_applies_accounting_dimensions_to_all_rows(self):
+		project_name = frappe.db.get_value("Project", {"project_name": "_Test Bank Reco Project"}, "name")
+		if not project_name:
+			project_name = (
+				frappe.get_doc(
+					{
+						"doctype": "Project",
+						"project_name": "_Test Bank Reco Project",
+						"company": "_Test Company",
+					}
+				)
+				.insert()
+				.name
+			)
+
+		bt = create_bank_transaction(deposit=200, reference_no="jv-dim-test", bank_account=self.bank_account)
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.reference_number,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			project=project_name,
+			cost_center="Main - _TC",
+			accounting_dimensions=json.dumps({"branch": self.branch}),
+			allow_edit=True,
+		)
+
+		self.assertEqual(journal_entry.accounts[0].project, project_name)
+		self.assertEqual(journal_entry.accounts[0].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[0].branch, self.branch)
+		self.assertEqual(journal_entry.accounts[0].credit_in_account_currency, 200)
+		self.assertEqual(journal_entry.accounts[1].project, project_name)
+		self.assertEqual(journal_entry.accounts[1].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[1].branch, self.branch)
+		self.assertEqual(journal_entry.accounts[1].bank_account, self.bank_account)
+		self.assertEqual(journal_entry.accounts[1].debit_in_account_currency, 200)
 
 	def test_jv_against_transaction(self):
 		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)

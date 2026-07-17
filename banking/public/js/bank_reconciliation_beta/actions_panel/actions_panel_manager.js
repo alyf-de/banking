@@ -83,6 +83,12 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
 						company: this.frm.doc.company,
+						accounting_dimensions:
+							this.panel_manager.accounting_dimensions || [],
+						accounting_dimension_defaults:
+							this.panel_manager.accounting_dimension_defaults || {},
+						company_default_cost_center:
+							this.panel_manager.company_default_cost_center,
 					});
 				},
 			},
