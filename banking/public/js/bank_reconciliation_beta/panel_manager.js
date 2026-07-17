@@ -13,6 +13,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	async init_panels() {
 		const dimensions_cached = this.accounting_dimensions != null;
 		const document_types_cached = this.document_types != null;
+		const cost_center_cached = this.company_default_cost_center != null;
 
 		const [transactions, document_types, dimensions_message, company_defaults] =
 			await Promise.all([
@@ -28,7 +29,9 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 							this.accounting_dimension_defaults,
 					  ])
 					: this.get_accounting_dimensions(),
-				frappe.db.get_value("Company", this.frm.doc.company, "cost_center"),
+				cost_center_cached
+					? Promise.resolve(null)
+					: frappe.db.get_value("Company", this.frm.doc.company, "cost_center"),
 			]);
 
 		this.transactions = transactions;
@@ -39,7 +42,10 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 			this.accounting_dimensions = dimensions_message?.[0] || [];
 			this.accounting_dimension_defaults = dimensions_message?.[1] || {};
 		}
-		this.company_default_cost_center = company_defaults?.message?.cost_center;
+		if (!cost_center_cached) {
+			this.company_default_cost_center =
+				company_defaults?.message?.cost_center || "";
+		}
 
 		this.$wrapper.empty();
 		this.$panel_wrapper = this.$wrapper
