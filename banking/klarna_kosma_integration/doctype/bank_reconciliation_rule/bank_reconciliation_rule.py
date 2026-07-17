@@ -7,11 +7,15 @@ from typing import Any
 import frappe
 from frappe import _
 from frappe.exceptions import ValidationError
+from frappe.model.db_query import DatabaseQuery
 from frappe.model.document import Document
 from frappe.utils import add_days, getdate, today
 from frappe.utils.data import get_filter
 
 from banking.exceptions import CurrencyMismatchError
+
+# Same cap as List View (`count_upper_bound`): count at most N rows, show "N-1+" when hit.
+COUNT_UPPER_BOUND = 1001
 
 
 class NoFiltersError(ValidationError):
@@ -47,14 +51,27 @@ def _bank_transaction_stats_filters(
 	return filters
 
 
+def _approx_bank_transaction_count(filters: list) -> int:
+	"""Fast capped count, same approach as List View (LIMIT then count rows)."""
+	return len(
+		DatabaseQuery("Bank Transaction").execute(
+			filters=filters,
+			limit=COUNT_UPPER_BOUND,
+			order_by=None,
+			pluck="name",
+		)
+	)
+
+
 @frappe.whitelist()
 def get_bank_transaction_match_stats(
 	bank_account: str,
 	filters: str | None = None,
 	bank_reconciliation_rule: str | None = None,
 ) -> dict[str, Any]:
-	"""Count submitted Bank Transactions matching the rule filters (scoped by bank account).
+	"""Approximate count of submitted Bank Transactions matching the rule filters.
 
+	Uses a capped count (like List View) so large tables stay fast.
 	Windows use calendar days: last 30 days and last 365 days (\"12 months\"), relative to *today*.
 	"""
 	if not bank_account:
@@ -81,15 +98,14 @@ def get_bank_transaction_match_stats(
 	min_365 = add_days(as_of, -365)
 
 	return {
-		"last_30_days": frappe.db.count(
-			"Bank Transaction",
-			filters=_bank_transaction_stats_filters(user_filters, bank_account, min_30),
+		"last_30_days": _approx_bank_transaction_count(
+			_bank_transaction_stats_filters(user_filters, bank_account, min_30)
 		),
-		"last_12_months": frappe.db.count(
-			"Bank Transaction",
-			filters=_bank_transaction_stats_filters(user_filters, bank_account, min_365),
+		"last_12_months": _approx_bank_transaction_count(
+			_bank_transaction_stats_filters(user_filters, bank_account, min_365)
 		),
 		"as_of": as_of,
+		"count_upper_bound": COUNT_UPPER_BOUND,
 	}
 
 

@@ -175,10 +175,18 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 			return;
 		}
 
+		const format_count = (n) => {
+			const bound = data.count_upper_bound;
+			if (bound && n === bound) {
+				return `${bound - 1}+`;
+			}
+			return String(n);
+		};
+
 		const title = __("Submitted Bank Transactions matching this rule:");
 		const counts = __(
 			"{0} in the last 30 days, {1} in the last 12 months (365 days).",
-			[String(data.last_30_days), String(data.last_12_months)]
+			[format_count(data.last_30_days), format_count(data.last_12_months)]
 		);
 
 		$el.html(
