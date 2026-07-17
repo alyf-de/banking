@@ -29,6 +29,11 @@ def clear_pending_reconcile(voucher_type: str, voucher_name: str) -> None:
 	frappe.cache().delete_value(_cache_key(voucher_type, voucher_name))
 
 
+def clear_all_pending_reconciles() -> None:
+	"""Drop all pending keys (e.g. test tearDown; Redis is not covered by DB rollback)."""
+	frappe.cache().delete_keys(CACHE_PREFIX)
+
+
 def get_pending_reconcile(voucher_type: str, voucher_name: str) -> dict | None:
 	return frappe.cache().get_value(_cache_key(voucher_type, voucher_name))
 
@@ -48,14 +53,41 @@ def _voucher_bank_amount(doc, bank_gl_account: str) -> float:
 	return 0.0
 
 
-def reconcile_if_pending(doc, method: str | None = None) -> None:
-	"""doc_events on_submit for Journal Entry / Payment Entry.
+def _pending_bank_gl_and_unallocated(pending: dict) -> tuple[str, float]:
+	transaction = frappe.get_doc("Bank Transaction", pending["transaction_name"])
+	bank_gl_account = frappe.db.get_value("Bank Account", transaction.bank_account, "account")
+	return bank_gl_account, flt(transaction.unallocated_amount)
 
-	Create → Edit in Full Page drafts are meant for this Bank Transaction only.
-	Reject submit when the voucher bank amount exceeds the BT unallocated amount.
-	"""
+
+def validate_pending_reconcile_amount(doc, method: str | None = None) -> None:
+	"""before_submit: Create drafts must not exceed the Bank Transaction unallocated amount."""
 	pending = get_pending_reconcile(doc.doctype, doc.name)
 	if not pending:
+		return
+
+	if not frappe.db.exists("Bank Transaction", pending["transaction_name"]):
+		clear_pending_reconcile(doc.doctype, doc.name)
+		return
+
+	bank_gl_account, unallocated = _pending_bank_gl_and_unallocated(pending)
+	voucher_amount = _voucher_bank_amount(doc, bank_gl_account)
+
+	if voucher_amount > unallocated:
+		frappe.throw(
+			_(
+				"Cannot submit {0} {1}: bank amount {2} is greater than Bank Transaction {3} unallocated amount {4}. Reduce the voucher to {4} or less."
+			).format(doc.doctype, doc.name, voucher_amount, pending["transaction_name"], unallocated)
+		)
+
+
+def reconcile_if_pending(doc, method: str | None = None) -> None:
+	"""doc_events on_submit for Journal Entry / Payment Entry."""
+	pending = get_pending_reconcile(doc.doctype, doc.name)
+	if not pending:
+		return
+
+	if not frappe.db.exists("Bank Transaction", pending["transaction_name"]):
+		clear_pending_reconcile(doc.doctype, doc.name)
 		return
 
 	from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
@@ -76,15 +108,6 @@ def reconcile_if_pending(doc, method: str | None = None) -> None:
 	bank_gl_account = frappe.db.get_value("Bank Account", transaction.bank_account, "account")
 	unallocated = flt(transaction.unallocated_amount)
 	voucher_amount = _voucher_bank_amount(doc, bank_gl_account)
-
-	if voucher_amount > unallocated:
-		# Abort submit so an oversized Create voucher cannot be posted.
-		frappe.throw(
-			_(
-				"Cannot submit {0} {1}: bank amount {2} is greater than Bank Transaction {3} unallocated amount {4}. Reduce the voucher to {4} or less."
-			).format(doc.doctype, doc.name, voucher_amount, transaction_name, unallocated)
-		)
-
 	amount = voucher_amount if voucher_amount > 0 else unallocated
 
 	try:

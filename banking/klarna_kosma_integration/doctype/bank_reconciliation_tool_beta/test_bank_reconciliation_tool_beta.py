@@ -68,6 +68,13 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 	def tearDown(self) -> None:
 		"""Runs after each test."""
+		# Redis is not covered by DB savepoint rollback; stale pending keys can
+		# reuse rolled-back JE/BT names and corrupt later reconciles.
+		from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile import (
+			clear_all_pending_reconciles,
+		)
+
+		clear_all_pending_reconciles()
 		# Make sure invoices are rolled back to not affect invoice count assertions
 		frappe.db.rollback(save_point="bank_reco_beta_before_tests")
 
@@ -399,6 +406,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 				row.debit_in_account_currency = 250
 			if row.credit_in_account_currency:
 				row.credit_in_account_currency = 250
+		journal_entry.save()
 
 		self.assertRaises(frappe.ValidationError, journal_entry.submit)
 
