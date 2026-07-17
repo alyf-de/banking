@@ -62,8 +62,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 
 	/** Re-fetch and re-render the transaction list (e.g. after sort change). */
 	async reload_transactions() {
-		const transaction_data = await this.get_bank_transactions();
-		this.transactions = transaction_data.transactions;
+		this.transactions = await this.get_bank_transactions();
 		const active_name = this.active_transaction?.name;
 
 		if (!this.transactions?.length) {
