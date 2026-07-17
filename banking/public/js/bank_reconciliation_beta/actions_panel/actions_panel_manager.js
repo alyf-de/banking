@@ -46,9 +46,6 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		this.tabs_list_ul = this.$actions_container.find(".form-tabs");
 		this.$tab_content = this.$actions_container.find(".tab-content");
 
-		// Remove any listeners from previous tabs
-		frappe.realtime.off("doc_update");
-
 		const tabs = [
 			{
 				tab_name: "details",

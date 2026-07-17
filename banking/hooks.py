@@ -125,6 +125,14 @@ doc_events = {
 		"before_validate": "banking.overrides.bank_account.before_validate",
 		"validate": "banking.overrides.bank_account.validate",
 	},
+	"Journal Entry": {
+		"on_submit": "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile.reconcile_if_pending",
+		"on_trash": "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile.clear_if_pending",
+	},
+	"Payment Entry": {
+		"on_submit": "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile.reconcile_if_pending",
+		"on_trash": "banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile.clear_if_pending",
+	},
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
 	},

@@ -40,22 +40,43 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 	edit_in_full_page() {
 		this.create_voucher_bts(true, (message) => {
-			const doc = frappe.model.sync(message);
-			let doctype = doc[0].doctype,
-				docname = doc[0].name;
+			const doc = frappe.model.sync(message)[0];
+			const bt_name = this.transaction.name;
+			const initial_unallocated = flt(this.transaction.unallocated_amount);
 
-			// Reconcile and update the view
-			// when the voucher is submitted in another tab
-			frappe.socketio.doc_subscribe(doctype, docname);
-			frappe.realtime.off("doc_update");
-			frappe.realtime.on("doc_update", (data) => {
-				if (data.doctype === doctype && data.name === docname) {
-					this.reconcile_new_voucher(doctype, docname);
-				}
-			});
+			// Server attaches the voucher on submit. Refresh the list when the user returns.
+			const cleanup = () => {
+				window.removeEventListener("focus", on_focus);
+				window.removeEventListener("pagehide", cleanup);
+			};
+			const on_focus = () => {
+				frappe.db
+					.get_value("Bank Transaction", bt_name, [
+						"name",
+						"unallocated_amount",
+						"status",
+					])
+					.then((r) => {
+						const bt = r?.message;
+						if (!bt) {
+							return;
+						}
+						if (flt(bt.unallocated_amount) >= initial_unallocated) {
+							return;
+						}
+						cleanup();
+						this.actions_panel.after_transaction_reconcile(
+							bt,
+							true,
+							doc.doctype
+						);
+					});
+			};
+			window.addEventListener("focus", on_focus);
+			window.addEventListener("pagehide", cleanup);
 
 			frappe.open_in_new_tab = true;
-			frappe.set_route("Form", doctype, docname);
+			frappe.set_route("Form", doc.doctype, doc.name);
 		});
 	}
 
@@ -125,48 +146,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 					return;
 				} else if (response.message) {
 					success_callback(response.message);
-				}
-			},
-		});
-	}
-
-	reconcile_new_voucher(doctype, docname) {
-		// If no response, newly created doc is in draft state
-		// If deleted in response, newly created doc is deleted
-		// If doc object in response, newly created doc is submitted (can be reconciled)
-		frappe.call({
-			method:
-				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
-			args: {
-				transaction_name: this.transaction.name,
-				amount: this.transaction.unallocated_amount,
-				voucher_type: doctype,
-				voucher_name: docname,
-			},
-			callback: (response) => {
-				if (response.exc) {
-					frappe.show_alert({
-						message: __("Failed to reconcile new {0} against {1}", [
-							doctype,
-							this.transaction.name,
-						]),
-						indicator: "red",
-					});
-					return;
-				} else if (
-					response.message &&
-					Object.keys(response.message).length > 0
-				) {
-					if (response.message.deleted) {
-						frappe.realtime.off("doc_update");
-						return;
-					}
-
-					this.actions_panel.after_transaction_reconcile(
-						response.message,
-						true,
-						doctype
-					);
 				}
 			},
 		});

@@ -22,6 +22,9 @@ from frappe.utils import cint, flt, sbool
 from pypika import Order
 from pypika.terms import ExistsCriterion
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile import (
+	remember_pending_reconcile,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
 	get_deposit_included_fee,
 )
@@ -253,6 +256,7 @@ def create_journal_entry_bts(
 	journal_entry.insert()
 
 	if allow_edit:
+		remember_pending_reconcile("Journal Entry", journal_entry.name, bank_transaction_name)
 		return journal_entry  # Return saved document
 
 	# This check happens here because the user should be able to make
@@ -342,6 +346,7 @@ def create_payment_entry_bts(
 	payment_entry.insert()
 
 	if allow_edit:
+		remember_pending_reconcile("Payment Entry", payment_entry.name, bank_transaction_name)
 		return payment_entry  # Return saved document
 
 	payment_entry.submit()

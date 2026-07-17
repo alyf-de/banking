@@ -344,6 +344,70 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(journal_entry.accounts[1].bank_account, self.bank_account)
 		self.assertEqual(journal_entry.accounts[1].debit_in_account_currency, 200)
 
+	def test_edit_in_full_page_reconciles_on_submit(self):
+		"""Draft JE from allow_edit is linked to the Bank Transaction when submitted."""
+		bt = create_bank_transaction(
+			deposit=200, reference_no="edit-full-page", bank_account=self.bank_account
+		)
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.reference_number,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			allow_edit=True,
+		)
+
+		self.assertEqual(journal_entry.docstatus, 0)
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 0)
+
+		journal_entry.submit()
+
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_entry, journal_entry.name)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+		self.assertEqual(bt.status, "Reconciled")
+
+	def test_edit_in_full_page_rejects_voucher_larger_than_unallocated(self):
+		"""Create drafts must not submit with a bank amount above the BT unallocated amount."""
+		from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.pending_reconcile import (
+			get_pending_reconcile,
+		)
+
+		bt = create_bank_transaction(
+			deposit=200, reference_no="edit-full-page-too-big", bank_account=self.bank_account
+		)
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.reference_number,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			allow_edit=True,
+		)
+
+		for row in journal_entry.accounts:
+			if row.debit_in_account_currency:
+				row.debit_in_account_currency = 250
+			if row.credit_in_account_currency:
+				row.credit_in_account_currency = 250
+
+		self.assertRaises(frappe.ValidationError, journal_entry.submit)
+
+		journal_entry.reload()
+		self.assertEqual(journal_entry.docstatus, 0)
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 0)
+		self.assertIsNotNone(get_pending_reconcile("Journal Entry", journal_entry.name))
+
 	def test_jv_against_transaction(self):
 		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
 		create_journal_entry_bts(
