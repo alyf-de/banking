@@ -54,7 +54,7 @@ def _parse_accounting_dimensions_json(accounting_dimensions: str | None) -> dict
 
 	try:
 		dimensions = json.loads(accounting_dimensions)
-	except (TypeError, json.JSONDecodeError):
+	except TypeError, json.JSONDecodeError:
 		return {}
 
 	return dimensions if isinstance(dimensions, dict) else {}
@@ -291,8 +291,8 @@ def create_payment_entry_bts(
 	mode_of_payment: str | None = None,
 	project: str | None = None,
 	cost_center: str | None = None,
-	accounting_dimensions: str | None = None,
 	allow_edit: bool = False,
+	accounting_dimensions: str | None = None,
 ):
 	"""Create a new Payment Entry for reconciling the Bank Transaction.
 
