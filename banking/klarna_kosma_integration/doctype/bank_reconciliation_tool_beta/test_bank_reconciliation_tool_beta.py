@@ -31,6 +31,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,
 	create_payment_entry_bts,
+	get_bank_transactions,
 	get_linked_payments,
 )
 
@@ -764,6 +765,11 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			allow_edit=True,
 		)
 
+		# Detach from Edit-in-Full-Page auto-reconcile so matching can be tested independently
+		journal_entry.db_set("created_from_bank_transaction", None)
+		journal_entry.created_from_bank_transaction = None
+		bt.db_set({"reserved_voucher_type": None, "reserved_voucher": None})
+
 		# Split the JV Row into two
 		journal_entry.accounts[1].debit_in_account_currency = 100
 		journal_entry.append(
@@ -868,6 +874,9 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
 			allow_edit=True,
 		)
+		journal_entry.db_set("created_from_bank_transaction", None)
+		journal_entry.created_from_bank_transaction = None
+		bt.db_set({"reserved_voucher_type": None, "reserved_voucher": None})
 		journal_entry.submit()
 
 		self.assertFalse(journal_entry.is_system_generated)
@@ -1562,6 +1571,256 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si_with_fee.outstanding_amount, 80)
 
+	def _create_draft_journal_entry(self, bt, **kwargs):
+		defaults = {
+			"bank_transaction_name": bt.name,
+			"party_type": "Customer",
+			"party": self.customer,
+			"posting_date": bt.date,
+			"reference_number": bt.reference_number or bt.name,
+			"reference_date": bt.date,
+			"entry_type": "Bank Entry",
+			"second_account": frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			"allow_edit": True,
+		}
+		defaults.update(kwargs)
+		return create_journal_entry_bts(**defaults)
+
+	def _create_draft_payment_entry(self, bt, **kwargs):
+		defaults = {
+			"bank_transaction_name": bt.name,
+			"reference_number": bt.reference_number or bt.name,
+			"reference_date": bt.date,
+			"party_type": "Customer" if bt.deposit else "Supplier",
+			"party": self.customer if bt.deposit else create_supplier(),
+			"posting_date": bt.date,
+			"allow_edit": True,
+		}
+		defaults.update(kwargs)
+		return create_payment_entry_bts(**defaults)
+
+	def test_edit_in_full_page_journal_entry_reserves_transaction(self):
+		bt = create_bank_transaction(deposit=200, reference_no="reserve-je", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		bt.reload()
+		journal_entry.reload()
+
+		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+		self.assertEqual(bt.reserved_voucher_type, "Journal Entry")
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+
+		result = get_bank_transactions(bank_account=self.bank_account)
+		reserved_row = next(row for row in result["transactions"] if row.name == bt.name)
+		self.assertEqual(reserved_row.reserved_voucher, journal_entry.name)
+		self.assertEqual(reserved_row.reserved_voucher_type, "Journal Entry")
+
+	def test_edit_in_full_page_payment_entry_reserves_transaction(self):
+		bt = create_bank_transaction(deposit=150, reference_no="reserve-pe", bank_account=self.bank_account)
+		payment_entry = self._create_draft_payment_entry(bt)
+
+		bt.reload()
+		payment_entry.reload()
+
+		self.assertEqual(payment_entry.created_from_bank_transaction, bt.name)
+		self.assertEqual(bt.reserved_voucher_type, "Payment Entry")
+		self.assertEqual(bt.reserved_voucher, payment_entry.name)
+
+		result = get_bank_transactions(bank_account=self.bank_account)
+		reserved_row = next(row for row in result["transactions"] if row.name == bt.name)
+		self.assertEqual(reserved_row.reserved_voucher, payment_entry.name)
+		self.assertEqual(reserved_row.reserved_voucher_type, "Payment Entry")
+
+	def test_second_draft_against_reserved_transaction_is_rejected(self):
+		bt = create_bank_transaction(deposit=200, reference_no="second-draft", bank_account=self.bank_account)
+		first = self._create_draft_journal_entry(bt)
+
+		with self.assertRaises(frappe.ValidationError):
+			self._create_draft_journal_entry(bt)
+
+		bt.reload()
+		self.assertEqual(bt.reserved_voucher, first.name)
+
+	def test_unrelated_reconciliation_against_reserved_transaction_is_rejected(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="unrelated-reco", bank_account=self.bank_account
+		)
+		self._create_draft_journal_entry(bt)
+
+		si = create_sales_invoice(
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			)
+
+		bt.reload()
+		self.assertTrue(bt.reserved_voucher)
+		self.assertFalse(bt.payment_entries)
+
+	def test_delete_draft_releases_reservation(self):
+		bt = create_bank_transaction(deposit=200, reference_no="delete-draft", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+		journal_entry.delete()
+
+		bt.reload()
+		self.assertFalse(bt.reserved_voucher)
+		self.assertFalse(bt.reserved_voucher_type)
+
+		result = get_bank_transactions(bank_account=self.bank_account)
+		row = next(row for row in result["transactions"] if row.name == bt.name)
+		self.assertFalse(row.reserved_voucher)
+		self.assertFalse(row.reserved_voucher_type)
+
+	def test_durable_provenance_survives_reload(self):
+		bt = create_bank_transaction(deposit=200, reference_no="provenance", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+		name = journal_entry.name
+
+		reloaded = frappe.get_doc("Journal Entry", name)
+		self.assertEqual(reloaded.created_from_bank_transaction, bt.name)
+
+	def test_submit_draft_journal_entry_fully_reconciles(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="submit-je-full", bank_account=self.bank_account
+		)
+		journal_entry = self._create_draft_journal_entry(bt)
+		journal_entry.submit()
+
+		bt.reload()
+		journal_entry.reload()
+
+		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+		self.assertFalse(bt.reserved_voucher)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_entry, journal_entry.name)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+
+	def test_submit_draft_payment_entry_fully_reconciles(self):
+		bt = create_bank_transaction(
+			deposit=175, reference_no="submit-pe-full", bank_account=self.bank_account
+		)
+		payment_entry = self._create_draft_payment_entry(bt)
+		payment_entry.submit()
+
+		bt.reload()
+		payment_entry.reload()
+
+		self.assertEqual(payment_entry.created_from_bank_transaction, bt.name)
+		self.assertFalse(bt.reserved_voucher)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.payment_entries[0].payment_entry, payment_entry.name)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 175)
+
+	def test_submit_draft_journal_entry_partially_reconciles(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="submit-je-partial", bank_account=self.bank_account
+		)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		journal_entry.accounts[0].credit_in_account_currency = 80
+		journal_entry.accounts[1].debit_in_account_currency = 80
+		journal_entry.save()
+		journal_entry.submit()
+
+		bt.reload()
+		self.assertFalse(bt.reserved_voucher)
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertEqual(bt.unallocated_amount, 120)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 80)
+
+	def test_submit_rejects_wrong_bank_account_on_journal_entry(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="wrong-account", bank_account=self.bank_account
+		)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		other_gl = create_bank_gl_account("_Test Other Reco Bank")
+		journal_entry.accounts[1].account = other_gl
+		journal_entry.save()
+
+		frappe.db.savepoint("before_failed_submit")
+		with self.assertRaises(frappe.ValidationError):
+			journal_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		journal_entry.reload()
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+		self.assertEqual(journal_entry.docstatus, 0)
+		self.assertFalse(bt.payment_entries)
+
+	def test_submit_rejects_opposite_direction_payment_entry(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="wrong-direction", bank_account=self.bank_account
+		)
+		payment_entry = self._create_draft_payment_entry(bt)
+
+		# Flip to Pay against a deposit transaction
+		company_account = frappe.get_value("Bank Account", bt.bank_account, "account")
+		payment_entry.payment_type = "Pay"
+		payment_entry.party_type = "Supplier"
+		payment_entry.party = create_supplier("_Test Reco Direction Supplier")
+		payment_entry.paid_from = company_account
+		payment_entry.paid_to = frappe.db.get_value("Company", bt.company, "default_payable_account")
+		payment_entry.save()
+
+		frappe.db.savepoint("before_failed_submit")
+		with self.assertRaises(frappe.ValidationError):
+			payment_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		payment_entry.reload()
+		self.assertEqual(bt.reserved_voucher, payment_entry.name)
+		self.assertEqual(payment_entry.docstatus, 0)
+
+	def test_submit_rejects_amount_above_unallocated(self):
+		bt = create_bank_transaction(deposit=200, reference_no="oversized", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		journal_entry.accounts[0].credit_in_account_currency = 250
+		journal_entry.accounts[1].debit_in_account_currency = 250
+		journal_entry.save()
+
+		frappe.db.savepoint("before_failed_submit")
+		with self.assertRaises(frappe.ValidationError):
+			journal_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		journal_entry.reload()
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+		self.assertEqual(journal_entry.docstatus, 0)
+
+	def test_failed_reconciliation_rolls_back_without_losing_reservation(self):
+		bt = create_bank_transaction(deposit=200, reference_no="failed-reco", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		frappe.db.savepoint("before_failed_submit")
+		with patch(
+			"banking.overrides.bank_transaction.CustomBankTransaction.allocate_payment_entries",
+			side_effect=frappe.ValidationError("forced reconciliation failure"),
+		):
+			with self.assertRaises(frappe.ValidationError):
+				journal_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		journal_entry.reload()
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+		self.assertEqual(journal_entry.docstatus, 0)
+		self.assertFalse(bt.payment_entries)
+		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
@@ -1667,6 +1926,14 @@ def create_bank(bank_name: str = "Citi Bank", swift_number: str = "CITIUS33"):
 
 
 def create_bank_gl_account(account_name: str = "_Test Bank - _TC", currency: str = "INR") -> str:
+	existing = frappe.db.exists("Account", {"account_name": account_name, "company": "_Test Company"})
+	if existing:
+		return existing
+
+	# Account names that already include the company suffix are stored as-is
+	if frappe.db.exists("Account", account_name):
+		return account_name
+
 	gl_account = frappe.get_doc(
 		{
 			"doctype": "Account",
