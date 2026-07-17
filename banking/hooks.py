@@ -32,13 +32,13 @@ app_include_js = "/assets/banking/js/utils.js"
 # include js in doctype views
 doctype_js = {
 	"Bank": "custom/bank.js",
-	"Bank Transaction": "custom/bank_transaction.js",
 	"Expense Claim": "custom/expense_claim.js",
 	"Purchase Invoice": "custom/purchase_invoice.js",
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
 	"Bank Account": "custom/bank_account.js",
+	"Bank Transaction": "custom/bank_transaction.js",
 }
 doctype_list_js = {
 	"Expense Claim": "custom/expense_claim_list.js",
