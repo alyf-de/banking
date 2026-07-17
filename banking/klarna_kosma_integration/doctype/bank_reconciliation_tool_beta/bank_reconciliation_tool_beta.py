@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 import datetime
 import json
+import warnings
 from typing import TYPE_CHECKING, Union
 
 import frappe
@@ -525,11 +526,11 @@ def get_linked_payments(
 			to_reference_date,
 		)
 	):
-		from frappe.utils.deprecations import deprecation_warning
-
-		deprecation_warning(
+		warnings.warn(
 			"Date filter arguments for get_linked_payments are deprecated and ignored. "
 			"Use statement date filters only when fetching Bank Transactions.",
+			DeprecationWarning,
+			stacklevel=2,
 		)
 
 	transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
