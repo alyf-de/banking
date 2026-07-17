@@ -250,7 +250,9 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		if (frappe.realtime.open_docs?.has(open_key)) {
 			return;
 		}
-		// doc_subscribe throttles to 1/sec; emit directly so multi-draft loads work
+		// doc_subscribe throttles to 1/sec via frappe.flags.doc_subscribe (Frappe v15,
+		// socketio_client.js). Emit directly while the flag is set so batch voucher watches
+		// in the same tick are not dropped after the first subscription.
 		if (frappe.flags.doc_subscribe) {
 			frappe.realtime.emit("doc_subscribe", doctype, docname);
 			frappe.realtime.open_docs.add(open_key);

@@ -38,7 +38,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				<p class="text-muted">
 					${__(
 						"A draft {0} is already linked to this transaction. Open it to continue editing or submit.",
-						[__(voucher_type)]
+						[frappe.utils.escape_html(__(voucher_type))]
 					)}
 				</p>
 				<button type="button" class="btn btn-primary btn-sm open-reserved-draft">

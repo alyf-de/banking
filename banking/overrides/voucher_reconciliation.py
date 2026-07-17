@@ -19,19 +19,19 @@ def reconcile_created_from_bank_transaction(doc, method=None):
 
 	amount = get_voucher_bank_amount(doc, bank_transaction)
 
-	bank_transaction.add_payment_entries(
-		[
-			{
-				"payment_doctype": doc.doctype,
-				"payment_name": doc.name,
-				"amount": amount,
-			}
-		]
-	)
-	bank_transaction.validate_duplicate_references()
-	bank_transaction.allocate_payment_entries()
-	bank_transaction.update_allocated_amount()
-	bank_transaction.set_status()
+	vouchers = [
+		{
+			"payment_doctype": doc.doctype,
+			"payment_name": doc.name,
+			"amount": amount,
+		}
+	]
+
+	if bank_transaction.unallocated_amount <= 0.0:
+		frappe.throw(_("Bank Transaction {0} is already fully reconciled").format(bank_transaction.name))
+
+	bank_transaction.assert_reservation_allows(vouchers)
+	bank_transaction.reconcile_paid_vouchers(vouchers)
 	bank_transaction.reserved_voucher_type = None
 	bank_transaction.reserved_voucher = None
 	bank_transaction.save()
