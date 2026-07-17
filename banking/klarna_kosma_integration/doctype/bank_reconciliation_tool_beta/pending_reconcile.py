@@ -72,6 +72,13 @@ def validate_pending_reconcile_amount(doc, method: str | None = None) -> None:
 	bank_gl_account, unallocated = _pending_bank_gl_and_unallocated(pending)
 	voucher_amount = _voucher_bank_amount(doc, bank_gl_account)
 
+	if voucher_amount <= 0:
+		frappe.throw(
+			_(
+				"Cannot submit {0} {1}: no bank amount found for Bank Account GL {2}. Restore the bank account row before submitting."
+			).format(doc.doctype, doc.name, bank_gl_account)
+		)
+
 	if voucher_amount > unallocated:
 		frappe.throw(
 			_(
@@ -106,14 +113,20 @@ def reconcile_if_pending(doc, method: str | None = None) -> None:
 		return
 
 	bank_gl_account = frappe.db.get_value("Bank Account", transaction.bank_account, "account")
-	unallocated = flt(transaction.unallocated_amount)
 	voucher_amount = _voucher_bank_amount(doc, bank_gl_account)
-	amount = voucher_amount if voucher_amount > 0 else unallocated
+	if voucher_amount <= 0:
+		# Leave the cache key so the pending link remains discoverable.
+		frappe.log_error(
+			title=_("Cannot reconcile {0} {1} with Bank Transaction {2}: no bank amount for GL {3}").format(
+				doc.doctype, doc.name, transaction_name, bank_gl_account
+			)
+		)
+		return
 
 	try:
 		reconcile_voucher(
 			transaction_name,
-			amount,
+			voucher_amount,
 			doc.doctype,
 			doc.name,
 		)

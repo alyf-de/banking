@@ -397,7 +397,7 @@ def bulk_reconcile_vouchers(
 def reconcile_voucher(
 	transaction_name: str, amount: float, voucher_type: str, voucher_name: str
 ) -> Union[dict, "CustomBankTransaction"]:
-	"""Reconcile a entry with a bank transaction. Called on `doc_update` websocket event."""
+	"""Reconcile an entry with a bank transaction."""
 
 	# Newly created voucher was deleted
 	if not frappe.db.exists(voucher_type, voucher_name):

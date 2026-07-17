@@ -45,6 +45,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			const initial_unallocated = flt(this.transaction.unallocated_amount);
 
 			// Server attaches the voucher on submit. Refresh the list when the user returns.
+			// pagehide covers tab close; router.once covers Frappe SPA navigation (pushState).
 			const cleanup = () => {
 				window.removeEventListener("focus", on_focus);
 				window.removeEventListener("pagehide", cleanup);
@@ -74,6 +75,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			};
 			window.addEventListener("focus", on_focus);
 			window.addEventListener("pagehide", cleanup);
+			frappe.router.once("change", cleanup);
 
 			frappe.open_in_new_tab = true;
 			frappe.set_route("Form", doc.doctype, doc.name);
