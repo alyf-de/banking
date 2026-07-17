@@ -114,7 +114,7 @@ def get_bank_transactions(
 	to_date: str | datetime.date | None = None,
 	order_by: str | None = "date asc",
 ) -> tuple[dict[str, Any], ...] | None:
-	"""Return bank transactions for a bank account"""
+	"""Return bank transactions for a bank account, including reserved drafts."""
 	filters: list[list] = [
 		["docstatus", "=", 1],
 		["status", "not in", ["Reconciled", "Cancelled"]],
@@ -156,9 +156,33 @@ def get_bank_transactions(
 			"bank_party_name",
 			"bank_party_account_number",
 			"bank_party_iban",
+			"reserved_voucher_type",
+			"reserved_voucher",
 		],
 		filters=filters,
 		order_by=get_bank_transaction_order_by(order_by),
+	)
+
+
+def _reserve_bank_transaction(bank_transaction: CustomBankTransaction, voucher_type: str, voucher_name: str):
+	if bank_transaction.reserved_voucher:
+		frappe.throw(
+			_(
+				"Bank Transaction {0} is already reserved by draft {1} {2}. "
+				"Submit or delete that voucher before creating another."
+			).format(
+				frappe.bold(bank_transaction.name),
+				_(bank_transaction.reserved_voucher_type),
+				frappe.bold(bank_transaction.reserved_voucher),
+			)
+		)
+
+	bank_transaction.db_set(
+		{
+			"reserved_voucher_type": voucher_type,
+			"reserved_voucher": voucher_name,
+		},
+		update_modified=False,
 	)
 
 
@@ -188,8 +212,10 @@ def create_journal_entry_bts(
 	if isinstance(allow_edit, str):
 		allow_edit = sbool(allow_edit)
 
-	bank_transaction: CustomBankTransaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
-	bank_transaction.check_permission("read")
+	bank_transaction: CustomBankTransaction = frappe.get_doc(
+		"Bank Transaction", bank_transaction_name, for_update=allow_edit
+	)
+	bank_transaction.check_permission("write" if allow_edit else "read")
 
 	if bank_transaction.deposit and bank_transaction.withdrawal:
 		frappe.throw(_("Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"))
@@ -226,6 +252,8 @@ def create_journal_entry_bts(
 			"user_remark": bank_transaction.description,
 		}
 	)
+	if allow_edit:
+		journal_entry.created_from_bank_transaction = bank_transaction.name
 
 	account_rows = [
 		{
@@ -259,6 +287,7 @@ def create_journal_entry_bts(
 	journal_entry.insert()
 
 	if allow_edit:
+		_reserve_bank_transaction(bank_transaction, "Journal Entry", journal_entry.name)
 		return journal_entry  # Return saved document
 
 	# This check happens here because the user should be able to make
@@ -303,12 +332,11 @@ def create_payment_entry_bts(
 		allow_edit = sbool(allow_edit)
 
 	# Create a new payment entry based on the bank transaction
-	bank_transaction: CustomBankTransaction = frappe.db.get_values(
-		"Bank Transaction",
-		bank_transaction_name,
-		fieldname=["name", "unallocated_amount", "deposit", "bank_account"],
-		as_dict=True,
-	)[0]
+	bank_transaction: CustomBankTransaction = frappe.get_doc(
+		"Bank Transaction", bank_transaction_name, for_update=allow_edit
+	)
+	bank_transaction.check_permission("write" if allow_edit else "read")
+
 	paid_amount = bank_transaction.unallocated_amount
 	payment_type = "Receive" if bank_transaction.deposit > 0.0 else "Pay"
 
@@ -328,6 +356,8 @@ def create_payment_entry_bts(
 	payment_entry: PaymentEntry = frappe.new_doc("Payment Entry")
 
 	payment_entry.update(payment_entry_dict)
+	if allow_edit:
+		payment_entry.created_from_bank_transaction = bank_transaction.name
 
 	if mode_of_payment:
 		payment_entry.mode_of_payment = mode_of_payment
@@ -348,6 +378,7 @@ def create_payment_entry_bts(
 	payment_entry.insert()
 
 	if allow_edit:
+		_reserve_bank_transaction(bank_transaction, "Payment Entry", payment_entry.name)
 		return payment_entry  # Return saved document
 
 	payment_entry.submit()
@@ -455,6 +486,9 @@ def auto_reconcile_vouchers(
 		company=company, bank=bank, bank_account=bank_account, from_date=from_date, to_date=to_date
 	)
 	for transaction in bank_transactions:
+		# Skip transactions reserved by an Edit-in-Full-Page draft voucher
+		if transaction.reserved_voucher:
+			continue
 		linked_payments = get_linked_payments(
 			transaction.name,
 			["payment_entry", "journal_entry"],
