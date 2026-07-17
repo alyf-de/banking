@@ -121,6 +121,14 @@ doc_events = {
 		"before_submit": "banking.overrides.bank_transaction.before_submit",
 		"on_cancel": "banking.overrides.bank_transaction.on_cancel",
 	},
+	"Journal Entry": {
+		"on_submit": "banking.overrides.voucher_reconciliation.reconcile_created_from_bank_transaction",
+		"on_trash": "banking.overrides.voucher_reconciliation.release_bank_transaction_reservation",
+	},
+	"Payment Entry": {
+		"on_submit": "banking.overrides.voucher_reconciliation.reconcile_created_from_bank_transaction",
+		"on_trash": "banking.overrides.voucher_reconciliation.release_bank_transaction_reservation",
+	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
 		"validate": "banking.overrides.bank_account.validate",
