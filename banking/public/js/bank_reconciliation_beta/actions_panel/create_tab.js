@@ -4,10 +4,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	constructor(opts) {
 		Object.assign(this, opts);
 		this.accounting_dimensions = (this.accounting_dimensions || []).filter(
-			(dimension) => dimension.fieldname && dimension.document_type
+			(dimension) => dimension.fieldname && dimension.document_type,
 		);
 		this.custom_dimension_fieldnames = this.accounting_dimensions.map(
-			(dimension) => dimension.fieldname
+			(dimension) => dimension.fieldname,
 		);
 		this.make();
 	}
@@ -30,19 +30,11 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
 		this.create_voucher_bts(false, (message) =>
-<<<<<<< HEAD
-			me.actions_panel.after_transaction_reconcile(
+			this.actions_panel.after_transaction_reconcile(
 				message,
 				true,
 				document_type,
 			),
-=======
-			this.actions_panel.after_transaction_reconcile(
-				message,
-				true,
-				document_type
-			)
->>>>>>> 007417b (feat: add accounting dimensions to create journal entry (#365))
 		);
 	}
 
@@ -91,7 +83,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
 		const dim_payload = this.get_selected_accounting_dimensions(
 			values,
-			this.custom_dimension_fieldnames
+			this.custom_dimension_fieldnames,
 		);
 		let args = {
 			bank_transaction_name: this.transaction.name,

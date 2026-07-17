@@ -11,14 +11,6 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	async init_panels() {
-<<<<<<< HEAD
-		const [transactions, document_types] = await Promise.all([
-			this.get_bank_transactions(),
-			frappe.xcall(
-				"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation",
-			),
-		]);
-=======
 		const dimensions_cached = this.accounting_dimensions != null;
 		const document_types_cached = this.document_types != null;
 
@@ -28,7 +20,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 				document_types_cached
 					? Promise.resolve(this.document_types)
 					: frappe.xcall(
-							"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation"
+							"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.get_doctypes_for_bank_reconciliation",
 					  ),
 				dimensions_cached
 					? Promise.resolve([
@@ -38,7 +30,6 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 					: this.get_accounting_dimensions(),
 				frappe.db.get_value("Company", this.frm.doc.company, "cost_center"),
 			]);
->>>>>>> 007417b (feat: add accounting dimensions to create journal entry (#365))
 
 		this.transactions = transactions;
 		if (!document_types_cached) {
