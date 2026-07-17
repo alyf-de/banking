@@ -46,9 +46,13 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 
 			// Server attaches the voucher on submit. Refresh the list when the user returns.
 			// pagehide covers tab close; router.once covers Frappe SPA navigation (pushState).
+			// panel_manager.cleanup_edit_in_full_page is cleared when another BT is selected.
 			const cleanup = () => {
 				window.removeEventListener("focus", on_focus);
 				window.removeEventListener("pagehide", cleanup);
+				if (this.panel_manager.cleanup_edit_in_full_page === cleanup) {
+					this.panel_manager.cleanup_edit_in_full_page = null;
+				}
 			};
 			const on_focus = () => {
 				frappe.db
@@ -73,6 +77,8 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 						);
 					});
 			};
+			this.panel_manager.cleanup_edit_in_full_page?.();
+			this.panel_manager.cleanup_edit_in_full_page = cleanup;
 			window.addEventListener("focus", on_focus);
 			window.addEventListener("pagehide", cleanup);
 			frappe.router.once("change", cleanup);

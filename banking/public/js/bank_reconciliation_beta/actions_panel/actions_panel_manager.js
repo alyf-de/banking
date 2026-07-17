@@ -7,6 +7,9 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 	}
 
 	make() {
+		// Drop stale focus listeners from a previous "Edit in Full Page" flow
+		this.panel_manager.cleanup_edit_in_full_page?.();
+
 		this.init_actions_container();
 		this.render_tabs();
 
