@@ -108,8 +108,18 @@ def reconcile_if_pending(doc, method: str | None = None) -> None:
 		row.payment_document == doc.doctype and row.payment_entry == doc.name
 		for row in transaction.payment_entries
 	)
-	if already_linked or flt(transaction.unallocated_amount) <= 0:
+	if already_linked:
 		clear_pending_reconcile(doc.doctype, doc.name)
+		return
+
+	if flt(transaction.unallocated_amount) <= 0:
+		# Concurrent reconcile may have consumed the BT between before_submit and on_submit.
+		clear_pending_reconcile(doc.doctype, doc.name)
+		frappe.log_error(
+			title=_("Cannot reconcile {0} {1} with Bank Transaction {2}: no unallocated amount left").format(
+				doc.doctype, doc.name, transaction_name
+			)
+		)
 		return
 
 	bank_gl_account = frappe.db.get_value("Bank Account", transaction.bank_account, "account")
