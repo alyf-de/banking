@@ -11,12 +11,14 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		this.filter_group = null;
 		this._debounced_fetch = null;
 		this.rendered_for = null;
+		this.rendered_readonly = false;
 	}
 
 	teardown() {
 		this.filter_group = null;
 		this.$stats_el = null;
 		this.rendered_for = null;
+		this.rendered_readonly = false;
 	}
 
 	needs_filter_rerender() {
@@ -27,15 +29,7 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 			return true;
 		}
 		// Submitted rules disable filter controls; duplicate as draft must rebuild editable UI.
-		if (
-			this.frm.doc.docstatus === 0 &&
-			this.frm.fields_dict?.filter_area?.$wrapper?.find(
-				".form-control:disabled"
-			).length
-		) {
-			return true;
-		}
-		return false;
+		return this.rendered_readonly && this.frm.doc.docstatus === 0;
 	}
 
 	static filters_to_route_options(filters) {
@@ -63,17 +57,6 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		return opts;
 	}
 
-	merge_list_filters(user_filters) {
-		const merged = user_filters.map((row) => row.slice(0, 4));
-		merged.push([
-			"Bank Transaction",
-			"bank_account",
-			"=",
-			this.frm.doc.bank_account,
-		]);
-		return merged;
-	}
-
 	open_bank_transaction_list() {
 		if (!this.frm.doc.bank_account) {
 			frappe.throw(__("Set a Bank Account first."));
@@ -82,7 +65,13 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		if (!user_filters.length) {
 			frappe.throw(__("Please define at least one filter."));
 		}
-		const merged = this.merge_list_filters(user_filters);
+		const merged = user_filters.map((row) => row.slice(0, 4));
+		merged.push([
+			"Bank Transaction",
+			"bank_account",
+			"=",
+			this.frm.doc.bank_account,
+		]);
 		frappe.route_options = this.constructor.filters_to_route_options(merged);
 		frappe.set_route("List", "Bank Transaction");
 	}
@@ -114,14 +103,14 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		}
 	}
 
-	get_debounced_fetch() {
+	schedule_fetch() {
 		if (!this._debounced_fetch) {
 			this._debounced_fetch = frappe.utils.debounce(
 				() => this.fetch_and_show(),
 				400
 			);
 		}
-		return this._debounced_fetch;
+		this._debounced_fetch();
 	}
 
 	async fetch_and_show() {
@@ -139,13 +128,7 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 			return;
 		}
 
-		let user_filters = [];
-		try {
-			user_filters = this.get_user_filters();
-		} catch (e) {
-			user_filters = [];
-		}
-
+		const user_filters = this.get_user_filters();
 		if (!user_filters.length) {
 			$el.html(
 				`<p class="text-muted small mb-0">${__(
@@ -206,6 +189,7 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 	}
 
 	mount(parent) {
+		this.rendered_readonly = this.frm.doc.docstatus !== 0;
 		this.$stats_el = $('<div class="brr-match-stats form-group"></div>');
 		parent.append(this.$stats_el);
 		this.fetch_and_show();

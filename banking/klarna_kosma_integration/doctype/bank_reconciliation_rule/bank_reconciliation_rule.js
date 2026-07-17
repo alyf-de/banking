@@ -37,7 +37,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 	},
 	bank_account(frm) {
 		frm.trigger("set_target_account_query");
-		frm.stats_manager?.get_debounced_fetch()();
+		frm.stats_manager?.schedule_fetch();
 	},
 	async set_target_account_query(frm) {
 		if (!frm.doc.bank_account) {
@@ -99,14 +99,14 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 				doctype: "Bank Transaction",
 				on_change: () => {
 					frm.set_value("filters", JSON.stringify(filter_group.get_filters()));
-					stats.get_debounced_fetch()();
+					stats.schedule_fetch();
 				},
 			});
 
 			stats.filter_group = filter_group;
 
 			const after_filters_ready = () => {
-				if (frm.doc.docstatus === 1) {
+				if (frm.doc.docstatus !== 0) {
 					parent.find(".filter-action-buttons").remove();
 					parent.find(".divider").remove();
 					parent.find(".remove-filter").remove();
