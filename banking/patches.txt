@@ -12,4 +12,5 @@ execute:from banking.install import insert_custom_records; insert_custom_records
 banking.patches.set_voucher_matching_defaults
 banking.patches.download_batch_transactions
 banking.patches.truncate_legacy_filter_hidden_flag
+banking.patches.add_voucher_reservation_fields
 execute:from banking.install import make_property_setters; make_property_setters()

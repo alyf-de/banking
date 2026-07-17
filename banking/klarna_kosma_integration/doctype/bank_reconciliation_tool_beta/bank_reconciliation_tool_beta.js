@@ -273,6 +273,9 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 	build_reconciliation_area: function (frm) {
 		frappe.require("bank_reconciliation_beta.bundle.js", () => {
+			if (frm.panel_manager?.cleanup_voucher_watches) {
+				frm.panel_manager.cleanup_voucher_watches();
+			}
 			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
 				{
 					frm: frm,
