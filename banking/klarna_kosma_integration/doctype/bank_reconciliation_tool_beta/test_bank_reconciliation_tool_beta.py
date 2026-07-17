@@ -13,11 +13,6 @@ from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import (
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 	create_sales_invoice,
 )
-from erpnext.accounts.report.trial_balance.test_trial_balance import (
-	clear_dimension_defaults,
-	create_accounting_dimension,
-	disable_dimension,
-)
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
@@ -59,18 +54,31 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account", 1
 		)
 
-		create_accounting_dimension(
-			company="_Test Company",
-			offsetting_account=frappe.db.get_value("Company", "_Test Company", "default_receivable_account"),
+		dimension = frappe.get_doc("Accounting Dimension", "Branch")
+		dimension.disabled = 0
+		dimension.set("dimension_defaults", [])
+		dimension.append(
+			"dimension_defaults",
+			{
+				"company": "_Test Company",
+				"automatically_post_balancing_accounting_entry": 1,
+				"offsetting_account": frappe.db.get_value(
+					"Company", "_Test Company", "default_receivable_account"
+				),
+			},
 		)
+		dimension.save()
+
 		cls.branch = "_Test Bank Reco Branch"
 		frappe.get_doc({"doctype": "Branch", "branch": cls.branch}).insert(ignore_if_duplicate=True)
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	@classmethod
 	def tearDownClass(cls) -> None:
-		clear_dimension_defaults("Branch")
-		disable_dimension()
+		dimension = frappe.get_doc("Accounting Dimension", "Branch")
+		dimension.set("dimension_defaults", [])
+		dimension.disabled = 1
+		dimension.save()
 		super().tearDownClass()
 
 	def tearDown(self) -> None:
