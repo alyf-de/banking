@@ -50,7 +50,7 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 				opts[field] = op === "=" ? value : [op, value];
 			} else {
 				opts[field] = conditions.map(([op, value]) =>
-					JSON.stringify([op, value])
+					JSON.stringify([op, value]),
 				);
 			}
 		}
@@ -107,7 +107,7 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		if (!this._debounced_fetch) {
 			this._debounced_fetch = frappe.utils.debounce(
 				() => this.fetch_and_show(),
-				400
+				400,
 			);
 		}
 		this._debounced_fetch();
@@ -122,8 +122,8 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		if (!this.frm.doc.bank_account) {
 			$el.html(
 				`<p class="text-muted small mb-0">${__(
-					"Set a Bank Account to see match counts."
-				)}</p>`
+					"Set a Bank Account to see match counts.",
+				)}</p>`,
 			);
 			return;
 		}
@@ -132,8 +132,8 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		if (!user_filters.length) {
 			$el.html(
 				`<p class="text-muted small mb-0">${__(
-					"Add at least one filter to see match counts."
-				)}</p>`
+					"Add at least one filter to see match counts.",
+				)}</p>`,
 			);
 			return;
 		}
@@ -164,8 +164,8 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 			if (request_id === this.request_id) {
 				$el.html(
 					`<p class="text-danger small mb-0">${__(
-						"Could not load match counts."
-					)}</p>`
+						"Could not load match counts.",
+					)}</p>`,
 				);
 			}
 			return;
@@ -186,13 +186,13 @@ banking.bank_reconciliation.BankReconciliationRuleStatsManager = class BankRecon
 		const title = __("Submitted Bank Transactions matching this rule:");
 		const counts = __(
 			"{0} in the last 30 days, {1} in the last 12 months (365 days).",
-			[format_count(data.last_30_days), format_count(data.last_12_months)]
+			[format_count(data.last_30_days), format_count(data.last_12_months)],
 		);
 
 		$el.html(
 			`<p class="text-muted small mb-0"><strong>${frappe.utils.escape_html(
-				title
-			)}</strong> ${frappe.utils.escape_html(counts)}</p>`
+				title,
+			)}</strong> ${frappe.utils.escape_html(counts)}</p>`,
 		);
 	}
 

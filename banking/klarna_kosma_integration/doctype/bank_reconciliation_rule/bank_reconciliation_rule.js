@@ -7,7 +7,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 			if (!frm.stats_manager) {
 				frm.stats_manager =
 					new banking.bank_reconciliation.BankReconciliationRuleStatsManager(
-						frm
+						frm,
 					);
 			}
 			const stats = frm.stats_manager;
@@ -16,12 +16,14 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 			frm.remove_custom_button(__("Open Matches"));
 			const filters_json =
 				frm.doc.filters && frm.doc.filters !== "[]" ? frm.doc.filters : "[]";
-			let has_filters = false;
+
+			let has_filters;
 			try {
 				has_filters = JSON.parse(filters_json).length > 0;
 			} catch (e) {
 				has_filters = false;
 			}
+
 			if (frm.doc.bank_account && has_filters) {
 				frm.add_custom_button(__("Open Matches"), () => {
 					stats.open_bank_transaction_list();
@@ -122,8 +124,8 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 				frappe
 					.run_serially(
 						filters.map(
-							(f) => () => filter_group.add_filter(f[0], f[1], f[2], f[3])
-						)
+							(f) => () => filter_group.add_filter(f[0], f[1], f[2], f[3]),
+						),
 					)
 					.then(() => {
 						filter_group.update_filters();

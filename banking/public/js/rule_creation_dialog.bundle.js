@@ -61,14 +61,14 @@ banking.bank_reconciliation.show_rule_creation_dialog = function (doc) {
 	}
 	if (!frappe.model.can_create("Bank Reconciliation Rule")) {
 		frappe.throw(
-			__("You do not have permission to create a Bank Reconciliation Rule.")
+			__("You do not have permission to create a Bank Reconciliation Rule."),
 		);
 	}
 
 	const field_rows = get_visible_field_rows(doc);
 	if (!field_rows.length) {
 		frappe.msgprint(
-			__("No filterable field values are set on this Bank Transaction.")
+			__("No filterable field values are set on this Bank Transaction."),
 		);
 		return;
 	}
@@ -80,7 +80,7 @@ banking.bank_reconciliation.show_rule_creation_dialog = function (doc) {
 			return `<tr class="rule-creation-filter-row">
 				<td class="text-center" style="width:3rem;">
 					<input type="checkbox" class="rule-creation-filter-cb" data-fieldname="${frappe.utils.escape_html(
-						row.fieldname
+						row.fieldname,
 					)}" checked />
 				</td>
 				<td>${label}</td>
