@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from erpnext.accounts.doctype.account.test_account import create_account
 
 
 def set_automatic_bank_fee_entries(enabled: bool) -> None:
@@ -17,10 +16,46 @@ def get_bank_parent_account(company: str = "_Test Company") -> str:
 	return frappe.db.get_value("Account", {"account_type": "Bank", "is_group": 1, "company": company})
 
 
+def _create_account(
+	*,
+	account_name: str,
+	parent_account: str,
+	company: str,
+	account_type: str | None = None,
+	account_currency: str | None = None,
+	is_group: int = 0,
+) -> str:
+	"""Create or update an Account without importing ERPNext test bootstrap."""
+	existing = frappe.db.get_value(
+		"Account",
+		{"account_name": account_name, "company": company},
+	)
+	if existing:
+		account = frappe.get_doc("Account", existing)
+		account.is_group = is_group
+		account.parent_account = parent_account
+		account.save()
+		return account.name
+
+	account = frappe.get_doc(
+		{
+			"doctype": "Account",
+			"is_group": is_group,
+			"account_name": account_name,
+			"account_type": account_type,
+			"parent_account": parent_account,
+			"company": company,
+			"account_currency": account_currency,
+		}
+	)
+	account.save()
+	return account.name
+
+
 def create_currency_account(
 	currency: str, parent_account: str, account_name: str, company: str = "_Test Company"
 ):
-	account = create_account(
+	account = _create_account(
 		account_name=account_name,
 		account_type="Bank",
 		parent_account=parent_account,

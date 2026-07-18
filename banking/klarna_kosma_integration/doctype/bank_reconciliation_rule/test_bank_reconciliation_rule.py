@@ -18,37 +18,12 @@ from banking.testing_utils import create_bank_account, create_currency_account
 test_dependencies = ["Company", "Account"]
 
 
-def _group_account_with_parent(company: str) -> str:
-	name = frappe.db.get_value(
-		"Account",
-		{"company": company, "is_group": 1, "parent_account": ["!=", ""]},
-		"name",
-	)
-	if not name:
-		raise RuntimeError(f"No suitable group Account found for company {company!r}")
-	return name
-
-
-def _resolved_test_company() -> str:
-	if frappe.db.exists("Company", TEST_COMPANY):
-		return TEST_COMPANY
-	name = frappe.db.get_value("Company", {}, "name", order_by="creation asc")
-	if not name:
-		raise RuntimeError("No Company found for banking tests")
-	return name
-
-
 class TestBankReconciliationRule(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
 
-<<<<<<< HEAD
 		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": "_Test Company"})
-=======
-		cls.test_company = _resolved_test_company()
-		parent_account = _group_account_with_parent(cls.test_company)
->>>>>>> 1eea476 (feat: Bank Reconciliation Rule Preview & Filter Preset (#366))
 		bank_account = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
 		cls.target_account = create_currency_account("USD", parent_account, "_Test_Account_USD")
 		cls.ba = create_bank_account(bank_account.name)
@@ -81,12 +56,13 @@ class TestBankReconciliationRule(FrappeTestCase):
 	)
 	def test_get_bank_transaction_match_stats_windows(self, _mock_today):
 		desc = "STAT-COUNT-BRR-359"
-		filters = json.dumps([["Bank Transaction", "description", "=", desc, False]])
+		filters = json.dumps([["Bank Transaction", "description", "=", desc]])
 
 		def _insert_submitted_bt(posting_date: str):
 			bt = frappe.new_doc("Bank Transaction")
-			bt.company = self.test_company
+			bt.company = "_Test Company"
 			bt.bank_account = self.ba.name
+			bt.currency = "EUR"
 			bt.deposit = 1.0
 			bt.date = posting_date
 			bt.description = desc
@@ -106,15 +82,10 @@ class TestBankReconciliationRule(FrappeTestCase):
 			frappe.db.delete("Bank Transaction", {"description": desc})
 
 	def test_get_bank_transaction_match_stats_bank_account_mismatch(self):
-		parent_account = _group_account_with_parent(self.test_company)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": "_Test Company"})
 		eur_target = create_currency_account("EUR", parent_account, "_Test_BRR_EUR_Tgt_Mis")
 		other_bank_acc = create_currency_account("EUR", parent_account, "_Test_Account_EUR_BrrMis")
-		other_ba = frappe.new_doc("Bank Account")
-		other_ba.account_name = "_Test_B_Other_Mismatch"
-		other_ba.account = other_bank_acc.name
-		other_ba.bank = "_Test_Bank"
-		other_ba.is_company_account = 1
-		other_ba.insert(ignore_permissions=True, ignore_links=True)
+		other_ba = create_bank_account(other_bank_acc.name, account_name="_Test_B_Other_Mismatch")
 		rule = frappe.new_doc("Bank Reconciliation Rule")
 		rule.bank_account = self.ba.name
 		rule.target_account = eur_target.name

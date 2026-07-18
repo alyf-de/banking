@@ -7,7 +7,6 @@ from typing import Any
 import frappe
 from frappe import _
 from frappe.exceptions import ValidationError
-from frappe.model.db_query import DatabaseQuery
 from frappe.model.document import Document
 from frappe.utils import add_days, getdate, today
 from frappe.utils.data import get_filter
@@ -54,9 +53,10 @@ def _bank_transaction_stats_filters(
 def _approx_bank_transaction_count(filters: list) -> int:
 	"""Fast capped count, same approach as List View (LIMIT then count rows)."""
 	return len(
-		DatabaseQuery("Bank Transaction").execute(
+		frappe.get_list(
+			"Bank Transaction",
 			filters=filters,
-			limit=COUNT_UPPER_BOUND,
+			limit_page_length=COUNT_UPPER_BOUND,
 			order_by=None,
 			pluck="name",
 		)
