@@ -7,6 +7,8 @@ frappe.ui.form.on("Bank Transaction", {
 			frm.trigger("set_included_fee_headline");
 			frm.trigger("set_foreign_currency_included_fee_headline");
 		}
+
+		refresh_rule_creation_menu(frm);
 	},
 
 	set_included_fee_headline(frm) {
@@ -52,6 +54,25 @@ frappe.ui.form.on("Bank Transaction", {
 		);
 	},
 });
+
+function refresh_rule_creation_menu(frm) {
+	frappe.require("rule_creation_dialog.bundle.js", () => {
+		if (frm._rule_creation_menu_link) {
+			frm._rule_creation_menu_link.closest("li").remove();
+			frm._rule_creation_menu_link = null;
+		}
+		if (
+			!frm.doc.bank_account ||
+			!frappe.model.can_create("Bank Reconciliation Rule")
+		) {
+			return;
+		}
+		frm._rule_creation_menu_link = frm.page.add_menu_item(
+			__("Create Reconciliation Rule"),
+			() => banking.bank_reconciliation.show_rule_creation_dialog(frm.doc)
+		);
+	});
+}
 
 function has_deposit_with_included_fee(frm) {
 	return (

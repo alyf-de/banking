@@ -32,11 +32,34 @@ class CustomBankTransaction(BankTransaction):
 		if self.unallocated_amount <= 0.0:
 			frappe.throw(frappe._("Bank Transaction {0} is already fully reconciled").format(self.name))
 
+		self.assert_reservation_allows(vouchers)
+
 		pe_length_before = len(self.payment_entries)
 		self.reconcile_paid_vouchers(vouchers)
 
 		if len(self.payment_entries) != pe_length_before:
 			self.save()  # runs on_update_after_submit
+
+	def assert_reservation_allows(self, vouchers: list):
+		"""Reject payment entries other than the reserved voucher while a reservation is active."""
+		if not self.reserved_voucher:
+			return
+
+		for voucher in vouchers:
+			voucher_type, voucher_name = voucher["payment_doctype"], voucher["payment_name"]
+			if voucher_type == self.reserved_voucher_type and voucher_name == self.reserved_voucher:
+				continue
+
+			frappe.throw(
+				_(
+					"Bank Transaction {0} is reserved by draft {1} {2}. "
+					"Submit or delete that voucher before reconciling other entries."
+				).format(
+					frappe.bold(self.name),
+					_(self.reserved_voucher_type),
+					frappe.bold(self.reserved_voucher),
+				)
+			)
 
 	def validate_period_closing(self):
 		"""
@@ -99,7 +122,9 @@ class CustomBankTransaction(BankTransaction):
 
 
 def on_update_after_submit(doc, event):
-	"""Validate if the Bank Transaction is over-allocated."""
+	"""Validate reservation and over-allocation after submit."""
+	_validate_new_payment_entries_against_reservation(doc)
+
 	to_allocate = flt(doc.withdrawal or doc.deposit)
 	for entry in doc.payment_entries:
 		to_allocate -= flt(entry.allocated_amount)
@@ -111,6 +136,33 @@ def on_update_after_submit(doc, event):
 				),
 				title=_("Over Allocation"),
 			)
+
+
+def _validate_new_payment_entries_against_reservation(doc):
+	if not doc.reserved_voucher:
+		return
+
+	before = doc.get_doc_before_save()
+	before_keys = {
+		(entry.payment_document, entry.payment_entry) for entry in (before.payment_entries if before else [])
+	}
+	reserved_key = (doc.reserved_voucher_type, doc.reserved_voucher)
+
+	for entry in doc.payment_entries:
+		key = (entry.payment_document, entry.payment_entry)
+		if key in before_keys or key == reserved_key:
+			continue
+
+		frappe.throw(
+			_(
+				"Bank Transaction {0} is reserved by draft {1} {2}. "
+				"Submit or delete that voucher before reconciling other entries."
+			).format(
+				frappe.bold(doc.name),
+				_(doc.reserved_voucher_type),
+				frappe.bold(doc.reserved_voucher),
+			)
+		)
 
 
 def has_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") -> bool:
