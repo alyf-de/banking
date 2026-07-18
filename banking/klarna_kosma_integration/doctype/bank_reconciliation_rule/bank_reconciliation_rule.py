@@ -35,11 +35,11 @@ def _normalize_filter_rows(raw_filters: list) -> list[list[Any]]:
 
 
 def _bank_transaction_stats_filters(
-	user_filters: list,
+	normalized_filters: list,
 	bank_account: str,
 	min_date: str,
 ) -> list[list[Any]]:
-	filters = _normalize_filter_rows(user_filters)
+	filters = list(normalized_filters)
 	filters.extend(
 		[
 			["Bank Transaction", "bank_account", "=", bank_account],
@@ -92,6 +92,7 @@ def get_bank_transaction_match_stats(
 	if not isinstance(user_filters, list) or not user_filters:
 		frappe.throw(_("Please define at least one filter"))
 
+	normalized_filters = _normalize_filter_rows(user_filters)
 	as_of = getdate(today())
 	# Match UI wording: transactions with *date* on or after (today - 30) / (today - 365).
 	min_30 = add_days(as_of, -30)
@@ -99,10 +100,10 @@ def get_bank_transaction_match_stats(
 
 	return {
 		"last_30_days": _approx_bank_transaction_count(
-			_bank_transaction_stats_filters(user_filters, bank_account, min_30)
+			_bank_transaction_stats_filters(normalized_filters, bank_account, min_30)
 		),
 		"last_12_months": _approx_bank_transaction_count(
-			_bank_transaction_stats_filters(user_filters, bank_account, min_365)
+			_bank_transaction_stats_filters(normalized_filters, bank_account, min_365)
 		),
 		"as_of": as_of,
 		"count_upper_bound": COUNT_UPPER_BOUND,
