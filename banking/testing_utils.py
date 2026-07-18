@@ -34,6 +34,8 @@ def _create_account(
 		account = frappe.get_doc("Account", existing)
 		account.is_group = is_group
 		account.parent_account = parent_account
+		account.account_type = account_type
+		account.account_currency = account_currency
 		account.save()
 		return account.name
 
