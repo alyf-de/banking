@@ -240,7 +240,7 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 
 	for name in sorted(main_data):
 		camt_document = CAMTDocument(xml=main_data[name], camt54=batch_data)
-		bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
+		bank_account = get_bank_account(camt_document.iban, user.bank)
 		if not bank_account:
 			frappe.log_error(
 				title=_("Banking Error"),
@@ -273,7 +273,7 @@ def validated_perms(ebics_user, permitted_types, required_type):
 		)
 
 
-def get_bank_account(iban: str, bank: str, company: str) -> str | None:
+def get_bank_account(iban: str, bank: str) -> str | None:
 	return frappe.db.get_value(
 		"Bank Account",
 		{
@@ -281,7 +281,6 @@ def get_bank_account(iban: str, bank: str, company: str) -> str | None:
 			"disabled": 0,
 			"bank": bank,
 			"is_company_account": 1,
-			"company": company,
 		},
 	)
 
