@@ -253,9 +253,8 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 		process_camt_document(
 			camt_document,
 			bank_account,
-			user.company,
-			user.start_date,
-			user.split_batch_transactions,
+			earliest_date=user.start_date,
+			split_batch_transactions=user.split_batch_transactions,
 		)
 
 
@@ -288,12 +287,10 @@ def get_bank_account(iban: str, bank: str) -> str | None:
 def process_camt_document(
 	camt_document: CAMTDocument,
 	bank_account: str,
-	company: str | None = None,
 	earliest_date: date | None = None,
 	split_batch_transactions: bool = False,
 ):
-	if not company:
-		company = frappe.db.get_value("Bank Account", bank_account, "company")
+	company = frappe.db.get_value("Bank Account", bank_account, "company")
 
 	for transaction in camt_document:
 		if transaction.status and transaction.status != "BOOK":
