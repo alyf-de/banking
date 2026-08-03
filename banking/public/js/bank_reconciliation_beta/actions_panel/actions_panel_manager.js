@@ -10,10 +10,15 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		this.init_actions_container();
 		this.render_tabs();
 
-		// Default to last selected tab
-		this.$actions_container
-			.find("#" + this.panel_manager.actions_tab)
-			.trigger("click");
+		// Default to last selected tab (Match is unavailable for reserved drafts)
+		let default_tab = this.panel_manager.actions_tab;
+		if (
+			this.transaction.reserved_voucher &&
+			default_tab === "match_voucher-tab"
+		) {
+			default_tab = "create_voucher-tab";
+		}
+		this.$actions_container.find("#" + default_tab).trigger("click");
 	}
 
 	init_actions_container() {
@@ -46,27 +51,13 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 		this.tabs_list_ul = this.$actions_container.find(".form-tabs");
 		this.$tab_content = this.$actions_container.find(".tab-content");
 
-		// Remove any listeners from previous tabs
-		frappe.realtime.off("doc_update");
-
+		const is_reserved = !!this.transaction.reserved_voucher;
 		const tabs = [
 			{
 				tab_name: "details",
 				tab_label: __("Details"),
 				make_tab: () => {
 					return new erpnext.accounts.bank_reconciliation.DetailsTab({
-						actions_panel: this,
-						transaction: this.transaction,
-						panel_manager: this.panel_manager,
-						frm: this.frm,
-					});
-				},
-			},
-			{
-				tab_name: "match_voucher",
-				tab_label: __("Match Voucher"),
-				make_tab: () => {
-					return new erpnext.accounts.bank_reconciliation.MatchTab({
 						actions_panel: this,
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
@@ -83,10 +74,31 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
 						company: this.frm.doc.company,
+						accounting_dimensions:
+							this.panel_manager.accounting_dimensions || [],
+						accounting_dimension_defaults:
+							this.panel_manager.accounting_dimension_defaults || {},
+						company_default_cost_center:
+							this.panel_manager.company_default_cost_center,
 					});
 				},
 			},
 		];
+
+		if (!is_reserved) {
+			tabs.splice(1, 0, {
+				tab_name: "match_voucher",
+				tab_label: __("Match Voucher"),
+				make_tab: () => {
+					return new erpnext.accounts.bank_reconciliation.MatchTab({
+						actions_panel: this,
+						transaction: this.transaction,
+						panel_manager: this.panel_manager,
+						frm: this.frm,
+					});
+				},
+			});
+		}
 
 		for (const { tab_name, tab_label, make_tab } of tabs) {
 			this.add_tab(tab_name, tab_label);

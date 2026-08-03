@@ -6,6 +6,8 @@ app_email = "hallo@alyf.de"
 app_license = "GPLv3"
 notification_email_logo = "/assets/banking/images/alyf-logo.png"
 
+required_apps = ["frappe/erpnext"]
+
 # Includes in <head>
 # ------------------
 
@@ -35,6 +37,8 @@ doctype_js = {
 	"Employee": "custom/employee.js",
 	"Supplier": "custom/supplier.js",
 	"Bank Reconciliation Tool": "custom/bank_reconciliation_tool.js",
+	"Bank Account": "custom/bank_account.js",
+	"Bank Transaction": "custom/bank_transaction.js",
 }
 doctype_list_js = {
 	"Expense Claim": "custom/expense_claim_list.js",
@@ -74,11 +78,13 @@ doctype_list_js = {
 
 # before_install = "banking.install.before_install"
 after_install = "banking.install.after_install"
+after_app_install = "banking.install.after_app_install"
 
 # Uninstallation
 # ------------
 
 before_uninstall = "banking.uninstall.before_uninstall"
+before_app_uninstall = "banking.uninstall.before_app_uninstall"
 # after_uninstall = "banking.uninstall.after_uninstall"
 
 # Desk Notifications
@@ -117,8 +123,17 @@ doc_events = {
 		"before_submit": "banking.overrides.bank_transaction.before_submit",
 		"on_cancel": "banking.overrides.bank_transaction.on_cancel",
 	},
+	"Journal Entry": {
+		"on_submit": "banking.overrides.voucher_reconciliation.reconcile_created_from_bank_transaction",
+		"on_trash": "banking.overrides.voucher_reconciliation.release_bank_transaction_reservation",
+	},
+	"Payment Entry": {
+		"on_submit": "banking.overrides.voucher_reconciliation.reconcile_created_from_bank_transaction",
+		"on_trash": "banking.overrides.voucher_reconciliation.release_bank_transaction_reservation",
+	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
+		"validate": "banking.overrides.bank_account.validate",
 	},
 	"Employee": {
 		"validate": "banking.custom.employee.validate",
@@ -257,6 +272,7 @@ alyf_banking_custom_records = [
 		"link_doctype": "SEPA Payment Order",
 		"link_fieldname": "reference_name",
 		"custom": 1,
+		"_required_apps": ["hrms"],
 	},
 	{
 		"doctype": "DocType Link",

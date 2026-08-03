@@ -2,14 +2,44 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Bank Reconciliation Rule", {
-	onload: function (frm) {
-		frm.trigger("render_bt_filters");
-	},
 	refresh(frm) {
-		frm.trigger("set_target_account_query");
+		frappe.require("bank_reconciliation_rule_stats.bundle.js", () => {
+			if (!frm.stats_manager) {
+				frm.stats_manager =
+					new banking.bank_reconciliation.BankReconciliationRuleStatsManager(
+						frm,
+					);
+			}
+			const stats = frm.stats_manager;
+
+			frm.trigger("set_target_account_query");
+			frm.remove_custom_button(__("Open Matches"));
+			const filters_json =
+				frm.doc.filters && frm.doc.filters !== "[]" ? frm.doc.filters : "[]";
+
+			let has_filters;
+			try {
+				has_filters = JSON.parse(filters_json).length > 0;
+			} catch (e) {
+				has_filters = false;
+			}
+
+			if (frm.doc.bank_account && has_filters) {
+				frm.add_custom_button(__("Open Matches"), () => {
+					stats.open_bank_transaction_list();
+				});
+			}
+
+			if (stats.needs_filter_rerender()) {
+				frm.trigger("render_bt_filters");
+			} else {
+				stats.fetch_and_show();
+			}
+		});
 	},
 	bank_account(frm) {
 		frm.trigger("set_target_account_query");
+		frm.stats_manager?.schedule_fetch();
 	},
 	async set_target_account_query(frm) {
 		if (!frm.doc.bank_account) {
@@ -49,13 +79,21 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		}));
 	},
 	render_bt_filters(frm) {
+		const stats = frm.stats_manager;
+		stats.teardown();
+
 		const parent = frm.fields_dict.filter_area.$wrapper;
 		parent.empty();
 
-		const filters =
-			frm.doc.filters && frm.doc.filters !== "[]"
-				? JSON.parse(frm.doc.filters)
-				: [];
+		let filters = [];
+		try {
+			if (frm.doc.filters && frm.doc.filters !== "[]") {
+				const parsed = JSON.parse(frm.doc.filters);
+				filters = Array.isArray(parsed) ? parsed : [];
+			}
+		} catch (e) {
+			filters = [];
+		}
 
 		frappe.model.with_doctype("Bank Transaction", () => {
 			const filter_group = new frappe.ui.FilterGroup({
@@ -63,16 +101,41 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 				doctype: "Bank Transaction",
 				on_change: () => {
 					frm.set_value("filters", JSON.stringify(filter_group.get_filters()));
+					stats.schedule_fetch();
 				},
 			});
 
-			filter_group.add_filters_to_filter_group(filters);
+			stats.filter_group = filter_group;
 
-			if (frm.doc.docstatus === 1) {
-				parent.find(".filter-action-buttons").remove();
-				parent.find(".divider").remove();
-				parent.find(".remove-filter").remove();
-				parent.find(".form-control").prop("disabled", true);
+			const after_filters_ready = () => {
+				if (frm.doc.docstatus !== 0) {
+					parent.find(".filter-action-buttons").remove();
+					parent.find(".divider").remove();
+					parent.find(".remove-filter").remove();
+					parent.find(".form-control").prop("disabled", true);
+				}
+
+				stats.rendered_for = frm.docname;
+				stats.mount(parent);
+			};
+
+			if (filters.length) {
+				filter_group.toggle_empty_filters(false);
+				frappe
+					.run_serially(
+						filters.map(
+							(f) => () => filter_group.add_filter(f[0], f[1], f[2], f[3]),
+						),
+					)
+					.then(() => {
+						filter_group.update_filters();
+						after_filters_ready();
+					})
+					.catch(() => {
+						after_filters_ready();
+					});
+			} else {
+				after_filters_ready();
 			}
 		});
 	},

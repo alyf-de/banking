@@ -5,7 +5,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import BankTrans
 from frappe import _
 from frappe.core.utils import find
 from frappe.utils import flt, getdate
-from frappe.utils.data import evaluate_filters
+from frappe.utils.data import evaluate_filters, get_link_to_form
 
 
 class CustomBankTransaction(BankTransaction):
@@ -41,11 +41,34 @@ class CustomBankTransaction(BankTransaction):
 		if self.unallocated_amount <= 0.0:
 			frappe.throw(frappe._("Bank Transaction {0} is already fully reconciled").format(self.name))
 
+		self.assert_reservation_allows(vouchers)
+
 		pe_length_before = len(self.payment_entries)
 		self.reconcile_paid_vouchers(vouchers)
 
 		if len(self.payment_entries) != pe_length_before:
 			self.save()  # runs on_update_after_submit
+
+	def assert_reservation_allows(self, vouchers: list):
+		"""Reject payment entries other than the reserved voucher while a reservation is active."""
+		if not self.reserved_voucher:
+			return
+
+		for voucher in vouchers:
+			voucher_type, voucher_name = voucher["payment_doctype"], voucher["payment_name"]
+			if voucher_type == self.reserved_voucher_type and voucher_name == self.reserved_voucher:
+				continue
+
+			frappe.throw(
+				_(
+					"Bank Transaction {0} is reserved by draft {1} {2}. "
+					"Submit or delete that voucher before reconciling other entries."
+				).format(
+					frappe.bold(self.name),
+					_(self.reserved_voucher_type),
+					frappe.bold(self.reserved_voucher),
+				)
+			)
 
 	def validate_period_closing(self):
 		"""
@@ -103,9 +126,14 @@ class CustomBankTransaction(BankTransaction):
 		for fieldname in ["deposit", "withdrawal", "included_fee", "excluded_fee"]:
 			self.convert_to_positive_value(fieldname)
 
+	def get_rounded(self, fieldname: str) -> float:
+		return flt(self.get(fieldname), self.precision(fieldname))
+
 
 def on_update_after_submit(doc, event):
-	"""Validate if the Bank Transaction is over-allocated."""
+	"""Validate reservation and over-allocation after submit."""
+	_validate_new_payment_entries_against_reservation(doc)
+
 	to_allocate = flt(doc.withdrawal or doc.deposit)
 	for entry in doc.payment_entries:
 		to_allocate -= flt(entry.allocated_amount)
@@ -119,6 +147,53 @@ def on_update_after_submit(doc, event):
 			)
 
 
+def _validate_new_payment_entries_against_reservation(doc):
+	if not doc.reserved_voucher:
+		return
+
+	before = doc.get_doc_before_save()
+	before_keys = {
+		(entry.payment_document, entry.payment_entry) for entry in (before.payment_entries if before else [])
+	}
+	reserved_key = (doc.reserved_voucher_type, doc.reserved_voucher)
+
+	for entry in doc.payment_entries:
+		key = (entry.payment_document, entry.payment_entry)
+		if key in before_keys or key == reserved_key:
+			continue
+
+		frappe.throw(
+			_(
+				"Bank Transaction {0} is reserved by draft {1} {2}. "
+				"Submit or delete that voucher before reconciling other entries."
+			).format(
+				frappe.bold(doc.name),
+				_(doc.reserved_voucher_type),
+				frappe.bold(doc.reserved_voucher),
+			)
+		)
+
+
+def has_zero_transaction_amount_with_included_fee(doc: CustomBankTransaction) -> bool:
+	return (
+		doc.get_rounded("deposit") == 0
+		and doc.get_rounded("withdrawal") == 0
+		and doc.get_rounded("included_fee") > 0
+	)
+
+
+def log_zero_transaction_amount_with_included_fee(doc: CustomBankTransaction) -> None:
+	frappe.log_error(
+		title=_("Unsupported Bank Transaction with included fee"),
+		message=_(
+			"Bank Transaction {0} has no deposit or withdrawal but has an included fee of {1}. "
+			"Automatic bank fee reconciliation was skipped; please review manually."
+		).format(doc.name, doc.get_formatted("included_fee")),
+		reference_doctype="Bank Transaction",
+		reference_name=doc.name,
+	)
+
+
 def before_submit(doc: CustomBankTransaction, method):
 	date = doc.date or frappe.utils.nowdate()
 
@@ -129,25 +204,93 @@ def before_submit(doc: CustomBankTransaction, method):
 			)
 		)
 
-	if doc.deposit == 0 and doc.withdrawal == 0:
+	if has_zero_transaction_amount_with_included_fee(doc):
+		log_zero_transaction_amount_with_included_fee(doc)
 		return
 
-	for fieldname in ["deposit", "withdrawal"]:
-		value = doc.get(fieldname)
-		if value is None:
-			continue
-		if value < 0:
+	if doc.get_rounded("deposit") == 0 and doc.get_rounded("withdrawal") == 0:
+		return
+
+	for fieldname in ["deposit", "withdrawal", "included_fee"]:
+		if doc.get_rounded(fieldname) < 0:
 			frappe.throw(
 				_("The field {0} is negative. Please verify the input data.").format(
 					_(doc.meta.get_label(fieldname))
 				)
 			)
 
+	if doc.get_rounded("withdrawal") and doc.get_rounded("included_fee") > doc.get_rounded("withdrawal"):
+		frappe.throw(
+			_("The field {0} cannot be greater than {1}. Please verify the input data.").format(
+				_(doc.meta.get_label("included_fee")), _(doc.meta.get_label("withdrawal"))
+			)
+		)
+
 	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
 	account = frappe.get_cached_value("Bank Account", doc.bank_account, "account")
-	debit, credit = (doc.deposit, 0) if doc.deposit else (0, doc.withdrawal)
+	debit, credit = (
+		(doc.get_rounded("deposit"), 0.0)
+		if doc.get_rounded("deposit")
+		else (0.0, doc.get_rounded("withdrawal"))
+	)
+
+	if flt(frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")):
+		create_je_bank_fees(doc, cost_center, date, account, debit, credit)
 
 	create_je_automatic_rules(doc, cost_center, date, account, debit, credit)
+
+
+def create_je_bank_fees(doc, cost_center, date, account, debit, credit):
+	# Create a journal entry for included bank fees.
+	included_fee = doc.included_fee
+
+	if included_fee is None or included_fee <= 0:
+		return
+
+	# Only create fee JEs for withdrawals. Deposit-side fees are deferred
+	# to reconciliation, where the correct counter-account is known.
+	if not flt(doc.withdrawal):
+		return
+
+	bank_fee_account = frappe.db.get_value("Bank Account", doc.bank_account, "bank_fee_account")
+	if not bank_fee_account:
+		frappe.throw(
+			_("Please specify a <i>Bank Fee Account</i> for {0}.").format(
+				get_link_to_form("Bank Account", doc.bank_account)
+			)
+		)
+
+	je_fee_name = create_automatic_journal_entry(
+		company=doc.company,
+		bank_account=doc.bank_account,
+		bank_transaction=doc.name,
+		cost_center=cost_center,
+		date=date,
+		account=account,
+		target_account=bank_fee_account,
+		debit=0,
+		credit=included_fee,
+	)
+
+	if credit > 0:
+		# Only adjust withdrawals, because deposits never include the fee in the bank amount.
+		doc.append(
+			"payment_entries",
+			{
+				"payment_document": "Journal Entry",
+				"payment_entry": je_fee_name,
+				"allocated_amount": included_fee,
+			},
+		)
+		# Recompute from the rows so existing allocations are preserved if this helper
+		# is reused outside the current submit flow.
+		doc.allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+		doc.unallocated_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - doc.allocated_amount
+	# Deposit fees are linked via the Journal Entry reference only and must stay
+	# out of the reconciliation table.
+
+	if doc.unallocated_amount == 0:
+		doc.status = "Reconciled"
 
 
 def on_cancel(doc, method):
@@ -167,6 +310,13 @@ def on_cancel(doc, method):
 
 
 def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
+	allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+	remaining_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - allocated_amount
+	if remaining_amount <= 0:
+		return
+
+	debit, credit = (remaining_amount, 0.0) if flt(doc.deposit) else (0.0, remaining_amount)
+
 	bank_reconciliation_rules = frappe.get_all(
 		"Bank Reconciliation Rule",
 		filters={
@@ -215,9 +365,10 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 				"allocated_amount": debit + credit,
 			},
 		)
-		doc.allocated_amount = (doc.allocated_amount or 0) + debit + credit
-		doc.unallocated_amount = 0
-		doc.status = "Reconciled"
+		doc.allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+		doc.unallocated_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - doc.allocated_amount
+		if doc.unallocated_amount == 0:
+			doc.status = "Reconciled"
 		break
 
 
@@ -234,7 +385,7 @@ def create_automatic_journal_entry(
 	rule: str | None = None,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
-	journal_entry.voucher_type = "Journal Entry"
+	journal_entry.voucher_type = "Bank Entry"
 	journal_entry.posting_date = date
 	journal_entry.company = company
 	journal_entry.user_remark = (
@@ -244,10 +395,10 @@ def create_automatic_journal_entry(
 		if rule
 		else _("Auto-created from Bank Transaction {0}").format(bank_transaction)
 	)
+	journal_entry.is_system_generated = 1
 	journal_entry.cheque_no = bank_transaction
 	journal_entry.cheque_date = date
 	journal_entry.multi_currency = 1
-	journal_entry.is_system_generated = 1
 
 	journal_entry.append(
 		"accounts",

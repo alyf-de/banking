@@ -46,6 +46,11 @@
 			* .account-holder-value {
 				font-weight: 600;
 			}
+
+			.reserved-draft-badge {
+				margin-left: 6px;
+				vertical-align: middle;
+			}
 		}
 	}
 
@@ -78,6 +83,14 @@
 		* .btn-primary[data-fieldname="bt_reconcile"],
 		* .btn-primary[data-fieldname="create"] {
 			float: right;
+		}
+
+		.reserved-draft-resume {
+			padding: var(--padding-md);
+
+			> p {
+				margin-bottom: var(--margin-md);
+			}
 		}
 
 		* .dt-scrollable {

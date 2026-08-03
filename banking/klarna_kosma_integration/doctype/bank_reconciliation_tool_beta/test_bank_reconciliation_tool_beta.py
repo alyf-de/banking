@@ -1,6 +1,7 @@
 # Copyright (c) 2023, ALYF GmbH and Contributors
 # See license.txt
 import json
+from unittest.mock import patch
 
 import frappe
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
@@ -14,15 +15,19 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 )
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
+from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
+	_get_valid_accounting_dimensions,
 	auto_reconcile_vouchers,
 	bulk_reconcile_vouchers,
 	create_journal_entry_bts,
 	create_payment_entry_bts,
+	get_bank_transactions,
 	get_linked_payments,
 )
 
@@ -50,7 +55,32 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account", 1
 		)
 
+		dimension = frappe.get_doc("Accounting Dimension", "Branch")
+		dimension.disabled = 0
+		dimension.set("dimension_defaults", [])
+		dimension.append(
+			"dimension_defaults",
+			{
+				"company": "_Test Company",
+				"automatically_post_balancing_accounting_entry": 1,
+				"offsetting_account": frappe.db.get_value(
+					"Company", "_Test Company", "default_receivable_account"
+				),
+			},
+		)
+		dimension.save()
+
+		cls.branch = "_Test Bank Reco Branch"
+		frappe.get_doc({"doctype": "Branch", "branch": cls.branch}).insert(ignore_if_duplicate=True)
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
+
+	@classmethod
+	def tearDownClass(cls) -> None:
+		dimension = frappe.get_doc("Accounting Dimension", "Branch")
+		dimension.set("dimension_defaults", [])
+		dimension.disabled = 1
+		dimension.save()
+		super().tearDownClass()
 
 	def tearDown(self) -> None:
 		"""Runs after each test."""
@@ -271,6 +301,65 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.status, "Reconciled")
 
+	@patch(
+		"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_accounting_dimensions"
+	)
+	def test_get_valid_accounting_dimensions(self, mock_get_accounting_dimensions):
+		mock_get_accounting_dimensions.return_value = ["test_dim", "empty_dim"]
+		dimensions_json = json.dumps(
+			{
+				"test_dim": "DIM-001",
+				"empty_dim": "",
+				"not_a_real_dimension": "ignored",
+			}
+		)
+
+		dimensions = _get_valid_accounting_dimensions(dimensions_json)
+
+		mock_get_accounting_dimensions.assert_called_once_with(as_list=True)
+		self.assertEqual(dimensions, {"test_dim": "DIM-001"})
+
+	def test_create_journal_entry_bts_applies_accounting_dimensions_to_all_rows(self):
+		project_name = frappe.db.get_value("Project", {"project_name": "_Test Bank Reco Project"}, "name")
+		if not project_name:
+			project_name = (
+				frappe.get_doc(
+					{
+						"doctype": "Project",
+						"project_name": "_Test Bank Reco Project",
+						"company": "_Test Company",
+					}
+				)
+				.insert()
+				.name
+			)
+
+		bt = create_bank_transaction(deposit=200, reference_no="jv-dim-test", bank_account=self.bank_account)
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.reference_number,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			project=project_name,
+			cost_center="Main - _TC",
+			accounting_dimensions=json.dumps({"branch": self.branch}),
+			allow_edit=True,
+		)
+
+		self.assertEqual(journal_entry.accounts[0].project, project_name)
+		self.assertEqual(journal_entry.accounts[0].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[0].branch, self.branch)
+		self.assertEqual(journal_entry.accounts[0].credit_in_account_currency, 200)
+		self.assertEqual(journal_entry.accounts[1].project, project_name)
+		self.assertEqual(journal_entry.accounts[1].cost_center, "Main - _TC")
+		self.assertEqual(journal_entry.accounts[1].branch, self.branch)
+		self.assertEqual(journal_entry.accounts[1].bank_account, self.bank_account)
+		self.assertEqual(journal_entry.accounts[1].debit_in_account_currency, 200)
+
 	def test_jv_against_transaction(self):
 		bt = create_bank_transaction(deposit=200, reference_no="abcdef123", bank_account=self.bank_account)
 		create_journal_entry_bts(
@@ -466,7 +555,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			bank_account=self.bank_account,
 			from_date=day_before_yesterday,
 			to_date=add_days(getdate(), 1),
-			filter_by_reference_date=False,
 		)
 		bt.reload()
 
@@ -588,8 +676,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		first_match, second_match = matched_vouchers[0], matched_vouchers[1]
 
@@ -631,8 +717,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		first_match = matched_vouchers[0]
 
@@ -643,6 +727,44 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["rank"], 4)
 		self.assertEqual(first_match["amount_match"], 1)
 		self.assertEqual(first_match["ref_in_desc_match"], 0)
+
+	def test_default_reference_field_matches_bank_transaction_reference_number(self):
+		si = create_sales_invoice(
+			rate=300,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			date=getdate(),
+			deposit=300,
+			reference_no=si.name,
+			bank_account=self.bank_account,
+			description="Customer transfer",
+		)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices"],
+		)
+		first_match = matched_vouchers[0]
+
+		self.assertEqual(first_match["reference_no"], si.name)
+		self.assertEqual(first_match["name"], si.name)
+		self.assertEqual(first_match["rank"], 5)
+		self.assertEqual(first_match["reference_number_match"], 1)
+
+	def test_legacy_date_filters_emit_deprecation_warning(self):
+		bt = create_bank_transaction(deposit=300, bank_account=self.bank_account)
+
+		with self.assertWarns(PendingFrappeDeprecationWarning):
+			get_linked_payments(
+				bank_transaction_name=bt.name,
+				document_types=["sales_invoice", "unpaid_invoices"],
+				from_date=add_days(getdate(), -1),
+				to_date=add_days(getdate(), 1),
+			)
 
 	def test_split_jv_match_against_transaction(self):
 		"""
@@ -662,6 +784,11 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			allow_edit=True,
 		)
 
+		# Detach from Edit-in-Full-Page auto-reconcile so matching can be tested independently
+		journal_entry.db_set("created_from_bank_transaction", None)
+		journal_entry.created_from_bank_transaction = None
+		bt.db_set({"reserved_voucher_type": None, "reserved_voucher": None})
+
 		# Split the JV Row into two
 		journal_entry.accounts[1].debit_in_account_currency = 100
 		journal_entry.append(
@@ -679,8 +806,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched_vouchers = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["journal_entry"],
-			from_date=getdate(),
-			to_date=getdate(),
 		)
 		first_match = matched_vouchers[0]
 
@@ -688,6 +813,106 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(first_match["reference_no"], bt.reference_number)
 		self.assertEqual(first_match["name"], journal_entry.name)
 		self.assertEqual(first_match["paid_amount"], 200.0)
+
+	def test_unreconcile_reoffers_fee_journal_entry(self):
+		"""Withdrawal fee JEs must be offered again once unreconciled from the BT."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank Fee Reoffer", swift_number="CITIUS36")
+		gl_account = create_bank_gl_account("_Test Fee Reoffer Bank - _TC")
+		fee_account = create_bank_gl_account("_Test Fee Reoffer Offset - _TC")
+		bank_account = frappe.get_doc(
+			{
+				"doctype": "Bank Account",
+				"account_name": "Fee Reoffer Account",
+				"bank": bank.name,
+				"account": gl_account,
+				"bank_fee_account": fee_account,
+				"company": "_Test Company",
+				"is_company_account": 1,
+			}
+		).insert()
+
+		bt = frappe.get_doc(
+			{
+				"doctype": "Bank Transaction",
+				"company": "_Test Company",
+				"description": "Withdrawal with auto-generated fee entry",
+				"date": getdate(),
+				"withdrawal": 5.0,
+				"included_fee": 1.0,
+				"currency": "INR",
+				"bank_account": bank_account.name,
+				"reference_number": "FEE-FILTER-002",
+			}
+		).insert()
+		bt.submit()
+		bt.reload()
+
+		self.assertEqual(len(bt.payment_entries), 1)
+		fee_journal_entry = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(str(fee_journal_entry.clearance_date), str(bt.date))
+
+		bt.remove_payment_entries()
+		bt.reload()
+		fee_journal_entry.reload()
+
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertFalse(bt.payment_entries)
+		self.assertIsNone(fee_journal_entry.clearance_date)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["journal_entry"],
+		)
+		matched_names = [voucher["name"] for voucher in matched_vouchers]
+
+		self.assertIn(fee_journal_entry.name, matched_names)
+		self.assertEqual(matched_vouchers[0]["paid_amount"], 1.0)
+
+	def test_cheque_number_linked_journal_entry_is_excluded_from_matches(self):
+		"""Cheque-number-linked custom JEs must stay hidden."""
+		bt = create_bank_transaction(
+			date=getdate(),
+			withdrawal=200,
+			bank_account=self.bank_account,
+			reference_no="CUSTOM-JE-001",
+		)
+		journal_entry = create_journal_entry_bts(
+			bank_transaction_name=bt.name,
+			party_type="Customer",
+			party=self.customer,
+			posting_date=bt.date,
+			reference_number=bt.name,
+			reference_date=bt.date,
+			entry_type="Bank Entry",
+			second_account=frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			allow_edit=True,
+		)
+		journal_entry.db_set("created_from_bank_transaction", None)
+		journal_entry.created_from_bank_transaction = None
+		bt.db_set({"reserved_voucher_type": None, "reserved_voucher": None})
+		journal_entry.submit()
+
+		self.assertFalse(journal_entry.is_system_generated)
+		self.assertFalse(
+			frappe.db.exists(
+				"Journal Entry Account",
+				{
+					"parent": journal_entry.name,
+					"reference_type": "Bank Transaction",
+					"reference_name": bt.name,
+				},
+			)
+		)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["journal_entry"],
+		)
+		matched_names = [voucher["name"] for voucher in matched_vouchers]
+
+		self.assertNotIn(journal_entry.name, matched_names)
 
 	def test_usd_purchase_invoice_paid_in_usd(self):
 		"""Reconcile a USD Purchase Invoice via a USD bank account.
@@ -720,8 +945,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["purchase_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		pi_match = next(m for m in matched if m["name"] == pi.name)
 		self.assertEqual(pi_match["paid_amount"], 100)  # converted from 8000 INR
@@ -772,8 +995,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["purchase_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		pi_match = next(m for m in matched if m["name"] == pi.name)
 		self.assertEqual(pi_match["paid_amount"], 8000)  # INR, unchanged
@@ -828,8 +1049,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 100)  # converted from 8000 INR
@@ -851,6 +1070,187 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(pe.received_amount, 100)
 		self.assertEqual(pe.paid_from_account_currency, "INR")
 		self.assertEqual(pe.paid_to_account_currency, "USD")
+
+	def test_usd_sales_invoice_paid_in_inr_with_fee(self):
+		"""Company-currency bank fees can be represented as PE deductions."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test INR Bank Fee USD Invoice GL")
+		fee_expense_account = create_bank_gl_account("_Test INR Bank Fee USD Invoice Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="INR Account With USD Invoice Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		customer = create_customer("USD Invoice Fee Client", "USD")
+
+		si = create_sales_invoice(
+			customer=customer,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=7987,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 8000)
+		self.assertEqual(si_match["currency"], "INR")
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(si.outstanding_amount, 0)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 7987)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 7987)
+		self.assertEqual(pe.received_amount, 7987)
+		self.assertEqual(pe.difference_amount, 0)
+
+		fee_deductions = [row for row in pe.deductions if row.account == fee_expense_account]
+		self.assertEqual(len(fee_deductions), 1)
+		self.assertEqual(fee_deductions[0].amount, 13)
+		self.assertFalse(fee_deductions[0].is_exchange_gain_loss)
+
+	def test_manual_fx_included_fee_deposit_adds_pe_deduction(self):
+		"""Manual FX reconciliation must still book the included fee deduction."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Manual FX Fee Bank GL")
+		fee_expense_account = create_bank_gl_account("_Test Manual FX Fee Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Manual FX Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		usd_receivable_account = frappe.get_doc(
+			{
+				"doctype": "Account",
+				"company": "_Test Company",
+				"parent_account": "Accounts Receivable - _TC",
+				"account_type": "Receivable",
+				"is_group": 0,
+				"account_name": "Manual FX USD Receivable - _TC",
+				"account_currency": "USD",
+			}
+		).insert()
+		customer = create_customer("Manual FX Fee Customer", "USD")
+		create_currency_exchange("USD", "INR", 80)
+
+		si = create_sales_invoice(
+			customer=customer,
+			debit_to=usd_receivable_account.name,
+			currency="USD",
+			conversion_rate=80,
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=7987,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			extra_params={
+				"manual_reconcile_amounts": {
+					"source_amount": 7987,
+					"exchange_rate": 0.0125,
+					"target_amount": 100,
+					"source_currency": "INR",
+					"target_currency": "USD",
+				}
+			},
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 7987)
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		fee_deductions = [row for row in pe.deductions if row.account == fee_expense_account]
+		self.assertEqual(len(fee_deductions), 1)
+		self.assertEqual(fee_deductions[0].amount, 13)
+		self.assertFalse(fee_deductions[0].is_exchange_gain_loss)
+
+	def test_rejects_foreign_fee(self):
+		"""PE deductions are company-currency only, but this BT fee is in USD."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank USD Fee", swift_number="CITIUS37")
+		gl_account = create_bank_gl_account("_Test USD Bank Fee Reco", "USD")
+		fee_account = create_bank_gl_account("_Test USD Bank Fee Expense Reco", "USD")
+		usd_bank_account = create_bank_account(
+			bank.name,
+			gl_account,
+			"USD Reco Fee Account",
+			bank_fee_account=fee_account,
+		)
+		customer = create_customer("USD Fee Client Inc.", "USD")
+		create_currency_exchange("USD", "INR", 90)
+
+		si = create_sales_invoice(
+			customer=customer,
+			currency="USD",
+			conversion_rate=80,
+			rate=113,
+			warehouse="Finished Goods - _TC",
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		bt = create_bank_transaction(
+			deposit=100,
+			included_fee=13,
+			bank_account=usd_bank_account,
+			currency="USD",
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 113)
+
+		frappe.db.savepoint("before_multicurrency_included_fee_reconcile")
+		with self.assertRaises(CurrencyMismatchError):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			)
+		frappe.db.rollback(save_point="before_multicurrency_included_fee_reconcile")
+
+		bt.reload()
+		si.reload()
+
+		self.assertFalse(bt.payment_entries)
+		self.assertEqual(bt.unallocated_amount, 100)
+		self.assertEqual(si.outstanding_amount, 9040)
 
 	def test_usd_sales_invoice_paid_in_company_currency(self):
 		"""Reconcile a USD Sales Invoice via an INR bank account.
@@ -881,8 +1281,6 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		matched = get_linked_payments(
 			bank_transaction_name=bt.name,
 			document_types=["sales_invoice", "unpaid_invoices"],
-			from_date=add_days(getdate(), -1),
-			to_date=add_days(getdate(), 1),
 		)
 		si_match = next(m for m in matched if m["name"] == si.name)
 		self.assertEqual(si_match["paid_amount"], 8000)  # INR, unchanged
@@ -953,6 +1351,473 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(len(bt.payment_entries), 1)
 		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
 
+	def test_included_fee_deposit_creates_jv_with_fee_row(self):
+		"""Reconciling a deposit with included_fee must create a JE that settles
+		the full invoice amount (deposit + fee) and books the fee to the bank fee account.
+
+		BT: deposit=75, included_fee=5
+		SI: 80
+		Expected JE: Dr Bank 75, Dr Bank Fees 5, Cr Receivable 80
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer()
+		si = create_sales_invoice(
+			rate=80,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+		)
+		si_match = next(m for m in matched if m["name"] == si.name)
+		self.assertEqual(si_match["paid_amount"], 80)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 75)
+		self.assertEqual(bt.status, "Reconciled")
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.docstatus, 1)
+
+		accounts = {}
+		for row in je.accounts:
+			accounts[row.account] = row
+
+		# Bank debited for deposit amount only
+		self.assertEqual(accounts[fee_gl_account].debit_in_account_currency, 75)
+		# Fee account debited for the included fee
+		self.assertEqual(accounts[fee_expense_account].debit_in_account_currency, 5)
+
+		si.reload()
+		self.assertEqual(si.outstanding_amount, 0)
+
+	def test_included_fee_deposit_rejects_partial_reconciliation(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Partial GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Partial Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Partial Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=110,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer("Fee Partial Customer")
+		si = create_sales_invoice(
+			rate=120,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		with self.assertRaises(FullReconciliationRequiredError):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			)
+
+		bt.reload()
+		si.reload()
+		self.assertFalse(bt.payment_entries)
+		self.assertEqual(bt.unallocated_amount, 110)
+		self.assertEqual(si.outstanding_amount, 120)
+
+	def test_included_fee_deposit_rejects_followup_reconciliation(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Followup GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Followup Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Followup Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=110,
+			included_fee=13,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer("Fee Followup Customer")
+		si = create_sales_invoice(
+			rate=120,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		si2 = create_sales_invoice(
+			rate=120,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		bt.append(
+			"payment_entries",
+			{
+				"payment_document": "Sales Invoice",
+				"payment_entry": si.name,
+				"allocated_amount": 107,
+			},
+		)
+		bt.allocated_amount = 107
+		bt.unallocated_amount = 3
+		bt.save()
+
+		with self.assertRaises(FullReconciliationRequiredError):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si2.name}]),
+			)
+
+		si2.reload()
+		self.assertEqual(si2.outstanding_amount, 120)
+
+	def test_included_fee_deposit_ignores_fee_when_disabled(self):
+		"""With the global feature flag disabled, deposit-side included fees must
+		not affect exact matching or reconciliation."""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Disabled GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Disabled Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Disabled Fee Flag",
+			bank_fee_account=fee_expense_account,
+		)
+
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		customer = create_customer("Fee Flag Disabled Customer")
+		si = create_sales_invoice(
+			rate=75,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+		si_with_fee = create_sales_invoice(
+			rate=80,
+			warehouse="Finished Goods - _TC",
+			customer=customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		matched = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["sales_invoice", "unpaid_invoices", "exact_match"],
+		)
+		matched_names = [voucher["name"] for voucher in matched]
+		self.assertIn(si.name, matched_names)
+		self.assertNotIn(si_with_fee.name, matched_names)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+		)
+
+		bt.reload()
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_document, "Payment Entry")
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 75)
+		self.assertEqual(bt.status, "Reconciled")
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.docstatus, 1)
+		self.assertFalse(pe.deductions)
+
+		si.reload()
+		si_with_fee.reload()
+		self.assertEqual(si.outstanding_amount, 0)
+		self.assertEqual(si_with_fee.outstanding_amount, 80)
+
+	def _create_draft_journal_entry(self, bt, **kwargs):
+		defaults = {
+			"bank_transaction_name": bt.name,
+			"party_type": "Customer",
+			"party": self.customer,
+			"posting_date": bt.date,
+			"reference_number": bt.reference_number or bt.name,
+			"reference_date": bt.date,
+			"entry_type": "Bank Entry",
+			"second_account": frappe.db.get_value("Company", bt.company, "default_receivable_account"),
+			"allow_edit": True,
+		}
+		defaults.update(kwargs)
+		return create_journal_entry_bts(**defaults)
+
+	def _create_draft_payment_entry(self, bt, **kwargs):
+		defaults = {
+			"bank_transaction_name": bt.name,
+			"reference_number": bt.reference_number or bt.name,
+			"reference_date": bt.date,
+			"party_type": "Customer" if bt.deposit else "Supplier",
+			"party": self.customer if bt.deposit else create_supplier(),
+			"posting_date": bt.date,
+			"allow_edit": True,
+		}
+		defaults.update(kwargs)
+		return create_payment_entry_bts(**defaults)
+
+	def test_edit_in_full_page_journal_entry_reserves_transaction(self):
+		bt = create_bank_transaction(deposit=200, reference_no="reserve-je", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		bt.reload()
+		journal_entry.reload()
+
+		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+		self.assertEqual(bt.reserved_voucher_type, "Journal Entry")
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		reserved_row = next(row for row in transactions if row.name == bt.name)
+		self.assertEqual(reserved_row.reserved_voucher, journal_entry.name)
+		self.assertEqual(reserved_row.reserved_voucher_type, "Journal Entry")
+
+	def test_edit_in_full_page_payment_entry_reserves_transaction(self):
+		bt = create_bank_transaction(deposit=150, reference_no="reserve-pe", bank_account=self.bank_account)
+		payment_entry = self._create_draft_payment_entry(bt)
+
+		bt.reload()
+		payment_entry.reload()
+
+		self.assertEqual(payment_entry.created_from_bank_transaction, bt.name)
+		self.assertEqual(bt.reserved_voucher_type, "Payment Entry")
+		self.assertEqual(bt.reserved_voucher, payment_entry.name)
+
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		reserved_row = next(row for row in transactions if row.name == bt.name)
+		self.assertEqual(reserved_row.reserved_voucher, payment_entry.name)
+		self.assertEqual(reserved_row.reserved_voucher_type, "Payment Entry")
+
+	def test_second_draft_against_reserved_transaction_is_rejected(self):
+		bt = create_bank_transaction(deposit=200, reference_no="second-draft", bank_account=self.bank_account)
+		first = self._create_draft_journal_entry(bt)
+
+		with self.assertRaises(frappe.ValidationError):
+			self._create_draft_journal_entry(bt)
+
+		bt.reload()
+		self.assertEqual(bt.reserved_voucher, first.name)
+
+	def test_unrelated_reconciliation_against_reserved_transaction_is_rejected(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="unrelated-reco", bank_account=self.bank_account
+		)
+		self._create_draft_journal_entry(bt)
+
+		si = create_sales_invoice(
+			rate=100,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			bulk_reconcile_vouchers(
+				bt.name,
+				json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}]),
+			)
+
+		bt.reload()
+		self.assertTrue(bt.reserved_voucher)
+		self.assertFalse(bt.payment_entries)
+
+	def test_delete_draft_releases_reservation(self):
+		bt = create_bank_transaction(deposit=200, reference_no="delete-draft", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+		journal_entry.delete()
+
+		bt.reload()
+		self.assertFalse(bt.reserved_voucher)
+		self.assertFalse(bt.reserved_voucher_type)
+
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		row = next(row for row in transactions if row.name == bt.name)
+		self.assertFalse(row.reserved_voucher)
+		self.assertFalse(row.reserved_voucher_type)
+
+	def test_durable_provenance_survives_reload(self):
+		bt = create_bank_transaction(deposit=200, reference_no="provenance", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+		name = journal_entry.name
+
+		reloaded = frappe.get_doc("Journal Entry", name)
+		self.assertEqual(reloaded.created_from_bank_transaction, bt.name)
+
+	def test_submit_draft_journal_entry_fully_reconciles(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="submit-je-full", bank_account=self.bank_account
+		)
+		journal_entry = self._create_draft_journal_entry(bt)
+		journal_entry.submit()
+
+		bt.reload()
+		journal_entry.reload()
+
+		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+		self.assertFalse(bt.reserved_voucher)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(len(bt.payment_entries), 1)
+		self.assertEqual(bt.payment_entries[0].payment_entry, journal_entry.name)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 200)
+
+	def test_submit_draft_payment_entry_fully_reconciles(self):
+		bt = create_bank_transaction(
+			deposit=175, reference_no="submit-pe-full", bank_account=self.bank_account
+		)
+		payment_entry = self._create_draft_payment_entry(bt)
+		payment_entry.submit()
+
+		bt.reload()
+		payment_entry.reload()
+
+		self.assertEqual(payment_entry.created_from_bank_transaction, bt.name)
+		self.assertFalse(bt.reserved_voucher)
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.payment_entries[0].payment_entry, payment_entry.name)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 175)
+
+	def test_submit_draft_journal_entry_partially_reconciles(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="submit-je-partial", bank_account=self.bank_account
+		)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		journal_entry.accounts[0].credit_in_account_currency = 80
+		journal_entry.accounts[1].debit_in_account_currency = 80
+		journal_entry.save()
+		journal_entry.submit()
+
+		bt.reload()
+		self.assertFalse(bt.reserved_voucher)
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertEqual(bt.unallocated_amount, 120)
+		self.assertEqual(bt.payment_entries[0].allocated_amount, 80)
+
+	def test_submit_rejects_wrong_bank_account_on_journal_entry(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="wrong-account", bank_account=self.bank_account
+		)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		other_gl = create_bank_gl_account("_Test Other Reco Bank")
+		journal_entry.accounts[1].account = other_gl
+		journal_entry.save()
+
+		frappe.db.savepoint("before_failed_submit")
+		with self.assertRaises(frappe.ValidationError):
+			journal_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		journal_entry.reload()
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+		self.assertEqual(journal_entry.docstatus, 0)
+		self.assertFalse(bt.payment_entries)
+
+	def test_submit_rejects_opposite_direction_payment_entry(self):
+		bt = create_bank_transaction(
+			deposit=200, reference_no="wrong-direction", bank_account=self.bank_account
+		)
+		payment_entry = self._create_draft_payment_entry(bt)
+
+		# Flip to Pay against a deposit transaction
+		company_account = frappe.get_value("Bank Account", bt.bank_account, "account")
+		payment_entry.payment_type = "Pay"
+		payment_entry.party_type = "Supplier"
+		payment_entry.party = create_supplier("_Test Reco Direction Supplier")
+		payment_entry.paid_from = company_account
+		payment_entry.paid_to = frappe.db.get_value("Company", bt.company, "default_payable_account")
+		payment_entry.save()
+
+		frappe.db.savepoint("before_failed_submit")
+		with self.assertRaises(frappe.ValidationError):
+			payment_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		payment_entry.reload()
+		self.assertEqual(bt.reserved_voucher, payment_entry.name)
+		self.assertEqual(payment_entry.docstatus, 0)
+
+	def test_submit_rejects_amount_above_unallocated(self):
+		bt = create_bank_transaction(deposit=200, reference_no="oversized", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		journal_entry.accounts[0].credit_in_account_currency = 250
+		journal_entry.accounts[1].debit_in_account_currency = 250
+		journal_entry.save()
+
+		frappe.db.savepoint("before_failed_submit")
+		with self.assertRaises(frappe.ValidationError):
+			journal_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		journal_entry.reload()
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+		self.assertEqual(journal_entry.docstatus, 0)
+
+	def test_failed_reconciliation_rolls_back_without_losing_reservation(self):
+		bt = create_bank_transaction(deposit=200, reference_no="failed-reco", bank_account=self.bank_account)
+		journal_entry = self._create_draft_journal_entry(bt)
+
+		frappe.db.savepoint("before_failed_submit")
+		with patch(
+			"banking.overrides.bank_transaction.CustomBankTransaction.allocate_payment_entries",
+			side_effect=frappe.ValidationError("forced reconciliation failure"),
+		):
+			with self.assertRaises(frappe.ValidationError):
+				journal_entry.submit()
+		frappe.db.rollback(save_point="before_failed_submit")
+
+		bt.reload()
+		journal_entry.reload()
+		self.assertEqual(bt.reserved_voucher, journal_entry.name)
+		self.assertEqual(journal_entry.docstatus, 0)
+		self.assertFalse(bt.payment_entries)
+		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+
 
 def get_pe_references(vouchers: list):
 	return frappe.get_all(
@@ -972,20 +1837,23 @@ def create_bank_transaction(
 	bank_account: str | None = None,
 	description: str | None = None,
 	currency: str = "INR",
+	included_fee: float | None = None,
 ):
-	doc = frappe.get_doc(
-		{
-			"doctype": "Bank Transaction",
-			"company": "_Test Company",
-			"description": description or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
-			"date": date or frappe.utils.nowdate(),
-			"deposit": deposit or 0.0,
-			"withdrawal": withdrawal or 0.0,
-			"currency": currency,
-			"bank_account": bank_account,
-			"reference_number": reference_no,
-		}
-	).insert()
+	values = {
+		"doctype": "Bank Transaction",
+		"company": "_Test Company",
+		"description": description or "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
+		"date": date or frappe.utils.nowdate(),
+		"deposit": deposit or 0.0,
+		"withdrawal": withdrawal or 0.0,
+		"currency": currency,
+		"bank_account": bank_account,
+		"reference_number": reference_no,
+	}
+	if included_fee is not None:
+		values["included_fee"] = included_fee
+
+	doc = frappe.get_doc(values).insert()
 	return doc.submit()
 
 
@@ -1012,6 +1880,7 @@ def create_bank_account(
 	gl_account="_Test Bank - _TC",
 	bank_account_name="Personal Account",
 	company=None,
+	bank_fee_account=None,
 ) -> str:
 	if bank_account := frappe.db.exists(
 		"Bank Account",
@@ -1023,18 +1892,22 @@ def create_bank_account(
 			"is_company_account": 1,
 		},
 	):
+		if bank_fee_account:
+			frappe.db.set_value("Bank Account", bank_account, "bank_fee_account", bank_fee_account)
 		return bank_account
 
-	bank_account = frappe.get_doc(
-		{
-			"doctype": "Bank Account",
-			"account_name": bank_account_name,
-			"bank": bank_name,
-			"account": gl_account,
-			"company": company or "_Test Company",
-			"is_company_account": 1,
-		}
-	).insert()
+	values = {
+		"doctype": "Bank Account",
+		"account_name": bank_account_name,
+		"bank": bank_name,
+		"account": gl_account,
+		"company": company or "_Test Company",
+		"is_company_account": 1,
+	}
+	if bank_fee_account:
+		values["bank_fee_account"] = bank_fee_account
+
+	bank_account = frappe.get_doc(values).insert()
 	return bank_account.name
 
 
@@ -1050,6 +1923,14 @@ def create_bank(bank_name: str = "Citi Bank", swift_number: str = "CITIUS33"):
 
 
 def create_bank_gl_account(account_name: str = "_Test Bank - _TC", currency: str = "INR") -> str:
+	existing = frappe.db.exists("Account", {"account_name": account_name, "company": "_Test Company"})
+	if existing:
+		return existing
+
+	# Account names that already include the company suffix are stored as-is
+	if frappe.db.exists("Account", account_name):
+		return account_name
+
 	gl_account = frappe.get_doc(
 		{
 			"doctype": "Account",

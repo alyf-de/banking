@@ -3,11 +3,22 @@ frappe.provide("erpnext.accounts.bank_reconciliation");
 erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 	constructor(opts) {
 		Object.assign(this, opts);
+		this.accounting_dimensions = (this.accounting_dimensions || []).filter(
+			(dimension) => dimension.fieldname && dimension.document_type,
+		);
+		this.custom_dimension_fieldnames = this.accounting_dimensions.map(
+			(dimension) => dimension.fieldname,
+		);
 		this.make();
 	}
 
 	make() {
 		this.panel_manager.actions_tab = "create_voucher-tab";
+
+		if (this.transaction.reserved_voucher) {
+			this.render_reserved_draft_link();
+			return;
+		}
 
 		this.create_field_group = new frappe.ui.FieldGroup({
 			fields: this.get_create_tab_fields(),
@@ -15,16 +26,41 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			card_layout: true,
 		});
 		this.create_field_group.make();
+		this.create_field_group.refresh_section_collapse();
+	}
+
+	render_reserved_draft_link() {
+		const voucher_type = this.transaction.reserved_voucher_type;
+		const voucher_name = this.transaction.reserved_voucher;
+		this.panel_manager.watch_voucher_until_settled(voucher_type, voucher_name);
+		this.actions_panel.$tab_content.append(`
+			<div class="reserved-draft-resume">
+				<p class="text-muted">
+					${__(
+						"A draft {0} is already linked to this transaction. Open it to continue editing or submit.",
+						[frappe.utils.escape_html(__(voucher_type))],
+					)}
+				</p>
+				<button type="button" class="btn btn-primary btn-sm open-reserved-draft">
+					${__("Open {0}", [frappe.utils.escape_html(voucher_name)])}
+				</button>
+			</div>
+		`);
+		this.actions_panel.$tab_content
+			.find(".open-reserved-draft")
+			.on("click", () => {
+				frappe.open_in_new_tab = true;
+				frappe.set_route("Form", voucher_type, voucher_name);
+			});
 	}
 
 	create_voucher() {
-		var me = this;
 		let values = this.create_field_group.get_values();
 		let document_type = values.document_type;
 
 		// Create new voucher and delete or refresh current BT row depending on reconciliation
 		this.create_voucher_bts(false, (message) =>
-			me.actions_panel.after_transaction_reconcile(
+			this.actions_panel.after_transaction_reconcile(
 				message,
 				true,
 				document_type,
@@ -38,19 +74,29 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			let doctype = doc[0].doctype,
 				docname = doc[0].name;
 
-			// Reconcile and update the view
-			// when the voucher is submitted in another tab
-			frappe.socketio.doc_subscribe(doctype, docname);
-			frappe.realtime.off("doc_update");
-			frappe.realtime.on("doc_update", (data) => {
-				if (data.doctype === doctype && data.name === docname) {
-					this.reconcile_new_voucher(doctype, docname);
-				}
-			});
+			// Reload so the row stays visible with the reserved Draft badge
+			this.panel_manager.reload_transactions();
+			this.panel_manager.watch_voucher_until_settled(doctype, docname);
 
 			frappe.open_in_new_tab = true;
 			frappe.set_route("Form", doctype, docname);
 		});
+	}
+
+	get_selected_accounting_dimensions(values, fieldnames) {
+		const dim_payload = {};
+		for (const fieldname of fieldnames || []) {
+			if (values[fieldname]) {
+				dim_payload[fieldname] = values[fieldname];
+			}
+		}
+		return dim_payload;
+	}
+
+	serialize_accounting_dimensions(dim_payload) {
+		return Object.keys(dim_payload).length > 0
+			? JSON.stringify(dim_payload)
+			: null;
 	}
 
 	create_voucher_bts(allow_edit = false, success_callback) {
@@ -59,6 +105,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		let document_type = values.document_type;
 		let method =
 			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta";
+		const dim_payload = this.get_selected_accounting_dimensions(
+			values,
+			this.custom_dimension_fieldnames,
+		);
 		let args = {
 			bank_transaction_name: this.transaction.name,
 			reference_number: values.reference_number,
@@ -68,15 +118,13 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			posting_date: values.posting_date,
 			mode_of_payment: values.mode_of_payment,
 			allow_edit: allow_edit,
+			project: values.project,
+			cost_center: values.cost_center,
+			accounting_dimensions: this.serialize_accounting_dimensions(dim_payload),
 		};
 
 		if (document_type === "Payment Entry") {
 			method = method + ".create_payment_entry_bts";
-			args = {
-				...args,
-				project: values.project,
-				cost_center: values.cost_center,
-			};
 		} else {
 			method = method + ".create_journal_entry_bts";
 			args = {
@@ -106,53 +154,42 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		});
 	}
 
-	reconcile_new_voucher(doctype, docname) {
-		// If no response, newly created doc is in draft state
-		// If deleted in response, newly created doc is deleted
-		// If doc object in response, newly created doc is submitted (can be reconciled)
-		var me = this;
-		frappe.call({
-			method:
-				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.reconcile_voucher",
-			args: {
-				transaction_name: this.transaction.name,
-				amount: this.transaction.unallocated_amount,
-				voucher_type: doctype,
-				voucher_name: docname,
-			},
-			callback: (response) => {
-				if (response.exc) {
-					frappe.show_alert({
-						message: __("Failed to reconcile new {0} against {1}", [
-							doctype,
-							me.transaction.name,
-						]),
-						indicator: "red",
-					});
-					return;
-				} else if (
-					response.message &&
-					Object.keys(response.message).length > 0
-				) {
-					if (response.message.deleted) {
-						frappe.realtime.off("doc_update");
-						return;
-					}
+	get_split_accounting_dimension_fields() {
+		const company_defaults =
+			(this.accounting_dimension_defaults || {})[this.company] || {};
+		const to_link_field = (dimension) => {
+			const df = {
+				fieldname: dimension.fieldname,
+				fieldtype: "Link",
+				label: __(dimension.label || frappe.model.unscrub(dimension.fieldname)),
+				options: dimension.document_type,
+			};
+			if (company_defaults[dimension.fieldname]) {
+				df.default = company_defaults[dimension.fieldname];
+			}
+			return df;
+		};
+		const split_at = Math.ceil(this.accounting_dimensions.length / 2);
 
-					me.actions_panel.after_transaction_reconcile(
-						response.message,
-						true,
-						doctype,
-					);
-				}
-			},
-		});
+		return {
+			left_custom_dimension_fields: this.accounting_dimensions
+				.slice(0, split_at)
+				.map(to_link_field),
+			right_custom_dimension_fields: this.accounting_dimensions
+				.slice(split_at)
+				.map(to_link_field),
+		};
 	}
 
 	get_create_tab_fields() {
 		let party_type =
 			this.transaction.party_type ||
 			(flt(this.transaction.withdrawal) > 0 ? "Supplier" : "Customer");
+		const company_defaults =
+			(this.accounting_dimension_defaults || {})[this.company] || {};
+		const { left_custom_dimension_fields, right_custom_dimension_fields } =
+			this.get_split_accounting_dimension_fields();
+
 		return [
 			{
 				label: __("Document Type"),
@@ -210,14 +247,6 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				options: "Mode of Payment",
 			},
 			{
-				fieldname: "edit_in_full_page",
-				fieldtype: "Button",
-				label: __("Edit in Full Page"),
-				click: () => {
-					this.edit_in_full_page();
-				},
-			},
-			{
 				fieldname: "column_break_7",
 				fieldtype: "Column Break",
 			},
@@ -272,27 +301,57 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				reqd: 1,
 			},
 			{
-				fieldname: "project",
-				fieldtype: "Link",
-				label: "Project",
-				options: "Project",
-				depends_on: "eval: doc.document_type == 'Payment Entry'",
+				fieldname: "accounting_dimensions_section",
+				fieldtype: "Section Break",
+				label: __("Accounting Dimensions"),
+				collapsible: 1,
 			},
 			{
 				fieldname: "cost_center",
 				fieldtype: "Link",
-				label: "Cost Center",
+				label: __("Cost Center"),
 				options: "Cost Center",
-				depends_on: "eval: doc.document_type == 'Payment Entry'",
+				default:
+					company_defaults.cost_center || this.company_default_cost_center,
+				get_query: () => {
+					return {
+						filters: {
+							company: this.company,
+							is_group: 0,
+						},
+					};
+				},
 			},
+			...left_custom_dimension_fields,
+			{
+				fieldname: "dimension_col_break",
+				fieldtype: "Column Break",
+			},
+			{
+				fieldname: "project",
+				fieldtype: "Link",
+				label: __("Project"),
+				options: "Project",
+				default: company_defaults.project,
+				get_query: () => {
+					return {
+						filters: {
+							company: this.company,
+						},
+					};
+				},
+			},
+			...right_custom_dimension_fields,
 			{
 				fieldtype: "Section Break",
 			},
 			{
-				label: __("Hidden field for alignment"),
-				fieldname: "hidden_field",
-				fieldtype: "Data",
-				hidden: 1,
+				fieldname: "edit_in_full_page",
+				fieldtype: "Button",
+				label: __("Edit in Full Page"),
+				click: () => {
+					this.edit_in_full_page();
+				},
 			},
 			{
 				fieldtype: "Column Break",
