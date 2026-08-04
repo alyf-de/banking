@@ -155,7 +155,7 @@ def successful_request_exists(ebics_user: str | None, order_type: str, request_d
 				and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
 			):
 				return True
-		except (json.JSONDecodeError, TypeError, ValueError):
+		except json.JSONDecodeError, TypeError, ValueError:
 			pass  # If we can't parse, let the sync attempt
 
 	return False
