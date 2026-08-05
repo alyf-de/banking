@@ -1553,6 +1553,34 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si_with_fee.outstanding_amount, 80)
 
+	def test_get_bank_transactions_includes_deposit_fee_in_reconcilable_amount(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Reco Amount Fee GL")
+		fee_expense_account = create_bank_gl_account("_Test Reco Amount Fee Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Reco Amount Fee Account",
+			bank_fee_account=fee_expense_account,
+		)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+
+		result = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		self.assertEqual(row.included_fee, 5)
+		self.assertEqual(row.included_fee_for_reconciliation, 5)
+		self.assertEqual(row.reconcilable_amount, 80)
+
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		result = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
+		self.assertEqual(row.reconcilable_amount, 75)
+
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {
 			"bank_transaction_name": bt.name,

@@ -141,6 +141,7 @@ def get_bank_transactions(
 		"bank_account",
 		"company",
 		"unallocated_amount",
+		"included_fee",
 		"reference_number",
 		"party_type",
 		"party",
@@ -152,14 +153,59 @@ def get_bank_transactions(
 	]
 	order_by = get_bank_transaction_order_by(order_by)
 
-	return {
-		"transactions": frappe.get_list(
-			"Bank Transaction",
-			fields=fields,
-			filters=filters,
-			order_by=order_by,
-		),
-	}
+	transactions = frappe.get_list(
+		"Bank Transaction",
+		fields=fields,
+		filters=filters,
+		order_by=order_by,
+	)
+	enrich_transactions_with_reconcilable_amounts(transactions)
+
+	return {"transactions": transactions}
+
+
+def enrich_transactions_with_reconcilable_amounts(transactions: list) -> None:
+	"""Add deposit+fee reconcilable amounts used by the Match tab summary.
+
+	Deposit-side included fees increase the economic value available for voucher
+	matching when automatic bank-fee booking is enabled and the bank account has
+	a fee account. The UI must show that combined amount or allocation looks wrong.
+	"""
+	if not transactions:
+		return
+
+	fee_enabled = flt(
+		frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")
+	)
+	fee_accounts_by_bank_account = {}
+	if fee_enabled:
+		bank_account_names = list(
+			{transaction.bank_account for transaction in transactions if transaction.bank_account}
+		)
+		if bank_account_names:
+			fee_accounts_by_bank_account = {
+				row.name: row.bank_fee_account
+				for row in frappe.get_all(
+					"Bank Account",
+					filters={"name": ["in", bank_account_names]},
+					fields=["name", "bank_fee_account"],
+				)
+			}
+
+	for transaction in transactions:
+		included_fee_for_reconciliation = 0.0
+		if (
+			fee_enabled
+			and flt(transaction.deposit) > 0
+			and flt(transaction.included_fee) > 0
+			and fee_accounts_by_bank_account.get(transaction.bank_account)
+		):
+			included_fee_for_reconciliation = flt(transaction.included_fee)
+
+		transaction.included_fee_for_reconciliation = included_fee_for_reconciliation
+		transaction.reconcilable_amount = (
+			flt(transaction.unallocated_amount) + included_fee_for_reconciliation
+		)
 
 
 def _reserve_bank_transaction(
