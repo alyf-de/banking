@@ -182,7 +182,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		if (id in this.summary_data) {
 			delete this.summary_data[id];
 		} else {
-			this.summary_data[id] = { amount: value, currency: currency };
+			this.summary_data[id] = {
+				amount: value,
+				currency: currency,
+				doctype: row[this.position_of("Voucher")].doctype,
+			};
 		}
 
 		if (this.has_currency_mismatch_selection()) {
@@ -190,24 +194,26 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			return;
 		}
 
-		// Total of selected row amounts in summary_data
-		// Cap to reconcilable amount (unallocated + deposit included fee)
-		let reconcilable_amount =
-			erpnext.accounts.bank_reconciliation.get_reconcilable_amount(
-				this.transaction
+		// Deposit included fees are only booked against unpaid invoices.
+		// PE/JE matching and Create Voucher stay on the bank net amount.
+		let allocation_budget =
+			erpnext.accounts.bank_reconciliation.get_allocation_budget(
+				this.transaction,
+				this.summary_data
 			);
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, entry) => a + entry.amount,
 			0
 		);
-		let max_allocated = Math.min(total_allocated, reconcilable_amount);
+		let max_allocated = Math.min(total_allocated, allocation_budget);
 
-		// Deduct allocated amount from reconcilable amount to show the
-		// final effect on reconciling (including deposit-side bank fees)
 		let transaction_amount =
-			erpnext.accounts.bank_reconciliation.get_summary_amount(this.transaction);
-		let unallocated = flt(reconcilable_amount) - flt(max_allocated);
-		let actual_unallocated = flt(reconcilable_amount) - flt(total_allocated);
+			erpnext.accounts.bank_reconciliation.get_summary_amount(
+				this.transaction,
+				this.summary_data
+			);
+		let unallocated = flt(allocation_budget) - flt(max_allocated);
+		let actual_unallocated = flt(allocation_budget) - flt(total_allocated);
 
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
@@ -225,15 +231,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 	render_baseline_summary() {
 		let transaction_amount =
-			erpnext.accounts.bank_reconciliation.get_summary_amount(this.transaction);
-		let reconcilable_amount =
-			erpnext.accounts.bank_reconciliation.get_reconcilable_amount(
-				this.transaction
-			);
+			this.transaction.withdrawal || this.transaction.deposit;
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
-			flt(reconcilable_amount),
-			flt(reconcilable_amount),
+			flt(this.transaction.unallocated_amount),
+			flt(this.transaction.unallocated_amount),
 			this.transaction.currency
 		);
 	}

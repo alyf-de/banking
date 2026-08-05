@@ -108,7 +108,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				fieldtype: "Currency",
 				options: "currency",
 				read_only: 1,
-				hidden: flt(this.transaction.included_fee_for_reconciliation) ? 0 : 1,
+				hidden: flt(this.transaction.included_fee) ? 0 : 1,
 			},
 			{
 				fieldtype: "Column Break",
@@ -121,7 +121,7 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 			},
 			{
 				label: __("To Allocate"),
-				fieldname: "reconcilable_amount",
+				fieldname: "unallocated_amount",
 				fieldtype: "Currency",
 				options: "currency",
 				read_only: 1,

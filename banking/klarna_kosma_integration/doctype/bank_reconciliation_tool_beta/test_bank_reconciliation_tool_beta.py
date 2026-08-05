@@ -1553,7 +1553,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si_with_fee.outstanding_amount, 80)
 
-	def test_get_bank_transactions_includes_deposit_fee_in_reconcilable_amount(self):
+	def test_get_bank_transactions_exposes_deposit_fee_for_unpaid_invoices_only(self):
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 
 		fee_gl_account = create_bank_gl_account("_Test Reco Amount Fee GL")
@@ -1573,13 +1573,83 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
 		self.assertEqual(row.included_fee, 5)
 		self.assertEqual(row.included_fee_for_reconciliation, 5)
-		self.assertEqual(row.reconcilable_amount, 80)
+		self.assertIsNone(row.get("reconcilable_amount"))
 
+		# Flag off → fee not exposed for Match unpaid-invoice budget
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
 		result = get_bank_transactions(bank_account=bank_account_with_fee)
 		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
-		self.assertEqual(row.reconcilable_amount, 75)
+
+	def test_get_bank_transactions_hides_fee_when_partially_allocated(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Partial Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Partial Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Partial Fee Reco Account",
+			bank_fee_account=fee_expense_account,
+		)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		# Simulate a prior allocation without going through fee reconcile
+		frappe.db.set_value("Bank Transaction", bt.name, "unallocated_amount", 40)
+		bt.reload()
+
+		result = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		self.assertEqual(row.included_fee, 5)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
+
+	def test_get_bank_transactions_hides_fee_for_foreign_currency_bank(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank USD Fee UI", swift_number="CITIUS38")
+		gl_account = create_bank_gl_account("_Test USD Bank Fee UI", "USD")
+		fee_account = create_bank_gl_account("_Test USD Bank Fee Expense UI", "USD")
+		usd_bank_account = create_bank_account(
+			bank.name,
+			gl_account,
+			"USD Fee UI Account",
+			bank_fee_account=fee_account,
+		)
+		bt = create_bank_transaction(
+			deposit=100,
+			included_fee=13,
+			bank_account=usd_bank_account,
+			currency="USD",
+		)
+
+		result = get_bank_transactions(bank_account=usd_bank_account)
+		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		self.assertEqual(row.included_fee, 13)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
+
+	def test_get_bank_transactions_hides_fee_without_bank_fee_account(self):
+		# Create the account while the fee feature is off so bank_fee_account can stay empty,
+		# then enable the flag — enrich must not expose a fee without an expense account.
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+
+		fee_gl_account = create_bank_gl_account("_Test Missing Fee Account GL")
+		bank_account_without_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Missing Fee Account",
+		)
+		frappe.db.set_value("Bank Account", bank_account_without_fee, "bank_fee_account", None)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_without_fee,
+		)
+
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		result = get_bank_transactions(bank_account=bank_account_without_fee)
+		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {

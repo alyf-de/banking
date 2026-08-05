@@ -1,19 +1,56 @@
 frappe.provide("erpnext.accounts.bank_reconciliation");
 
-erpnext.accounts.bank_reconciliation.get_reconcilable_amount = (
-	transaction
+// Unpaid invoices are the only Match path that books deposit included fees.
+erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES = [
+	"Sales Invoice",
+	"Purchase Invoice",
+	"Expense Claim",
+];
+
+erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee = (
+	summary_data
 ) => {
-	return (
-		flt(transaction.unallocated_amount) +
-		flt(transaction.included_fee_for_reconciliation)
+	const entries = Object.values(summary_data || {});
+	if (!entries.length) {
+		return false;
+	}
+	return entries.every((entry) =>
+		erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
+			entry.doctype
+		)
 	);
 };
 
-erpnext.accounts.bank_reconciliation.get_summary_amount = (transaction) => {
-	return (
-		flt(transaction.withdrawal || transaction.deposit) +
-		flt(transaction.included_fee_for_reconciliation)
-	);
+erpnext.accounts.bank_reconciliation.get_allocation_budget = (
+	transaction,
+	summary_data
+) => {
+	let budget = flt(transaction.unallocated_amount);
+	if (
+		flt(transaction.included_fee_for_reconciliation) &&
+		erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee(
+			summary_data
+		)
+	) {
+		budget += flt(transaction.included_fee_for_reconciliation);
+	}
+	return budget;
+};
+
+erpnext.accounts.bank_reconciliation.get_summary_amount = (
+	transaction,
+	summary_data
+) => {
+	let amount = flt(transaction.withdrawal || transaction.deposit);
+	if (
+		flt(transaction.included_fee_for_reconciliation) &&
+		erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee(
+			summary_data
+		)
+	) {
+		amount += flt(transaction.included_fee_for_reconciliation);
+	}
+	return amount;
 };
 
 erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
@@ -444,8 +481,7 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.$list_container = this.$panel_wrapper.find(".list-container");
 
 		this.transactions.map((transaction) => {
-			let amount =
-				erpnext.accounts.bank_reconciliation.get_summary_amount(transaction);
+			let amount = transaction.deposit || transaction.withdrawal;
 			let symbol = transaction.withdrawal ? "-" : "+";
 			const draft_badge = transaction.reserved_voucher
 				? `<span class="indicator-pill yellow filterable no-indicator-dot ellipsis reserved-draft-badge">${__(
@@ -533,10 +569,12 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		if (updated_amount) {
 			// update amount is > 0 always [src: `after_transaction_reconcile()`]
 			this.transactions[current_index]["unallocated_amount"] = updated_amount;
-			this.transactions[current_index]["reconcilable_amount"] =
-				erpnext.accounts.bank_reconciliation.get_reconcilable_amount(
-					this.transactions[current_index]
-				);
+			// Prior allocations mean deposit fee can no longer be booked
+			if (
+				flt(updated_amount) !== flt(this.transactions[current_index].deposit)
+			) {
+				this.transactions[current_index]["included_fee_for_reconciliation"] = 0;
+			}
 		} else {
 			this.transactions[current_index] = {
 				...transaction,
