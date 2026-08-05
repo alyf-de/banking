@@ -364,8 +364,9 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 		party = {}
 		if party_account_type := get_party_account_type(target_account):
 			if reason := get_party_error(doc, party_account_type, target_account):
-				# Leave the transaction unreconciled instead of failing its submission,
-				# which would abort a whole bank statement import.
+				# Stop instead of raising, which would abort a whole statement import,
+				# and instead of falling through to the next rule, which would book the
+				# amount to an account the highest-priority match did not intend.
 				frappe.log_error(
 					title="Bank Reconciliation Rule not applied",
 					message=reason,
