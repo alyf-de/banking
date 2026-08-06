@@ -219,6 +219,10 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.actions_filters.exact_match = 0;
 		this.actions_filters.exact_party_match = 0;
 		this.actions_filters.unpaid_invoices = 1;
+		// Sticky Create Voucher fields across transaction switches
+		this.create_preferences = {
+			document_type: "Payment Entry",
+		};
 	}
 
 	render_no_transactions() {
