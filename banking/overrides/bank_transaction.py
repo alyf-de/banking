@@ -7,6 +7,11 @@ from frappe.core.utils import find
 from frappe.utils import flt, getdate
 from frappe.utils.data import evaluate_filters, get_link_to_form
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
+	get_party_account_type,
+	party_type_matches_account_type,
+)
+
 
 class CustomBankTransaction(BankTransaction):
 	def before_validate(self):
@@ -32,11 +37,34 @@ class CustomBankTransaction(BankTransaction):
 		if self.unallocated_amount <= 0.0:
 			frappe.throw(frappe._("Bank Transaction {0} is already fully reconciled").format(self.name))
 
+		self.assert_reservation_allows(vouchers)
+
 		pe_length_before = len(self.payment_entries)
 		self.reconcile_paid_vouchers(vouchers)
 
 		if len(self.payment_entries) != pe_length_before:
 			self.save()  # runs on_update_after_submit
+
+	def assert_reservation_allows(self, vouchers: list):
+		"""Reject payment entries other than the reserved voucher while a reservation is active."""
+		if not self.reserved_voucher:
+			return
+
+		for voucher in vouchers:
+			voucher_type, voucher_name = voucher["payment_doctype"], voucher["payment_name"]
+			if voucher_type == self.reserved_voucher_type and voucher_name == self.reserved_voucher:
+				continue
+
+			frappe.throw(
+				_(
+					"Bank Transaction {0} is reserved by draft {1} {2}. "
+					"Submit or delete that voucher before reconciling other entries."
+				).format(
+					frappe.bold(self.name),
+					_(self.reserved_voucher_type),
+					frappe.bold(self.reserved_voucher),
+				)
+			)
 
 	def validate_period_closing(self):
 		"""
@@ -99,7 +127,9 @@ class CustomBankTransaction(BankTransaction):
 
 
 def on_update_after_submit(doc, event):
-	"""Validate if the Bank Transaction is over-allocated."""
+	"""Validate reservation and over-allocation after submit."""
+	_validate_new_payment_entries_against_reservation(doc)
+
 	to_allocate = flt(doc.withdrawal or doc.deposit)
 	for entry in doc.payment_entries:
 		to_allocate -= flt(entry.allocated_amount)
@@ -111,6 +141,33 @@ def on_update_after_submit(doc, event):
 				),
 				title=_("Over Allocation"),
 			)
+
+
+def _validate_new_payment_entries_against_reservation(doc):
+	if not doc.reserved_voucher:
+		return
+
+	before = doc.get_doc_before_save()
+	before_keys = {
+		(entry.payment_document, entry.payment_entry) for entry in (before.payment_entries if before else [])
+	}
+	reserved_key = (doc.reserved_voucher_type, doc.reserved_voucher)
+
+	for entry in doc.payment_entries:
+		key = (entry.payment_document, entry.payment_entry)
+		if key in before_keys or key == reserved_key:
+			continue
+
+		frappe.throw(
+			_(
+				"Bank Transaction {0} is reserved by draft {1} {2}. "
+				"Submit or delete that voucher before reconciling other entries."
+			).format(
+				frappe.bold(doc.name),
+				_(doc.reserved_voucher_type),
+				frappe.bold(doc.reserved_voucher),
+			)
+		)
 
 
 def has_zero_transaction_amount_with_included_fee(doc: "CustomBankTransaction") -> bool:
@@ -248,6 +305,26 @@ def on_cancel(doc, method):
 		frappe.get_doc("Journal Entry", journal_entry).cancel()
 
 
+def get_party_error(doc, account_type: str, target_account: str) -> str | None:
+	"""Explain why the Bank Transaction cannot supply a party for `target_account`.
+
+	The transaction is the only source for the party of the automatic Journal Entry,
+	so a rule pointing at a Receivable or Payable account is not applicable to
+	transactions without a fitting party. Returns None if the party fits.
+	"""
+	if not (doc.party_type and doc.party):
+		return _("Bank Transaction {0} has no party, but target account {1} is a {2} account.").format(
+			doc.name, target_account, _(account_type)
+		)
+
+	if not party_type_matches_account_type(doc.party_type, account_type):
+		return _(
+			"Bank Transaction {0} has party type {1}, which cannot be booked against the {2} account {3}."
+		).format(doc.name, _(doc.party_type), _(account_type), target_account)
+
+	return None
+
+
 def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 	allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
 	remaining_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - allocated_amount
@@ -284,6 +361,22 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 		if not evaluate_filters(doc, filters):
 			continue
 
+		party = {}
+		if party_account_type := get_party_account_type(target_account):
+			if reason := get_party_error(doc, party_account_type, target_account):
+				# Stop instead of raising, which would abort a whole statement import,
+				# and instead of falling through to the next rule, which would book the
+				# amount to an account the highest-priority match did not intend.
+				frappe.log_error(
+					title="Bank Reconciliation Rule not applied",
+					message=reason,
+					reference_doctype="Bank Reconciliation Rule",
+					reference_name=br_rule_name,
+				)
+				return
+
+			party = {"party_type": doc.party_type, "party": doc.party}
+
 		je_auto_name = create_automatic_journal_entry(
 			company=doc.company,
 			bank_account=doc.bank_account,
@@ -295,6 +388,7 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 			debit=debit,
 			credit=credit,
 			rule=br_rule_name,
+			**party,
 		)
 		doc.append(
 			"payment_entries",
@@ -322,6 +416,8 @@ def create_automatic_journal_entry(
 	debit: float = 0,
 	credit: float = 0,
 	rule: str | None = None,
+	party_type: str | None = None,
+	party: str | None = None,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Bank Entry"
@@ -360,6 +456,8 @@ def create_automatic_journal_entry(
 			"debit_in_account_currency": credit,
 			"credit_in_account_currency": debit,
 			"cost_center": cost_center,
+			"party_type": party_type,
+			"party": party,
 		},
 	)
 

@@ -1,6 +1,6 @@
-frappe.provide("erpnext.accounts.bank_reconciliation");
+frappe.provide("banking.bank_reconciliation");
 
-erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
+banking.bank_reconciliation.MatchTab = class MatchTab {
 	constructor(opts) {
 		$.extend(this, opts);
 		this.make();
@@ -46,14 +46,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.set_table_data(vouchers);
 		this.actions_table.unfreeze();
 
-		let transaction_amount =
-			this.transaction.withdrawal || this.transaction.deposit;
-		this.render_transaction_amount_summary(
-			flt(transaction_amount),
-			flt(this.transaction.unallocated_amount),
-			flt(this.transaction.unallocated_amount),
-			this.transaction.currency
-		);
+		this.render_baseline_summary();
 	}
 
 	update_filters_in_state(new_filters) {
@@ -71,11 +64,6 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 				args: {
 					bank_transaction_name: this.transaction.name,
 					document_types: document_types,
-					from_date: this.frm.doc.bank_statement_from_date,
-					to_date: this.frm.doc.bank_statement_to_date,
-					filter_by_reference_date: this.frm.doc.filter_by_reference_date,
-					from_reference_date: this.frm.doc.from_reference_date,
-					to_reference_date: this.frm.doc.to_reference_date,
 				},
 			})
 			.then((result) => result.message);
@@ -194,7 +182,11 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		if (id in this.summary_data) {
 			delete this.summary_data[id];
 		} else {
-			this.summary_data[id] = { amount: value, currency: currency };
+			this.summary_data[id] = {
+				amount: value,
+				currency: currency,
+				doctype: row[this.position_of("Voucher")].doctype,
+			};
 		}
 
 		if (this.has_currency_mismatch_selection()) {
@@ -202,25 +194,28 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			return;
 		}
 
-		// Total of selected row amounts in summary_data
-		// Cap total_allocated to unallocated amount
+		// Deposit included fees are only booked against unpaid invoices.
+		// PE/JE matching and Create Voucher stay on the bank net amount.
+		let unpaid_invoices_only =
+			this.panel_manager.actions_filters.unpaid_invoices;
+		let allocation_budget = banking.bank_reconciliation.get_allocation_budget(
+			this.transaction,
+			this.summary_data,
+			unpaid_invoices_only
+		);
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, entry) => a + entry.amount,
 			0
 		);
-		let max_allocated = Math.min(
-			total_allocated,
-			this.transaction.unallocated_amount
-		);
+		let max_allocated = Math.min(total_allocated, allocation_budget);
 
-		// Deduct allocated amount from transaction's unallocated amount
-		// to show the final effect on reconciling
-		let transaction_amount =
-			this.transaction.withdrawal || this.transaction.deposit;
-		let unallocated =
-			flt(this.transaction.unallocated_amount) - flt(max_allocated);
-		let actual_unallocated =
-			flt(this.transaction.unallocated_amount) - flt(total_allocated);
+		let transaction_amount = banking.bank_reconciliation.get_summary_amount(
+			this.transaction,
+			this.summary_data,
+			unpaid_invoices_only
+		);
+		let unallocated = flt(allocation_budget) - flt(max_allocated);
+		let actual_unallocated = flt(allocation_budget) - flt(total_allocated);
 
 		this.render_transaction_amount_summary(
 			flt(transaction_amount),
@@ -261,7 +256,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		// Show the actual allocated amount
 		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
 
-		new erpnext.accounts.bank_reconciliation.SummaryCard({
+		new banking.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
 			values: {
 				Amount: [total_amount],

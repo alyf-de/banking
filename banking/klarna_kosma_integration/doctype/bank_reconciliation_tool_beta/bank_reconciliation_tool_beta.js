@@ -44,16 +44,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		}
 	},
 
-	filter_by_reference_date: function (frm) {
-		if (frm.doc.filter_by_reference_date) {
-			frm.set_value("bank_statement_from_date", "");
-			frm.set_value("bank_statement_to_date", "");
-		} else {
-			frm.set_value("from_reference_date", "");
-			frm.set_value("to_reference_date", "");
-		}
-	},
-
 	/**
 	 * Handles reconcile-time currency conversion for mismatched voucher selections.
 	 *
@@ -80,7 +70,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 		const context = await fetch_reconcile_amount_context(transaction, voucher);
 
-		return erpnext.accounts.bank_reconciliation.prompt_manual_reconcile_amounts(
+		return banking.bank_reconciliation.prompt_manual_reconcile_amounts(
 			context,
 			transaction,
 			voucher
@@ -111,9 +101,6 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 							bank_account: frm.doc.bank_account,
 							from_date: frm.doc.bank_statement_from_date,
 							to_date: frm.doc.bank_statement_to_date,
-							filter_by_reference_date: frm.doc.filter_by_reference_date,
-							from_reference_date: frm.doc.from_reference_date,
-							to_reference_date: frm.doc.to_reference_date,
 						},
 						freeze: true,
 						freeze_message: __("Auto Reconciling ..."),
@@ -272,7 +259,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 		// frappe.require("bank_reconciliation_beta.bundle.js", () => {
 		// 	let difference = flt(frm.doc.bank_statement_closing_balance) - flt(frm.cleared_balance);
 		// 	let difference_color = difference >= 0 ?  "text-success" : "text-danger";
-		// 	frm.summary_card = new erpnext.accounts.bank_reconciliation.SummaryCard({
+		// 	frm.summary_card = new banking.bank_reconciliation.SummaryCard({
 		// 		$wrapper: frm.get_field("reconciliation_tool_cards").$wrapper,
 		// 		values: {
 		// 			"Bank Closing Balance": [frm.doc.bank_statement_closing_balance],
@@ -286,12 +273,13 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 	build_reconciliation_area: function (frm) {
 		frappe.require("bank_reconciliation_beta.bundle.js", () => {
-			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
-				{
-					frm: frm,
-					$wrapper: frm.$reconciliation_area,
-				}
-			);
+			if (frm.panel_manager?.cleanup_voucher_watches) {
+				frm.panel_manager.cleanup_voucher_watches();
+			}
+			frm.panel_manager = new banking.bank_reconciliation.PanelManager({
+				frm: frm,
+				$wrapper: frm.$reconciliation_area,
+			});
 		});
 	},
 });

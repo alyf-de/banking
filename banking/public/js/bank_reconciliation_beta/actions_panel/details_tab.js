@@ -1,6 +1,6 @@
-frappe.provide("erpnext.accounts.bank_reconciliation");
+frappe.provide("banking.bank_reconciliation");
 
-erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
+banking.bank_reconciliation.DetailsTab = class DetailsTab {
 	constructor(opts) {
 		$.extend(this, opts);
 		this.make();
@@ -101,6 +101,14 @@ erpnext.accounts.bank_reconciliation.DetailsTab = class DetailsTab {
 				fieldtype: "Currency",
 				options: "currency",
 				read_only: 1,
+			},
+			{
+				label: __("Included Fee"),
+				fieldname: "included_fee",
+				fieldtype: "Currency",
+				options: "currency",
+				read_only: 1,
+				hidden: flt(this.transaction.included_fee) ? 0 : 1,
 			},
 			{
 				fieldtype: "Column Break",
