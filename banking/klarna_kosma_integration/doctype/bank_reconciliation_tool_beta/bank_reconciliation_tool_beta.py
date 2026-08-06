@@ -138,32 +138,6 @@ def get_bank_transactions(
 		bank_accounts: tuple[str, ...] = frappe.get_list("Bank Account", filters={"bank": bank}, pluck="name")
 		filters.append(["bank_account", "in", bank_accounts])
 
-<<<<<<< HEAD
-	return frappe.get_list(
-		"Bank Transaction",
-		fields=[
-			"date",
-			"deposit",
-			"withdrawal",
-			"currency",
-			"description",
-			"name",
-			"bank_account",
-			"company",
-			"unallocated_amount",
-			"reference_number",
-			"party_type",
-			"party",
-			"bank_party_name",
-			"bank_party_account_number",
-			"bank_party_iban",
-			"reserved_voucher_type",
-			"reserved_voucher",
-		],
-		filters=filters,
-		order_by=get_bank_transaction_order_by(order_by),
-	)
-=======
 	fields = [
 		"date",
 		"deposit",
@@ -194,7 +168,7 @@ def get_bank_transactions(
 	)
 	enrich_transactions_with_deposit_fee_for_reconciliation(transactions)
 
-	return {"transactions": transactions}
+	return transactions
 
 
 def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) -> None:
@@ -281,7 +255,6 @@ def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) 
 			included_fee_for_reconciliation = flt(transaction.included_fee)
 
 		transaction.included_fee_for_reconciliation = included_fee_for_reconciliation
->>>>>>> 90cd117 (fix(Bank Reconciliation Beta): show deposit + included fee in UI amounts (#408))
 
 
 def _reserve_bank_transaction(bank_transaction: CustomBankTransaction, voucher_type: str, voucher_name: str):

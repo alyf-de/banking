@@ -1584,16 +1584,16 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			bank_account=bank_account_with_fee,
 		)
 
-		result = get_bank_transactions(bank_account=bank_account_with_fee)
-		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee, 5)
 		self.assertEqual(row.included_fee_for_reconciliation, 5)
 		self.assertIsNone(row.get("reconcilable_amount"))
 
 		# Flag off → fee not exposed for Match unpaid-invoice budget
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
-		result = get_bank_transactions(bank_account=bank_account_with_fee)
-		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
 	def test_get_bank_transactions_hides_fee_when_partially_allocated(self):
@@ -1615,8 +1615,8 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		frappe.db.set_value("Bank Transaction", bt.name, "unallocated_amount", 40)
 		bt.reload()
 
-		result = get_bank_transactions(bank_account=bank_account_with_fee)
-		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee, 5)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
@@ -1638,8 +1638,8 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		# Sub-precision drift must not count as a prior allocation
 		frappe.db.set_value("Bank Transaction", bt.name, "unallocated_amount", 74.999999)
 
-		result = get_bank_transactions(bank_account=bank_account_with_fee)
-		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 5)
 
 	def test_get_bank_transactions_hides_fee_for_foreign_currency_bank(self):
@@ -1661,8 +1661,8 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 			currency="USD",
 		)
 
-		result = get_bank_transactions(bank_account=usd_bank_account)
-		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		transactions = get_bank_transactions(bank_account=usd_bank_account)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee, 13)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
@@ -1684,8 +1684,8 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		)
 
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
-		result = get_bank_transactions(bank_account=bank_account_without_fee)
-		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		transactions = get_bank_transactions(bank_account=bank_account_without_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
 	def _create_draft_journal_entry(self, bt, **kwargs):

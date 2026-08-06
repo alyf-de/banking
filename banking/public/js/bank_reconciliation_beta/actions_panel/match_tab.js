@@ -46,18 +46,7 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		this.set_table_data(vouchers);
 		this.actions_table.unfreeze();
 
-<<<<<<< HEAD
-		let transaction_amount =
-			this.transaction.withdrawal || this.transaction.deposit;
-		this.render_transaction_amount_summary(
-			flt(transaction_amount),
-			flt(this.transaction.unallocated_amount),
-			flt(this.transaction.unallocated_amount),
-			this.transaction.currency,
-		);
-=======
 		this.render_baseline_summary();
->>>>>>> 90cd117 (fix(Bank Reconciliation Beta): show deposit + included fee in UI amounts (#408))
 	}
 
 	update_filters_in_state(new_filters) {
@@ -213,26 +202,19 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 			erpnext.accounts.bank_reconciliation.get_allocation_budget(
 				this.transaction,
 				this.summary_data,
-				unpaid_invoices_only
+				unpaid_invoices_only,
 			);
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, entry) => a + entry.amount,
 			0,
 		);
-<<<<<<< HEAD
-		let max_allocated = Math.min(
-			total_allocated,
-			this.transaction.unallocated_amount,
-		);
-=======
 		let max_allocated = Math.min(total_allocated, allocation_budget);
->>>>>>> 90cd117 (fix(Bank Reconciliation Beta): show deposit + included fee in UI amounts (#408))
 
 		let transaction_amount =
 			erpnext.accounts.bank_reconciliation.get_summary_amount(
 				this.transaction,
 				this.summary_data,
-				unpaid_invoices_only
+				unpaid_invoices_only,
 			);
 		let unallocated = flt(allocation_budget) - flt(max_allocated);
 		let actual_unallocated = flt(allocation_budget) - flt(total_allocated);
