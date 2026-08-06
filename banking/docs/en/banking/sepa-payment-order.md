@@ -1,6 +1,9 @@
 ---
 title: SEPA Payment Order
 order: 50
+roles:
+  - Accounts User
+  - Accounts Manager
 ---
 
 The **SEPA Payment Order** feature provides a comprehensive solution for creating and managing SEPA Credit Transfer payments directly from ERPNext. This feature seamlessly integrates with **Purchase Invoice** to automate the payment process for suppliers and employees within the SEPA zone.

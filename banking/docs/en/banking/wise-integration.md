@@ -1,6 +1,9 @@
 ---
 title: WISE Integration
 order: 60
+roles:
+  - Accounts User
+  - Accounts Manager
 ---
 
 You can import your **Bank Transactions** from [WISE](https://wise.com/) and reconcile them using our **Bank Reconciliation Tool Beta**.

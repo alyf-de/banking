@@ -1,6 +1,10 @@
 ---
 title: ALYF Banking
 order: 0
+roles:
+  - Accounts User
+  - Accounts Manager
+  - System Manager
 ---
 
 ALYF Banking imports bank statements into ERPNext as **Bank Transactions** and helps you reconcile them against vouchers.

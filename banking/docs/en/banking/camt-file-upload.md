@@ -1,6 +1,9 @@
 ---
 title: CAMT File Upload
 order: 30
+roles:
+  - Accounts User
+  - Accounts Manager
 ---
 
 ## Overview

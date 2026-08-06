@@ -1,6 +1,9 @@
 ---
 title: Bank Reconciliation Tool Beta
 order: 20
+roles:
+  - Accounts User
+  - Accounts Manager
 ---
 
 Once all your Bank Transactions are synced into ERPNext, you can reconcile them with your existing vouchers. On your workspace sidebar, **go to**:

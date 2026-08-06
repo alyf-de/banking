@@ -1,6 +1,9 @@
 ---
 title: EBICS Integration
 order: 10
+roles:
+  - System Manager
+  - Accounts Manager
 ---
 
 EBICS (Electronic Banking Internet Communication Standard) allows companies to manage payments across multiple banks using a single, secure system. Widely used in Europe, EBICS is an open standard compatible with many ERP systems, making it easy for businesses to handle multi-bank payments and cash management.

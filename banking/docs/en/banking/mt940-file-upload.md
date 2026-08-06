@@ -1,6 +1,9 @@
 ---
 title: MT940 File Upload
 order: 40
+roles:
+  - Accounts User
+  - Accounts Manager
 ---
 
 ## Overview

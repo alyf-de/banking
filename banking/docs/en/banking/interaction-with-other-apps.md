@@ -1,6 +1,8 @@
 ---
 title: Interaction with other Apps
 order: 80
+roles:
+  - System Manager
 ---
 
 > **NOTE**: This document mainly applies to v15+. For earlier versions, things may be different.
