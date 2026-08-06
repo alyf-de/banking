@@ -220,7 +220,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				onchange: () => {
 					this.persist_create_preference("document_type");
 					this.apply_document_type_requirements(
-						this.create_field_group.get_value("document_type")
+						this.create_field_group.get_value("document_type"),
 					);
 				},
 			},
