@@ -204,6 +204,9 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 			method: `${REORDER_METHOD_PREFIX}.get_rules_for_reorder`,
 			args: { bank_account: account },
 			callback: function (r) {
+				if (dialog.get_value("bank_account") !== account) {
+					return;
+				}
 				if (r.exc) {
 					loaded_account = null;
 					dialog.fields_dict.rules_list_html.$wrapper.html(
