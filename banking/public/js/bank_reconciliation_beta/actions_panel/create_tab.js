@@ -181,6 +181,22 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 		};
 	}
 
+	persist_create_preference(fieldname) {
+		this.panel_manager.create_preferences[fieldname] =
+			this.create_field_group.get_value(fieldname);
+	}
+
+	apply_document_type_requirements(document_type) {
+		const fields = this.create_field_group;
+		fields.get_field("party").df.reqd = document_type === "Payment Entry";
+		fields.get_field("party_type").df.reqd = document_type === "Payment Entry";
+		fields.get_field("journal_entry_type").df.reqd =
+			document_type === "Journal Entry";
+		fields.get_field("second_account").df.reqd =
+			document_type === "Journal Entry";
+		fields.refresh();
+	}
+
 	get_create_tab_fields() {
 		let party_type =
 			this.transaction.party_type ||
@@ -189,6 +205,10 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 			(this.accounting_dimension_defaults || {})[this.company] || {};
 		const { left_custom_dimension_fields, right_custom_dimension_fields } =
 			this.get_split_accounting_dimension_fields();
+		const document_type =
+			this.panel_manager.create_preferences.document_type || "Payment Entry";
+		const is_payment_entry = document_type === "Payment Entry";
+		const is_journal_entry = document_type === "Journal Entry";
 
 		return [
 			{
@@ -196,19 +216,12 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldname: "document_type",
 				fieldtype: "Select",
 				options: `Payment Entry\nJournal Entry`,
-				default: "Payment Entry",
+				default: document_type,
 				onchange: () => {
-					let value = this.create_field_group.get_value("document_type");
-					let fields = this.create_field_group;
-
-					fields.get_field("party").df.reqd = value === "Payment Entry";
-					fields.get_field("party_type").df.reqd = value === "Payment Entry";
-					fields.get_field("journal_entry_type").df.reqd =
-						value === "Journal Entry";
-					fields.get_field("second_account").df.reqd =
-						value === "Journal Entry";
-
-					this.create_field_group.refresh();
+					this.persist_create_preference("document_type");
+					this.apply_document_type_requirements(
+						this.create_field_group.get_value("document_type"),
+					);
 				},
 			},
 			{
@@ -256,6 +269,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldtype: "Select",
 				options: `Bank Entry\nJournal Entry\nInter Company Journal Entry\nCash Entry\nCredit Card Entry\nDebit Note\nCredit Note\nContra Entry\nExcise Entry\nWrite Off Entry\nOpening Entry\nDepreciation Entry\nExchange Rate Revaluation\nDeferred Revenue\nDeferred Expense`,
 				default: "Bank Entry",
+				reqd: is_journal_entry,
 				depends_on: "eval: doc.document_type == 'Journal Entry'",
 			},
 			{
@@ -263,6 +277,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldtype: "Link",
 				label: "Account",
 				options: "Account",
+				reqd: is_journal_entry,
 				get_query: () => {
 					return {
 						filters: {
@@ -278,7 +293,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				fieldtype: "Link",
 				label: "Party Type",
 				options: "DocType",
-				reqd: 1,
+				reqd: is_payment_entry,
 				default: party_type,
 				get_query: function () {
 					return {
@@ -298,7 +313,7 @@ erpnext.accounts.bank_reconciliation.CreateTab = class CreateTab {
 				label: "Party",
 				default: this.transaction.party,
 				options: party_type,
-				reqd: 1,
+				reqd: is_payment_entry,
 			},
 			{
 				fieldname: "accounting_dimensions_section",
