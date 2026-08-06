@@ -7,6 +7,11 @@ from frappe.core.utils import find
 from frappe.utils import flt, getdate
 from frappe.utils.data import evaluate_filters, get_link_to_form
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
+	get_party_account_type,
+	party_type_matches_account_type,
+)
+
 
 class CustomBankTransaction(BankTransaction):
 	def before_validate(self):
@@ -300,6 +305,26 @@ def on_cancel(doc, method):
 		frappe.get_doc("Journal Entry", journal_entry).cancel()
 
 
+def get_party_error(doc, account_type: str, target_account: str) -> str | None:
+	"""Explain why the Bank Transaction cannot supply a party for `target_account`.
+
+	The transaction is the only source for the party of the automatic Journal Entry,
+	so a rule pointing at a Receivable or Payable account is not applicable to
+	transactions without a fitting party. Returns None if the party fits.
+	"""
+	if not (doc.party_type and doc.party):
+		return _("Bank Transaction {0} has no party, but target account {1} is a {2} account.").format(
+			doc.name, target_account, _(account_type)
+		)
+
+	if not party_type_matches_account_type(doc.party_type, account_type):
+		return _(
+			"Bank Transaction {0} has party type {1}, which cannot be booked against the {2} account {3}."
+		).format(doc.name, _(doc.party_type), _(account_type), target_account)
+
+	return None
+
+
 def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 	allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
 	remaining_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - allocated_amount
@@ -336,6 +361,22 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 		if not evaluate_filters(doc, filters):
 			continue
 
+		party = {}
+		if party_account_type := get_party_account_type(target_account):
+			if reason := get_party_error(doc, party_account_type, target_account):
+				# Stop instead of raising, which would abort a whole statement import,
+				# and instead of falling through to the next rule, which would book the
+				# amount to an account the highest-priority match did not intend.
+				frappe.log_error(
+					title="Bank Reconciliation Rule not applied",
+					message=reason,
+					reference_doctype="Bank Reconciliation Rule",
+					reference_name=br_rule_name,
+				)
+				return
+
+			party = {"party_type": doc.party_type, "party": doc.party}
+
 		je_auto_name = create_automatic_journal_entry(
 			company=doc.company,
 			bank_account=doc.bank_account,
@@ -347,6 +388,7 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 			debit=debit,
 			credit=credit,
 			rule=br_rule_name,
+			**party,
 		)
 		doc.append(
 			"payment_entries",
@@ -374,6 +416,8 @@ def create_automatic_journal_entry(
 	debit: float = 0,
 	credit: float = 0,
 	rule: str | None = None,
+	party_type: str | None = None,
+	party: str | None = None,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Bank Entry"
@@ -412,6 +456,8 @@ def create_automatic_journal_entry(
 			"debit_in_account_currency": credit,
 			"credit_in_account_currency": debit,
 			"cost_center": cost_center,
+			"party_type": party_type,
+			"party": party,
 		},
 	)
 
