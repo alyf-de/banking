@@ -11,9 +11,9 @@ from banking.exceptions import CurrencyMismatchError, PartyMismatchError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
 	BankReconciliationRule,
 	NoFiltersError,
+	get_bank_transaction_match_stats,
 	get_rules_for_reorder,
 	reorder_bank_reconciliation_rule_priorities,
-	get_bank_transaction_match_stats,
 )
 from banking.testing_utils import TEST_COMPANY, create_bank_account, create_currency_account
 
@@ -113,7 +113,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "priority"), 10)
 		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "docstatus"), 1)
 		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "docstatus"), 1)
-    
+
 	def test_validate_target_account_party(self):
 		def rule(filters: list) -> BankReconciliationRule:
 			return BankReconciliationRule(

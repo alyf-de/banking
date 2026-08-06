@@ -167,6 +167,43 @@ class BankReconciliationRule(Document):
 		if not parsed:
 			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
 
+	def validate_target_account_party(self):
+		"""Receivable and Payable target accounts need a party on the Journal Entry.
+
+		The party is copied from the matched Bank Transaction, so the rule has to
+		restrict itself to transactions with a compatible party type.
+		"""
+		account_type = get_party_account_type(self.target_account)
+		if not account_type:
+			return
+
+		party_type = self.get_filter_value("party_type")
+		if not party_type:
+			frappe.throw(
+				_(
+					"{0} is a {1} account, so the automatic Journal Entry needs a party. "
+					"Please add a {2} filter to restrict this rule to transactions with a party."
+				).format(frappe.bold(self.target_account), _(account_type), frappe.bold(_("Party Type"))),
+				PartyMismatchError,
+			)
+
+		if not party_type_matches_account_type(party_type, account_type):
+			frappe.throw(
+				_("Party type {0} cannot be booked against the {1} account {2}.").format(
+					frappe.bold(_(party_type)), _(account_type), frappe.bold(self.target_account)
+				),
+				PartyMismatchError,
+			)
+
+	def get_filter_value(self, fieldname: str) -> str | None:
+		"""Return the value the rule pins `fieldname` to, if it uses an equality filter."""
+		for row in json.loads(self.filters):
+			if row[1] == fieldname and row[2] == "=":
+				return row[3]
+
+		return None
+
+
 @frappe.whitelist()
 def get_bank_accounts_with_rules() -> list[str]:
 	"""Bank accounts that have at least one non-cancelled reconciliation rule."""
@@ -197,6 +234,7 @@ def get_rules_for_reorder(bank_account: str | None = None) -> list[dict]:
 		order_by="priority desc, creation asc",
 	)
 	return list(rules)
+
 
 @frappe.whitelist()
 def reorder_bank_reconciliation_rule_priorities(
@@ -251,39 +289,3 @@ def reorder_bank_reconciliation_rule_priorities(
 	for idx, name in enumerate(ordered):
 		priority = cint(n - idx) * step
 		frappe.db.set_value("Bank Reconciliation Rule", name, "priority", priority)
-    
-	def validate_target_account_party(self):
-		"""Receivable and Payable target accounts need a party on the Journal Entry.
-
-		The party is copied from the matched Bank Transaction, so the rule has to
-		restrict itself to transactions with a compatible party type.
-		"""
-		account_type = get_party_account_type(self.target_account)
-		if not account_type:
-			return
-
-		party_type = self.get_filter_value("party_type")
-		if not party_type:
-			frappe.throw(
-				_(
-					"{0} is a {1} account, so the automatic Journal Entry needs a party. "
-					"Please add a {2} filter to restrict this rule to transactions with a party."
-				).format(frappe.bold(self.target_account), _(account_type), frappe.bold(_("Party Type"))),
-				PartyMismatchError,
-			)
-
-		if not party_type_matches_account_type(party_type, account_type):
-			frappe.throw(
-				_("Party type {0} cannot be booked against the {1} account {2}.").format(
-					frappe.bold(_(party_type)), _(account_type), frappe.bold(self.target_account)
-				),
-				PartyMismatchError,
-			)
-
-	def get_filter_value(self, fieldname: str) -> str | None:
-		"""Return the value the rule pins `fieldname` to, if it uses an equality filter."""
-		for row in json.loads(self.filters):
-			if row[1] == fieldname and row[2] == "=":
-				return row[3]
-
-		return None
