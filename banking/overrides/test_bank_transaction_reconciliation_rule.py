@@ -6,18 +6,13 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-<<<<<<< HEAD
-from banking.testing_utils import create_bank_account, create_currency_account
-
-test_dependencies = ["Company", "Account"]
-=======
 from banking.testing_utils import (
-	TEST_COMPANY,
 	create_bank_account,
 	create_currency_account,
 	create_supplier,
 )
->>>>>>> d060fa8 (fix: set party on rule-generated Journal Entries (#409))
+
+test_dependencies = ["Company", "Account"]
 
 
 def create_bank_reconciliation_rule(bank_account, target_account, filters, disabled=0, submit=True):
@@ -48,18 +43,12 @@ class TestBankTransactionReconciliationRule(FrappeTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 
-<<<<<<< HEAD
 		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": "_Test Company"})
 		cls.account_main = create_currency_account("INR", parent_account, "_Test_Account_INR")
 		cls.account_target = create_currency_account("INR", parent_account, "_Test_Account_INR_Target")
-=======
-		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": TEST_COMPANY})
-		cls.account_main = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
-		cls.account_target = create_currency_account("EUR", parent_account, "_Test_Account_EUR_Target")
 		cls.account_payable = create_currency_account(
-			"EUR", parent_account, "_Test_Account_EUR_Payable", account_type="Payable"
+			"INR", parent_account, "_Test_Account_INR_Payable", account_type="Payable"
 		)
->>>>>>> d060fa8 (fix: set party on rule-generated Journal Entries (#409))
 		cls.bank_account = create_bank_account(cls.account_main.name)
 		cls.supplier = create_supplier()
 

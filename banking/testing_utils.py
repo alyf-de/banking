@@ -55,15 +55,11 @@ def _create_account(
 
 
 def create_currency_account(
-<<<<<<< HEAD
-	currency: str, parent_account: str, account_name: str, company: str = "_Test Company"
-=======
 	currency: str,
 	parent_account: str,
 	account_name: str,
-	company: str = TEST_COMPANY,
+	company: str = "_Test Company",
 	account_type: str = "Bank",
->>>>>>> d060fa8 (fix: set party on rule-generated Journal Entries (#409))
 ):
 	account = _create_account(
 		account_name=account_name,
