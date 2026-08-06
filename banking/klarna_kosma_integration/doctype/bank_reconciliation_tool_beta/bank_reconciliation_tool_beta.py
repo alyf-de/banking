@@ -138,30 +138,123 @@ def get_bank_transactions(
 		bank_accounts: tuple[str, ...] = frappe.get_list("Bank Account", filters={"bank": bank}, pluck="name")
 		filters.append(["bank_account", "in", bank_accounts])
 
-	return frappe.get_list(
+	fields = [
+		"date",
+		"deposit",
+		"withdrawal",
+		"currency",
+		"description",
+		"name",
+		"bank_account",
+		"company",
+		"unallocated_amount",
+		"included_fee",
+		"reference_number",
+		"party_type",
+		"party",
+		"bank_party_name",
+		"bank_party_account_number",
+		"bank_party_iban",
+		"reserved_voucher_type",
+		"reserved_voucher",
+	]
+	order_by = get_bank_transaction_order_by(order_by)
+
+	transactions = frappe.get_list(
 		"Bank Transaction",
-		fields=[
-			"date",
-			"deposit",
-			"withdrawal",
-			"currency",
-			"description",
-			"name",
-			"bank_account",
-			"company",
-			"unallocated_amount",
-			"reference_number",
-			"party_type",
-			"party",
-			"bank_party_name",
-			"bank_party_account_number",
-			"bank_party_iban",
-			"reserved_voucher_type",
-			"reserved_voucher",
-		],
+		fields=fields,
 		filters=filters,
-		order_by=get_bank_transaction_order_by(order_by),
+		order_by=order_by,
 	)
+	enrich_transactions_with_deposit_fee_for_reconciliation(transactions)
+
+	return transactions
+
+
+def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) -> None:
+	"""Expose deposit included fees that unpaid-invoice reconciliation can book.
+
+	Only set when the same gates as get_deposit_included_fee apply, plus:
+	- no prior allocations (follow-up fee reconcile is rejected);
+	- bank account currency equals company currency (PE deductions are company-currency).
+
+	This is the unpaid-invoice fee additive — not a general allocatable amount for
+	Payment Entry / Journal Entry matching or Create Voucher.
+	"""
+	if not transactions:
+		return
+
+	fee_enabled = flt(
+		frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees")
+	)
+	if not fee_enabled:
+		for transaction in transactions:
+			transaction.included_fee_for_reconciliation = 0.0
+		return
+
+	bank_account_names = list(
+		{transaction.bank_account for transaction in transactions if transaction.bank_account}
+	)
+	bank_account_rows = (
+		frappe.get_all(
+			"Bank Account",
+			filters={"name": ["in", bank_account_names]},
+			fields=["name", "bank_fee_account", "account"],
+		)
+		if bank_account_names
+		else []
+	)
+	fee_accounts_by_bank_account = {row.name: row.bank_fee_account for row in bank_account_rows}
+	gl_by_bank_account = {row.name: row.account for row in bank_account_rows}
+	gl_accounts = list({row.account for row in bank_account_rows if row.account})
+	bank_currency_by_gl = (
+		{
+			row.name: row.account_currency
+			for row in frappe.get_all(
+				"Account",
+				filters={"name": ["in", gl_accounts]},
+				fields=["name", "account_currency"],
+			)
+		}
+		if gl_accounts
+		else {}
+	)
+
+	company_names = list({transaction.company for transaction in transactions if transaction.company})
+	company_currency_by_name = (
+		{
+			row.name: row.default_currency
+			for row in frappe.get_all(
+				"Company",
+				filters={"name": ["in", company_names]},
+				fields=["name", "default_currency"],
+			)
+		}
+		if company_names
+		else {}
+	)
+
+	# These are get_list rows, not documents, so precision has to be resolved separately
+	precision = frappe.get_precision("Bank Transaction", "unallocated_amount")
+
+	for transaction in transactions:
+		included_fee_for_reconciliation = 0.0
+		bank_gl = gl_by_bank_account.get(transaction.bank_account)
+		bank_currency = bank_currency_by_gl.get(bank_gl) if bank_gl else None
+		company_currency = company_currency_by_name.get(transaction.company)
+		fully_unallocated_deposit = flt(transaction.deposit) > 0 and flt(
+			transaction.unallocated_amount, precision
+		) == flt(transaction.deposit, precision)
+		if (
+			fully_unallocated_deposit
+			and flt(transaction.included_fee) > 0
+			and fee_accounts_by_bank_account.get(transaction.bank_account)
+			and bank_currency
+			and bank_currency == company_currency
+		):
+			included_fee_for_reconciliation = flt(transaction.included_fee)
+
+		transaction.included_fee_for_reconciliation = included_fee_for_reconciliation
 
 
 def _reserve_bank_transaction(bank_transaction: CustomBankTransaction, voucher_type: str, voucher_name: str):

@@ -4,6 +4,8 @@
 import json
 from contextlib import contextmanager
 from datetime import date
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -64,6 +66,22 @@ class TestBankingSettings(FrappeTestCase):
 		with create_successful_request("C53", date(2025, 1, 2), date(2025, 1, 2)):
 			with create_successful_request("C53", date(2025, 1, 1), date(2025, 1, 1)):
 				self.assertTrue(successful_request_exists(None, "C53", date(2025, 1, 1)))
+
+	def test_successful_request_exists_ignores_malformed_dates(self):
+		valid_parameters = json.dumps({"start_date": "2025-01-01", "end_date": "2025-01-01"})
+		for malformed_parameters in (
+			{"start_date": "not-a-date", "end_date": "2025-01-01"},
+			{"start_date": "2025-01-01", "end_date": "not-a-date"},
+		):
+			with self.subTest(parameters=malformed_parameters):
+				with patch(
+					"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings.frappe.get_all",
+					return_value=[
+						SimpleNamespace(parameters=json.dumps(malformed_parameters)),
+						SimpleNamespace(parameters=valid_parameters),
+					],
+				):
+					self.assertTrue(successful_request_exists(None, "C53", date(2025, 1, 1)))
 
 
 @contextmanager
