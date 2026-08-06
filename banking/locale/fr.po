@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2026-07-20 12:05+0053\n"
+"POT-Creation-Date: 2026-08-06 22:08+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -54,8 +54,8 @@ msgstr "Une nouvelle version de l'application Banking est disponible ({0}). Veui
 msgid "ALYF Banking"
 msgstr "ALYF Banque"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:130
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:467
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:138
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:534
 msgid "Account Holder"
 msgstr "Titulaire du compte"
 
@@ -96,6 +96,14 @@ msgstr "Montants mis à jour."
 msgid "An error occurred"
 msgstr "Une erreur est survenue"
 
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:76
+msgid "Applied: {0}"
+msgstr "Appliqué : {0}"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:63
+msgid "Apply this rule to {0} unreconciled Bank Transaction(s)? This will create Journal Entries and cannot be undone easily."
+msgstr "Appliquer cette règle à {0} transaction(s) bancaire(s) non rapprochée(s) ? Cela créera des écritures comptables et ne pourra pas être facilement annulé."
+
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order_list.js:19
 msgid "Approved"
 msgstr "Approuvé"
@@ -108,7 +116,7 @@ msgstr "Essayez-vous de rapprocher des justificatifs de différentes parties? Ce
 msgid "Authentication error due to invalid credentials."
 msgstr "Erreur d'authentification due à des identifiants invalides."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:540
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:628
 msgid "Auto Reconciliation Complete"
 msgstr "Rapprochement automatique terminé"
 
@@ -120,11 +128,11 @@ msgstr "Rapprochement automatique en cours..."
 msgid "Auto reconcile bank transactions based on matching reference numbers?"
 msgstr "Rapprocher les transactions bancaires en fonction des numéros de référence correspondants?"
 
-#: banking/overrides/bank_transaction.py:387
+#: banking/overrides/bank_transaction.py:471
 msgid "Auto-created from Bank Transaction {0}"
 msgstr "Créé automatiquement à partir de la transaction bancaire {0}"
 
-#: banking/overrides/bank_transaction.py:383
+#: banking/overrides/bank_transaction.py:467
 msgid "Auto-created from Bank Transaction {0} by Bank Reconciliation Rule {1}"
 msgstr "Créé automatiquement à partir de la transaction bancaire {0} par la règle de rapprochement bancaire {1}"
 
@@ -136,15 +144,15 @@ msgstr "Le traitement automatique des frais bancaires inclus n'est pas pris en c
 msgid "Automatic journal entries for bank fees can only be enabled when all company Bank Accounts have a Bank Fee Account."
 msgstr "Les écritures comptables automatiques pour les frais bancaires ne peuvent être activées que lorsque tous les comptes bancaires de la société ont un compte de frais bancaires."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:140
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:157
 msgid "Bank Account and Target Account need to be in the same currency!"
 msgstr "Le compte bancaire et le compte cible doivent être dans la même devise !"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:85
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:101
 msgid "Bank Account does not match this Bank Reconciliation Rule"
 msgstr "Le compte bancaire ne correspond pas à cette règle de rapprochement bancaire"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:78
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:94
 msgid "Bank Account is required"
 msgstr "Le compte bancaire est obligatoire"
 
@@ -184,11 +192,19 @@ msgstr "Règle de rapprochement bancaire"
 msgid "Bank Reconciliation Tool Beta"
 msgstr "Outil de rapprochement bancaire Beta"
 
-#: banking/overrides/bank_transaction.py:179
+#: banking/overrides/bank_transaction.py:184
 msgid "Bank Transaction {0} has no deposit or withdrawal but has an included fee of {1}. Automatic bank fee reconciliation was skipped; please review manually."
 msgstr "La transaction bancaire {0} n'a ni dépôt ni retrait, mais a des frais inclus de {1}. Le rapprochement automatique des frais bancaires a été ignoré ; veuillez vérifier manuellement."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:170
+#: banking/overrides/bank_transaction.py:316
+msgid "Bank Transaction {0} has no party, but target account {1} is a {2} account."
+msgstr "La transaction bancaire {0} n'a pas de partie, mais le compte cible {1} est un compte {2}."
+
+#: banking/overrides/bank_transaction.py:321
+msgid "Bank Transaction {0} has party type {1}, which cannot be booked against the {2} account {3}."
+msgstr "La transaction bancaire {0} a le type de partie {1}, qui ne peut pas être imputé au compte {2} {3}."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:258
 msgid "Bank Transaction {0} is already reserved by draft {1} {2}. Submit or delete that voucher before creating another."
 msgstr "La transaction bancaire {0} est déjà réservée par le brouillon {1} {2}. Validez ou supprimez ce justificatif avant d'en créer un autre."
 
@@ -196,8 +212,8 @@ msgstr "La transaction bancaire {0} est déjà réservée par le brouillon {1} {
 msgid "Bank Transaction {0} is not reserved for {1} {2}."
 msgstr "La transaction bancaire {0} n'est pas réservée pour {1} {2}."
 
-#: banking/overrides/bank_transaction.py:54
-#: banking/overrides/bank_transaction.py:157
+#: banking/overrides/bank_transaction.py:59
+#: banking/overrides/bank_transaction.py:162
 msgid "Bank Transaction {0} is reserved by draft {1} {2}. Submit or delete that voucher before reconciling other entries."
 msgstr "La transaction bancaire {0} est réservée par le brouillon {1} {2}. Validez ou supprimez ce justificatif avant de rapprocher d'autres écritures."
 
@@ -291,7 +307,7 @@ msgstr "Réservation par lot"
 msgid "CRED"
 msgstr "CRED"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:221
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:309
 msgid "Cannot create Journal Entry for a Bank Transaction with both Deposit and Withdrawal"
 msgstr "Impossible de créer une écriture comptable pour une transaction bancaire avec un dépôt et un retrait"
 
@@ -302,6 +318,10 @@ msgstr "Impossible de faire une écriture comptable de rapprochement contre plus
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:683
 msgid "Cannot make Reconciliation Payment Entry against multiple parties"
 msgstr "Impossible de faire une écriture comptable de rapprochement contre plusieurs parties"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:221
+msgid "Cannot reapply a disabled Bank Reconciliation Rule."
+msgstr "Impossible de réappliquer une règle de rapprochement bancaire désactivée."
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:110
 #: banking/ebics/doctype/ebics_user/ebics_user.js:157
@@ -320,6 +340,10 @@ msgstr "Le compte société et le compte de frais bancaires doivent être dans l
 #: banking/public/js/bank_reconciliation_rule_stats.bundle.js:166
 msgid "Could not load match counts."
 msgstr "Impossible de charger le nombre de correspondances."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:50
+msgid "Counting matching Bank Transactions..."
+msgstr "Comptage des transactions bancaires correspondantes..."
 
 #: banking/public/js/rule_creation_dialog.bundle.js:106
 msgid "Create Bank Reconciliation Rule"
@@ -360,11 +384,11 @@ msgstr "Création d'un ordre de paiement SEPA..."
 msgid "Credentials"
 msgstr "Identifiants"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:317
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:315
 msgid "Currency conversion reconcile is only available for Sales Invoice, Purchase Invoice, and Expense Claim."
 msgstr "Le rapprochement avec conversion de devise n'est disponible que pour les factures clients, factures fournisseurs et demandes de remboursement."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:301
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:299
 msgid "Currency conversion reconcile is only supported for one voucher at a time."
 msgstr "Le rapprochement avec conversion de devise n'est pris en charge que pour un justificatif à la fois."
 
@@ -419,7 +443,7 @@ msgstr "Télécharger les fichiers de réponse"
 msgid "Downloaded"
 msgstr "Téléchargé"
 
-#: banking/overrides/bank_transaction.py:77
+#: banking/overrides/bank_transaction.py:82
 msgid "Due to Period Closing, you cannot reconcile unpaid vouchers with a Bank Transaction before {0}"
 msgstr "En raison de la clôture de la période, vous ne pouvez pas rapprocher les chèques impayés avec une transaction bancaire avant le {0}"
 
@@ -483,6 +507,10 @@ msgstr "Transactions EBICS reimportées avec succès."
 msgid "EREF"
 msgstr "EREF"
 
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:360
+msgid "Each rule may only appear once"
+msgstr "Chaque règle ne peut apparaître qu'une seule fois"
+
 #: banking/ebics/doctype/ebics_user/ebics_user.js:114
 msgid "Ebics 2.5 (H004)"
 msgstr "Ebics 2.5 (H004)"
@@ -495,7 +523,7 @@ msgstr "Ebics 3.0 (H005)"
 msgid "Ebics Users"
 msgstr "Utilisateurs EBICS"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:351
+#: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:366
 msgid "Edit in Full Page"
 msgstr "Modifier dans la page complète"
 
@@ -558,11 +586,11 @@ msgstr "Entrez votre phrase secrète de signature"
 msgid "Error while fetching releases"
 msgstr "Erreur lors de la récupération des versions"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:344
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:339
 msgid "Exchange Gain"
 msgstr "Gain de change"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:342
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:337
 msgid "Exchange Loss"
 msgstr "Perte de change"
 
@@ -574,6 +602,14 @@ msgstr "Date d'exécution"
 #: banking/public/js/bank_reconciliation_beta/actions_panel/create_tab.js:143
 msgid "Failed to create {0} against {1}"
 msgstr "Échec de la création de {0} contre {1}"
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:17
+msgid "Failed to load bank accounts. Please try again."
+msgstr "Échec du chargement des comptes bancaires. Veuillez réessayer."
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:210
+msgid "Failed to load rules. Please try again."
+msgstr "Échec du chargement des règles. Veuillez réessayer."
 
 #: banking/ebics/doctype/ebics_request/ebics_request.js:49
 msgid "Failed to re-import EBICS transactions."
@@ -591,7 +627,11 @@ msgstr "Échec de la suppression de l'enregistrement de l'utilisateur EBICS."
 msgid "Failed to update {0}"
 msgstr "Échec de la mise à jour de {0}"
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:122
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:78
+msgid "Failed: {0}"
+msgstr "Échoué : {0}"
+
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:186
 msgid "Fetching Bank Transactions"
 msgstr "Récupération des transactions bancaires"
 
@@ -599,8 +639,8 @@ msgstr "Récupération des transactions bancaires"
 msgid "Field {} does not exist in {}. Please check the configuration in Banking Settings."
 msgstr "Le champ {} n'existe pas dans {}. Veuillez vérifier la configuration dans les paramètres Banking."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:353
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:387
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:351
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:385
 msgid "Filter Required"
 msgstr "Filtre requis"
 
@@ -632,7 +672,7 @@ msgstr "H004"
 msgid "H005"
 msgstr "H005"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:190
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:198
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:496
 msgid "Hidden field for alignment"
 msgstr "Champ masqué pour l'alignement"
@@ -672,7 +712,7 @@ msgstr "Si plusieurs règles correspondent à une <b>transaction bancaire</b>, s
 msgid "If no <a href='/app/bank-transaction' target='_blank'>Bank Transactions</a> are created, please check the <a href='/app/error-log' target='_blank'>Error Logs</a>. If there are no errors, the bank likely did not provide any (new) bank statements for this period."
 msgstr "Si aucune <a href='/app/bank-transaction' target='_blank'>transactions bancaires</a> ne sont créées, veuillez vérifier les <a href='/app/error-log' target='_blank'>journaux des erreurs</a>. Si aucune erreur n'est présente, la banque n'a probablement pas fourni de nouvelles transactions bancaires pour cette période."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:60
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:110
 msgid "In {0} {1} the field {2} is not set."
 msgstr "Dans {0} {1}, le champ {2} n'est pas défini."
 
@@ -712,22 +752,27 @@ msgstr "Les données disponibles pour le téléchargement sont invalides."
 msgid "Invalid data for re-import."
 msgstr "Données invalides pour le reimport."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:29
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:45
 msgid "Invalid filter"
 msgstr "Filtre invalide"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:32
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:48
 msgid "Invalid filter: only Bank Transaction fields are supported"
 msgstr "Filtre invalide : seuls les champs de transaction bancaire sont pris en charge"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:90
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:149
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:106
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:166
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:248
 msgid "Invalid filters"
 msgstr "Filtres invalides"
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/unpaid_vouchers.py:403
 msgid "Invalid manual reconcile amounts payload."
 msgstr "Données de montants de rapprochement manuel invalides."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:356
+msgid "Invalid rule order"
+msgstr "Ordre des règles invalide"
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:91
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:96
@@ -779,8 +824,8 @@ msgstr "Les montants de rapprochement manuel doivent être supérieurs à zéro.
 msgid "Match Voucher"
 msgstr "Rapprocher le chèque"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:170
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:202
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:165
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:197
 msgid "Max {0}"
 msgstr "Max {0}"
 
@@ -802,15 +847,19 @@ msgstr "Aucune IBAN pour {0} {1}."
 msgid "No IBAN found for Employee {0}."
 msgstr "Aucun IBAN trouvé pour l'employé {0}."
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:165
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:233
 msgid "No Transactions found for the current filters."
 msgstr "Aucune transaction trouvée pour les filtres actuels."
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:26
+msgid "No bank accounts with reconciliation rules."
+msgstr "Aucun compte bancaire avec des règles de rapprochement."
 
 #: banking/ebics/doctype/ebics_request/ebics_request.py:72
 msgid "No data available for download."
 msgstr "Aucune donnée disponible pour le téléchargement."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:267
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:262
 msgid "No exchange rate found — please enter manually"
 msgstr "Taux de change non trouvé — veuillez entrer manuellement"
 
@@ -818,13 +867,30 @@ msgstr "Taux de change non trouvé — veuillez entrer manuellement"
 msgid "No filterable field values are set on this Bank Transaction."
 msgstr "Aucune valeur de champ filtrable n'est définie sur cette transaction bancaire."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:521
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:609
 msgid "No matches occurred via Auto Reconciliation"
 msgstr "Aucun rapprochement automatique n'a eu lieu"
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:135
+msgid "No rules for this bank account."
+msgstr "Aucune règle pour ce compte bancaire."
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:75
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:85
+msgid "No rules to save."
+msgstr "Aucune règle à enregistrer."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:56
+msgid "No unreconciled Bank Transactions match this rule."
+msgstr "Aucune transaction bancaire non rapprochée ne correspond à cette règle."
 
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:470
 msgid "Not available"
 msgstr "Non disponible"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:378
+msgid "Not permitted to update {0}."
+msgstr "Non autorisé à mettre à jour {0}."
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:48
 msgid "Note: When you lose these passwords, you will have to go through the initialization process with your bank again."
@@ -834,7 +900,7 @@ msgstr "Remarque : si vous perdez ces mots de passe, vous devrez recommencer le 
 msgid "Nothing to reconcile: source amount is fully capped by the bank transaction."
 msgstr "Rien à rapprocher : le montant source est entièrement couvert par la transaction bancaire."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:183
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:178
 msgid "On {0}"
 msgstr "Le {0}"
 
@@ -861,11 +927,11 @@ msgid "Open Billing Portal"
 msgstr "Ouvrir le portail de facturation"
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:16
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:26
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:27
 msgid "Open Matches"
 msgstr "Ouvrir les correspondances"
 
-#: banking/overrides/bank_transaction.py:137
+#: banking/overrides/bank_transaction.py:142
 msgid "Over Allocation"
 msgstr "Allocation excessive"
 
@@ -878,13 +944,17 @@ msgstr "Retours alloués en trop"
 msgid "Partner ID"
 msgstr "ID partenaire"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:137
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:145
 msgid "Party Account Number"
 msgstr "Numéro de compte de la partie"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:144
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:152
 msgid "Party IBAN"
 msgstr "IBAN de la partie"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:192
+msgid "Party type {0} cannot be booked against the {1} account {2}."
+msgstr "Le type de partie {0} ne peut pas être imputé au compte {1} {2}."
 
 #. Label of a Password field in DocType 'EBICS User'
 #: banking/ebics/doctype/ebics_user/ebics_user.js:22
@@ -937,16 +1007,21 @@ msgstr "Veuillez ajouter l'ID d'hôte EBICS et l'URL à la banque {0}"
 msgid "Please add a two-letter country code to country {0}"
 msgstr "Veuillez ajouter un code pays à deux lettres pour le pays {0}"
 
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:354
+msgid "Please add at least one rule to the list"
+msgstr "Veuillez ajouter au moins une règle à la liste"
+
 #: banking/ebics/doctype/ebics_user/ebics_user.js:88
 msgid "Please confirm that the following keys are identical to the ones mentioned on your bank's letter:"
 msgstr "Veuillez confirmer que les clés suivantes sont identiques à celles mentionnées dans la lettre de votre banque :"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:93
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:109
 msgid "Please define at least one filter"
 msgstr "Veuillez définir au moins un filtre"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:145
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:151
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:162
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:168
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:223
 msgid "Please define at least one filter!"
 msgstr "Veuillez définir au moins un filtre !"
 
@@ -976,14 +1051,23 @@ msgstr "Veuillez sélectionner au moins un chèque à rapprocher"
 msgid "Please select vouchers of the same type to reconcile"
 msgstr "Veuillez sélectionner des chèques du même type à rapprocher"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:352
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:386
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:331
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:350
+msgid "Please set a Bank Account"
+msgstr "Veuillez définir un compte bancaire"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:350
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:384
 msgid "Please set the 'Bank Account' filter"
 msgstr "Veuillez définir le filtre 'Compte bancaire'"
 
-#: banking/overrides/bank_transaction.py:249
+#: banking/overrides/bank_transaction.py:254
 msgid "Please specify a <i>Bank Fee Account</i> for {0}."
 msgstr "Veuillez indiquer un <i>compte de frais bancaires</i> pour {0}."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:219
+msgid "Please submit the Bank Reconciliation Rule before reapplying it."
+msgstr "Veuillez valider la règle de rapprochement bancaire avant de la réappliquer."
 
 #. Label of a Password field in DocType 'Banking Settings'
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.json
@@ -1020,6 +1104,20 @@ msgstr "Reimportation annulée."
 msgid "Re-importing EBICS transactions ..."
 msgstr "Reimportation des transactions EBICS ..."
 
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:55
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:81
+msgid "Reapply Rule"
+msgstr "Réappliquer la règle"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:17
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:32
+msgid "Reapply to Unreconciled"
+msgstr "Réappliquer aux non rapprochées"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:73
+msgid "Reapplying rule..."
+msgstr "Réapplication de la règle..."
+
 #: banking/public/js/bank_reconciliation_beta/actions_panel/match_tab.js:377
 msgid "Reconciling ..."
 msgstr "Rapprochement en cours..."
@@ -1041,6 +1139,16 @@ msgstr "Champs de référence"
 #: banking/ebics/doctype/sepa_payment/sepa_payment.json
 msgid "Reference Row Name"
 msgstr "Nom de ligne de référence"
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:44
+msgid "Reorder bank reconciliation rules"
+msgstr "Réordonner les règles de rapprochement bancaire"
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule_list.js:28
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:16
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:25
+msgid "Reorder by Priority"
+msgstr "Réordonner par priorité"
 
 #. Label of a Select field in DocType 'EBICS Request'
 #: banking/ebics/doctype/ebics_request/ebics_request.json
@@ -1097,6 +1205,10 @@ msgstr "Ordres de paiement SEPA"
 msgid "SHAR"
 msgstr "SHAR"
 
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:65
+msgid "Save order"
+msgstr "Enregistrer l'ordre"
+
 #: banking/public/js/rule_creation_dialog.bundle.js:120
 msgid "Select at least one field to use as a filter."
 msgstr "Sélectionnez au moins un champ à utiliser comme filtre."
@@ -1105,7 +1217,7 @@ msgstr "Sélectionnez au moins un champ à utiliser comme filtre."
 msgid "Sent via EBICS"
 msgstr "Envoyé via EBICS"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:160
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:155
 msgid "Set Reconcile Conversion Amounts"
 msgstr "Définir les montants de conversion pour le rapprochement"
 
@@ -1139,19 +1251,27 @@ msgstr "Phrase secrète de signature"
 msgid "Signup for Banking"
 msgstr "Inscription à Banking"
 
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.js:77
+msgid "Skipped: {0}"
+msgstr "Ignoré : {0}"
+
 #: banking/klarna_kosma_integration/exception_handler.py:66
 msgid "Something went wrong. Please retry in a while."
 msgstr "Quelque chose s'est mal passé. Veuillez réessayer plus tard."
 
-#: banking/public/js/bank_reconciliation_beta/panel_manager.js:396
+#: banking/public/js/bank_reconciliation_beta/panel_manager.js:463
 msgid "Sort By"
 msgstr "Trier par"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:165
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:169
+msgid "Sortable is not available. Please open the dialog from the Bank Reconciliation Rule list and try again."
+msgstr "Sortable n'est pas disponible. Veuillez ouvrir la boîte de dialogue depuis la liste des règles de rapprochement bancaire et réessayer."
+
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:160
 msgid "Source Amount ({0})"
 msgstr "Montant source ({0})"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:233
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:228
 msgid "Source amount, exchange rate, and target amount must be greater than zero."
 msgstr "Le montant source, le taux de change et le montant cible doivent être supérieurs à zéro."
 
@@ -1201,7 +1321,7 @@ msgstr "Le compte bancaire fournisseur n'a pas été créé."
 msgid "Target Account"
 msgstr "Compte cible"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:195
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:190
 msgid "Target Amount ({0})"
 msgstr "Montant cible ({0})"
 
@@ -1209,7 +1329,7 @@ msgstr "Montant cible ({0})"
 msgid "Target amount is not valid for the selected voucher."
 msgstr "Le montant cible n'est pas valide pour le justificatif sélectionné."
 
-#: banking/overrides/bank_transaction.py:134
+#: banking/overrides/bank_transaction.py:139
 msgid "The Bank Transaction is over-allocated by {0} at row {1}."
 msgstr "La transaction bancaire est sur-allouée de {0} à la ligne {1}."
 
@@ -1225,7 +1345,7 @@ msgstr "Le montant alloué ne peut pas être négatif. Veuillez ajuster les chè
 msgid "The bank transaction has been modified since the dialog was loaded. Please refresh and try again."
 msgstr "La transaction bancaire a été modifiée depuis que le dialogue a été chargé. Veuillez actualiser et réessayer."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:297
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:385
 msgid "The currency of the second account ({0} : {1}) must be the same as of the bank account ({2} : {3})"
 msgstr "La devise du second compte ({0} : {1}) doit être la même que celle du compte bancaire ({2} : {3})"
 
@@ -1233,17 +1353,25 @@ msgstr "La devise du second compte ({0} : {1}) doit être la même que celle du 
 msgid "The currency of the second account ({0}) must be the same as of the bank account ({1})"
 msgstr "La devise du second compte ({0}) doit être la même que celle du compte bancaire ({1})"
 
-#: banking/overrides/bank_transaction.py:215
+#: banking/overrides/bank_transaction.py:220
 msgid "The field {0} cannot be greater than {1}. Please verify the input data."
 msgstr "Le champ {0} ne peut pas être supérieur à {1}. Veuillez vérifier les données saisies."
 
-#: banking/overrides/bank_transaction.py:208
+#: banking/overrides/bank_transaction.py:213
 msgid "The field {0} is negative. Please verify the input data."
 msgstr "Le champ {0} est négatif. Veuillez vérifier les données saisies."
 
-#: banking/overrides/bank_transaction.py:193
+#: banking/overrides/bank_transaction.py:198
 msgid "The field {0} is required. Please verify the input data."
 msgstr "Le champ {0} est obligatoire. Veuillez vérifier les données saisies."
+
+#: banking/public/js/bank_reconciliation_rule_reorder/reorder_dialog.js:49
+msgid "The first row is handled first when several rules match. Drag to change the order (priority)."
+msgstr "La première ligne est traitée en premier lorsque plusieurs règles correspondent. Faites glisser pour modifier l'ordre (priorité)."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:371
+msgid "The order must include every rule for this bank account. Reload the dialog and try again."
+msgstr "L'ordre doit inclure chaque règle pour ce compte bancaire. Rechargez la boîte de dialogue et réessayez."
 
 #: banking/klarna_kosma_integration/doctype/banking_settings/banking_settings.py:236
 msgid "The scheduler is inactive. Please activate it to continue auto-syncing bank transactions."
@@ -1271,11 +1399,11 @@ msgstr "Cette transaction a des <i>frais inclus</i> mais ni <i>dépôt</i> ni <i
 msgid "This transaction has an <i>Included Fee</i> in a foreign currency. Automatic reconciliation cannot consider that fee in Payment Entry deductions; reconcile and book the fee manually with a Journal Entry if appropriate."
 msgstr "Cette transaction a des <i>frais inclus</i> dans une devise étrangère. Le rapprochement automatique ne peut pas prendre en compte ces frais dans les déductions de l'écriture de paiement ; rapprochez et comptabilisez les frais manuellement avec une écriture comptable si nécessaire."
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:115
+#: banking/public/js/bank_reconciliation_beta/actions_panel/details_tab.js:123
 msgid "To Allocate"
 msgstr "À allouer"
 
-#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:319
+#: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:314
 msgid "To Allocate after reconcile"
 msgstr "À allouer après le rapprochement"
 
@@ -1297,7 +1425,7 @@ msgstr "Type de transmission"
 msgid "Unable to determine exchange rate for {0} against {1}."
 msgstr "Impossible de déterminer le taux de change pour {0} par rapport à {1}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:343
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:341
 msgid "Unable to prepare conversion details for reconciliation."
 msgstr "Impossible de préparer les détails de conversion pour le rapprochement."
 
@@ -1309,7 +1437,7 @@ msgstr "Impossible de préparer les détails du rapprochement."
 msgid "Unable to resolve batch transaction: camt.054 not available. Please try again later."
 msgstr "Impossible de résoudre la transaction par lot : camt.054 non disponible. Veuillez réessayer plus tard."
 
-#: banking/overrides/bank_transaction.py:178
+#: banking/overrides/bank_transaction.py:183
 msgid "Unsupported Bank Transaction with included fee"
 msgstr "Transaction bancaire non prise en charge avec frais inclus"
 
@@ -1317,7 +1445,7 @@ msgstr "Transaction bancaire non prise en charge avec frais inclus"
 msgid "Unsupported Payment Entry type {0}."
 msgstr "Type d'écriture de paiement non pris en charge {0}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:637
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:725
 msgid "Unsupported voucher type for manual reconciliation: {0}"
 msgstr "Type de justificatif non pris en charge pour le rapprochement manuel : {0}"
 
@@ -1335,7 +1463,7 @@ msgstr "Mise à jour en cours..."
 
 #: banking/public/js/bank_reconciliation_rule_stats.bundle.js:143
 msgid "Updating..."
-msgstr ""
+msgstr "Mise à jour..."
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:121
 msgid "Upload CAMT file"
@@ -1346,11 +1474,11 @@ msgid "Upload CSV / Excel file"
 msgstr "Télécharger le fichier CSV / Excel"
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:125
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:392
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:390
 msgid "Upload MT940 file"
 msgstr "Télécharger le fichier MT940"
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:358
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:356
 msgid "Upload XML (CAMT.053) file"
 msgstr "Télécharger le fichier XML (CAMT.053)"
 
@@ -1410,8 +1538,8 @@ msgstr "Vous n'avez pas la permission de créer une règle de rapprochement banc
 msgid "You selected protocol version {0}, but the bank {1} only supports {2}."
 msgstr "Vous avez sélectionné la version du protocole {0}, mais la banque {1} ne prend en charge que {2}."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:359
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:393
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:357
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.js:391
 msgid "to import bank transactions for {0}."
 msgstr "pour importer les transactions bancaires pour {0}."
 
@@ -1419,8 +1547,12 @@ msgstr "pour importer les transactions bancaires pour {0}."
 msgid "{0} in the last 30 days, {1} in the last 12 months (365 days)."
 msgstr "{0} au cours des 30 derniers jours, {1} au cours des 12 derniers mois (365 jours)."
 
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:524
-#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:533
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:183
+msgid "{0} is a {1} account, so the automatic Journal Entry needs a party. Please add a {2} filter to restrict this rule to transactions with a party."
+msgstr "{0} est un compte {1} ; l'écriture comptable automatique nécessite donc une partie. Veuillez ajouter un filtre {2} pour limiter cette règle aux transactions avec une partie."
+
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:612
+#: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:621
 msgid "{0} {1} {2}"
 msgstr "{0} {1} {2}"
 
