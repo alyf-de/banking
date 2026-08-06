@@ -257,10 +257,25 @@ class BankReconciliationRule(Document):
 		for name in transaction_names:
 			try:
 				bt = frappe.get_doc("Bank Transaction", name)
-				if bt.reserved_voucher:
-					skipped += 1
-					continue
+			except Exception:
+				failed += 1
+				if len(failed_names) < 10:
+					failed_names.append(name)
+				frappe.log_error(
+					title="Bank Reconciliation Rule reapply failed",
+					message=frappe.get_traceback(),
+					reference_doctype="Bank Transaction",
+					reference_name=name,
+				)
+				continue
 
+			if bt.reserved_voucher:
+				skipped += 1
+				continue
+
+			# JE submit and BT save must succeed together; otherwise the JE is orphaned.
+			frappe.db.savepoint("reapply_bt")
+			try:
 				result = apply_bank_reconciliation_rule(
 					bt,
 					self.name,
@@ -274,6 +289,7 @@ class BankReconciliationRule(Document):
 					# Filters no longer match (race) or party mismatch.
 					skipped += 1
 			except Exception:
+				frappe.db.rollback(save_point="reapply_bt")
 				failed += 1
 				if len(failed_names) < 10:
 					failed_names.append(name)
@@ -283,6 +299,8 @@ class BankReconciliationRule(Document):
 					reference_doctype="Bank Transaction",
 					reference_name=name,
 				)
+			else:
+				frappe.db.release_savepoint("reapply_bt")
 
 		return {
 			"applied": applied,

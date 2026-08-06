@@ -253,6 +253,63 @@ class TestBankReconciliationRule(FrappeTestCase):
 		self.assertEqual(matching.unallocated_amount, 0)
 		self.assertTrue(matching.payment_entries)
 
+	def test_reapply_rolls_back_je_when_bt_save_fails(self):
+		desc = "REAPPLY-ROLLBACK-001"
+		rule, target = self._make_eur_target_and_rule(desc)
+		bt = self._insert_unreconciled_bt(desc)
+		bank_gl = frappe.db.get_value("Bank Account", self.ba.name, "account")
+		created_jes: list[str] = []
+
+		def _stub_je(**kwargs):
+			je = frappe.new_doc("Journal Entry")
+			je.voucher_type = "Bank Entry"
+			je.company = kwargs["company"]
+			je.posting_date = kwargs["date"]
+			je.append(
+				"accounts",
+				{
+					"account": bank_gl,
+					"debit_in_account_currency": kwargs.get("debit") or 0,
+					"credit_in_account_currency": kwargs.get("credit") or 0,
+				},
+			)
+			je.append(
+				"accounts",
+				{
+					"account": target.name,
+					"debit_in_account_currency": kwargs.get("credit") or 0,
+					"credit_in_account_currency": kwargs.get("debit") or 0,
+				},
+			)
+			je.insert(ignore_permissions=True)
+			created_jes.append(je.name)
+			return je.name
+
+		original_save = frappe.model.document.Document.save
+
+		def _save(self, *args, **kwargs):
+			if self.doctype == "Bank Transaction":
+				raise frappe.ValidationError("simulated save failure")
+			return original_save(self, *args, **kwargs)
+
+		with (
+			patch(
+				"banking.overrides.bank_transaction.create_automatic_journal_entry",
+				side_effect=_stub_je,
+			),
+			patch.object(frappe.model.document.Document, "save", _save),
+		):
+			result = rule.reapply_to_unreconciled()
+
+		self.assertEqual(result["applied"], 0)
+		self.assertEqual(result["failed"], 1)
+		self.assertTrue(created_jes)
+		self.assertFalse(frappe.db.exists("Journal Entry", created_jes[0]))
+
+		bt.reload()
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertFalse(bt.payment_entries)
+
 	def test_reapply_rejects_draft_and_disabled(self):
 		desc = "REAPPLY-GUARD-001"
 		draft_rule, _ = self._make_eur_target_and_rule(desc, submit=False)
