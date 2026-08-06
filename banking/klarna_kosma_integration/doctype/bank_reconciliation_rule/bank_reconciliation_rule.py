@@ -12,14 +12,30 @@ from frappe.model.document import Document
 from frappe.utils import add_days, getdate, today
 from frappe.utils.data import get_filter
 
-from banking.exceptions import CurrencyMismatchError
+from banking.exceptions import CurrencyMismatchError, PartyMismatchError
 
 # Same cap as List View (`count_upper_bound`): count at most N rows, show "N-1+" when hit.
 COUNT_UPPER_BOUND = 1001
 
+PARTY_ACCOUNT_TYPES = ("Receivable", "Payable")
+
 
 class NoFiltersError(ValidationError):
 	pass
+
+
+def get_party_account_type(account: str) -> str | None:
+	"""Return the account type if Journal Entry rows on `account` require a party."""
+	account_type = frappe.get_cached_value("Account", account, "account_type")
+	return account_type if account_type in PARTY_ACCOUNT_TYPES else None
+
+
+def party_type_matches_account_type(party_type: str, account_type: str) -> bool:
+	# Employees can be both payable and receivable, same exception as ERPNext makes.
+	if party_type == "Employee":
+		return True
+
+	return frappe.get_cached_value("Party Type", party_type, "account_type") == account_type
 
 
 def _normalize_filter_rows(raw_filters: list) -> list[list[Any]]:
@@ -129,6 +145,7 @@ class BankReconciliationRule(Document):
 	def validate(self):
 		self.validate_account_currencies()
 		self.validate_filters()
+		self.validate_target_account_party()
 
 	def validate_account_currencies(self):
 		bank_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
@@ -149,3 +166,39 @@ class BankReconciliationRule(Document):
 			frappe.throw(_("Invalid filters"), NoFiltersError)
 		if not parsed:
 			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
+
+	def validate_target_account_party(self):
+		"""Receivable and Payable target accounts need a party on the Journal Entry.
+
+		The party is copied from the matched Bank Transaction, so the rule has to
+		restrict itself to transactions with a compatible party type.
+		"""
+		account_type = get_party_account_type(self.target_account)
+		if not account_type:
+			return
+
+		party_type = self.get_filter_value("party_type")
+		if not party_type:
+			frappe.throw(
+				_(
+					"{0} is a {1} account, so the automatic Journal Entry needs a party. "
+					"Please add a {2} filter to restrict this rule to transactions with a party."
+				).format(frappe.bold(self.target_account), _(account_type), frappe.bold(_("Party Type"))),
+				PartyMismatchError,
+			)
+
+		if not party_type_matches_account_type(party_type, account_type):
+			frappe.throw(
+				_("Party type {0} cannot be booked against the {1} account {2}.").format(
+					frappe.bold(_(party_type)), _(account_type), frappe.bold(self.target_account)
+				),
+				PartyMismatchError,
+			)
+
+	def get_filter_value(self, fieldname: str) -> str | None:
+		"""Return the value the rule pins `fieldname` to, if it uses an equality filter."""
+		for row in json.loads(self.filters):
+			if row[1] == fieldname and row[2] == "=":
+				return row[3]
+
+		return None

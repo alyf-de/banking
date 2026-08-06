@@ -7,7 +7,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from banking.exceptions import CurrencyMismatchError
+from banking.exceptions import CurrencyMismatchError, PartyMismatchError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
 	BankReconciliationRule,
 	NoFiltersError,
@@ -45,6 +45,9 @@ class TestBankReconciliationRule(FrappeTestCase):
 		parent_account = _group_account_with_parent(cls.test_company)
 		bank_account = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
 		cls.target_account = create_currency_account("USD", parent_account, "_Test_Account_USD")
+		cls.payable_account = create_currency_account(
+			"EUR", parent_account, "_Test_Account_EUR_Payable_Brr", account_type="Payable"
+		)
 		cls.ba = create_bank_account(bank_account.name)
 
 	def test_validate_account_currencies(self):
@@ -68,6 +71,39 @@ class TestBankReconciliationRule(FrappeTestCase):
 		brr_doc.filters = "[]"
 		with self.assertRaises(NoFiltersError):
 			brr_doc.validate_filters()
+
+	def test_validate_target_account_party(self):
+		def rule(filters: list) -> BankReconciliationRule:
+			return BankReconciliationRule(
+				{
+					"doctype": "Bank Reconciliation Rule",
+					"bank_account": self.ba.name,
+					"target_account": self.payable_account.name,
+					"filters": json.dumps(filters),
+				}
+			)
+
+		without_party_filter = rule([["Bank Transaction", "description", "=", "X"]])
+		with self.assertRaises(PartyMismatchError):
+			without_party_filter.validate_target_account_party()
+
+		wrong_party_type = rule([["Bank Transaction", "party_type", "=", "Customer"]])
+		with self.assertRaises(PartyMismatchError):
+			wrong_party_type.validate_target_account_party()
+
+		rule([["Bank Transaction", "party_type", "=", "Supplier"]]).validate_target_account_party()
+
+	def test_validate_target_account_party_ignores_other_accounts(self):
+		brr_doc = BankReconciliationRule(
+			{
+				"doctype": "Bank Reconciliation Rule",
+				"bank_account": self.ba.name,
+				"target_account": self.target_account.name,
+				"filters": json.dumps([["Bank Transaction", "description", "=", "X"]]),
+			}
+		)
+
+		brr_doc.validate_target_account_party()
 
 	@patch(
 		"banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule.today",
