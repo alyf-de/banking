@@ -31,7 +31,7 @@ frappe.listview_settings["Bank Reconciliation Rule"] = {
 					"bank_reconciliation_rule_reorder.bundle.js",
 					"bank_reconciliation_rule_reorder.bundle.css",
 				],
-				() => banking.bank_reconciliation.open_reorder_dialog(listview)
+				() => banking.bank_reconciliation.open_reorder_dialog(listview),
 			);
 		});
 	},

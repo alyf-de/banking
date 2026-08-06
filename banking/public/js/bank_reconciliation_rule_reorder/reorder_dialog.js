@@ -35,7 +35,7 @@ banking.bank_reconciliation.open_reorder_dialog = function (listview) {
 
 banking.bank_reconciliation.show_reorder_dialog = function (
 	listview,
-	bank_accounts_with_rules
+	bank_accounts_with_rules,
 ) {
 	let sortable = null;
 	let loaded_account = null;
@@ -47,7 +47,7 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 				fieldname: "info",
 				fieldtype: "HTML",
 				options: `<p class="text-muted small">${__(
-					"The first row is handled first when several rules match. Drag to change the order (priority)."
+					"The first row is handled first when several rules match. Drag to change the order (priority).",
 				)}</p>`,
 			},
 			{
@@ -77,7 +77,7 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 				return;
 			}
 			const ordered = Array.from(ul.querySelectorAll("li[data-name]")).map(
-				(li) => li.getAttribute("data-name")
+				(li) => li.getAttribute("data-name"),
 			);
 			if (!ordered.length) {
 				frappe.show_alert({
@@ -132,7 +132,7 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 		$wrap.empty();
 		if (!rules || !rules.length) {
 			$wrap.html(
-				`<p class="text-muted">${__("No rules for this bank account.")}</p>`
+				`<p class="text-muted">${__("No rules for this bank account.")}</p>`,
 			);
 			return;
 		}
@@ -142,7 +142,7 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 			"xs",
 			"",
 			"",
-			"sortable-handle"
+			"sortable-handle",
 		);
 		const items = rules.map((r) =>
 			frappe.render_template("reorder_item", {
@@ -153,13 +153,13 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 				priority: Number(r.priority) || 0,
 				status: rule_status(r),
 				drag_icon,
-			})
+			}),
 		);
 
 		$wrap.html(
 			`<ul class="brr-reorder__list unstyled list-unstyled">${items.join(
-				""
-			)}</ul>`
+				"",
+			)}</ul>`,
 		);
 	}
 
@@ -167,8 +167,8 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 		if (typeof Sortable === "undefined") {
 			frappe.msgprint(
 				__(
-					"Sortable is not available. Please open the dialog from the Bank Reconciliation Rule list and try again."
-				)
+					"Sortable is not available. Please open the dialog from the Bank Reconciliation Rule list and try again.",
+				),
 			);
 			return;
 		}
@@ -197,7 +197,7 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 		loaded_account = account;
 		reset_sortable();
 		dialog.fields_dict.rules_list_html.$wrapper.html(
-			`<p class="text-muted">${__("Loading...")}</p>`
+			`<p class="text-muted">${__("Loading...")}</p>`,
 		);
 		frappe.call({
 			type: "GET",
@@ -211,8 +211,8 @@ banking.bank_reconciliation.show_reorder_dialog = function (
 					loaded_account = null;
 					dialog.fields_dict.rules_list_html.$wrapper.html(
 						`<p class="text-danger">${__(
-							"Failed to load rules. Please try again."
-						)}</p>`
+							"Failed to load rules. Please try again.",
+						)}</p>`,
 					);
 					return;
 				}
