@@ -1,0 +1,26 @@
+.brr-reorder-dialog {
+	.brr-reorder__item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 8px;
+		border: 1px solid var(--border-color, #d1d8dd);
+		border-radius: var(--border-radius, 4px);
+		margin-bottom: 4px;
+		background: var(--control-bg, #fff);
+		font-size: var(--text-md);
+	}
+
+	.brr-reorder__handle {
+		cursor: grab;
+		color: var(--text-muted);
+	}
+
+	.brr-reorder__label {
+		flex: 1;
+	}
+
+	.brr-reorder__item[data-priority-st="disabled"] {
+		opacity: 0.7;
+	}
+}
