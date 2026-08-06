@@ -14,6 +14,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 
 			frm.trigger("set_target_account_query");
 			frm.remove_custom_button(__("Open Matches"));
+			frm.remove_custom_button(__("Reapply to Unreconciled"));
 			const filters_json =
 				frm.doc.filters && frm.doc.filters !== "[]" ? frm.doc.filters : "[]";
 			let has_filters = false;
@@ -27,6 +28,11 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 					stats.open_bank_transaction_list();
 				});
 			}
+			if (frm.doc.docstatus === 1 && !frm.doc.disabled && has_filters) {
+				frm.add_custom_button(__("Reapply to Unreconciled"), () => {
+					frm.trigger("reapply_to_unreconciled");
+				});
+			}
 
 			if (stats.needs_filter_rerender()) {
 				frm.trigger("render_bt_filters");
@@ -34,6 +40,50 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 				stats.fetch_and_show();
 			}
 		});
+	},
+	async reapply_to_unreconciled(frm) {
+		const { message: preview } = await frm.call({
+			method: "reapply_to_unreconciled",
+			doc: frm.doc,
+			args: { dry_run: 1 },
+			freeze: true,
+			freeze_message: __("Counting matching Bank Transactions..."),
+		});
+		const count = preview?.count || 0;
+		if (!count) {
+			frappe.msgprint({
+				title: __("Reapply Rule"),
+				message: __("No unreconciled Bank Transactions match this rule."),
+				indicator: "blue",
+			});
+			return;
+		}
+
+		frappe.confirm(
+			__(
+				"Apply this rule to {0} unreconciled Bank Transaction(s)? This will create Journal Entries and cannot be undone easily.",
+				[`<b>${count}</b>`]
+			),
+			async () => {
+				const { message: result } = await frm.call({
+					method: "reapply_to_unreconciled",
+					doc: frm.doc,
+					args: { dry_run: 0 },
+					freeze: true,
+					freeze_message: __("Reapplying rule..."),
+				});
+				const parts = [
+					__("Applied: {0}", [result.applied || 0]),
+					__("Skipped: {0}", [result.skipped || 0]),
+					__("Failed: {0}", [result.failed || 0]),
+				];
+				frappe.msgprint({
+					title: __("Reapply Rule"),
+					message: parts.join("<br>"),
+					indicator: result.failed ? "orange" : "green",
+				});
+			}
+		);
 	},
 	bank_account(frm) {
 		frm.trigger("set_target_account_query");
