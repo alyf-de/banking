@@ -3,15 +3,22 @@ title: ALYF Banking
 order: 0
 ---
 
-<div align="center">
-	<img src="assets/index/alyf-banking-logo.png" height="80">
-	<h2>ALYF Banking</h2>
-</div>
+ALYF Banking imports bank statements into ERPNext as **Bank Transactions** and helps you reconcile them against vouchers.
 
-<div align="center">
-<p><b>ALYF Banking</b> is a seamless solution for connecting your bank accounts with ERPNext.</p>
-</div>
+## Import bank statements
 
-The feature set contains a new and improved Bank Reconciliation Tool for blazing fast reconciliations ⚡️ along with a Banking Integration for a fully automated bank syncing experience.
+- Sync statements automatically via [EBICS](/app/docs/en/banking/ebics-integration) (Austria, France, Germany, Switzerland)
+- Upload [CAMT](/app/docs/en/banking/camt-file-upload) or [MT940](/app/docs/en/banking/mt940-file-upload) files by hand
+- Import [Wise](/app/docs/en/banking/wise-integration) balance statements as CAMT files
 
-Use the sidebar navigation to find what you're interested in.
+## Reconcile transactions
+
+Use [Bank Reconciliation Tool Beta](/app/docs/en/banking/bank-reconciliation-tool-beta) to match **Bank Transactions** to paid vouchers (**Payment Entry**, **Journal Entry**) or unpaid vouchers (**Sales Invoice**, **Purchase Invoice**, and others when those apps are installed).
+
+## Outgoing payments
+
+Create [SEPA Payment Orders](/app/docs/en/banking/sepa-payment-order) (pain.001) for supplier and employee payments. You can send them via EBICS when your bank access allows it.
+
+## Other apps
+
+See [Interaction with other Apps](/app/docs/en/banking/interaction-with-other-apps) for how Banking works with ERPNext, HRMS, and related apps.
