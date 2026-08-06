@@ -144,7 +144,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 			frappe.delete_doc("Account", eur_target.name, force=1, ignore_permissions=True)
 
 	def _make_eur_target_and_rule(self, description: str, *, submit=True, disabled=0):
-		parent_account = _group_account_with_parent(self.test_company)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": "_Test Company"})
 		eur_target = create_currency_account("EUR", parent_account, f"_Test_BRR_Reapply_{description[:12]}")
 		rule = frappe.new_doc("Bank Reconciliation Rule")
 		rule.bank_account = self.ba.name
@@ -159,7 +159,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 
 	def _insert_unreconciled_bt(self, description: str, *, withdrawal=10.0, **extra):
 		bt = frappe.new_doc("Bank Transaction")
-		bt.company = self.test_company
+		bt.company = "_Test Company"
 		bt.bank_account = self.ba.name
 		bt.withdrawal = withdrawal
 		bt.date = "2025-06-01"
@@ -299,7 +299,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 
 	def test_reapply_skips_reserved_and_party_mismatch(self):
 		desc = "REAPPLY-SKIP-001"
-		parent_account = _group_account_with_parent(self.test_company)
+		parent_account = frappe.db.get_value("Account", {"is_group": 1, "company": "_Test Company"})
 		payable = create_currency_account(
 			"EUR", parent_account, "_Test_BRR_Reapply_Pay", account_type="Payable"
 		)
