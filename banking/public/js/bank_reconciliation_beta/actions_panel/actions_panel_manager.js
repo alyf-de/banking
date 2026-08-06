@@ -1,6 +1,6 @@
-frappe.provide("erpnext.accounts.bank_reconciliation");
+frappe.provide("banking.bank_reconciliation");
 
-erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelManager {
+banking.bank_reconciliation.ActionsPanelManager = class ActionsPanelManager {
 	constructor(opts) {
 		Object.assign(this, opts);
 		this.make();
@@ -57,7 +57,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 				tab_name: "details",
 				tab_label: __("Details"),
 				make_tab: () => {
-					return new erpnext.accounts.bank_reconciliation.DetailsTab({
+					return new banking.bank_reconciliation.DetailsTab({
 						actions_panel: this,
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
@@ -69,7 +69,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 				tab_name: "create_voucher",
 				tab_label: __("Create Voucher"),
 				make_tab: () => {
-					return new erpnext.accounts.bank_reconciliation.CreateTab({
+					return new banking.bank_reconciliation.CreateTab({
 						actions_panel: this,
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,
@@ -90,7 +90,7 @@ erpnext.accounts.bank_reconciliation.ActionsPanelManager = class ActionsPanelMan
 				tab_name: "match_voucher",
 				tab_label: __("Match Voucher"),
 				make_tab: () => {
-					return new erpnext.accounts.bank_reconciliation.MatchTab({
+					return new banking.bank_reconciliation.MatchTab({
 						actions_panel: this,
 						transaction: this.transaction,
 						panel_manager: this.panel_manager,

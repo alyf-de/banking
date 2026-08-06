@@ -1,6 +1,6 @@
-frappe.provide("erpnext.accounts.bank_reconciliation");
+frappe.provide("banking.bank_reconciliation");
 
-erpnext.accounts.bank_reconciliation.SummaryCard = class SummaryCard {
+banking.bank_reconciliation.SummaryCard = class SummaryCard {
 	/**
 	 * {
 	 * 	$wrapper: $wrapper,
