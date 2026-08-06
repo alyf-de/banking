@@ -11,6 +11,14 @@ banking.bank_reconciliation.open_reorder_dialog = function (listview) {
 		type: "GET",
 		method: `${REORDER_METHOD_PREFIX}.get_bank_accounts_with_rules`,
 		callback(r) {
+			if (r.exc) {
+				frappe.msgprint({
+					title: __("Reorder by Priority"),
+					message: __("Failed to load bank accounts. Please try again."),
+					indicator: "red",
+				});
+				return;
+			}
 			const accounts = r.message || [];
 			if (!accounts.length) {
 				frappe.msgprint({
