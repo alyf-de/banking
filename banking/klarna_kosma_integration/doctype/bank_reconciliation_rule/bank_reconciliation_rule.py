@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 import json
-from typing import Any
+from typing import Any, cast
 
 import frappe
 from frappe import _
 from frappe.exceptions import ValidationError
 from frappe.model.document import Document
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, cint, getdate, today
 from frappe.utils.data import get_filter
 
 from banking.exceptions import CurrencyMismatchError, PartyMismatchError
@@ -203,3 +203,83 @@ class BankReconciliationRule(Document):
 				return row[3]
 
 		return None
+
+
+@frappe.whitelist(methods=["GET"])
+@frappe.read_only()
+def get_bank_accounts_with_rules() -> list[str]:
+	"""Bank accounts that have at least one non-cancelled reconciliation rule."""
+	return frappe.get_list(
+		"Bank Reconciliation Rule",
+		filters={"docstatus": ("!=", 2)},
+		pluck="bank_account",
+		group_by="bank_account",
+		order_by="bank_account asc",
+	)
+
+
+@frappe.whitelist(methods=["GET"])
+@frappe.read_only()
+def get_rules_for_reorder(bank_account: str) -> list[dict]:
+	"""Load non-cancelled rules for a bank account (list order = current evaluation order)."""
+	if not bank_account:
+		frappe.throw(_("Please set a Bank Account"))
+
+	return frappe.get_list(
+		"Bank Reconciliation Rule",
+		filters={"bank_account": bank_account, "docstatus": ("!=", 2)},
+		fields=["name", "target_account", "priority", "docstatus", "disabled"],
+		order_by="priority desc, creation asc",
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def reorder_bank_reconciliation_rule_priorities(bank_account: str, ordered_names: str | list) -> None:
+	"""
+	Persist **priority** from a full drag-and-drop order: first row = highest priority
+	(must match `order_by` in **Bank Transaction** automatic rules: `priority desc`).
+	Values are **10, 20, 30, …** so users can set intermediate priorities (e.g. 15) without
+	running the dialog again.
+	"""
+	if not bank_account:
+		frappe.throw(_("Please set a Bank Account"))
+
+	raw = frappe.parse_json(ordered_names) if isinstance(ordered_names, str) else ordered_names
+	if not raw:
+		frappe.throw(_("Please add at least one rule to the list"))
+	if not isinstance(raw, list | tuple) or not all(isinstance(n, str) for n in raw):
+		frappe.throw(_("Invalid rule order"))
+	names = cast("list[str] | tuple[str, ...]", raw)
+	ordered: list[str] = [str(n) for n in names]
+	if len(ordered) != len(set(ordered)):
+		frappe.throw(_("Each rule may only appear once"))
+
+	expected = set(
+		frappe.get_list(
+			"Bank Reconciliation Rule",
+			filters={"bank_account": bank_account, "docstatus": ("!=", 2)},
+			pluck="name",
+		)
+	)
+	if set(ordered) != expected:
+		frappe.throw(
+			_("The order must include every rule for this bank account. Reload the dialog and try again.")
+		)
+
+	n = len(ordered)
+	# db.set_value bypasses DocType permissions; check write on each rule before updating.
+	for name in ordered:
+		if not frappe.has_permission("Bank Reconciliation Rule", "write", name):
+			frappe.throw(_("Not permitted to update {0}.").format(name), frappe.PermissionError)
+
+	# Stagger so we do not hold duplicate priorities while renumbering submitted rules
+	for i, name in enumerate(ordered):
+		frappe.db.set_value(
+			"Bank Reconciliation Rule", name, "priority", 1_000_000 + i, update_modified=False
+		)
+
+	# 10, 20, 30, … so manually inserted rules can use intermediate priorities without renumbering
+	step = 10
+	for idx, name in enumerate(ordered):
+		priority = cint(n - idx) * step
+		frappe.db.set_value("Bank Reconciliation Rule", name, "priority", priority)
