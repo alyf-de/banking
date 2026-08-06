@@ -55,16 +55,35 @@ def _create_account(
 
 
 def create_currency_account(
+<<<<<<< HEAD
 	currency: str, parent_account: str, account_name: str, company: str = "_Test Company"
+=======
+	currency: str,
+	parent_account: str,
+	account_name: str,
+	company: str = TEST_COMPANY,
+	account_type: str = "Bank",
+>>>>>>> d060fa8 (fix: set party on rule-generated Journal Entries (#409))
 ):
 	account = _create_account(
 		account_name=account_name,
-		account_type="Bank",
+		account_type=account_type,
 		parent_account=parent_account,
 		company=company,
 		account_currency=currency,
 	)
 	return frappe.get_doc("Account", account)
+
+
+def create_supplier(supplier_name: str = "_Test_Banking_Supplier"):
+	if frappe.db.exists("Supplier", supplier_name):
+		return frappe.get_doc("Supplier", supplier_name)
+
+	supplier = frappe.new_doc("Supplier")
+	supplier.supplier_name = supplier_name
+	supplier.supplier_group = frappe.db.get_value("Supplier Group", {"is_group": 0})
+	supplier.insert(ignore_permissions=True)
+	return supplier
 
 
 def create_bank_account(
