@@ -11,7 +11,7 @@ erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES = [
 // variants report the same doctype. Only the "unpaid_invoices" filter distinguishes them.
 erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee = (
 	summary_data,
-	unpaid_invoices_only
+	unpaid_invoices_only,
 ) => {
 	if (!cint(unpaid_invoices_only)) {
 		return false;
@@ -23,22 +23,22 @@ erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee = (
 	}
 	return entries.every((entry) =>
 		erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
-			entry.doctype
-		)
+			entry.doctype,
+		),
 	);
 };
 
 erpnext.accounts.bank_reconciliation.get_allocation_budget = (
 	transaction,
 	summary_data,
-	unpaid_invoices_only
+	unpaid_invoices_only,
 ) => {
 	let budget = flt(transaction.unallocated_amount);
 	if (
 		flt(transaction.included_fee_for_reconciliation) &&
 		erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee(
 			summary_data,
-			unpaid_invoices_only
+			unpaid_invoices_only,
 		)
 	) {
 		budget += flt(transaction.included_fee_for_reconciliation);
@@ -49,14 +49,14 @@ erpnext.accounts.bank_reconciliation.get_allocation_budget = (
 erpnext.accounts.bank_reconciliation.get_summary_amount = (
 	transaction,
 	summary_data,
-	unpaid_invoices_only
+	unpaid_invoices_only,
 ) => {
 	let amount = flt(transaction.withdrawal || transaction.deposit);
 	if (
 		flt(transaction.included_fee_for_reconciliation) &&
 		erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee(
 			summary_data,
-			unpaid_invoices_only
+			unpaid_invoices_only,
 		)
 	) {
 		amount += flt(transaction.included_fee_for_reconciliation);
