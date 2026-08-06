@@ -1,15 +1,15 @@
-frappe.provide("erpnext.accounts.bank_reconciliation");
+frappe.provide("banking.bank_reconciliation");
 
 // Unpaid invoices are the only Match path that books deposit included fees.
 // Expense Claims are excluded: they are only matched for withdrawals, never fee deposits.
-erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES = [
+banking.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES = [
 	"Sales Invoice",
 	"Purchase Invoice",
 ];
 
 // The doctype alone cannot tell an unpaid invoice from a paid/POS one: both query
 // variants report the same doctype. Only the "unpaid_invoices" filter distinguishes them.
-erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee = (
+banking.bank_reconciliation.selection_uses_deposit_fee = (
 	summary_data,
 	unpaid_invoices_only,
 ) => {
@@ -22,13 +22,19 @@ erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee = (
 		return false;
 	}
 	return entries.every((entry) =>
+<<<<<<< HEAD
 		erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
 			entry.doctype,
 		),
+=======
+		banking.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
+			entry.doctype
+		)
+>>>>>>> 8bc3098 (refactor(Bank Reconciliation Tool Beta)!: change ns from erpnext.accounts to banking (#415))
 	);
 };
 
-erpnext.accounts.bank_reconciliation.get_allocation_budget = (
+banking.bank_reconciliation.get_allocation_budget = (
 	transaction,
 	summary_data,
 	unpaid_invoices_only,
@@ -36,7 +42,7 @@ erpnext.accounts.bank_reconciliation.get_allocation_budget = (
 	let budget = flt(transaction.unallocated_amount);
 	if (
 		flt(transaction.included_fee_for_reconciliation) &&
-		erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee(
+		banking.bank_reconciliation.selection_uses_deposit_fee(
 			summary_data,
 			unpaid_invoices_only,
 		)
@@ -46,7 +52,7 @@ erpnext.accounts.bank_reconciliation.get_allocation_budget = (
 	return budget;
 };
 
-erpnext.accounts.bank_reconciliation.get_summary_amount = (
+banking.bank_reconciliation.get_summary_amount = (
 	transaction,
 	summary_data,
 	unpaid_invoices_only,
@@ -54,7 +60,7 @@ erpnext.accounts.bank_reconciliation.get_summary_amount = (
 	let amount = flt(transaction.withdrawal || transaction.deposit);
 	if (
 		flt(transaction.included_fee_for_reconciliation) &&
-		erpnext.accounts.bank_reconciliation.selection_uses_deposit_fee(
+		banking.bank_reconciliation.selection_uses_deposit_fee(
 			summary_data,
 			unpaid_invoices_only,
 		)
@@ -64,7 +70,7 @@ erpnext.accounts.bank_reconciliation.get_summary_amount = (
 	return amount;
 };
 
-erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
+banking.bank_reconciliation.PanelManager = class PanelManager {
 	constructor(opts) {
 		Object.assign(this, opts);
 		this.make();
@@ -244,13 +250,12 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_actions_panel() {
-		this.actions_panel =
-			new erpnext.accounts.bank_reconciliation.ActionsPanelManager({
-				$wrapper: this.$panel_wrapper,
-				transaction: this.active_transaction,
-				frm: this.frm,
-				panel_manager: this,
-			});
+		this.actions_panel = new banking.bank_reconciliation.ActionsPanelManager({
+			$wrapper: this.$panel_wrapper,
+			transaction: this.active_transaction,
+			frm: this.frm,
+			panel_manager: this,
+		});
 	}
 
 	/**
