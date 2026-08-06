@@ -198,40 +198,22 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 		// PE/JE matching and Create Voucher stay on the bank net amount.
 		let unpaid_invoices_only =
 			this.panel_manager.actions_filters.unpaid_invoices;
-<<<<<<< HEAD
-		let allocation_budget =
-			erpnext.accounts.bank_reconciliation.get_allocation_budget(
-				this.transaction,
-				this.summary_data,
-				unpaid_invoices_only,
-			);
-=======
 		let allocation_budget = banking.bank_reconciliation.get_allocation_budget(
 			this.transaction,
 			this.summary_data,
-			unpaid_invoices_only
+			unpaid_invoices_only,
 		);
->>>>>>> 8bc3098 (refactor(Bank Reconciliation Tool Beta)!: change ns from erpnext.accounts to banking (#415))
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, entry) => a + entry.amount,
 			0,
 		);
 		let max_allocated = Math.min(total_allocated, allocation_budget);
 
-<<<<<<< HEAD
-		let transaction_amount =
-			erpnext.accounts.bank_reconciliation.get_summary_amount(
-				this.transaction,
-				this.summary_data,
-				unpaid_invoices_only,
-			);
-=======
 		let transaction_amount = banking.bank_reconciliation.get_summary_amount(
 			this.transaction,
 			this.summary_data,
-			unpaid_invoices_only
+			unpaid_invoices_only,
 		);
->>>>>>> 8bc3098 (refactor(Bank Reconciliation Tool Beta)!: change ns from erpnext.accounts to banking (#415))
 		let unallocated = flt(allocation_budget) - flt(max_allocated);
 		let actual_unallocated = flt(allocation_budget) - flt(total_allocated);
 

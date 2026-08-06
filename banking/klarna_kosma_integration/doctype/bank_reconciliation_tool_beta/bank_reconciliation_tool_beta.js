@@ -276,19 +276,10 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 			if (frm.panel_manager?.cleanup_voucher_watches) {
 				frm.panel_manager.cleanup_voucher_watches();
 			}
-<<<<<<< HEAD
-			frm.panel_manager = new erpnext.accounts.bank_reconciliation.PanelManager(
-				{
-					frm: frm,
-					$wrapper: frm.$reconciliation_area,
-				},
-			);
-=======
 			frm.panel_manager = new banking.bank_reconciliation.PanelManager({
 				frm: frm,
 				$wrapper: frm.$reconciliation_area,
 			});
->>>>>>> 8bc3098 (refactor(Bank Reconciliation Tool Beta)!: change ns from erpnext.accounts to banking (#415))
 		});
 	},
 });

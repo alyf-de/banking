@@ -22,15 +22,9 @@ banking.bank_reconciliation.selection_uses_deposit_fee = (
 		return false;
 	}
 	return entries.every((entry) =>
-<<<<<<< HEAD
-		erpnext.accounts.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
+		banking.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
 			entry.doctype,
 		),
-=======
-		banking.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
-			entry.doctype
-		)
->>>>>>> 8bc3098 (refactor(Bank Reconciliation Tool Beta)!: change ns from erpnext.accounts to banking (#415))
 	);
 };
 
