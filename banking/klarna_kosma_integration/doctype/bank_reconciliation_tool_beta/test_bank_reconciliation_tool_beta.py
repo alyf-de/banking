@@ -1605,6 +1605,28 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(row.included_fee, 5)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
+	def test_get_bank_transactions_exposes_fee_despite_sub_precision_rounding(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Rounding Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Rounding Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Rounding Fee Reco Account",
+			bank_fee_account=fee_expense_account,
+		)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		# Sub-precision drift must not count as a prior allocation
+		frappe.db.set_value("Bank Transaction", bt.name, "unallocated_amount", 74.999999)
+
+		result = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in result["transactions"] if transaction.name == bt.name)
+		self.assertEqual(row.included_fee_for_reconciliation, 5)
+
 	def test_get_bank_transactions_hides_fee_for_foreign_currency_bank(self):
 		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
 

@@ -227,14 +227,17 @@ def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) 
 		else {}
 	)
 
+	# These are get_list rows, not documents, so precision has to be resolved separately
+	precision = frappe.get_precision("Bank Transaction", "unallocated_amount")
+
 	for transaction in transactions:
 		included_fee_for_reconciliation = 0.0
 		bank_gl = gl_by_bank_account.get(transaction.bank_account)
 		bank_currency = bank_currency_by_gl.get(bank_gl) if bank_gl else None
 		company_currency = company_currency_by_name.get(transaction.company)
 		fully_unallocated_deposit = flt(transaction.deposit) > 0 and flt(
-			transaction.unallocated_amount
-		) == flt(transaction.deposit)
+			transaction.unallocated_amount, precision
+		) == flt(transaction.deposit, precision)
 		if (
 			fully_unallocated_deposit
 			and flt(transaction.included_fee) > 0

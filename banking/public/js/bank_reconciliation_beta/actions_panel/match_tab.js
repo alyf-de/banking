@@ -196,10 +196,13 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 
 		// Deposit included fees are only booked against unpaid invoices.
 		// PE/JE matching and Create Voucher stay on the bank net amount.
+		let unpaid_invoices_only =
+			this.panel_manager.actions_filters.unpaid_invoices;
 		let allocation_budget =
 			erpnext.accounts.bank_reconciliation.get_allocation_budget(
 				this.transaction,
-				this.summary_data
+				this.summary_data,
+				unpaid_invoices_only
 			);
 		let total_allocated = Object.values(this.summary_data).reduce(
 			(a, entry) => a + entry.amount,
@@ -210,7 +213,8 @@ erpnext.accounts.bank_reconciliation.MatchTab = class MatchTab {
 		let transaction_amount =
 			erpnext.accounts.bank_reconciliation.get_summary_amount(
 				this.transaction,
-				this.summary_data
+				this.summary_data,
+				unpaid_invoices_only
 			);
 		let unallocated = flt(allocation_budget) - flt(max_allocated);
 		let actual_unallocated = flt(allocation_budget) - flt(total_allocated);
