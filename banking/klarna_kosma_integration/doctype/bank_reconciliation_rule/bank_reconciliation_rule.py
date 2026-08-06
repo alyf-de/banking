@@ -256,7 +256,7 @@ class BankReconciliationRule(Document):
 
 		for name in transaction_names:
 			try:
-				bt = frappe.get_doc("Bank Transaction", name)
+				bt = frappe.get_doc("Bank Transaction", name, for_update=True)
 			except Exception:
 				failed += 1
 				if len(failed_names) < 10:
