@@ -12,6 +12,8 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reco
 	BankReconciliationRule,
 	NoFiltersError,
 	get_bank_transaction_match_stats,
+	get_rules_for_reorder,
+	reorder_bank_reconciliation_rule_priorities,
 )
 from banking.testing_utils import TEST_COMPANY, create_bank_account, create_currency_account
 
@@ -45,6 +47,7 @@ class TestBankReconciliationRule(FrappeTestCase):
 		parent_account = _group_account_with_parent(cls.test_company)
 		bank_account = create_currency_account("EUR", parent_account, "_Test_Account_EUR")
 		cls.target_account = create_currency_account("USD", parent_account, "_Test_Account_USD")
+		cls.target_eur = create_currency_account("EUR", parent_account, "_Test_BRR_Target_EUR")
 		cls.payable_account = create_currency_account(
 			"EUR", parent_account, "_Test_Account_EUR_Payable_Brr", account_type="Payable"
 		)
@@ -71,6 +74,45 @@ class TestBankReconciliationRule(FrappeTestCase):
 		brr_doc.filters = "[]"
 		with self.assertRaises(NoFiltersError):
 			brr_doc.validate_filters()
+
+	def _insert_draft_rule(self, description_value: str, priority: int):
+		r = frappe.new_doc("Bank Reconciliation Rule")
+		r.bank_account = self.ba.name
+		r.target_account = self.target_eur.name
+		r.filters = f'[["Bank Transaction","description","=","{description_value}",false]]'
+		r.priority = priority
+		r.insert(ignore_permissions=True, ignore_mandatory=True)
+		return r
+
+	def test_reorder_priorities(self):
+		frappe.db.delete("Bank Reconciliation Rule", {"bank_account": self.ba.name})
+		r1 = self._insert_draft_rule("BRR-REORDER-1", 2)
+		r2 = self._insert_draft_rule("BRR-REORDER-2", 1)
+		self.assertEqual(
+			[x["name"] for x in get_rules_for_reorder(bank_account=self.ba.name)], [r1.name, r2.name]
+		)
+		reorder_bank_reconciliation_rule_priorities(
+			bank_account=self.ba.name, ordered_names=[r2.name, r1.name]
+		)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "priority"), 20)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "priority"), 10)
+
+	def test_reorder_priorities_submitted(self):
+		frappe.db.delete("Bank Reconciliation Rule", {"bank_account": self.ba.name})
+		r1 = self._insert_draft_rule("BRR-REORDER-SUB-1", 2)
+		r2 = self._insert_draft_rule("BRR-REORDER-SUB-2", 1)
+		r1.submit()
+		r2.submit()
+		self.assertEqual(r1.docstatus, 1)
+		self.assertEqual(r2.docstatus, 1)
+
+		reorder_bank_reconciliation_rule_priorities(
+			bank_account=self.ba.name, ordered_names=[r2.name, r1.name]
+		)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "priority"), 20)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "priority"), 10)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r2.name, "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Bank Reconciliation Rule", r1.name, "docstatus"), 1)
 
 	def test_validate_target_account_party(self):
 		def rule(filters: list) -> BankReconciliationRule:
@@ -165,3 +207,197 @@ class TestBankReconciliationRule(FrappeTestCase):
 			frappe.delete_doc("Bank Account", other_ba.name, force=1, ignore_permissions=True)
 			frappe.delete_doc("Account", other_bank_acc.name, force=1, ignore_permissions=True)
 			frappe.delete_doc("Account", eur_target.name, force=1, ignore_permissions=True)
+
+	def _make_eur_target_and_rule(self, description: str, *, submit=True, disabled=0):
+		parent_account = _group_account_with_parent(self.test_company)
+		eur_target = create_currency_account("EUR", parent_account, f"_Test_BRR_Reapply_{description[:12]}")
+		rule = frappe.new_doc("Bank Reconciliation Rule")
+		rule.bank_account = self.ba.name
+		rule.target_account = eur_target.name
+		rule.disabled = disabled
+		rule.filters = json.dumps([["Bank Transaction", "description", "=", description]])
+		rule.insert(ignore_permissions=True, ignore_mandatory=True)
+		if submit:
+			rule.flags.ignore_permissions = True
+			rule.submit()
+		return rule, eur_target
+
+	def _insert_unreconciled_bt(self, description: str, *, withdrawal=10.0, **extra):
+		bt = frappe.new_doc("Bank Transaction")
+		bt.company = self.test_company
+		bt.bank_account = self.ba.name
+		bt.withdrawal = withdrawal
+		bt.date = "2025-06-01"
+		bt.description = description
+		bt.update(extra)
+		bt.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
+		frappe.db.set_value(
+			"Bank Transaction",
+			bt.name,
+			{
+				"docstatus": 1,
+				"status": "Unreconciled",
+				"unallocated_amount": withdrawal,
+				"allocated_amount": 0,
+			},
+			update_modified=False,
+		)
+		return frappe.get_doc("Bank Transaction", bt.name)
+
+	def test_reapply_to_unreconciled_dry_run_and_apply(self):
+		desc = "REAPPLY-MATCH-001"
+		rule, target = self._make_eur_target_and_rule(desc)
+		matching = self._insert_unreconciled_bt(desc)
+		self._insert_unreconciled_bt("REAPPLY-OTHER-001")
+
+		preview = rule.reapply_to_unreconciled(dry_run=1)
+		self.assertEqual(preview["count"], 1)
+
+		bank_gl = frappe.db.get_value("Bank Account", self.ba.name, "account")
+
+		def _stub_je(**kwargs):
+			je = frappe.new_doc("Journal Entry")
+			je.voucher_type = "Bank Entry"
+			je.company = kwargs["company"]
+			je.posting_date = kwargs["date"]
+			je.append(
+				"accounts",
+				{
+					"account": bank_gl,
+					"debit_in_account_currency": kwargs.get("debit") or 0,
+					"credit_in_account_currency": kwargs.get("credit") or 0,
+				},
+			)
+			je.append(
+				"accounts",
+				{
+					"account": target.name,
+					"debit_in_account_currency": kwargs.get("credit") or 0,
+					"credit_in_account_currency": kwargs.get("debit") or 0,
+				},
+			)
+			je.insert(ignore_permissions=True)
+			return je.name
+
+		with patch(
+			"banking.overrides.bank_transaction.create_automatic_journal_entry",
+			side_effect=_stub_je,
+		) as mock_je:
+			result = rule.reapply_to_unreconciled()
+
+		self.assertEqual(result["applied"], 1)
+		self.assertEqual(result["skipped"], 0)
+		self.assertEqual(result["failed"], 0)
+		mock_je.assert_called_once()
+
+		matching.reload()
+		self.assertEqual(matching.status, "Reconciled")
+		self.assertEqual(matching.unallocated_amount, 0)
+		self.assertTrue(matching.payment_entries)
+
+	def test_reapply_rolls_back_je_when_bt_save_fails(self):
+		desc = "REAPPLY-ROLLBACK-001"
+		rule, target = self._make_eur_target_and_rule(desc)
+		bt = self._insert_unreconciled_bt(desc)
+		bank_gl = frappe.db.get_value("Bank Account", self.ba.name, "account")
+		created_jes: list[str] = []
+
+		def _stub_je(**kwargs):
+			je = frappe.new_doc("Journal Entry")
+			je.voucher_type = "Bank Entry"
+			je.company = kwargs["company"]
+			je.posting_date = kwargs["date"]
+			je.append(
+				"accounts",
+				{
+					"account": bank_gl,
+					"debit_in_account_currency": kwargs.get("debit") or 0,
+					"credit_in_account_currency": kwargs.get("credit") or 0,
+				},
+			)
+			je.append(
+				"accounts",
+				{
+					"account": target.name,
+					"debit_in_account_currency": kwargs.get("credit") or 0,
+					"credit_in_account_currency": kwargs.get("debit") or 0,
+				},
+			)
+			je.insert(ignore_permissions=True)
+			created_jes.append(je.name)
+			return je.name
+
+		original_save = frappe.model.document.Document.save
+
+		def _save(self, *args, **kwargs):
+			if self.doctype == "Bank Transaction":
+				raise frappe.ValidationError("simulated save failure")
+			return original_save(self, *args, **kwargs)
+
+		with (
+			patch(
+				"banking.overrides.bank_transaction.create_automatic_journal_entry",
+				side_effect=_stub_je,
+			),
+			patch.object(frappe.model.document.Document, "save", _save),
+		):
+			result = rule.reapply_to_unreconciled()
+
+		self.assertEqual(result["applied"], 0)
+		self.assertEqual(result["failed"], 1)
+		self.assertTrue(created_jes)
+		self.assertFalse(frappe.db.exists("Journal Entry", created_jes[0]))
+
+		bt.reload()
+		self.assertEqual(bt.status, "Unreconciled")
+		self.assertFalse(bt.payment_entries)
+
+	def test_reapply_rejects_draft_and_disabled(self):
+		desc = "REAPPLY-GUARD-001"
+		draft_rule, _ = self._make_eur_target_and_rule(desc, submit=False)
+		with self.assertRaises(frappe.ValidationError):
+			draft_rule.reapply_to_unreconciled(dry_run=1)
+
+		disabled_rule, _ = self._make_eur_target_and_rule("REAPPLY-GUARD-002", disabled=1)
+		with self.assertRaises(frappe.ValidationError):
+			disabled_rule.reapply_to_unreconciled(dry_run=1)
+
+	def test_reapply_skips_reserved_and_party_mismatch(self):
+		desc = "REAPPLY-SKIP-001"
+		parent_account = _group_account_with_parent(self.test_company)
+		payable = create_currency_account(
+			"EUR", parent_account, "_Test_BRR_Reapply_Pay", account_type="Payable"
+		)
+		rule = frappe.new_doc("Bank Reconciliation Rule")
+		rule.bank_account = self.ba.name
+		rule.target_account = payable.name
+		rule.filters = json.dumps([["Bank Transaction", "description", "=", desc]])
+		# Bypass party validation on save by setting party_type filter for rule validity,
+		# then apply to a BT without party.
+		rule.filters = json.dumps(
+			[
+				["Bank Transaction", "description", "=", desc],
+				["Bank Transaction", "party_type", "=", "Supplier"],
+			]
+		)
+		rule.insert(ignore_permissions=True, ignore_mandatory=True)
+		rule.flags.ignore_permissions = True
+		rule.submit()
+
+		reserved = self._insert_unreconciled_bt(desc, party_type="Supplier")
+		frappe.db.set_value(
+			"Bank Transaction",
+			reserved.name,
+			{"reserved_voucher_type": "Journal Entry", "reserved_voucher": "JE-RESERVED"},
+			update_modified=False,
+		)
+
+		self._insert_unreconciled_bt(desc, withdrawal=7.0, party_type="Supplier")
+
+		with patch("banking.overrides.bank_transaction.create_automatic_journal_entry") as mock_je:
+			result = rule.reapply_to_unreconciled()
+
+		mock_je.assert_not_called()
+		self.assertEqual(result["applied"], 0)
+		self.assertEqual(result["skipped"], 2)
+		self.assertEqual(result["failed"], 0)
