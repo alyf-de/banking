@@ -255,7 +255,7 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 			bank_account,
 			user.company,
 			user.start_date,
-			user.split_batch_transactions,
+			user.split_batch_transactions and user.download_batch_transactions,
 		)
 
 
