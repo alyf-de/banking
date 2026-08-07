@@ -255,7 +255,8 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 			bank_account,
 			user.company,
 			user.start_date,
-			user.split_batch_transactions and user.download_batch_transactions,
+			user.split_batch_transactions,
+			user.download_batch_transactions,
 		)
 
 
@@ -292,6 +293,7 @@ def process_camt_document(
 	company: str | None = None,
 	earliest_date: date | None = None,
 	split_batch_transactions: bool = False,
+	skip_unresolved_batch_transactions: bool = True,
 ):
 	if not company:
 		company = frappe.db.get_value("Bank Account", bank_account, "company")
@@ -307,28 +309,31 @@ def process_camt_document(
 			# Split batch transactions into sub-transactions, based on info from camt.054.
 
 			if len(transaction) == 0:
-				# camt.054 might become available at a later time than camt.053.
-				# In this case, we want to block the processing of camt.053 until camt.054 is available.
-				raise UnresolvedBatchTransactionError()
+				if skip_unresolved_batch_transactions:
+					# camt.054 might become available at a later time than camt.053.
+					# In this case, we want to block the processing of camt.053 until camt.054 is available.
+					raise UnresolvedBatchTransactionError()
 
-			for sub_transaction_index, sub_transaction in enumerate(transaction):
-				sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
-				create_sepa_bank_transaction(
-					bank_account,
-					company,
-					sub_transaction,
-					transaction_id=transaction_id,
-					subtransaction_id=sub_transaction_id,
-					start_date=earliest_date,
-				)
-		else:
-			create_sepa_bank_transaction(
-				bank_account,
-				company,
-				transaction,
-				transaction_id=transaction_id,
-				start_date=earliest_date,
-			)
+			else:
+				for sub_transaction_index, sub_transaction in enumerate(transaction):
+					sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
+					create_sepa_bank_transaction(
+						bank_account,
+						company,
+						sub_transaction,
+						transaction_id=transaction_id,
+						subtransaction_id=sub_transaction_id,
+						start_date=earliest_date,
+					)
+				continue
+
+		create_sepa_bank_transaction(
+			bank_account,
+			company,
+			transaction,
+			transaction_id=transaction_id,
+			start_date=earliest_date,
+		)
 
 
 def create_sepa_bank_transaction(
