@@ -255,8 +255,8 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 			bank_account,
 			user.company,
 			user.start_date,
-			user.split_batch_transactions,
-			user.download_batch_transactions,
+			split_batch_transactions=bool(user.split_batch_transactions),
+			skip_unresolved_batch_transactions=bool(user.download_batch_transactions),
 		)
 
 

@@ -4,6 +4,7 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from fintech import sepa
 from frappe.tests.utils import FrappeTestCase
 
 from banking.ebics.utils import UnresolvedBatchTransactionError, import_ebics_json, process_camt_document
@@ -19,7 +20,7 @@ class TestEBICSUtils(FrappeTestCase):
 
 	@patch("banking.ebics.utils.get_bank_account", return_value="Test Bank Account")
 	@patch("banking.ebics.utils.process_camt_document")
-	@patch("fintech.sepa.CAMTDocument")
+	@patch.object(sepa, "CAMTDocument")
 	def test_import_batch_without_download_does_not_skip(
 		self, camt_document_class, process_camt_document, _get_bank_account
 	):
@@ -40,8 +41,8 @@ class TestEBICSUtils(FrappeTestCase):
 			"Test Bank Account",
 			"Test Company",
 			None,
-			True,
-			False,
+			split_batch_transactions=True,
+			skip_unresolved_batch_transactions=False,
 		)
 
 	@patch("banking.ebics.utils.create_sepa_bank_transaction")
