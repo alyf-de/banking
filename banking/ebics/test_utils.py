@@ -19,9 +19,7 @@ class TestEBICSUtils(UnitTestCase):
 
 	@patch("banking.ebics.utils.get_bank_account", return_value="Test Bank Account")
 	@patch("banking.ebics.utils.process_camt_document")
-	def test_import_batch_without_download_does_not_skip(
-		self, process_camt_document, _get_bank_account
-	):
+	def test_import_batch_without_download_does_not_skip(self, process_camt_document, _get_bank_account):
 		# fintech.sepa cannot be imported until fintech.register() has been called.
 		camt_document_class = MagicMock()
 		camt_document = camt_document_class.return_value
