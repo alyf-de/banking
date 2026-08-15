@@ -4,7 +4,7 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from banking.testing_utils import (
 	create_bank_account,
@@ -38,7 +38,7 @@ def create_bank_transaction(insert=True, **values):
 	return doc
 
 
-class TestBankTransactionReconciliationRule(FrappeTestCase):
+class TestBankTransactionReconciliationRule(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()

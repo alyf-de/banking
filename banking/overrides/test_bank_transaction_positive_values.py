@@ -1,12 +1,12 @@
 # Copyright (c) 2025, ALYF GmbH and Contributors
 # See license.txt
 
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import UnitTestCase
 
 from banking.testing_utils import make_bank_transaction
 
 
-class TestEnforcePositiveValues(FrappeTestCase):
+class TestEnforcePositiveValues(UnitTestCase):
 	def test_deposit_values_are_normalized(self):
 		doc = make_bank_transaction(
 			company=None,
