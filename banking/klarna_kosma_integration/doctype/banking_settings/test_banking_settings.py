@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from banking.klarna_kosma_integration.doctype.banking_settings.banking_settings import (
 	successful_request_exists,
@@ -21,7 +21,7 @@ from banking.testing_utils import (
 )
 
 
-class TestBankingSettings(FrappeTestCase):
+class TestBankingSettings(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
