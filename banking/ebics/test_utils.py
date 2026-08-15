@@ -2,9 +2,8 @@
 # See license.txt
 
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from fintech import sepa
 from frappe.tests import UnitTestCase
 
 from banking.ebics.utils import UnresolvedBatchTransactionError, import_ebics_json, process_camt_document
@@ -20,10 +19,11 @@ class TestEBICSUtils(UnitTestCase):
 
 	@patch("banking.ebics.utils.get_bank_account", return_value="Test Bank Account")
 	@patch("banking.ebics.utils.process_camt_document")
-	@patch.object(sepa, "CAMTDocument")
 	def test_import_batch_without_download_does_not_skip(
-		self, camt_document_class, process_camt_document, _get_bank_account
+		self, process_camt_document, _get_bank_account
 	):
+		# fintech.sepa cannot be imported until fintech.register() has been called.
+		camt_document_class = MagicMock()
 		camt_document = camt_document_class.return_value
 		camt_document.iban = "DE89370400440532013000"
 		user = SimpleNamespace(
@@ -34,7 +34,8 @@ class TestEBICSUtils(UnitTestCase):
 			download_batch_transactions=False,
 		)
 
-		import_ebics_json(user, {"camt053.xml": b"<Document />"})
+		with patch.dict("sys.modules", {"fintech.sepa": MagicMock(CAMTDocument=camt_document_class)}):
+			import_ebics_json(user, {"camt053.xml": b"<Document />"})
 
 		process_camt_document.assert_called_once_with(
 			camt_document,
