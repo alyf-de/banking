@@ -5,12 +5,12 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from fintech import sepa
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import UnitTestCase
 
 from banking.ebics.utils import UnresolvedBatchTransactionError, import_ebics_json, process_camt_document
 
 
-class TestEBICSUtils(FrappeTestCase):
+class TestEBICSUtils(UnitTestCase):
 	class EmptyBatchTransaction:
 		batch = True
 		status = None
