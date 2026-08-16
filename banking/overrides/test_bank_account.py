@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from banking.testing_utils import (
 	create_bank_account,
@@ -12,7 +12,7 @@ from banking.testing_utils import (
 )
 
 
-class TestBankAccount(FrappeTestCase):
+class TestBankAccount(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
