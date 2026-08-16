@@ -5,7 +5,7 @@ import json
 from unittest.mock import patch
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from banking.exceptions import CurrencyMismatchError, PartyMismatchError
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
@@ -18,7 +18,7 @@ from banking.testing_utils import create_bank_account, create_currency_account
 test_dependencies = ["Company", "Account"]
 
 
-class TestBankReconciliationRule(FrappeTestCase):
+class TestBankReconciliationRule(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
