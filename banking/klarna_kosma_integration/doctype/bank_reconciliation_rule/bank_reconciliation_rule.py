@@ -7,8 +7,9 @@ from typing import Any
 import frappe
 from frappe import _
 from frappe.exceptions import ValidationError
+from frappe.model.db_query import DatabaseQuery
 from frappe.model.document import Document
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, cint, getdate, today
 from frappe.utils.data import get_filter
 
 from banking.exceptions import CurrencyMismatchError, PartyMismatchError
@@ -203,3 +204,109 @@ class BankReconciliationRule(Document):
 				return row[3]
 
 		return None
+
+	def _unreconciled_match_filters(self) -> list[list[Any]]:
+		user_filters = _normalize_filter_rows(json.loads(self.filters or "[]"))
+		user_filters.extend(
+			[
+				["Bank Transaction", "bank_account", "=", self.bank_account],
+				["Bank Transaction", "docstatus", "=", 1],
+				["Bank Transaction", "unallocated_amount", ">", 0],
+			]
+		)
+		return user_filters
+
+	def _assert_can_reapply(self):
+		if self.docstatus != 1:
+			frappe.throw(_("Please submit the Bank Reconciliation Rule before reapplying it."))
+		if self.disabled:
+			frappe.throw(_("Cannot reapply a disabled Bank Reconciliation Rule."))
+		if not self.filters:
+			frappe.throw(_("Please define at least one filter!"), NoFiltersError)
+		frappe.has_permission("Bank Transaction", ptype="write", throw=True)
+
+	@frappe.whitelist()
+	def reapply_to_unreconciled(self, dry_run: bool | str | int = False) -> dict[str, Any]:
+		"""Apply this rule to matching unreconciled Bank Transactions.
+
+		When `dry_run` is truthy, only return the count of matching transactions.
+		"""
+		self._assert_can_reapply()
+		dry_run = bool(cint(dry_run))
+
+		filters = self._unreconciled_match_filters()
+		transaction_names = DatabaseQuery("Bank Transaction").execute(
+			filters=filters,
+			order_by=None,
+			pluck="name",
+		)
+
+		if dry_run:
+			return {"count": len(transaction_names)}
+
+		try:
+			rule_filters = json.loads(self.filters)
+		except json.JSONDecodeError:
+			frappe.throw(_("Invalid filters"), NoFiltersError)
+
+		from banking.overrides.bank_transaction import apply_bank_reconciliation_rule
+
+		applied = 0
+		skipped = 0
+		failed = 0
+		failed_names: list[str] = []
+
+		for name in transaction_names:
+			try:
+				bt = frappe.get_doc("Bank Transaction", name, for_update=True)
+			except Exception:
+				failed += 1
+				if len(failed_names) < 10:
+					failed_names.append(name)
+				frappe.log_error(
+					title="Bank Reconciliation Rule reapply failed",
+					message=frappe.get_traceback(),
+					reference_doctype="Bank Transaction",
+					reference_name=name,
+				)
+				continue
+
+			if bt.reserved_voucher:
+				skipped += 1
+				continue
+
+			# JE submit and BT save must succeed together; otherwise the JE is orphaned.
+			frappe.db.savepoint("reapply_bt")
+			try:
+				result = apply_bank_reconciliation_rule(
+					bt,
+					self.name,
+					self.target_account,
+					rule_filters,
+				)
+				if result == "applied":
+					bt.save(ignore_permissions=True)
+					applied += 1
+				else:
+					# Filters no longer match (race) or party mismatch.
+					skipped += 1
+			except Exception:
+				frappe.db.rollback(save_point="reapply_bt")
+				failed += 1
+				if len(failed_names) < 10:
+					failed_names.append(name)
+				frappe.log_error(
+					title="Bank Reconciliation Rule reapply failed",
+					message=frappe.get_traceback(),
+					reference_doctype="Bank Transaction",
+					reference_name=name,
+				)
+			else:
+				frappe.db.release_savepoint("reapply_bt")
+
+		return {
+			"applied": applied,
+			"skipped": skipped,
+			"failed": failed,
+			"failed_names": failed_names,
+		}
