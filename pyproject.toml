@@ -54,4 +54,4 @@ Repository = "https://github.com/alyf-de/banking.git"
 "Bug Reports" = "https://github.com/alyf-de/banking/issues"
 
 [tool.compendium]
-docs_branch = "version-15"
+docs_branch = "version-15-hotfix"
