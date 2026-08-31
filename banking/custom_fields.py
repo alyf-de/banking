@@ -108,6 +108,14 @@ def get_custom_fields():
 				allow_on_submit=1,
 				no_copy=1,
 			),
+			dict(
+				fieldname="on_hold_until",
+				label=_("On Hold Until"),
+				fieldtype="Date",
+				insert_after="reserved_voucher",
+				allow_on_submit=1,
+				no_copy=1,
+			),
 		],
 		"Journal Entry": [
 			dict(

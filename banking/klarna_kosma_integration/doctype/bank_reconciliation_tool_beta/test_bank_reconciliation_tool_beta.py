@@ -29,6 +29,8 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	create_payment_entry_bts,
 	get_bank_transactions,
 	get_linked_payments,
+	request_invoice,
+	set_bank_transaction_on_hold,
 )
 
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
@@ -1687,6 +1689,34 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		transactions = get_bank_transactions(bank_account=bank_account_without_fee)
 		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
+
+	def test_on_hold_transaction_is_hidden_until_the_following_day(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		set_bank_transaction_on_hold(bt.name, getdate())
+
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		self.assertNotIn(bt.name, [transaction.name for transaction in transactions])
+
+		frappe.db.set_value("Bank Transaction", bt.name, "on_hold_until", add_days(getdate(), -1))
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		self.assertIn(bt.name, [transaction.name for transaction in transactions])
+
+	def test_request_invoice_sends_email_and_sets_on_hold(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 1)
+		frappe.db.set_single_value("Banking Settings", "on_hold_threshold_after_invoice_request", 3)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
+		) as sendmail:
+			request_invoice(bt.name, "User", "Administrator")
+
+		sendmail.assert_called_once()
+		self.assertEqual(sendmail.call_args.kwargs["recipients"], ["Administrator"])
+		self.assertEqual(
+			frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"), add_days(getdate(), 3)
+		)
 
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {
