@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, get_link_to_form
 
 
 def before_validate(doc, method):
@@ -12,6 +12,7 @@ def before_validate(doc, method):
 def validate(doc, method):
 	validate_account_currencies(doc)
 	validate_required_bank_fee_account(doc)
+	validate_unique_iban(doc)
 
 
 def validate_account_currencies(doc):
@@ -31,6 +32,24 @@ def validate_required_bank_fee_account(doc):
 			"Bank Fee Account is mandatory for company Bank Accounts while automatic journal entries for bank fees are enabled in Banking Settings."
 		)
 	)
+
+
+def validate_unique_iban(doc):
+	if not doc.iban:
+		return
+
+	existing = frappe.db.get_value(
+		"Bank Account",
+		{"iban": doc.iban, "name": ["!=", doc.name]},
+		"name",
+	)
+
+	if existing:
+		frappe.throw(
+			_("A Bank Account with IBAN {0} already exists: {1}").format(
+				doc.iban, get_link_to_form("Bank Account", existing)
+			)
+		)
 
 
 def automatic_fee_entries_enabled() -> bool:
