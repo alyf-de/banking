@@ -168,11 +168,7 @@
    "link_fieldname": "ebics_user"
   }
  ],
-<<<<<<< HEAD
- "modified": "2025-10-08 15:37:25.273496",
-=======
  "modified": "2026-09-14 17:59:05.181464",
->>>>>>> cb9acb5 (fix(EBICS User): track changes)
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
@@ -208,11 +204,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
-<<<<<<< HEAD
- "title_field": "full_name"
-}
-=======
  "title_field": "full_name",
  "track_changes": 1
 }
->>>>>>> cb9acb5 (fix(EBICS User): track changes)
