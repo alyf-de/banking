@@ -54,6 +54,16 @@ class SEPAPaymentOrder(Document):
 		iban: DF.Data
 		payments: DF.Table[SEPAPayment]
 		reference_number: DF.Data | None
+		scheme: DF.Literal[
+			"pain.001.003.03",
+			"pain.001.001.03",
+			"pain.001.001.09",
+			"pain.001.001.03.ch.02",
+			"pain.001.001.09.ch.03",
+			"CBIPaymentRequest.00.04.00",
+			"CBIPaymentRequest.00.04.01",
+			"CBICrossBorderPaymentRequestLogMsg.00.01.01",
+		]
 		swift_number: DF.Data | None
 		transmission_datetime: DF.Datetime | None
 		transmission_type: DF.Literal["", "DOWNLOADED", "SENT_VIA_EBICS"]
@@ -147,6 +157,7 @@ class SEPAPaymentOrder(Document):
 		transfer = SEPACreditTransfer(
 			account=debtor_account,
 			batch=self.batch_booking == "Process as batch",
+			scheme=self.scheme,
 		)
 		for payment in self.payments:
 			transfer.add_transaction(
