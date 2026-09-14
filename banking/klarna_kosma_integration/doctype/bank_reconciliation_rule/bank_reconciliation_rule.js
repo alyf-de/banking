@@ -64,7 +64,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 		frappe.confirm(
 			__(
 				"Apply this rule to {0} unreconciled Bank Transaction(s)? This will create Journal Entries and cannot be undone easily.",
-				[`<b>${count}</b>`]
+				[`<b>${count}</b>`],
 			),
 			async () => {
 				const { message: result } = await frm.call({
@@ -84,7 +84,7 @@ frappe.ui.form.on("Bank Reconciliation Rule", {
 					message: parts.join("<br>"),
 					indicator: result.failed ? "orange" : "green",
 				});
-			}
+			},
 		);
 	},
 	bank_account(frm) {
