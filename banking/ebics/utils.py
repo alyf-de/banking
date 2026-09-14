@@ -240,7 +240,7 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 
 	for name in sorted(main_data):
 		camt_document = CAMTDocument(xml=main_data[name], camt54=batch_data)
-		bank_account = get_bank_account(camt_document.iban, user.bank, user.company)
+		bank_account = get_bank_account(camt_document.iban, user.bank)
 		if not bank_account:
 			frappe.log_error(
 				title=_("Banking Error"),
@@ -253,9 +253,8 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 		process_camt_document(
 			camt_document,
 			bank_account,
-			user.company,
-			user.start_date,
-			user.split_batch_transactions,
+			earliest_date=user.start_date,
+			split_batch_transactions=user.split_batch_transactions,
 		)
 
 
@@ -273,29 +272,32 @@ def validated_perms(ebics_user, permitted_types, required_type):
 		)
 
 
-def get_bank_account(iban: str, bank: str, company: str) -> str | None:
-	return frappe.db.get_value(
+def get_bank_account(iban: str, bank: str) -> str | None:
+	bank_accounts = frappe.get_all(
 		"Bank Account",
-		{
-			"iban": iban,
-			"disabled": 0,
-			"bank": bank,
-			"is_company_account": 1,
-			"company": company,
-		},
+		filters={"iban": iban, "disabled": 0, "bank": bank, "is_company_account": 1},
+		pluck="name",
 	)
+
+	if len(bank_accounts) > 1:
+		# This actually is prevented by a unique IBAN validation in bank_account.py
+		# historically, this was possible though. So we handle it with an Error Log.
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_("Found {0} Bank Accounts for IBAN {1}. Using {2}.").format(
+				len(bank_accounts), iban, bank_accounts[0]
+			),
+		)
+
+	return bank_accounts[0] if bank_accounts else None
 
 
 def process_camt_document(
 	camt_document: CAMTDocument,
 	bank_account: str,
-	company: str | None = None,
 	earliest_date: date | None = None,
 	split_batch_transactions: bool = False,
 ):
-	if not company:
-		company = frappe.db.get_value("Bank Account", bank_account, "company")
-
 	for transaction in camt_document:
 		if transaction.status and transaction.status != "BOOK":
 			# Skip PDNG and INFO transactions
@@ -315,7 +317,6 @@ def process_camt_document(
 				sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
 				create_sepa_bank_transaction(
 					bank_account,
-					company,
 					sub_transaction,
 					transaction_id=transaction_id,
 					subtransaction_id=sub_transaction_id,
@@ -324,7 +325,6 @@ def process_camt_document(
 		else:
 			create_sepa_bank_transaction(
 				bank_account,
-				company,
 				transaction,
 				transaction_id=transaction_id,
 				start_date=earliest_date,
@@ -333,7 +333,6 @@ def process_camt_document(
 
 def create_sepa_bank_transaction(
 	bank_account: str,
-	company: str,
 	sepa_transaction: SEPATransaction,
 	transaction_id: str,
 	subtransaction_id: str | None = None,
@@ -354,7 +353,6 @@ def create_sepa_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=transaction_id,
 		subtransaction_id=subtransaction_id,
-		company=company,
 		currency=currency,
 		description="\n".join(sepa_transaction.purpose) or sepa_transaction.info,
 		deposit=max(amount, 0),
@@ -522,14 +520,13 @@ def upload_mt940_file():
 def process_mt940_statement(statement: MT940Statement, bank_account: str):
 	"""Process a single MT940 statement and create bank transactions"""
 
-	company = frappe.db.get_value("Bank Account", bank_account, "company")
 	currency = statement["balance_open"]["currency"]
 	for transaction in statement["transactions"]:
-		create_mt940_bank_transaction(bank_account, company, transaction, currency)
+		create_mt940_bank_transaction(bank_account, transaction, currency)
 
 
 def create_mt940_bank_transaction(
-	bank_account: str, company: str, transaction: MT940Transaction, currency: str
+	bank_account: str, transaction: MT940Transaction, currency: str
 ):
 	"""Create a bank transaction from MT940 transaction data"""
 	transaction_date = transaction.get("date") or transaction["valuta"]
@@ -565,7 +562,6 @@ def create_mt940_bank_transaction(
 	create_bank_transaction(
 		bank_account=bank_account,
 		transaction_id=get_transaction_hash(values_to_hash),
-		company=company,
 		currency=currency,
 		description=description,
 		deposit=max(amount, 0),

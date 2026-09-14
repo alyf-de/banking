@@ -10,7 +10,7 @@
   "initialized",
   "bank_keys_activated",
   "column_break_hlxa",
-  "company",
+  "organization_name",
   "country",
   "bank",
   "intraday_sync",
@@ -39,12 +39,12 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "company",
-   "fieldtype": "Link",
+   "description": "Used as the organization name in the user certificates.",
+   "fieldname": "organization_name",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Company",
-   "mandatory_depends_on": "needs_certificates",
-   "options": "Company"
+   "label": "Organization Name",
+   "mandatory_depends_on": "needs_certificates"
   },
   {
    "fieldname": "country",
@@ -169,7 +169,7 @@
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2026-05-21 02:05:40.039153",
+ "modified": "2026-09-02 09:23:23.036356",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
@@ -202,7 +202,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "full_name,bank,company",
+ "search_fields": "full_name,bank,organization_name",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
