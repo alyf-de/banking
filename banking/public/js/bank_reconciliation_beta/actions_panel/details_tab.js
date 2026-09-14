@@ -157,6 +157,13 @@ banking.bank_reconciliation.DetailsTab = class DetailsTab {
 				hidden: this.transaction.bank_party_iban ? 0 : 1,
 			},
 			{
+				label: __("Transaction Type"),
+				fieldname: "transaction_type",
+				fieldtype: "Data",
+				read_only: 1,
+				hidden: this.transaction.transaction_type ? 0 : 1,
+			},
+			{
 				label: __("Update"),
 				fieldtype: "Section Break",
 				fieldname: "update_section",

@@ -52,3 +52,6 @@ docstring-code-format = true
 Homepage = "https://www.alyf.de/bank-integration"
 Repository = "https://github.com/alyf-de/banking.git"
 "Bug Reports" = "https://github.com/alyf-de/banking/issues"
+
+[tool.compendium]
+docs_branch = "version-16-hotfix"
