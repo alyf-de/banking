@@ -222,6 +222,40 @@ class TestBankReconciliationRule(IntegrationTestCase):
 		)
 		return frappe.get_doc("Bank Transaction", bt.name)
 
+	def _je_stub(self, target_account: str, created: list | None = None):
+		"""Stand-in for `create_automatic_journal_entry` that inserts a minimal Journal Entry."""
+		bank_gl = frappe.db.get_value("Bank Account", self.ba.name, "account")
+		cost_center = frappe.get_cached_value("Company", "_Test Company", "cost_center")
+
+		def _stub(**kwargs):
+			debit, credit = kwargs.get("debit") or 0, kwargs.get("credit") or 0
+			je = frappe.new_doc("Journal Entry")
+			je.voucher_type = "Bank Entry"
+			je.company = kwargs["company"]
+			je.posting_date = kwargs["date"]
+			je.cheque_no = kwargs["bank_transaction"]
+			je.cheque_date = kwargs["date"]
+			# Bank and target account are EUR, the test company's currency is INR.
+			je.multi_currency = 1
+			je.flags.ignore_exchange_rate = True
+			for account, dr, cr in ((bank_gl, debit, credit), (target_account, credit, debit)):
+				je.append(
+					"accounts",
+					{
+						"account": account,
+						"cost_center": cost_center,
+						"exchange_rate": 1,
+						"debit_in_account_currency": dr,
+						"credit_in_account_currency": cr,
+					},
+				)
+			je.insert(ignore_permissions=True)
+			if created is not None:
+				created.append(je.name)
+			return je.name
+
+		return _stub
+
 	def test_reapply_to_unreconciled_dry_run_and_apply(self):
 		desc = "REAPPLY-MATCH-001"
 		rule, target = self._make_eur_target_and_rule(desc)
@@ -231,35 +265,9 @@ class TestBankReconciliationRule(IntegrationTestCase):
 		preview = rule.reapply_to_unreconciled(dry_run=1)
 		self.assertEqual(preview["count"], 1)
 
-		bank_gl = frappe.db.get_value("Bank Account", self.ba.name, "account")
-
-		def _stub_je(**kwargs):
-			je = frappe.new_doc("Journal Entry")
-			je.voucher_type = "Bank Entry"
-			je.company = kwargs["company"]
-			je.posting_date = kwargs["date"]
-			je.append(
-				"accounts",
-				{
-					"account": bank_gl,
-					"debit_in_account_currency": kwargs.get("debit") or 0,
-					"credit_in_account_currency": kwargs.get("credit") or 0,
-				},
-			)
-			je.append(
-				"accounts",
-				{
-					"account": target.name,
-					"debit_in_account_currency": kwargs.get("credit") or 0,
-					"credit_in_account_currency": kwargs.get("debit") or 0,
-				},
-			)
-			je.insert(ignore_permissions=True)
-			return je.name
-
 		with patch(
 			"banking.overrides.bank_transaction.create_automatic_journal_entry",
-			side_effect=_stub_je,
+			side_effect=self._je_stub(target.name),
 		) as mock_je:
 			result = rule.reapply_to_unreconciled()
 
@@ -277,33 +285,7 @@ class TestBankReconciliationRule(IntegrationTestCase):
 		desc = "REAPPLY-ROLLBACK-001"
 		rule, target = self._make_eur_target_and_rule(desc)
 		bt = self._insert_unreconciled_bt(desc)
-		bank_gl = frappe.db.get_value("Bank Account", self.ba.name, "account")
 		created_jes: list[str] = []
-
-		def _stub_je(**kwargs):
-			je = frappe.new_doc("Journal Entry")
-			je.voucher_type = "Bank Entry"
-			je.company = kwargs["company"]
-			je.posting_date = kwargs["date"]
-			je.append(
-				"accounts",
-				{
-					"account": bank_gl,
-					"debit_in_account_currency": kwargs.get("debit") or 0,
-					"credit_in_account_currency": kwargs.get("credit") or 0,
-				},
-			)
-			je.append(
-				"accounts",
-				{
-					"account": target.name,
-					"debit_in_account_currency": kwargs.get("credit") or 0,
-					"credit_in_account_currency": kwargs.get("debit") or 0,
-				},
-			)
-			je.insert(ignore_permissions=True)
-			created_jes.append(je.name)
-			return je.name
 
 		original_save = frappe.model.document.Document.save
 
@@ -315,7 +297,7 @@ class TestBankReconciliationRule(IntegrationTestCase):
 		with (
 			patch(
 				"banking.overrides.bank_transaction.create_automatic_journal_entry",
-				side_effect=_stub_je,
+				side_effect=self._je_stub(target.name, created_jes),
 			),
 			patch.object(frappe.model.document.Document, "save", _save),
 		):
