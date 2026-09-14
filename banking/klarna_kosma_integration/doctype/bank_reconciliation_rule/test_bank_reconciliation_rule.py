@@ -206,6 +206,7 @@ class TestBankReconciliationRule(IntegrationTestCase):
 		bt.withdrawal = withdrawal
 		bt.date = "2025-06-01"
 		bt.description = description
+		bt.currency = "EUR"  # must match the bank account's currency
 		bt.update(extra)
 		bt.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
 		frappe.db.set_value(
