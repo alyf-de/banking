@@ -285,7 +285,9 @@ class BankReconciliationRule(Document):
 					rule_filters,
 				)
 				if result == "applied":
-					bt.save(ignore_permissions=True)
+					# Permission-checked per document: the doctype-level check in
+					# `_assert_can_reapply` does not cover User Permissions or "only if creator".
+					bt.save()
 					applied += 1
 				else:
 					# Filters no longer match (race) or party mismatch.
