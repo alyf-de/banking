@@ -149,6 +149,7 @@ class SEPAPaymentOrder(Document):
 		transfer = SEPACreditTransfer(
 			account=debtor_account,
 			batch=self.batch_booking == "Process as batch",
+			scheme="pain.001.001.09",
 		)
 		for payment in self.payments:
 			transfer.add_transaction(
