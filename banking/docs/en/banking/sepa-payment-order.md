@@ -96,6 +96,17 @@ SEPA Payment Orders enable users to:
   - _Process as batch_: Multiple payments are grouped as a single booking
   
   > Note about Batch Booking: This setting controls the `BtchBookg` flag in the SEPA XML file. However, some banks may not properly respect this setting and might still process payments as a batch even when _Process individually_ is selected. If you need individual transaction visibility in your bank statements and this setting doesn't work as expected, contact your bank to understand their batch booking policies. This setting's behavior may also relate to the C54 format settings configured in your **EBICS User** profile.
+- _Scheme_: XML schema of the generated payment file. Ask your bank which value they accept. The default is "pain.001.001.09".
+  - "pain.001.001.09": Current ISO 20022 credit transfer format (SEPA). Default.
+  - "pain.001.001.03": Previous ISO 20022 credit transfer format (SEPA). Some banks still require this.
+  - "pain.001.003.03": German national DK variant of pain.001.
+  - "pain.001.001.09.ch.03": Current Swiss Payment Standards credit transfer format.
+  - "pain.001.001.03.ch.02": Previous Swiss Payment Standards credit transfer format.
+  - "CBIPaymentRequest.00.04.01": Current Italian CBI SEPA credit transfer format.
+  - "CBIPaymentRequest.00.04.00": Previous Italian CBI SEPA credit transfer format.
+  - "CBICrossBorderPaymentRequestLogMsg.00.01.01": Italian CBI format for cross-border payments outside SEPA.
+
+  > Note about Scheme: Your bank rejects the file if the scheme does not match a format they support. Use the value from your bank's payment file specification.
 
 ### Adding Recipients
 
@@ -195,7 +206,7 @@ The system can automatically:
 
 After submitting a **SEPA Payment Order**:
 1. Click on _Actions_ → _Download as XML_
-2. The system generates a pain.001 compliant XML file
+2. The system generates an XML file in the selected _Scheme_
 3. _Transmission Type_ is set to "DOWNLOADED"
 4. Upload the file manually to your bank
 
@@ -220,10 +231,10 @@ Direct transmission to bank via EBICS:
 
 ### SEPA Compliance
 
-- Generates pain.001.001.03 format XML files
-- Supports SEPA Credit Transfer (SCT) scheme
+- Generates an XML payment file in the selected _Scheme_
+- Default scheme is "pain.001.001.09" (current EPC pain.001 format)
+- Supports SEPA Credit Transfer (SCT) and country-specific formats for Germany, Switzerland, and Italy
 - Handles both single and batch payments
-- Complies with European Payments Council standards
 
 ### Hooks and Events
 

@@ -21,6 +21,7 @@
   "execution_date",
   "column_break_nomw",
   "batch_booking",
+  "scheme",
   "section_break_sjeq",
   "payments"
  ],
@@ -141,12 +142,23 @@
    "in_list_view": 1,
    "label": "Transmission Datetime",
    "read_only": 1
+  },
+  {
+   "default": "pain.001.001.09",
+   "fieldname": "scheme",
+   "fieldtype": "Select",
+   "label": "Scheme",
+   "options": "pain.001.003.03\npain.001.001.03\npain.001.001.09\npain.001.001.03.ch.02\npain.001.001.09.ch.03\nCBIPaymentRequest.00.04.00\nCBIPaymentRequest.00.04.01\nCBICrossBorderPaymentRequestLogMsg.00.01.01"
   }
  ],
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2026-03-17 21:50:42.728623",
+=======
+ "modified": "2026-09-14 15:41:57.707778",
+>>>>>>> ab1698d (fix(SEPA Payment Order): make scheme configurable and default to pain.001.001.09 (#431))
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",
