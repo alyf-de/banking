@@ -16,7 +16,10 @@
 <hr>
 
 ## Documentation
+
 Check out the [Banking Wiki](https://github.com/alyf-de/banking/wiki) for a step-by-step guide on how to use the app.
+
+In-app docs live under `banking/docs/` and are served by [Compendium](https://github.com/alyf-de/compendium). Install the `compendium` app on your site to open them at `/app/docs` in Desk.
 
 ## Country and Bank Coverage
 

@@ -16,7 +16,7 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
@@ -34,7 +34,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
 
 
-class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
+class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls) -> None:
 		super().setUpClass()
