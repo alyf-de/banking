@@ -144,16 +144,12 @@ class SEPAPaymentOrder(Document):
 				doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
 				doc.run_method("sepa_payment_order_status_changed", payment.reference_row_name, status)
 
-<<<<<<< HEAD
-	def to_sepa_credit_transfer(self) -> "SEPACreditTransfer":
-=======
 	def verify_xml_render(self):
 		"""Verify that the XML render is successful."""
 		register_fintech()
 		self.to_sepa_credit_transfer().render()
 
-	def to_sepa_credit_transfer(self) -> SEPACreditTransfer:
->>>>>>> e932986 (fix(SEPA Payment Order): pass BIC if present (#436))
+	def to_sepa_credit_transfer(self) -> "SEPACreditTransfer":
 		"""
 		NOTE: call register_fintech() before calling this method.
 		"""
