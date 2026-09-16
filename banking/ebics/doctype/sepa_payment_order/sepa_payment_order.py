@@ -162,9 +162,10 @@ class SEPAPaymentOrder(Document):
 			scheme=self.scheme,
 		)
 		for payment in self.payments:
+			iban = payment.iban.replace(" ", "")
 			transfer.add_transaction(
 				account=Account(
-					iban=payment.iban.replace(" ", ""),
+					iban=(iban, payment.swift_number) if payment.swift_number else iban,
 					name=payment.recipient,
 				),
 				amount=Amount(
