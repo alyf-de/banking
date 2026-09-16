@@ -127,6 +127,7 @@ class SEPAPaymentOrder(Document):
 		self.notify_reference_docs(status=PaymentOrderStatus.DRAFT)
 
 	def on_submit(self):
+		self.verify_xml_render()
 		self.notify_reference_docs(status=PaymentOrderStatus.APPROVED)
 
 	def on_update_after_submit(self):
@@ -144,6 +145,11 @@ class SEPAPaymentOrder(Document):
 			if payment.reference_doctype and payment.reference_name:
 				doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
 				doc.run_method("sepa_payment_order_status_changed", payment.reference_row_name, status)
+
+	def verify_xml_render(self):
+		"""Verify that the XML render is successful."""
+		register_fintech()
+		self.to_sepa_credit_transfer().render()
 
 	def to_sepa_credit_transfer(self) -> SEPACreditTransfer:
 		"""
