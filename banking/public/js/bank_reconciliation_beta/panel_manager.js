@@ -53,7 +53,7 @@ banking.bank_reconciliation.get_allocation_budget = (
 // the signed sum: there the negative row really does reduce the allocation.
 banking.bank_reconciliation.get_total_allocated = (
 	transaction,
-	summary_data,
+	summary_data
 ) => {
 	const entries = Object.values(summary_data || {});
 	const total = entries.reduce((a, entry) => a + flt(entry.amount), 0);
@@ -62,7 +62,7 @@ banking.bank_reconciliation.get_total_allocated = (
 	const only_opposite_returns =
 		entries.length &&
 		entries.every(
-			(entry) => flt(entry.amount) < 0 && entry.doctype === opposite_doctype,
+			(entry) => flt(entry.amount) < 0 && entry.doctype === opposite_doctype
 		);
 	return only_opposite_returns ? -total : total;
 };
