@@ -247,7 +247,9 @@ def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[fra
 		],
 		or_filters=[
 			["Payment Schedule", "due_date", "<=", date],
-			["Payment Schedule", "discount_date", "<=", date],
+			# "<=" would also match rows without a discount date, because Frappe
+			# reads an empty date as very old. "between" ignores them.
+			["Payment Schedule", "discount_date", "between", ["1900-01-01", date]],
 		],
 		fields=["name", "`tabPayment Schedule`.name as payment_schedule_row"],
 		order_by="`tabPayment Schedule`.due_date asc",
