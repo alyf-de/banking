@@ -18,7 +18,16 @@ if TYPE_CHECKING:
 
 
 @frappe.whitelist(methods=["POST"])
-def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | None = None):
+def make_sepa_payment_order(
+	source_name: str,
+	target_doc: SEPAPaymentOrder | None = None,
+	payment_schedule_rows: list[str] | None = None,
+):
+	"""Map a Purchase Invoice into a SEPA Payment Order.
+
+	If `payment_schedule_rows` is given, only those Payment Schedule rows are mapped.
+	"""
+
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
@@ -83,7 +92,10 @@ def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | Non
 					"parent": "reference_name",
 					"parenttype": "reference_doctype",
 				},
-				"condition": lambda payment: round(payment.outstanding, 2) > 0,
+				"condition": lambda payment: (
+					round(payment.outstanding, 2) > 0
+					and (payment_schedule_rows is None or payment.name in payment_schedule_rows)
+				),
 				"postprocess": process_payment,
 			},
 		},
@@ -197,4 +209,4 @@ def _get_existing_sepa_payment_amount(purchase_invoice: str, exclude_row: str | 
 	if exclude_row:
 		filters["reference_row_name"] = ["!=", exclude_row]
 
-	return frappe.get_all("SEPA Payment", filters=filters, fields=["sum(amount) as total"])[0].total or 0
+	return sum(frappe.get_all("SEPA Payment", filters=filters, pluck="amount"))
