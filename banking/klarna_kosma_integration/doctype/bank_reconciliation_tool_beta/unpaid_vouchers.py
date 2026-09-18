@@ -125,12 +125,13 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 					"The currency of the second account ({0}) must be the same as of the bank account ({1})"
 				).format(second_account, company_currency)
 			)
+		amount = sign * row.allocated_amount
 		journal_entry.append(
 			"accounts",
 			{
 				"account": second_account,
-				"credit_in_account_currency": row.allocated_amount if bt.deposit > 0 else 0.0,
-				"debit_in_account_currency": row.allocated_amount if bt.withdrawal > 0 else 0.0,
+				"credit_in_account_currency": amount if bt.deposit > 0 else 0.0,
+				"debit_in_account_currency": amount if bt.withdrawal > 0 else 0.0,
 				"party_type": row.get("party_type"),
 				"party": row.get("party"),
 				"cost_center": get_default_cost_center(company),
@@ -155,11 +156,15 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 
 	effective_unallocated = bt.unallocated_amount + included_fee
 	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
+	# A selection of only opposite-side returns (e.g. return Purchase Invoices settled by a
+	# deposit) allocates negative amounts, but it settles the bank positively. Flip the sign,
+	# like the Payment Entry path does with abs(), so the entry is not booked inverted.
+	sign = -1 if all(invoice.outstanding_amount < 0 for invoice in invoices) else 1
 	adjust_and_allocate_invoices(
 		bt, invoices, journal_entry, action=_attach_invoice, effective_unallocated=effective_unallocated
 	)
 
-	total_allocated_amount = sum(row.allocated_amount for row in invoices)
+	total_allocated_amount = sign * sum(row.allocated_amount for row in invoices)
 	bank_amount = total_allocated_amount - included_fee
 	validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 
