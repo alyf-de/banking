@@ -88,6 +88,47 @@ class SEPAPaymentOrder(Document):
 		self.validate_account_currency()
 
 	@frappe.whitelist(methods=["POST"])
+	def fetch_payables(self, date: str):
+		"""Add all Purchase Invoices and Expense Claims that are payable by `date`.
+
+		Payable means: due on or before `date`, or losing an early payment discount
+		on or before `date`.
+		"""
+		from banking.custom.expense_claim import make_sepa_payment_order as claim_to_order
+		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
+
+		mapped_rows = {(p.reference_doctype, p.reference_row_name) for p in self.payments}
+		mapped_docs = {(p.reference_doctype, p.reference_name) for p in self.payments}
+		account_currency = self.get_account_currency()
+
+		rows_by_invoice: dict[str, list[str]] = {}
+		for row in get_payable_invoice_rows(self.company, account_currency, date):
+			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
+				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
+
+		# One unpayable document (e.g. a missing IBAN) must not abort the whole batch.
+		skipped = []
+		for invoice, rows in rows_by_invoice.items():
+			try:
+				invoice_to_order(invoice, self, payment_schedule_rows=rows)
+			except frappe.ValidationError as e:
+				skipped.append(f"{invoice}: {e}")
+
+		for claim in get_payable_expense_claims(self.company, account_currency, date):
+			if ("Expense Claim", claim) in mapped_docs:
+				continue
+
+			try:
+				claim_to_order(claim, self)
+			except frappe.ValidationError as e:
+				skipped.append(f"{claim}: {e}")
+
+		if skipped:
+			frappe.msgprint(skipped, title=_("Skipped"), indicator="orange", as_list=True)
+
+		self.update_payment_amounts()
+
+	@frappe.whitelist(methods=["POST"])
 	def update_payment_amounts(self):
 		for payment in self.payments:
 			new_amount = get_changed_payment_amount(payment, self.execution_date)
@@ -111,10 +152,13 @@ class SEPAPaymentOrder(Document):
 			if not kontocheck.check_iban(payment.iban):
 				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
 
+	def get_account_currency(self) -> str:
+		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
+		return frappe.db.get_value("Account", account_name, "account_currency")
+
 	def validate_account_currency(self):
 		"""Validate that each payment currency is the same as the account currency."""
-		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		account_currency = frappe.db.get_value("Account", account_name, "account_currency")
+		account_currency = self.get_account_currency()
 		for payment in self.payments:
 			if payment.currency != account_currency:
 				frappe.throw(
@@ -184,6 +228,56 @@ class SEPAPaymentOrder(Document):
 			)
 
 		return transfer
+
+
+def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[frappe._dict]:
+	"""Return Payment Schedule rows whose due date, or early payment discount deadline,
+	falls on or before `date`."""
+	return frappe.get_all(
+		"Purchase Invoice",
+		filters=[
+			["Purchase Invoice", "docstatus", "=", 1],
+			["Purchase Invoice", "company", "=", company],
+			["Purchase Invoice", "currency", "=", currency],
+			["Purchase Invoice", "status", "!=", "Paid"],
+			["Purchase Invoice", "on_hold", "=", 0],
+			["Purchase Invoice", "outstanding_amount", ">", 0],
+			["Payment Schedule", "outstanding", ">", 0],
+			["Payment Schedule", "sepa_payment_order_status", "in", ["", None]],
+		],
+		or_filters=[
+			["Payment Schedule", "due_date", "<=", date],
+			# "<=" would also match rows without a discount date, because Frappe
+			# reads an empty date as very old. "between" ignores them.
+			["Payment Schedule", "discount_date", "between", ["1900-01-01", date]],
+		],
+		fields=["name", "`tabPayment Schedule`.name as payment_schedule_row"],
+		order_by="`tabPayment Schedule`.due_date asc",
+	)
+
+
+def get_payable_expense_claims(company: str, currency: str, date: str) -> list[str]:
+	"""Return Expense Claims posted by `date`. They have no due date."""
+	if "hrms" not in frappe.get_installed_apps():
+		return []
+
+	if currency != frappe.db.get_value("Company", company, "default_currency"):
+		# Expense Claims are reimbursed in the company currency
+		return []
+
+	return frappe.get_all(
+		"Expense Claim",
+		filters={
+			"docstatus": 1,
+			"company": company,
+			"approval_status": "Approved",
+			"status": ["!=", "Paid"],
+			"sepa_payment_order_status": ["in", ["", None]],
+			"posting_date": ["<=", date],
+		},
+		order_by="posting_date asc",
+		pluck="name",
+	)
 
 
 @frappe.whitelist()
