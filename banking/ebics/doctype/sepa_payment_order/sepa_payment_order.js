@@ -32,6 +32,9 @@ frappe.ui.form.on("SEPA Payment Order", {
 		}
 
 		if (frm.doc.docstatus === 0 && frm.has_perm("write")) {
+			frm.add_custom_button(__("Get Payables"), () => {
+				frm.trigger("fetch_payables");
+			});
 			frm.add_custom_button(__("Add Recipient"), () => {
 				frm.trigger("add_recipient");
 			});
@@ -39,6 +42,29 @@ frappe.ui.form.on("SEPA Payment Order", {
 				frm.trigger("update_amounts");
 			});
 		}
+	},
+
+	fetch_payables(frm) {
+		frappe.prompt(
+			{
+				fieldname: "date",
+				label: __("Due Until"),
+				fieldtype: "Date",
+				reqd: 1,
+				default: frm.doc.execution_date || frappe.datetime.get_today(),
+				description: __(
+					"Fetch Purchase Invoices and Expense Claims that are due, or lose their early payment discount, on or before this date.",
+				),
+			},
+			({ date }) => {
+				frm.call("fetch_payables", { date }).then(() => {
+					frm.refresh_field("payments");
+					frm.dirty();
+				});
+			},
+			__("Get Payables"),
+			__("Fetch"),
+		);
 	},
 
 	add_recipient(frm) {
