@@ -645,6 +645,9 @@ def adjust_and_allocate_invoices(
 	unallocated = effective_unallocated if effective_unallocated is not None else bt.unallocated_amount
 	sum_postive, sum_negative = get_positive_and_negative_sums(bt.deposit, unallocated, invoices)
 	for row in invoices:
+		# Rows that get no share of the trimmed sums stay at zero, so callers can total
+		# `allocated_amount` over every row without hitting an unset field.
+		row.allocated_amount = 0.0
 		if row.outstanding_amount > 0:
 			if sum_postive <= 0:
 				continue
