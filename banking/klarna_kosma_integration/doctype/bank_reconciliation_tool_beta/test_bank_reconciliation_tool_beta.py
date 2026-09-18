@@ -700,6 +700,64 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(bt.unallocated_amount, 0)
 		self.assertEqual(bt.status, "Reconciled")
 
+	def test_multi_party_reconciliation_of_oversized_returns(self):
+		"""Returns exceeding the deposit are capped at the unallocated amount."""
+		supplier_a = create_supplier("_Test Reco Big Return Supplier A")
+		supplier_b = create_supplier("_Test Reco Big Return Supplier B")
+		return_1 = make_purchase_invoice(
+			supplier=supplier_a,
+			rate=100,
+			qty=-1,
+			is_return=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+		return_2 = make_purchase_invoice(
+			supplier=supplier_b,
+			rate=50,
+			qty=-1,
+			is_return=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+		refund_1 = abs(return_1.outstanding_amount)
+		bt = create_bank_transaction(
+			deposit=refund_1,  # covers only the first return
+			bank_account=self.bank_account,
+			reference_no="oversized-multi-party-returns",
+			reference_date=getdate(),
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{
+						"payment_doctype": "Purchase Invoice",
+						"payment_name": return_1.name,
+						"party": supplier_a,
+					},
+					{
+						"payment_doctype": "Purchase Invoice",
+						"payment_name": return_2.name,
+						"party": supplier_b,
+					},
+				]
+			),
+			reconcile_multi_party=True,
+		)
+		bt.reload()
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.total_debit, refund_1)
+		self.assertEqual(je.total_credit, refund_1)
+		self.assertEqual(je.accounts[-1].debit, refund_1)  # bank row matches the deposit
+
+		self.assertEqual(bt.payment_entries[0].allocated_amount, refund_1)
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(bt.status, "Reconciled")
+
+		return_2.reload()
+		self.assertEqual(return_2.outstanding_amount, -50)  # untouched
+
 	def test_configurable_reference_field(self):
 		"""Test if configured reference field is considered."""
 		settings = frappe.get_single("Banking Settings")

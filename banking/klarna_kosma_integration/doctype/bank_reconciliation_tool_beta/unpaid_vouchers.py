@@ -622,6 +622,11 @@ def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, inv
 	if allocation < 0:
 		sum_positive += allocation
 
+	# Opposite-side returns have no positive counterweight, they settle the bank by their
+	# absolute sum. Trim them against the unallocated amount as well, so the voucher never
+	# moves more money than the Bank Transaction can allocate.
+	sum_negative = min(sum_negative, sum_positive + bt_unallocated)
+
 	return sum_positive, sum_negative
 
 
