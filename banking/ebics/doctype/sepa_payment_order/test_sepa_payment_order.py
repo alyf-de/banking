@@ -1,17 +1,9 @@
 # Copyright (c) 2025, ALYF GmbH and Contributors
 # See license.txt
 
-<<<<<<< HEAD
-# import frappe
-from frappe.tests.utils import FrappeTestCase
-
-
-class TestSEPAPaymentOrder(FrappeTestCase):
-	pass
-=======
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, today
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
@@ -25,7 +17,7 @@ COMPANY_IBAN = "DE02120300000000202051"
 SUPPLIER_IBAN = "DE02100500000054540402"
 
 
-class TestSEPAPaymentOrder(IntegrationTestCase):
+class TestSEPAPaymentOrder(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -108,4 +100,3 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		late_order.fetch_payables(add_days(today(), 5))
 		late_payment = next(p for p in late_order.payments if p.reference_name == invoice.name)
 		self.assertEqual(late_payment.amount, invoice.grand_total)
->>>>>>> f5964ac (feat(SEPA Payment Order): fetch payables by date (#442))

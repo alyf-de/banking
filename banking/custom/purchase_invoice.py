@@ -16,12 +16,9 @@ if TYPE_CHECKING:
 
 
 @frappe.whitelist(methods=["POST"])
-<<<<<<< HEAD
-def make_sepa_payment_order(source_name: str, target_doc: "SEPAPaymentOrder | None" = None):
-=======
 def make_sepa_payment_order(
 	source_name: str,
-	target_doc: SEPAPaymentOrder | None = None,
+	target_doc: "SEPAPaymentOrder | None" = None,
 	payment_schedule_rows: list[str] | None = None,
 ):
 	"""Map a Purchase Invoice into a SEPA Payment Order.
@@ -29,7 +26,6 @@ def make_sepa_payment_order(
 	If `payment_schedule_rows` is given, only those Payment Schedule rows are mapped.
 	"""
 
->>>>>>> f5964ac (feat(SEPA Payment Order): fetch payables by date (#442))
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
