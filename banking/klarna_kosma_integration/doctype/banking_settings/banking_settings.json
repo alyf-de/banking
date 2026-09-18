@@ -20,6 +20,9 @@
   "fintech_license_key",
   "bank_reconciliation_tab",
   "enable_automatic_journal_entries_for_bank_fees",
+  "invoice_request_section",
+  "automatically_set_on_hold_after_invoice_request",
+  "on_hold_threshold_after_invoice_request",
   "advanced_section",
   "reference_fields",
   "voucher_matching_defaults"
@@ -123,6 +126,25 @@
    "fieldname": "enable_automatic_journal_entries_for_bank_fees",
    "fieldtype": "Check",
    "label": "Enable Automatic Journal Entries for Bank Fees"
+  },
+  {
+   "fieldname": "invoice_request_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Requests"
+  },
+  {
+   "default": "0",
+   "fieldname": "automatically_set_on_hold_after_invoice_request",
+   "fieldtype": "Check",
+   "label": "Automatically Set On Hold after Invoice Request"
+  },
+  {
+   "default": "7",
+   "depends_on": "automatically_set_on_hold_after_invoice_request",
+   "fieldname": "on_hold_threshold_after_invoice_request",
+   "fieldtype": "Int",
+   "label": "On Hold Threshold (after Invoice Request)",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
