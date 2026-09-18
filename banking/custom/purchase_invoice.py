@@ -197,4 +197,4 @@ def _get_existing_sepa_payment_amount(purchase_invoice: str, exclude_row: str | 
 	if exclude_row:
 		filters["reference_row_name"] = ["!=", exclude_row]
 
-	return frappe.get_all("SEPA Payment", filters=filters, fields=["sum(amount) as total"])[0].total or 0
+	return sum(frappe.get_all("SEPA Payment", filters=filters, pluck="amount"))
