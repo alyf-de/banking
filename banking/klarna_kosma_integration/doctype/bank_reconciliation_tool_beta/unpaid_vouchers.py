@@ -123,12 +123,13 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 					"The currency of the second account ({0}) must be the same as of the bank account ({1})"
 				).format(second_account, company_currency)
 			)
+		amount = sign * row.allocated_amount
 		journal_entry.append(
 			"accounts",
 			{
 				"account": second_account,
-				"credit_in_account_currency": row.allocated_amount if bt.deposit > 0 else 0.0,
-				"debit_in_account_currency": row.allocated_amount if bt.withdrawal > 0 else 0.0,
+				"credit_in_account_currency": amount if bt.deposit > 0 else 0.0,
+				"debit_in_account_currency": amount if bt.withdrawal > 0 else 0.0,
 				"party_type": row.get("party_type"),
 				"party": row.get("party"),
 				"cost_center": get_default_cost_center(company),
@@ -153,11 +154,15 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 
 	effective_unallocated = bt.unallocated_amount + included_fee
 	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
+	# A selection of only opposite-side returns (e.g. return Purchase Invoices settled by a
+	# deposit) allocates negative amounts, but it settles the bank positively. Flip the sign,
+	# like the Payment Entry path does with abs(), so the entry is not booked inverted.
+	sign = -1 if all(invoice.outstanding_amount < 0 for invoice in invoices) else 1
 	adjust_and_allocate_invoices(
 		bt, invoices, journal_entry, action=_attach_invoice, effective_unallocated=effective_unallocated
 	)
 
-	total_allocated_amount = sum(row.allocated_amount for row in invoices)
+	total_allocated_amount = sign * sum(row.allocated_amount for row in invoices)
 	bank_amount = total_allocated_amount - included_fee
 	validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 
@@ -615,6 +620,11 @@ def get_positive_and_negative_sums(bt_deposit: float, bt_unallocated: float, inv
 	if allocation < 0:
 		sum_positive += allocation
 
+	# Opposite-side returns have no positive counterweight, they settle the bank by their
+	# absolute sum. Trim them against the unallocated amount as well, so the voucher never
+	# moves more money than the Bank Transaction can allocate.
+	sum_negative = min(sum_negative, sum_positive + bt_unallocated)
+
 	return sum_positive, sum_negative
 
 
@@ -633,6 +643,9 @@ def adjust_and_allocate_invoices(
 	unallocated = effective_unallocated if effective_unallocated is not None else bt.unallocated_amount
 	sum_postive, sum_negative = get_positive_and_negative_sums(bt.deposit, unallocated, invoices)
 	for row in invoices:
+		# Rows that get no share of the trimmed sums stay at zero, so callers can total
+		# `allocated_amount` over every row without hitting an unset field.
+		row.allocated_amount = 0.0
 		if row.outstanding_amount > 0:
 			if sum_postive <= 0:
 				continue
