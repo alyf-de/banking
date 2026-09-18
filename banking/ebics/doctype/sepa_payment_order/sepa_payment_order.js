@@ -53,7 +53,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 				reqd: 1,
 				default: frm.doc.execution_date || frappe.datetime.get_today(),
 				description: __(
-					"Fetch Purchase Invoices and Expense Claims that are due, or lose their early payment discount, on or before this date.",
+					"Fetch Purchase Invoices and Expense Claims that are due, or lose their early payment discount, on or before this date."
 				),
 			},
 			({ date }) => {
@@ -63,7 +63,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 				});
 			},
 			__("Get Payables"),
-			__("Fetch"),
+			__("Fetch")
 		);
 	},
 
