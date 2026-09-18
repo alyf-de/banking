@@ -153,15 +153,11 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	journal_entry.user_remark = bt.description
 
 	effective_unallocated = bt.unallocated_amount + included_fee
-<<<<<<< HEAD
 	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
-=======
-	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
 	# A selection of only opposite-side returns (e.g. return Purchase Invoices settled by a
 	# deposit) allocates negative amounts, but it settles the bank positively. Flip the sign,
 	# like the Payment Entry path does with abs(), so the entry is not booked inverted.
 	sign = -1 if all(invoice.outstanding_amount < 0 for invoice in invoices) else 1
->>>>>>> 2aa75d9 (fix(Bank Reconciliation Tool Beta): book multi-party returns positively (#440))
 	adjust_and_allocate_invoices(
 		bt, invoices, journal_entry, action=_attach_invoice, effective_unallocated=effective_unallocated
 	)
