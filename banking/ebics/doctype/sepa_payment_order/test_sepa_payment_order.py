@@ -4,7 +4,7 @@
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
+from frappe.utils import add_days, flt, today
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
 	create_bank,
@@ -52,26 +52,27 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 			execution_date=execution_date,
 		)
 
-	def make_invoice(self, due_date: str, discount_date: str | None = None) -> str:
+	def make_invoice(self, due_date: str, discount_date: str | None = None):
+		"""Submit a Purchase Invoice with a single payment schedule row."""
 		invoice = make_purchase_invoice(
-			supplier=self.supplier, qty=1, rate=100, do_not_save=True, bill_no=frappe.generate_hash(length=8)
+			supplier=self.supplier,
+			qty=1,
+			rate=100,
+			do_not_submit=True,
+			bill_no=frappe.generate_hash(length=8),
 		)
-		invoice.payment_schedule = [
-			{
-				"due_date": due_date,
-				"invoice_portion": 100,
-				"payment_amount": invoice.grand_total,
-				"discount_date": discount_date,
-				"discount_type": "Percentage",
-				"discount": 2 if discount_date else 0,
-			}
-		]
+		# ERPNext creates the payment schedule on insert, we only adjust its dates
+		schedule = invoice.payment_schedule[0]
+		schedule.due_date = due_date
+		schedule.discount_date = discount_date
+		schedule.discount_type = "Percentage"
+		schedule.discount = 2 if discount_date else 0
 		invoice.submit()
-		return invoice.name
+		return invoice
 
 	def test_fetch_payables_by_due_date(self):
-		due = self.make_invoice(due_date=add_days(today(), 5))
-		not_due = self.make_invoice(due_date=add_days(today(), 30))
+		due = self.make_invoice(due_date=add_days(today(), 5)).name
+		not_due = self.make_invoice(due_date=add_days(today(), 30)).name
 
 		order = self.new_payment_order(execution_date=today())
 		order.fetch_payables(add_days(today(), 10))
@@ -90,12 +91,12 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		# paying within the discount period: 2 % less
 		order = self.new_payment_order(execution_date=add_days(today(), 3))
 		order.fetch_payables(add_days(today(), 5))
-		payment = next(p for p in order.payments if p.reference_name == invoice)
-		self.assertEqual(payment.amount, 98)
+		payment = next(p for p in order.payments if p.reference_name == invoice.name)
+		self.assertEqual(payment.amount, flt(invoice.grand_total * 0.98, 2))
 		self.assertEqual(payment.iban, SUPPLIER_IBAN)
 
 		# paying after the discount expired: full amount
 		late_order = self.new_payment_order(execution_date=add_days(today(), 10))
 		late_order.fetch_payables(add_days(today(), 5))
-		late_payment = next(p for p in late_order.payments if p.reference_name == invoice)
-		self.assertEqual(late_payment.amount, 100)
+		late_payment = next(p for p in late_order.payments if p.reference_name == invoice.name)
+		self.assertEqual(late_payment.amount, invoice.grand_total)
