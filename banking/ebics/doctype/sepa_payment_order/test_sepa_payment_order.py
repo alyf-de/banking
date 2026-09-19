@@ -52,10 +52,10 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 			execution_date=execution_date,
 		)
 
-	def make_invoice(self, due_date: str, discount_date: str | None = None):
+	def make_invoice(self, due_date: str, discount_date: str | None = None, supplier: str | None = None):
 		"""Submit a Purchase Invoice with a single payment schedule row."""
 		invoice = make_purchase_invoice(
-			supplier=self.supplier,
+			supplier=supplier or self.supplier,
 			qty=1,
 			rate=100,
 			do_not_submit=True,
@@ -100,3 +100,42 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 		late_order.fetch_payables(add_days(today(), 5))
 		late_payment = next(p for p in late_order.payments if p.reference_name == invoice.name)
 		self.assertEqual(late_payment.amount, invoice.grand_total)
+
+	def test_fetch_payables_skips_inaccessible_documents(self):
+		"""A document the user may not read must not abort the whole fetch."""
+		readable = self.make_invoice(due_date=add_days(today(), 5)).name
+		restricted_supplier = create_supplier("_Test SEPA Supplier 2")
+		restricted = self.make_invoice(due_date=add_days(today(), 5), supplier=restricted_supplier).name
+
+		user = make_user_restricted_to_supplier(self.supplier)
+		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.set_user(user)
+
+		order = self.new_payment_order(execution_date=today())
+		order.fetch_payables(add_days(today(), 10))
+
+		fetched = [payment.reference_name for payment in order.payments]
+		self.assertIn(readable, fetched)
+		self.assertNotIn(restricted, fetched)
+
+		# the user is told why the document was left out
+		skipped = str(frappe.message_log[-1])
+		self.assertIn(restricted, skipped)
+		self.assertIn("Not permitted", skipped)
+
+
+def make_user_restricted_to_supplier(supplier: str) -> str:
+	"""An Accounts Manager who may only read documents of `supplier`."""
+	email = "sepa_restricted@example.com"
+	if not frappe.db.exists("User", email):
+		frappe.get_doc(
+			doctype="User",
+			email=email,
+			first_name="SEPA Restricted",
+			roles=[{"role": "Accounts Manager"}],
+		).insert()
+
+	if not frappe.db.exists("User Permission", {"user": email, "allow": "Supplier"}):
+		frappe.get_doc(doctype="User Permission", user=email, allow="Supplier", for_value=supplier).insert()
+
+	return email

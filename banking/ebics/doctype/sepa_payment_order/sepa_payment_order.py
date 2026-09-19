@@ -104,13 +104,15 @@ class SEPAPaymentOrder(Document):
 			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
 				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
 
-		# One unpayable document (e.g. a missing IBAN) must not abort the whole batch.
+		# One unpayable document (e.g. a missing IBAN) or one the user may not read
+		# must not abort the whole batch.
 		skipped = []
 		for invoice, rows in rows_by_invoice.items():
 			try:
 				invoice_to_order(invoice, self, payment_schedule_rows=rows)
-			except frappe.ValidationError as e:
-				skipped.append(f"{invoice}: {e}")
+			except (frappe.ValidationError, frappe.PermissionError) as e:
+				reason = str(e) or _("Not permitted")
+				skipped.append(f"{invoice}: {reason}")
 
 		for claim in get_payable_expense_claims(self.company, account_currency, date):
 			if ("Expense Claim", claim) in mapped_docs:
@@ -118,8 +120,9 @@ class SEPAPaymentOrder(Document):
 
 			try:
 				claim_to_order(claim, self)
-			except frappe.ValidationError as e:
-				skipped.append(f"{claim}: {e}")
+			except (frappe.ValidationError, frappe.PermissionError) as e:
+				reason = str(e) or _("Not permitted")
+				skipped.append(f"{claim}: {reason}")
 
 		if skipped:
 			frappe.msgprint(skipped, title=_("Skipped"), indicator="orange", as_list=True)
@@ -257,6 +260,10 @@ def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[fra
 def get_payable_expense_claims(company: str, currency: str, date: str) -> list[str]:
 	"""Return Expense Claims posted by `date`. They have no due date."""
 	if "hrms" not in frappe.get_installed_apps():
+		return []
+
+	if not frappe.has_permission("Expense Claim"):
+		# e.g. an Accounts Manager, who may pay invoices but not see claims
 		return []
 
 	if currency != frappe.db.get_value("Company", company, "default_currency"):
