@@ -104,15 +104,16 @@ class SEPAPaymentOrder(Document):
 			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
 				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
 
-		# One unpayable document (e.g. a missing IBAN) or one the user may not read
-		# must not abort the whole batch.
+		# One unpayable (e.g. missing IBAN) or unreadable document must not abort the whole batch.
 		skipped = []
+		inaccessible = 0
 		for invoice, rows in rows_by_invoice.items():
 			try:
 				invoice_to_order(invoice, self, payment_schedule_rows=rows)
-			except (frappe.ValidationError, frappe.PermissionError) as e:
-				reason = str(e) or _("Not permitted")
-				skipped.append(f"{invoice}: {reason}")
+			except frappe.PermissionError:
+				inaccessible += 1
+			except frappe.ValidationError as e:
+				skipped.append(f"{invoice}: {e}")
 
 		for claim in get_payable_expense_claims(self.company, account_currency, date):
 			if ("Expense Claim", claim) in mapped_docs:
@@ -120,9 +121,14 @@ class SEPAPaymentOrder(Document):
 
 			try:
 				claim_to_order(claim, self)
-			except (frappe.ValidationError, frappe.PermissionError) as e:
-				reason = str(e) or _("Not permitted")
-				skipped.append(f"{claim}: {reason}")
+			except frappe.PermissionError:
+				inaccessible += 1
+			except frappe.ValidationError as e:
+				skipped.append(f"{claim}: {e}")
+
+		if inaccessible:
+			# No names: the user is not allowed to read these documents.
+			skipped.append(_("{0} document(s) you have no permission to read.").format(inaccessible))
 
 		if skipped:
 			frappe.msgprint(skipped, title=_("Skipped"), indicator="orange", as_list=True)
@@ -234,7 +240,10 @@ class SEPAPaymentOrder(Document):
 def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[frappe._dict]:
 	"""Return Payment Schedule rows whose due date, or early payment discount deadline,
 	falls on or before `date`."""
-	return frappe.get_all(
+	if not frappe.has_permission("Purchase Invoice"):
+		return []
+
+	return frappe.get_list(
 		"Purchase Invoice",
 		filters=[
 			["Purchase Invoice", "docstatus", "=", 1],
@@ -270,7 +279,7 @@ def get_payable_expense_claims(company: str, currency: str, date: str) -> list[s
 		# Expense Claims are reimbursed in the company currency
 		return []
 
-	return frappe.get_all(
+	return frappe.get_list(
 		"Expense Claim",
 		filters={
 			"docstatus": 1,

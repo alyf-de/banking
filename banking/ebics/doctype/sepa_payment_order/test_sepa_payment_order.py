@@ -1,6 +1,8 @@
 # Copyright (c) 2025, ALYF GmbH and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from frappe.tests.utils import FrappeTestCase
@@ -52,10 +54,10 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 			execution_date=execution_date,
 		)
 
-	def make_invoice(self, due_date: str, discount_date: str | None = None, supplier: str | None = None):
+	def make_invoice(self, due_date: str, discount_date: str | None = None):
 		"""Submit a Purchase Invoice with a single payment schedule row."""
 		invoice = make_purchase_invoice(
-			supplier=supplier or self.supplier,
+			supplier=self.supplier,
 			qty=1,
 			rate=100,
 			do_not_submit=True,
@@ -103,39 +105,25 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 
 	def test_fetch_payables_skips_inaccessible_documents(self):
 		"""A document the user may not read must not abort the whole fetch."""
+		blocked = self.make_invoice(due_date=add_days(today(), 5)).name
 		readable = self.make_invoice(due_date=add_days(today(), 5)).name
-		restricted_supplier = create_supplier("_Test SEPA Supplier 2")
-		restricted = self.make_invoice(due_date=add_days(today(), 5), supplier=restricted_supplier).name
 
-		user = make_user_restricted_to_supplier(self.supplier)
-		self.addCleanup(frappe.set_user, "Administrator")
-		frappe.set_user(user)
+		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
+
+		def raise_for_blocked(source_name, *args, **kwargs):
+			if source_name == blocked:
+				raise frappe.PermissionError
+			return invoice_to_order(source_name, *args, **kwargs)
 
 		order = self.new_payment_order(execution_date=today())
-		order.fetch_payables(add_days(today(), 10))
+		with patch("banking.custom.purchase_invoice.make_sepa_payment_order", side_effect=raise_for_blocked):
+			order.fetch_payables(add_days(today(), 10))
 
 		fetched = [payment.reference_name for payment in order.payments]
 		self.assertIn(readable, fetched)
-		self.assertNotIn(restricted, fetched)
+		self.assertNotIn(blocked, fetched)
 
-		# the user is told why the document was left out
+		# the name of an unreadable document must not leak into the message
 		skipped = str(frappe.message_log[-1])
-		self.assertIn(restricted, skipped)
-		self.assertIn("Not permitted", skipped)
-
-
-def make_user_restricted_to_supplier(supplier: str) -> str:
-	"""An Accounts Manager who may only read documents of `supplier`."""
-	email = "sepa_restricted@example.com"
-	if not frappe.db.exists("User", email):
-		frappe.get_doc(
-			doctype="User",
-			email=email,
-			first_name="SEPA Restricted",
-			roles=[{"role": "Accounts Manager"}],
-		).insert()
-
-	if not frappe.db.exists("User Permission", {"user": email, "allow": "Supplier"}):
-		frappe.get_doc(doctype="User Permission", user=email, allow="Supplier", for_value=supplier).insert()
-
-	return email
+		self.assertNotIn(blocked, skipped)
+		self.assertIn("1 document(s)", skipped)
