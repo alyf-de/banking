@@ -106,11 +106,14 @@ class SEPAPaymentOrder(Document):
 			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
 				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
 
-		# One unpayable document (e.g. a missing IBAN) must not abort the whole batch.
+		# One unpayable (e.g. missing IBAN) or unreadable document must not abort the whole batch.
 		skipped = []
+		inaccessible = 0
 		for invoice, rows in rows_by_invoice.items():
 			try:
 				invoice_to_order(invoice, self, payment_schedule_rows=rows)
+			except frappe.PermissionError:
+				inaccessible += 1
 			except frappe.ValidationError as e:
 				skipped.append(f"{invoice}: {e}")
 
@@ -120,8 +123,14 @@ class SEPAPaymentOrder(Document):
 
 			try:
 				claim_to_order(claim, self)
+			except frappe.PermissionError:
+				inaccessible += 1
 			except frappe.ValidationError as e:
 				skipped.append(f"{claim}: {e}")
+
+		if inaccessible:
+			# No names: the user is not allowed to read these documents.
+			skipped.append(_("{0} document(s) you have no permission to read.").format(inaccessible))
 
 		if skipped:
 			frappe.msgprint(skipped, title=_("Skipped"), indicator="orange", as_list=True)
@@ -233,7 +242,10 @@ class SEPAPaymentOrder(Document):
 def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[frappe._dict]:
 	"""Return Payment Schedule rows whose due date, or early payment discount deadline,
 	falls on or before `date`."""
-	return frappe.get_all(
+	if not frappe.has_permission("Purchase Invoice"):
+		return []
+
+	return frappe.get_list(
 		"Purchase Invoice",
 		filters=[
 			["Purchase Invoice", "docstatus", "=", 1],
@@ -261,11 +273,14 @@ def get_payable_expense_claims(company: str, currency: str, date: str) -> list[s
 	if "hrms" not in frappe.get_installed_apps():
 		return []
 
+	if not frappe.has_permission("Expense Claim"):
+		return []
+
 	if currency != frappe.db.get_value("Company", company, "default_currency"):
 		# Expense Claims are reimbursed in the company currency
 		return []
 
-	return frappe.get_all(
+	return frappe.get_list(
 		"Expense Claim",
 		filters={
 			"docstatus": 1,
