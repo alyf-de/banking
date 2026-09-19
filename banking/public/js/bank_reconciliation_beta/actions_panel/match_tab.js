@@ -203,9 +203,9 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 			this.summary_data,
 			unpaid_invoices_only
 		);
-		let total_allocated = Object.values(this.summary_data).reduce(
-			(a, entry) => a + entry.amount,
-			0
+		let total_allocated = banking.bank_reconciliation.get_total_allocated(
+			this.transaction,
+			this.summary_data
 		);
 		let max_allocated = Math.min(total_allocated, allocation_budget);
 
