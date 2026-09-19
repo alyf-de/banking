@@ -1,6 +1,8 @@
 # Copyright (c) 2025, ALYF GmbH and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from frappe.tests import IntegrationTestCase
@@ -100,3 +102,23 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		late_order.fetch_payables(add_days(today(), 5))
 		late_payment = next(p for p in late_order.payments if p.reference_name == invoice.name)
 		self.assertEqual(late_payment.amount, invoice.grand_total)
+
+	def test_fetch_payables_skips_inaccessible_documents(self):
+		"""A document the user may not read must not abort the whole fetch."""
+		blocked = self.make_invoice(due_date=add_days(today(), 5)).name
+		readable = self.make_invoice(due_date=add_days(today(), 5)).name
+
+		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
+
+		def raise_for_blocked(source_name, *args, **kwargs):
+			if source_name == blocked:
+				raise frappe.PermissionError
+			return invoice_to_order(source_name, *args, **kwargs)
+
+		order = self.new_payment_order(execution_date=today())
+		with patch("banking.custom.purchase_invoice.make_sepa_payment_order", side_effect=raise_for_blocked):
+			order.fetch_payables(add_days(today(), 10))
+
+		fetched = [payment.reference_name for payment in order.payments]
+		self.assertIn(readable, fetched)
+		self.assertNotIn(blocked, fetched)
