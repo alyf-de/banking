@@ -203,6 +203,8 @@ class SEPAPaymentOrder(Document):
 		A Mode of Payment qualifies if the account configured for this company is the
 		account of this order's bank account.
 		"""
+		mode_filter = ModeOfPaymentFilter(mode_filter)
+
 		if mode_filter == ModeOfPaymentFilter.IGNORE:
 			return None
 
