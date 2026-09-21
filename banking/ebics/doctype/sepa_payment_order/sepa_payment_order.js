@@ -62,7 +62,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 					label: __("Mode of Payment"),
 					fieldtype: "Select",
 					reqd: 1,
-					default: "Matching or empty",
+					default: "matching_or_empty",
 					// Frappe translates the labels, the values stay as they are
 					options: [
 						{ value: "matching_or_empty", label: __("Matching or empty") },
