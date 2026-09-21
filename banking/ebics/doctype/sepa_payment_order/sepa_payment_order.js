@@ -46,6 +46,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 
 	fetch_payables(frm) {
 		frappe.prompt(
+<<<<<<< HEAD
 			{
 				fieldname: "date",
 				label: __("Due Until"),
@@ -61,6 +62,43 @@ frappe.ui.form.on("SEPA Payment Order", {
 					frm.refresh_field("payments");
 					frm.dirty();
 				});
+=======
+			[
+				{
+					fieldname: "date",
+					label: __("Due Until"),
+					fieldtype: "Date",
+					reqd: 1,
+					default: frm.doc.execution_date || frappe.datetime.get_today(),
+					description: __(
+						"Fetch Purchase Invoices and Expense Claims that are due, or lose their early payment discount, on or before this date.",
+					),
+				},
+				{
+					fieldname: "mode_of_payment_filter",
+					label: __("Mode of Payment"),
+					fieldtype: "Select",
+					reqd: 1,
+					default: "matching_or_empty",
+					// Frappe translates the labels, the values stay as they are
+					options: [
+						{ value: "matching_or_empty", label: __("Matching or empty") },
+						{ value: "matching_only", label: __("Matching only") },
+						{ value: "ignore", label: __("Ignore") },
+					],
+					description: __(
+						"Which invoices to fetch, by matching the account configured in their Mode of Payment against this order's bank account. Expense Claims are always fetched.",
+					),
+				},
+			],
+			({ date, mode_of_payment_filter }) => {
+				frm
+					.call("fetch_payables", { date, mode_of_payment_filter })
+					.then(() => {
+						frm.refresh_field("payments");
+						frm.dirty();
+					});
+>>>>>>> 11ddb12 (feat(SEPA Payment Order): match payables by mode of payment (#445))
 			},
 			__("Get Payables"),
 			__("Fetch")

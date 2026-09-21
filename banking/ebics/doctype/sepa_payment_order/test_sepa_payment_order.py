@@ -54,7 +54,9 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 			execution_date=execution_date,
 		)
 
-	def make_invoice(self, due_date: str, discount_date: str | None = None):
+	def make_invoice(
+		self, due_date: str, discount_date: str | None = None, mode_of_payment: str | None = None
+	):
 		"""Submit a Purchase Invoice with a single payment schedule row."""
 		invoice = make_purchase_invoice(
 			supplier=self.supplier,
@@ -69,6 +71,7 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 		schedule.discount_date = discount_date
 		schedule.discount_type = "Percentage"
 		schedule.discount = 2 if discount_date else 0
+		schedule.mode_of_payment = mode_of_payment
 		invoice.submit()
 		return invoice
 
@@ -123,7 +126,76 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 		self.assertIn(readable, fetched)
 		self.assertNotIn(blocked, fetched)
 
+<<<<<<< HEAD
 		# the name of an unreadable document must not leak into the message
 		skipped = str(frappe.message_log[-1])
 		self.assertNotIn(blocked, skipped)
 		self.assertIn("1 document(s)", skipped)
+=======
+	def test_fetch_payables_by_mode_of_payment(self):
+		"""Only a Mode of Payment configured for the order's bank account qualifies."""
+		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
+		matching = create_mode_of_payment("_Test SEPA Matching Mode", own_account)
+		other = create_mode_of_payment(
+			"_Test SEPA Other Mode", create_bank_gl_account("_Test Other SEPA Bank")
+		)
+
+		fits = self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=matching).name
+		fits_not = self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=other).name
+		no_mode = self.make_invoice(due_date=add_days(today(), 5)).name
+
+		def fetch(mode_of_payment_filter):
+			order = self.new_payment_order(execution_date=today())
+			order.fetch_payables(add_days(today(), 10), mode_of_payment_filter)
+			return [payment.reference_name for payment in order.payments]
+
+		fetched = fetch("matching_or_empty")
+		self.assertIn(fits, fetched)
+		self.assertIn(no_mode, fetched)
+		self.assertNotIn(fits_not, fetched)
+
+		fetched = fetch("matching_only")
+		self.assertIn(fits, fetched)
+		self.assertNotIn(no_mode, fetched)
+		self.assertNotIn(fits_not, fetched)
+
+		fetched = fetch("ignore")
+		self.assertIn(fits, fetched)
+		self.assertIn(no_mode, fetched)
+		self.assertIn(fits_not, fetched)
+
+	def test_fetch_payables_reports_wrong_mode_of_payment(self):
+		"""Rows dropped by the Mode of Payment filter are counted in the message."""
+		other = create_mode_of_payment(
+			"_Test SEPA Other Mode", create_bank_gl_account("_Test Other SEPA Bank")
+		)
+		self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=other)
+
+		order = self.new_payment_order(execution_date=today())
+		with patch("frappe.msgprint") as msgprint:
+			order.fetch_payables(add_days(today(), 10), "matching_only")
+
+		messages = msgprint.call_args.args[0]
+		self.assertTrue(
+			any("Mode of Payment" in message for message in messages),
+			f"no Mode of Payment message in {messages}",
+		)
+
+
+def create_mode_of_payment(name: str, account: str) -> str:
+	if frappe.db.exists("Mode of Payment", name):
+		return name
+
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Mode of Payment",
+				"mode_of_payment": name,
+				"type": "Bank",
+				"accounts": [{"company": "_Test Company", "default_account": account}],
+			}
+		)
+		.insert()
+		.name
+	)
+>>>>>>> 11ddb12 (feat(SEPA Payment Order): match payables by mode of payment (#445))
