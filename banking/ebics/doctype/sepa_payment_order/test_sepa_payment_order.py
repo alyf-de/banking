@@ -126,12 +126,11 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 		self.assertIn(readable, fetched)
 		self.assertNotIn(blocked, fetched)
 
-<<<<<<< HEAD
 		# the name of an unreadable document must not leak into the message
 		skipped = str(frappe.message_log[-1])
 		self.assertNotIn(blocked, skipped)
 		self.assertIn("1 document(s)", skipped)
-=======
+
 	def test_fetch_payables_by_mode_of_payment(self):
 		"""Only a Mode of Payment configured for the order's bank account qualifies."""
 		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
@@ -198,4 +197,3 @@ def create_mode_of_payment(name: str, account: str) -> str:
 		.insert()
 		.name
 	)
->>>>>>> 11ddb12 (feat(SEPA Payment Order): match payables by mode of payment (#445))
