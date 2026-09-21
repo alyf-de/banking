@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ALYF Banking VERSION\n"
 "Report-Msgid-Bugs-To: hallo@alyf.de\n"
-"POT-Creation-Date: 2026-09-19 01:33+0053\n"
+"POT-Creation-Date: 2026-09-21 18:11+0053\n"
 "PO-Revision-Date: 2025-01-31 19:26+0053\n"
 "Last-Translator: hallo@alyf.de\n"
 "Language-Team: hallo@alyf.de\n"
@@ -63,7 +63,7 @@ msgid "Account Settings"
 msgstr "Configuración de la cuenta"
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:38
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:72
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:92
 msgid "Add Recipient"
 msgstr "Añadir destinatario"
 
@@ -76,15 +76,15 @@ msgstr "Añada al menos un filtro para ver el número de coincidencias."
 msgid "Admin URL"
 msgstr "URL de administración"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:140
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:181
 msgid "Amount updated to {0} in row {1}."
 msgstr "Importe actualizado a {0} en la fila {1}."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:290
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:310
 msgid "Amounts not updated."
 msgstr "Los importes no se actualizaron."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:283
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:303
 msgid "Amounts updated."
 msgstr "Importes actualizados."
 
@@ -423,7 +423,7 @@ msgstr "El modo desarrollador está activado. Por favor, desactívelo para conti
 msgid "Did you mean {0}?"
 msgstr "¿Me refieres a {0}?"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:288
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:361
 msgid "DocType must be Supplier or Employee."
 msgstr "El DocType debe ser Proveedor o Empleado."
 
@@ -450,7 +450,7 @@ msgstr "Descargar archivos de respuesta"
 msgid "Downloaded"
 msgstr "Descargado"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:51
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:52
 msgid "Due Until"
 msgstr "Vence hasta"
 
@@ -498,7 +498,7 @@ msgstr "URL EBICS"
 #. Label of a Workspace Sidebar Item
 #: banking/ebics/doctype/ebics_request/ebics_request.json
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:199
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:219
 #: banking/workspace_sidebar/alyf_banking.json
 msgid "EBICS User"
 msgstr "Usuario de EBICS"
@@ -579,7 +579,7 @@ msgstr "Ingrese la frase de contraseña"
 msgid "Enter only if scheduled execution at the bank is desired."
 msgstr "Ingrese solo si se desea ejecución programada en el banco."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:247
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:267
 msgid "Enter your passphrase"
 msgstr "Ingrese su frase de contraseña"
 
@@ -588,7 +588,7 @@ msgstr "Ingrese su frase de contraseña"
 msgid "Enter your password to enable automated, regular syncing. Leave blank if you prefer to sync manually."
 msgstr "Ingrese su contraseña para habilitar la sincronización automática, regular, o deje en blanco si prefiere sincronizar manualmente."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:240
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:260
 msgid "Enter your signature passphrase"
 msgstr "Ingrese su frase de contraseña de firma"
 
@@ -641,11 +641,11 @@ msgstr "No se pudo actualizar {0}"
 msgid "Failed: {0}"
 msgstr "Fallidas: {0}"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:66
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:86
 msgid "Fetch"
 msgstr "Obtener"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:55
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:56
 msgid "Fetch Purchase Invoices and Expense Claims that are due, or lose their early payment discount, on or before this date."
 msgstr "Obtener las facturas de compra y los reembolsos de gastos que vencen, o pierden su descuento por pronto pago, en esta fecha o antes."
 
@@ -683,7 +683,7 @@ msgid "Get Bank Transactions"
 msgstr "Obtener transacciones bancarias"
 
 #: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:35
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:65
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:85
 msgid "Get Payables"
 msgstr "Obtener cuentas por pagar"
 
@@ -706,7 +706,7 @@ msgstr "Campo oculto para alineación"
 msgid "IBAN Warning: Not used in SEPA Payment Orders"
 msgstr "Advertencia de IBAN: No se usa en órdenes de pago SEPA"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:149
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:190
 msgid "IBAN {0} is invalid."
 msgstr "El IBAN {0} es inválido."
 
@@ -849,6 +849,14 @@ msgstr "Los importes de conciliación manual deben ser mayores que cero."
 msgid "Match Voucher"
 msgstr "Conciliación de comprobante"
 
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:69
+msgid "Matching only"
+msgstr "Solo coincidentes"
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:68
+msgid "Matching or empty"
+msgstr "Coincidentes o vacíos"
+
 #: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:165
 #: banking/public/js/bank_reconciliation_beta/actions_panel/reconcile_conversion_dialog.js:197
 msgid "Max {0}"
@@ -864,7 +872,7 @@ msgstr "Necesita certificado"
 msgid "No Data Available"
 msgstr "No hay datos disponibles"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:307
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:380
 msgid "No IBAN for {0} {1}."
 msgstr "No hay IBAN para {0} {1}."
 
@@ -979,7 +987,7 @@ msgstr "El tipo de parte {0} no se puede contabilizar en la cuenta {1} {2}."
 #: banking/ebics/doctype/ebics_user/ebics_user.js:172
 #: banking/ebics/doctype/ebics_user/ebics_user.js:260
 #: banking/ebics/doctype/ebics_user/ebics_user.json
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:245
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:265
 msgid "Passphrase"
 msgstr "Frase de contraseña"
 
@@ -996,15 +1004,15 @@ msgstr "Un asiento de pago de tipo {0} no puede conciliar una transacción banca
 msgid "Payment Entry of type {0} cannot reconcile a withdrawal Bank Transaction."
 msgstr "Un asiento de pago de tipo {0} no puede conciliar una transacción bancaria de retiro."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:264
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:284
 msgid "Payment Order has been sent to bank."
 msgstr "La orden de pago ha sido enviada al banco."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:270
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:290
 msgid "Payment Order has not been sent to bank."
 msgstr "La orden de pago no ha sido enviada al banco."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:172
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:192
 msgid "Payment amounts have changed. Are you sure you want to submit without updating them first?"
 msgstr "Los importes del pago han cambiado. ¿Está seguro de que desea enviar sin actualizarlos primero?"
 
@@ -1184,11 +1192,11 @@ msgstr "Comprobante reservado"
 msgid "Reserved Voucher Type"
 msgstr "Tipo de comprobante reservado"
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:165
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:228
 msgid "Row {0}: Currency {1} does not match bank account currency {2}."
 msgstr "Fila {0}: La moneda {1} no coincide con la moneda de la cuenta bancaria {2}."
 
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:153
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:194
 msgid "Row {0}: IBAN {1} is invalid."
 msgstr "Fila {0}: El IBAN {1} es inválido."
 
@@ -1266,7 +1274,7 @@ msgid "Show Protocol Versions"
 msgstr "Mostrar versiones de protocolo"
 
 #: banking/ebics/doctype/ebics_user/ebics_user.js:39
-#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:238
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:258
 msgid "Signature Passphrase"
 msgstr "Contraseña de firma"
 
@@ -1553,6 +1561,10 @@ msgstr "Intentaremos descargar las nuevas transacciones desde hoy, utilizando <c
 msgid "When enabled, included bank fees are handled automatically for <b>Bank Transactions</b>: withdrawals create a fee <b>Journal Entry</b> on submit, and deposits include the fee during reconciliation. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\"><b>Bank Account</b></a>."
 msgstr "Si está activado, las comisiones bancarias incluidas se tratan automáticamente en las <b>transacciones bancarias</b>: los retiros crean un <b>asiento contable</b> de comisión al enviar, y los depósitos incluyen la comisión durante la conciliación. Especifique la <i>cuenta de comisiones bancarias</i> en su <a href=\"/app/bank-account?is_company_account=1\"><b>cuenta bancaria</b></a>."
 
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.js:72
+msgid "Which invoices to fetch, by matching the account configured in their Mode of Payment against this order's bank account. Expense Claims are always fetched."
+msgstr "Qué facturas obtener, comparando la cuenta configurada en su Modo de pago con la cuenta bancaria de esta orden. Los Reembolsos de gastos siempre se obtienen."
+
 #: banking/public/js/rule_creation_dialog.bundle.js:64
 msgid "You do not have permission to create a Bank Reconciliation Rule."
 msgstr "No tiene permiso para crear una regla de conciliación bancaria."
@@ -1591,6 +1603,10 @@ msgstr "pain.001.003.03"
 msgid "to import bank transactions for {0}."
 msgstr "para importar transacciones bancarias para {0}."
 
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:158
+msgid "{0} document(s) you have no permission to read."
+msgstr "{0} documento(s) que no tiene permiso para leer."
+
 #: banking/public/js/bank_reconciliation_rule_stats.bundle.js:189
 msgid "{0} in the last 30 days, {1} in the last 12 months (365 days)."
 msgstr "{0} en los últimos 30 días, {1} en los últimos 12 meses (365 días)."
@@ -1598,6 +1614,10 @@ msgstr "{0} en los últimos 30 días, {1} en los últimos 12 meses (365 días)."
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_rule/bank_reconciliation_rule.py:185
 msgid "{0} is a {1} account, so the automatic Journal Entry needs a party. Please add a {2} filter to restrict this rule to transactions with a party."
 msgstr "{0} es una cuenta {1}, por lo que el asiento contable automático necesita una parte. Añada un filtro de {2} para restringir esta regla a transacciones con una parte."
+
+#: banking/ebics/doctype/sepa_payment_order/sepa_payment_order.py:162
+msgid "{0} payable(s) whose Mode of Payment does not match {1}."
+msgstr "{0} cuenta(s) por pagar cuyo Modo de pago no coincide con {1}."
 
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:618
 #: banking/klarna_kosma_integration/doctype/bank_reconciliation_tool_beta/bank_reconciliation_tool_beta.py:627
