@@ -4,6 +4,14 @@
 frappe.ui.form.on("Bank Account", {
 	refresh(frm) {
 		frm.trigger("set_fee_account_query");
+
+		// Only modes that book to this bank account's account
+		frm.set_query("default_mode_of_payment", () => ({
+			filters: [
+				["Mode of Payment Account", "company", "=", frm.doc.company],
+				["Mode of Payment Account", "default_account", "=", frm.doc.account],
+			],
+		}));
 	},
 
 	account(frm) {
