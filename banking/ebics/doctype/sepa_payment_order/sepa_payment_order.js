@@ -54,13 +54,11 @@ frappe.ui.form.on("SEPA Payment Order", {
 			return;
 		}
 
-		const [default_mode_of_payment, { message: bank_account }] =
-			await Promise.all([
-				frappe.xcall(
-					"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.get_default_mode_of_payment",
-				),
-				frappe.db.get_value("Bank Account", frm.doc.bank_account, "account"),
-			]);
+		const { message: bank_account } = await frappe.db.get_value(
+			"Bank Account",
+			frm.doc.bank_account,
+			["account", "default_mode_of_payment"],
+		);
 		frappe.prompt(
 			[
 				{
@@ -78,7 +76,7 @@ frappe.ui.form.on("SEPA Payment Order", {
 					label: __("Mode of Payment"),
 					fieldtype: "Link",
 					options: "Mode of Payment",
-					default: default_mode_of_payment,
+					default: bank_account.default_mode_of_payment,
 					// Only modes that book to the account of this order's bank account
 					get_query: () => ({
 						filters: [

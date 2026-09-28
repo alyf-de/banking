@@ -80,10 +80,9 @@ In a draft **SEPA Payment Order**, click _Get Payables_ to add all payables that
 
 The system skips payment schedule rows that are already in a **SEPA Payment Order**. It also skips documents that you do not have permission to read, and documents that it cannot map (for example, if the IBAN is missing).
 
-In **Banking Settings**, on the _SEPA Payment Order_ tab, you can set these defaults:
+In **Banking Settings**, on the _SEPA Payment Order_ tab, you can set _Ignore Payables Before_. The system does not add payables posted before this date. Use this to skip old invoices that were paid, but not marked as paid.
 
-- _Ignore Payables Before_: The system does not add payables posted before this date. Use this to skip old invoices that were paid, but not marked as paid.
-- _Default Mode of Payment_: The default value for _Mode of Payment_ in the dialog.
+In the **Bank Account**, you can set a _Default Mode of Payment_. This is the default value for _Mode of Payment_ in the dialog.
 
 ### From an Expense Claim
 
