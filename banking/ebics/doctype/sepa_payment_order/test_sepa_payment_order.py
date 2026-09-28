@@ -126,6 +126,21 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		self.assertIn(readable, fetched)
 		self.assertNotIn(blocked, fetched)
 
+	def test_fetch_payables_ignores_old_payables(self):
+		"""Invoices posted before Ignore Payables Before are not fetched."""
+		invoice = self.make_invoice(due_date=add_days(today(), 5)).name
+
+		def fetch():
+			order = self.new_payment_order(execution_date=today())
+			order.fetch_payables(add_days(today(), 10))
+			return [payment.reference_name for payment in order.payments]
+
+		frappe.db.set_single_value("Banking Settings", "ignore_payables_before", add_days(today(), 1))
+		self.assertNotIn(invoice, fetch())
+
+		frappe.db.set_single_value("Banking Settings", "ignore_payables_before", today())
+		self.assertIn(invoice, fetch())
+
 	def test_fetch_payables_by_mode_of_payment(self):
 		"""Only the exact Mode of Payment qualifies. Without one, only rows without one qualify."""
 		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")

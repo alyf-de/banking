@@ -23,6 +23,7 @@
   "reference_fields",
   "voucher_matching_defaults",
   "sepa_payment_order_tab",
+  "ignore_payables_before",
   "default_mode_of_payment"
  ],
  "fields": [
@@ -129,6 +130,12 @@
    "fieldname": "sepa_payment_order_tab",
    "fieldtype": "Tab Break",
    "label": "SEPA Payment Order"
+  },
+  {
+   "description": "<strong>SEPA Payment Order</strong> will not fetch payables before this date.",
+   "fieldname": "ignore_payables_before",
+   "fieldtype": "Date",
+   "label": "Ignore Payables Before"
   },
   {
    "description": "Payables will be fetched for this <strong>Mode of Payment</strong> by default.",

@@ -97,6 +97,9 @@ class SEPAPaymentOrder(Document):
 		Only Payment Schedule rows with exactly this `mode_of_payment` qualify. Without
 		`mode_of_payment`, only rows without a Mode of Payment qualify. Expense Claims are
 		never filtered: their Mode of Payment only exists for claims paid on submission.
+
+		Documents posted before _Ignore Payables Before_ in Banking Settings are skipped.
+		They are likely paid already, but were not marked as paid.
 		"""
 		from banking.custom.expense_claim import make_sepa_payment_order as claim_to_order
 		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
@@ -104,9 +107,13 @@ class SEPAPaymentOrder(Document):
 		mapped_rows = {(p.reference_doctype, p.reference_row_name) for p in self.payments}
 		mapped_docs = {(p.reference_doctype, p.reference_name) for p in self.payments}
 		account_currency = self.get_account_currency()
+		# Without the setting, fetch payables of any age
+		posted_from = frappe.db.get_single_value("Banking Settings", "ignore_payables_before") or "1900-01-01"
 
 		rows_by_invoice: dict[str, list[str]] = {}
-		for row in get_payable_invoice_rows(self.company, account_currency, date, mode_of_payment):
+		for row in get_payable_invoice_rows(
+			self.company, account_currency, date, posted_from, mode_of_payment
+		):
 			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
 				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
 
@@ -121,7 +128,7 @@ class SEPAPaymentOrder(Document):
 			except frappe.ValidationError as e:
 				skipped.append(f"{invoice}: {e}")
 
-		for claim in get_payable_expense_claims(self.company, account_currency, date):
+		for claim in get_payable_expense_claims(self.company, account_currency, date, posted_from):
 			if ("Expense Claim", claim) in mapped_docs:
 				continue
 
@@ -244,10 +251,12 @@ class SEPAPaymentOrder(Document):
 
 
 def get_payable_invoice_rows(
-	company: str, currency: str, date: str, mode_of_payment: str | None
+	company: str, currency: str, date: str, posted_from: str, mode_of_payment: str | None
 ) -> list[frappe._dict]:
 	"""Return Payment Schedule rows whose due date, or early payment discount deadline,
-	falls on or before `date`, and whose Mode of Payment is `mode_of_payment` (empty if not given)."""
+	falls on or before `date`, and whose Mode of Payment is `mode_of_payment` (empty if not given).
+
+	Only invoices posted on or after `posted_from` qualify."""
 	if not frappe.has_permission("Purchase Invoice"):
 		return []
 
@@ -260,6 +269,7 @@ def get_payable_invoice_rows(
 			["Purchase Invoice", "status", "!=", "Paid"],
 			["Purchase Invoice", "on_hold", "=", 0],
 			["Purchase Invoice", "outstanding_amount", ">", 0],
+			["Purchase Invoice", "posting_date", ">=", posted_from],
 			["Payment Schedule", "outstanding", ">", 0],
 			["Payment Schedule", "sepa_payment_order_status", "in", ["", None]],
 			[
@@ -280,8 +290,8 @@ def get_payable_invoice_rows(
 	)
 
 
-def get_payable_expense_claims(company: str, currency: str, date: str) -> list[str]:
-	"""Return Expense Claims posted by `date`. They have no due date."""
+def get_payable_expense_claims(company: str, currency: str, date: str, posted_from: str) -> list[str]:
+	"""Return Expense Claims posted between `posted_from` and `date`. They have no due date."""
 	if "hrms" not in frappe.get_installed_apps():
 		return []
 
@@ -300,7 +310,7 @@ def get_payable_expense_claims(company: str, currency: str, date: str) -> list[s
 			"approval_status": "Approved",
 			"status": ["!=", "Paid"],
 			"sepa_payment_order_status": ["in", ["", None]],
-			"posting_date": ["<=", date],
+			"posting_date": ["between", [posted_from, date]],
 		},
 		order_by="posting_date asc",
 		pluck="name",
