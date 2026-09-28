@@ -172,6 +172,14 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 		self.assertNotIn(by_transfer, fetched)
 		self.assertNotIn(by_draft, fetched)
 
+	def test_fetch_payables_rejects_mode_of_other_account(self):
+		other_account = create_bank_gl_account("_Test SEPA Other Bank")
+		other_mode = create_mode_of_payment("_Test SEPA Other Transfer", other_account)
+
+		order = self.new_payment_order(execution_date=today())
+		with self.assertRaises(frappe.ValidationError):
+			order.fetch_payables(add_days(today(), 10), other_mode)
+
 
 def create_mode_of_payment(name: str, account: str) -> str:
 	if frappe.db.exists("Mode of Payment", name):
