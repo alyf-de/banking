@@ -44,7 +44,23 @@ frappe.ui.form.on("SEPA Payment Order", {
 		}
 	},
 
-	fetch_payables(frm) {
+	async fetch_payables(frm) {
+		if (!frm.doc.bank_account) {
+			frappe.show_alert({
+				message: __("Please select a Bank Account first."),
+				indicator: "orange",
+			});
+			frm.scroll_to_field("bank_account");
+			return;
+		}
+
+		const [default_mode_of_payment, { message: bank_account }] =
+			await Promise.all([
+				frappe.xcall(
+					"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.get_default_mode_of_payment",
+				),
+				frappe.db.get_value("Bank Account", frm.doc.bank_account, "account"),
+			]);
 		frappe.prompt(
 			[
 				{
@@ -58,29 +74,37 @@ frappe.ui.form.on("SEPA Payment Order", {
 					),
 				},
 				{
-					fieldname: "mode_of_payment_filter",
+					fieldname: "mode_of_payment",
 					label: __("Mode of Payment"),
-					fieldtype: "Select",
-					reqd: 1,
-					default: "matching_or_empty",
-					// Frappe translates the labels, the values stay as they are
-					options: [
-						{ value: "matching_or_empty", label: __("Matching or empty") },
-						{ value: "matching_only", label: __("Matching only") },
-						{ value: "ignore", label: __("Ignore") },
-					],
+					fieldtype: "Link",
+					options: "Mode of Payment",
+					default: default_mode_of_payment,
+					// Only modes that book to the account of this order's bank account
+					get_query: () => ({
+						filters: [
+							["Mode of Payment Account", "company", "=", frm.doc.company],
+							[
+								"Mode of Payment Account",
+								"default_account",
+								"=",
+								bank_account.account,
+							],
+						],
+					}),
 					description: __(
+<<<<<<< HEAD
 						"Which invoices to fetch, by matching the account configured in their Mode of Payment against this order's bank account. Expense Claims are always fetched."
+=======
+						"Fetch Purchase Invoices with this Mode of Payment in their Payment Schedule. If empty, fetch those without a Mode of Payment. Expense Claims are always fetched.",
+>>>>>>> 9cd3d06 (feat(SEPA Payment Order): fetch payables by exact mode of payment (#447))
 					),
 				},
 			],
-			({ date, mode_of_payment_filter }) => {
-				frm
-					.call("fetch_payables", { date, mode_of_payment_filter })
-					.then(() => {
-						frm.refresh_field("payments");
-						frm.dirty();
-					});
+			({ date, mode_of_payment }) => {
+				frm.call("fetch_payables", { date, mode_of_payment }).then(() => {
+					frm.refresh_field("payments");
+					frm.dirty();
+				});
 			},
 			__("Get Payables"),
 			__("Fetch")
