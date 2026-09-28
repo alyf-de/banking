@@ -149,11 +149,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2026-04-14 13:09:54.246991",
-=======
  "modified": "2026-09-28 17:54:37.517580",
->>>>>>> 9cd3d06 (feat(SEPA Payment Order): fetch payables by exact mode of payment (#447))
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

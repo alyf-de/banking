@@ -126,24 +126,14 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 		self.assertIn(readable, fetched)
 		self.assertNotIn(blocked, fetched)
 
-<<<<<<< HEAD
 		# the name of an unreadable document must not leak into the message
 		skipped = str(frappe.message_log[-1])
 		self.assertNotIn(blocked, skipped)
 		self.assertIn("1 document(s)", skipped)
 
-	def test_fetch_payables_by_mode_of_payment(self):
-		"""Only a Mode of Payment configured for the order's bank account qualifies."""
-		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		matching = create_mode_of_payment("_Test SEPA Matching Mode", own_account)
-		other = create_mode_of_payment(
-			"_Test SEPA Other Mode", create_bank_gl_account("_Test Other SEPA Bank")
-		)
-=======
 	def test_fetch_payables_ignores_old_payables(self):
 		"""Invoices posted before Ignore Payables Before are not fetched."""
 		invoice = self.make_invoice(due_date=add_days(today(), 5)).name
->>>>>>> 9cd3d06 (feat(SEPA Payment Order): fetch payables by exact mode of payment (#447))
 
 		def fetch():
 			order = self.new_payment_order(execution_date=today())
