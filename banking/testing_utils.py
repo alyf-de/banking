@@ -95,3 +95,22 @@ def create_bank_transaction(
 	)
 	doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
 	return doc
+
+
+def create_mode_of_payment(name: str, account: str) -> str:
+	if frappe.db.exists("Mode of Payment", name):
+		return name
+
+	company = frappe.db.get_value("Account", account, "company")
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Mode of Payment",
+				"mode_of_payment": name,
+				"type": "Bank",
+				"accounts": [{"company": company, "default_account": account}],
+			}
+		)
+		.insert()
+		.name
+	)
