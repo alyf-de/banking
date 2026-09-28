@@ -320,6 +320,7 @@ def get_payable_expense_claims(company: str, currency: str, date: str, posted_fr
 @frappe.whitelist()
 def get_default_mode_of_payment() -> str | None:
 	# Users of SEPA Payment Order may not be allowed to read Banking Settings
+	frappe.has_permission("SEPA Payment Order", ptype="write", throw=True)
 	return frappe.db.get_single_value("Banking Settings", "default_mode_of_payment")
 
 
