@@ -14,6 +14,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test
 	create_bank_gl_account,
 	create_supplier,
 )
+from banking.testing_utils import create_mode_of_payment
 
 COMPANY_IBAN = "DE02120300000000202051"
 SUPPLIER_IBAN = "DE02100500000054540402"
@@ -174,21 +175,3 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order = self.new_payment_order(execution_date=today())
 		with self.assertRaises(frappe.ValidationError):
 			order.fetch_payables(add_days(today(), 10), other_mode)
-
-
-def create_mode_of_payment(name: str, account: str) -> str:
-	if frappe.db.exists("Mode of Payment", name):
-		return name
-
-	return (
-		frappe.get_doc(
-			{
-				"doctype": "Mode of Payment",
-				"mode_of_payment": name,
-				"type": "Bank",
-				"accounts": [{"company": "_Test Company", "default_account": account}],
-			}
-		)
-		.insert()
-		.name
-	)

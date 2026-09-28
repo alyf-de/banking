@@ -4,10 +4,10 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from banking.ebics.doctype.sepa_payment_order.test_sepa_payment_order import create_mode_of_payment
 from banking.testing_utils import (
 	create_bank_account,
 	create_currency_account,
+	create_mode_of_payment,
 	get_bank_parent_account,
 	set_automatic_bank_fee_entries,
 )
