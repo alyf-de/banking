@@ -39,6 +39,7 @@ class BankingSettings(Document):
 		enabled: DF.Check
 		fintech_license_key: DF.Password | None
 		fintech_licensee_name: DF.Data | None
+		ignore_payables_before: DF.Date | None
 		reference_fields: DF.Table[BankingReferenceMapping]
 		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
 	# end: auto-generated types
