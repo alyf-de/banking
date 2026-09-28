@@ -45,6 +45,15 @@ frappe.ui.form.on("SEPA Payment Order", {
 	},
 
 	async fetch_payables(frm) {
+		if (!frm.doc.bank_account) {
+			frappe.show_alert({
+				message: __("Please select a Bank Account first."),
+				indicator: "orange",
+			});
+			frm.scroll_to_field("bank_account");
+			return;
+		}
+
 		const [default_mode_of_payment, { message: bank_account }] =
 			await Promise.all([
 				frappe.xcall(
