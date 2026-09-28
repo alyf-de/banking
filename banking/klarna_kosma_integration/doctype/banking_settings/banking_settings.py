@@ -34,7 +34,6 @@ class BankingSettings(Document):
 		admin_endpoint: DF.Data | None
 		api_token: DF.Password | None
 		customer_id: DF.Data | None
-		default_mode_of_payment: DF.Link | None
 		enable_automatic_journal_entries_for_bank_fees: DF.Check
 		enable_ebics: DF.Check
 		enabled: DF.Check
