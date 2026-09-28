@@ -104,6 +104,9 @@ class SEPAPaymentOrder(Document):
 		from banking.custom.expense_claim import make_sepa_payment_order as claim_to_order
 		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
 
+		if mode_of_payment:
+			self.validate_mode_of_payment(mode_of_payment)
+
 		mapped_rows = {(p.reference_doctype, p.reference_row_name) for p in self.payments}
 		mapped_docs = {(p.reference_doctype, p.reference_name) for p in self.payments}
 		account_currency = self.get_account_currency()
@@ -171,6 +174,20 @@ class SEPAPaymentOrder(Document):
 		for payment in self.payments:
 			if not kontocheck.check_iban(payment.iban):
 				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
+
+	def validate_mode_of_payment(self, mode_of_payment: str):
+		"""Payables of this Mode of Payment must be paid from this order's bank account."""
+		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
+		books_to_own_account = frappe.db.exists(
+			"Mode of Payment Account",
+			{"parent": mode_of_payment, "company": self.company, "default_account": own_account},
+		)
+		if not books_to_own_account:
+			frappe.throw(
+				_("Mode of Payment {0} does not book to the account of Bank Account {1}.").format(
+					frappe.bold(mode_of_payment), frappe.bold(self.bank_account)
+				)
+			)
 
 	def get_account_currency(self) -> str:
 		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
