@@ -45,9 +45,13 @@ frappe.ui.form.on("SEPA Payment Order", {
 	},
 
 	async fetch_payables(frm) {
-		const default_mode_of_payment = await frappe.xcall(
-			"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.get_default_mode_of_payment",
-		);
+		const [default_mode_of_payment, { message: bank_account }] =
+			await Promise.all([
+				frappe.xcall(
+					"banking.ebics.doctype.sepa_payment_order.sepa_payment_order.get_default_mode_of_payment",
+				),
+				frappe.db.get_value("Bank Account", frm.doc.bank_account, "account"),
+			]);
 		frappe.prompt(
 			[
 				{
@@ -66,6 +70,18 @@ frappe.ui.form.on("SEPA Payment Order", {
 					fieldtype: "Link",
 					options: "Mode of Payment",
 					default: default_mode_of_payment,
+					// Only modes that book to the account of this order's bank account
+					get_query: () => ({
+						filters: [
+							["Mode of Payment Account", "company", "=", frm.doc.company],
+							[
+								"Mode of Payment Account",
+								"default_account",
+								"=",
+								bank_account.account,
+							],
+						],
+					}),
 					description: __(
 						"Fetch Purchase Invoices with this Mode of Payment in their Payment Schedule. If empty, fetch those without a Mode of Payment. Expense Claims are always fetched.",
 					),
