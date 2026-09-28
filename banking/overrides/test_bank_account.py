@@ -7,6 +7,7 @@ from frappe.tests.utils import FrappeTestCase
 from banking.testing_utils import (
 	create_bank_account,
 	create_currency_account,
+	create_mode_of_payment,
 	get_bank_parent_account,
 	set_automatic_bank_fee_entries,
 )
@@ -58,3 +59,16 @@ class TestBankAccount(FrappeTestCase):
 			frappe.db.get_value("Bank Account", self.bank_account_with_fee.name, "bank_fee_account"),
 			self.account_fee.name,
 		)
+
+	def test_default_mode_of_payment_must_book_to_account(self):
+		"""Changing the account must not keep a Default Mode of Payment of the old account."""
+		mode = create_mode_of_payment("_Test Bank Account Transfer", self.account_eur.name)
+
+		bank_account = frappe.get_doc("Bank Account", self.bank_account_with_fee.name)
+		bank_account.flags.ignore_links = True  # the test Bank does not exist
+		bank_account.default_mode_of_payment = mode
+		bank_account.save()
+
+		bank_account.account = self.account_fee.name
+		with self.assertRaises(frappe.ValidationError):
+			bank_account.save()

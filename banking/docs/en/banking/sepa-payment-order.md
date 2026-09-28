@@ -71,6 +71,19 @@ SEPA Payment Orders enable users to:
 3. Click on _Actions_ → _SEPA Payment Order_
 4. All selected invoices will be combined into a single payment order
 
+### Get Payables
+
+In a draft **SEPA Payment Order**, click _Get Payables_ to add all payables that are due. First, select the _Bank Account_. In the dialog, set these values:
+
+- _Due Until_: The system adds **Purchase Invoices** that are due, or lose their early payment discount, on or before this date. It also adds **Expense Claims** posted on or before this date.
+- _Mode of Payment_: The system adds only **Purchase Invoices** with this _Mode of Payment_ in their **Payment Schedule**. If you leave it empty, the system adds only **Purchase Invoices** without a _Mode of Payment_. You can select only a **Mode of Payment** whose account for this company is the account of the selected _Bank Account_. This filter does not apply to **Expense Claims**.
+
+The system skips payment schedule rows that are already in a **SEPA Payment Order**. It also skips documents that you do not have permission to read, and documents that it cannot map (for example, if the IBAN is missing).
+
+In **Banking Settings**, on the _SEPA Payment Order_ tab, you can set _Ignore Payables Before_. The system does not add payables posted before this date. Use this to skip old invoices that were paid, but not marked as paid.
+
+In the **Bank Account**, you can set a _Default Mode of Payment_. This is the default value for _Mode of Payment_ in the dialog.
+
 ### From an Expense Claim
 
 1. Navigate to an approved **Expense Claim** that has not been fully reimbursed
