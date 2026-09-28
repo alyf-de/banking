@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "creation": "2022-12-01 16:21:37.132544",
  "default_view": "List",
  "doctype": "DocType",
@@ -22,7 +21,9 @@
   "enable_automatic_journal_entries_for_bank_fees",
   "advanced_section",
   "reference_fields",
-  "voucher_matching_defaults"
+  "voucher_matching_defaults",
+  "sepa_payment_order_tab",
+  "default_mode_of_payment"
  ],
  "fields": [
   {
@@ -119,17 +120,29 @@
   },
   {
    "default": "0",
-   "description": "When enabled, included bank fees are handled automatically for <b>Bank Transactions</b>: withdrawals create a fee <b>Journal Entry</b> on submit, and deposits include the fee during reconciliation. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\"><b>Bank Account</b></a>.",
+   "description": "When enabled, included bank fees are handled automatically for <b>Bank Transactions</b>: withdrawals create a fee <b>Journal Entry</b> on submit, and deposits include the fee during reconciliation. Please specify the <i>Bank Fee Account</i> in your <a href=\"/app/bank-account?is_company_account=1\" rel=\"noopener noreferrer\"><b>Bank Account</b></a>.",
    "fieldname": "enable_automatic_journal_entries_for_bank_fees",
    "fieldtype": "Check",
    "label": "Enable Automatic Journal Entries for Bank Fees"
+  },
+  {
+   "fieldname": "sepa_payment_order_tab",
+   "fieldtype": "Tab Break",
+   "label": "SEPA Payment Order"
+  },
+  {
+   "description": "Payables will be fetched for this <strong>Mode of Payment</strong> by default.",
+   "fieldname": "default_mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Default Mode of Payment",
+   "options": "Mode of Payment"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-21 02:06:27.679683",
+ "modified": "2026-09-28 17:54:37.517580",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

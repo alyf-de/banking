@@ -35,14 +35,6 @@ class PaymentOrderStatus(StrEnum):
 	TRANSMITTED = "Transmitted"
 
 
-class ModeOfPaymentFilter(StrEnum):
-	"""How `fetch_payables` treats the Mode of Payment of a payable document."""
-
-	IGNORE = "ignore"
-	MATCHING_OR_EMPTY = "matching_or_empty"
-	MATCHING_ONLY = "matching_only"
-
-
 class SEPAPaymentOrder(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
@@ -96,20 +88,15 @@ class SEPAPaymentOrder(Document):
 		self.validate_account_currency()
 
 	@frappe.whitelist(methods=["POST"])
-	def fetch_payables(
-		self,
-		date: str,
-		mode_of_payment_filter: str = ModeOfPaymentFilter.MATCHING_OR_EMPTY,
-	):
+	def fetch_payables(self, date: str, mode_of_payment: str | None = None):
 		"""Add all Purchase Invoices and Expense Claims that are payable by `date`.
 
 		Payable means: due on or before `date`, or losing an early payment discount
 		on or before `date`.
 
-		`mode_of_payment_filter` decides which Payment Schedule rows qualify, by matching
-		the account configured in their Mode of Payment against this order's bank account.
-		Expense Claims are never filtered: their Mode of Payment only exists for claims
-		paid on submission.
+		Only Payment Schedule rows with exactly this `mode_of_payment` qualify. Without
+		`mode_of_payment`, only rows without a Mode of Payment qualify. Expense Claims are
+		never filtered: their Mode of Payment only exists for claims paid on submission.
 		"""
 		from banking.custom.expense_claim import make_sepa_payment_order as claim_to_order
 		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
@@ -117,19 +104,11 @@ class SEPAPaymentOrder(Document):
 		mapped_rows = {(p.reference_doctype, p.reference_row_name) for p in self.payments}
 		mapped_docs = {(p.reference_doctype, p.reference_name) for p in self.payments}
 		account_currency = self.get_account_currency()
-		allowed_modes = self.get_allowed_modes_of_payment(mode_of_payment_filter)
 
-		wrong_mode = 0
 		rows_by_invoice: dict[str, list[str]] = {}
-		for row in get_payable_invoice_rows(self.company, account_currency, date):
-			if ("Purchase Invoice", row.payment_schedule_row) in mapped_rows:
-				continue
-
-			if allowed_modes is not None and row.mode_of_payment not in allowed_modes:
-				wrong_mode += 1
-				continue
-
-			rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
+		for row in get_payable_invoice_rows(self.company, account_currency, date, mode_of_payment):
+			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
+				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
 
 		# One unpayable (e.g. missing IBAN) or unreadable document must not abort the whole batch.
 		skipped = []
@@ -156,13 +135,6 @@ class SEPAPaymentOrder(Document):
 		if inaccessible:
 			# No names: the user is not allowed to read these documents.
 			skipped.append(_("{0} document(s) you have no permission to read.").format(inaccessible))
-
-		if wrong_mode:
-			skipped.append(
-				_("{0} payable(s) whose Mode of Payment does not match {1}.").format(
-					wrong_mode, self.bank_account
-				)
-			)
 
 		if skipped:
 			frappe.msgprint(skipped, title=_("Skipped"), indicator="orange", as_list=True)
@@ -196,30 +168,6 @@ class SEPAPaymentOrder(Document):
 	def get_account_currency(self) -> str:
 		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
 		return frappe.db.get_value("Account", account_name, "account_currency")
-
-	def get_allowed_modes_of_payment(self, mode_filter: str) -> list[str] | None:
-		"""Return the Mode of Payment values a payable may have, or None if any is fine.
-
-		A Mode of Payment qualifies if the account configured for this company is the
-		account of this order's bank account.
-		"""
-		mode_filter = ModeOfPaymentFilter(mode_filter)
-
-		if mode_filter == ModeOfPaymentFilter.IGNORE:
-			return None
-
-		account = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		modes = frappe.get_all(
-			"Mode of Payment Account",
-			filters={"company": self.company, "default_account": account},
-			pluck="parent",
-		)
-
-		if mode_filter == ModeOfPaymentFilter.MATCHING_OR_EMPTY:
-			# A payable without a Mode of Payment has no account to match
-			modes += ["", None]
-
-		return modes
 
 	def validate_account_currency(self):
 		"""Validate that each payment currency is the same as the account currency."""
@@ -295,9 +243,11 @@ class SEPAPaymentOrder(Document):
 		return transfer
 
 
-def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[frappe._dict]:
+def get_payable_invoice_rows(
+	company: str, currency: str, date: str, mode_of_payment: str | None
+) -> list[frappe._dict]:
 	"""Return Payment Schedule rows whose due date, or early payment discount deadline,
-	falls on or before `date`."""
+	falls on or before `date`, and whose Mode of Payment is `mode_of_payment` (empty if not given)."""
 	if not frappe.has_permission("Purchase Invoice"):
 		return []
 
@@ -312,6 +262,12 @@ def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[fra
 			["Purchase Invoice", "outstanding_amount", ">", 0],
 			["Payment Schedule", "outstanding", ">", 0],
 			["Payment Schedule", "sepa_payment_order_status", "in", ["", None]],
+			[
+				"Payment Schedule",
+				"mode_of_payment",
+				"in",
+				[mode_of_payment] if mode_of_payment else ["", None],
+			],
 		],
 		or_filters=[
 			["Payment Schedule", "due_date", "<=", date],
@@ -319,11 +275,7 @@ def get_payable_invoice_rows(company: str, currency: str, date: str) -> list[fra
 			# reads an empty date as very old. "between" ignores them.
 			["Payment Schedule", "discount_date", "between", ["1900-01-01", date]],
 		],
-		fields=[
-			"name",
-			"`tabPayment Schedule`.name as payment_schedule_row",
-			"`tabPayment Schedule`.mode_of_payment",
-		],
+		fields=["name", "`tabPayment Schedule`.name as payment_schedule_row"],
 		order_by="`tabPayment Schedule`.due_date asc",
 	)
 
@@ -353,6 +305,12 @@ def get_payable_expense_claims(company: str, currency: str, date: str) -> list[s
 		order_by="posting_date asc",
 		pluck="name",
 	)
+
+
+@frappe.whitelist()
+def get_default_mode_of_payment() -> str | None:
+	# Users of SEPA Payment Order may not be allowed to read Banking Settings
+	return frappe.db.get_single_value("Banking Settings", "default_mode_of_payment")
 
 
 @frappe.whitelist()

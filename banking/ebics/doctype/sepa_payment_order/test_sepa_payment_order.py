@@ -127,53 +127,30 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		self.assertNotIn(blocked, fetched)
 
 	def test_fetch_payables_by_mode_of_payment(self):
-		"""Only a Mode of Payment configured for the order's bank account qualifies."""
+		"""Only the exact Mode of Payment qualifies. Without one, only rows without one qualify."""
 		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		matching = create_mode_of_payment("_Test SEPA Matching Mode", own_account)
-		other = create_mode_of_payment(
-			"_Test SEPA Other Mode", create_bank_gl_account("_Test Other SEPA Bank")
-		)
+		transfer = create_mode_of_payment("_Test SEPA Transfer", own_account)
+		# Same account, but not paid by SEPA Payment Order
+		draft = create_mode_of_payment("_Test SEPA Draft", own_account)
 
-		fits = self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=matching).name
-		fits_not = self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=other).name
+		by_transfer = self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=transfer).name
+		by_draft = self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=draft).name
 		no_mode = self.make_invoice(due_date=add_days(today(), 5)).name
 
-		def fetch(mode_of_payment_filter):
+		def fetch(mode_of_payment=None):
 			order = self.new_payment_order(execution_date=today())
-			order.fetch_payables(add_days(today(), 10), mode_of_payment_filter)
+			order.fetch_payables(add_days(today(), 10), mode_of_payment)
 			return [payment.reference_name for payment in order.payments]
 
-		fetched = fetch("matching_or_empty")
-		self.assertIn(fits, fetched)
-		self.assertIn(no_mode, fetched)
-		self.assertNotIn(fits_not, fetched)
-
-		fetched = fetch("matching_only")
-		self.assertIn(fits, fetched)
+		fetched = fetch(transfer)
+		self.assertIn(by_transfer, fetched)
+		self.assertNotIn(by_draft, fetched)
 		self.assertNotIn(no_mode, fetched)
-		self.assertNotIn(fits_not, fetched)
 
-		fetched = fetch("ignore")
-		self.assertIn(fits, fetched)
+		fetched = fetch()
 		self.assertIn(no_mode, fetched)
-		self.assertIn(fits_not, fetched)
-
-	def test_fetch_payables_reports_wrong_mode_of_payment(self):
-		"""Rows dropped by the Mode of Payment filter are counted in the message."""
-		other = create_mode_of_payment(
-			"_Test SEPA Other Mode", create_bank_gl_account("_Test Other SEPA Bank")
-		)
-		self.make_invoice(due_date=add_days(today(), 5), mode_of_payment=other)
-
-		order = self.new_payment_order(execution_date=today())
-		with patch("frappe.msgprint") as msgprint:
-			order.fetch_payables(add_days(today(), 10), "matching_only")
-
-		messages = msgprint.call_args.args[0]
-		self.assertTrue(
-			any("Mode of Payment" in message for message in messages),
-			f"no Mode of Payment message in {messages}",
-		)
+		self.assertNotIn(by_transfer, fetched)
+		self.assertNotIn(by_draft, fetched)
 
 
 def create_mode_of_payment(name: str, account: str) -> str:
