@@ -223,6 +223,8 @@ def sync_ebics_transactions(
 		manager.confirm_download(success=False)
 		return
 
+	# Commit before acknowledging, so the bank never marks unsaved data as delivered.
+	frappe.db.commit()
 	manager.confirm_download(success=True)
 
 
