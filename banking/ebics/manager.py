@@ -63,17 +63,13 @@ class EBICSManager:
 			countryName=self.country_code,
 		)
 
-<<<<<<< HEAD
 	def get_client(self) -> "EbicsClient":
-=======
-	def get_client(self) -> EbicsClient:
 		if self.client:
 			return self.client
 
 		if not self.bank or not self.user:
 			raise ValueError("Bank and user must be set before creating a client.")
 
->>>>>>> 1a36154 (fix(EBICS): reuse client so downloads get confirmed (#450))
 		from fintech.ebics import EbicsClient
 
 		self.client = EbicsClient(self.bank, self.user, self.protocol_version)
