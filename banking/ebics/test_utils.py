@@ -67,8 +67,9 @@ class TestEBICSUtils(UnitTestCase):
 			start_date=None,
 		)
 
+	@patch("frappe.db.exists", return_value=False)
 	@patch("banking.ebics.utils.get_transaction_id", return_value="batch-id")
-	def test_process_unresolved_batch_with_download_is_skipped(self, _get_transaction_id):
+	def test_process_unresolved_batch_with_download_is_skipped(self, _get_transaction_id, _exists):
 		with self.assertRaises(UnresolvedBatchTransactionError):
 			process_camt_document(
 				[self.EmptyBatchTransaction()],
@@ -77,3 +78,22 @@ class TestEBICSUtils(UnitTestCase):
 				split_batch_transactions=True,
 				skip_unresolved_batch_transactions=True,
 			)
+
+	@patch("frappe.db.exists", return_value=True)
+	@patch("banking.ebics.utils.create_sepa_bank_transaction")
+	@patch("banking.ebics.utils.get_transaction_id", return_value="batch-id")
+	def test_process_unresolved_batch_already_imported(
+		self, _get_transaction_id, create_sepa_bank_transaction, _exists
+	):
+		# E.g. an intraday sync already split the batch and camt.054 is not delivered again.
+		transaction = self.EmptyBatchTransaction()
+
+		process_camt_document(
+			[transaction],
+			"Test Bank Account",
+			"Test Company",
+			split_batch_transactions=True,
+			skip_unresolved_batch_transactions=True,
+		)
+
+		create_sepa_bank_transaction.assert_not_called()
