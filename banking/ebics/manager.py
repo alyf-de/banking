@@ -21,11 +21,14 @@ class EbicsRequest:
 
 
 class EBICSManager:
-	__slots__ = ["bank", "country_code", "keyring", "protocol_version", "user"]
+	__slots__ = ["bank", "client", "country_code", "keyring", "protocol_version", "user"]
 
 	def __init__(self, protocol_version: str | None = None, country_code: str | None = None):
 		self.protocol_version = protocol_version or "H004"
 		self.country_code = country_code
+		self.client = None
+		self.bank = None
+		self.user = None
 
 	def set_keyring(self, keys: dict, save_to_db: "Callable", passphrase: str, sig_passphrase: str | None):
 		from fintech.ebics import EbicsKeyRing
@@ -61,9 +64,16 @@ class EBICSManager:
 		)
 
 	def get_client(self) -> "EbicsClient":
+		if self.client:
+			return self.client
+
+		if not self.bank or not self.user:
+			raise ValueError("Bank and user must be set before creating a client.")
+
 		from fintech.ebics import EbicsClient
 
-		return EbicsClient(self.bank, self.user, self.protocol_version)
+		self.client = EbicsClient(self.bank, self.user, self.protocol_version)
+		return self.client
 
 	def send_keys_to_bank(self):
 		client = self.get_client()
