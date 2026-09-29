@@ -308,9 +308,15 @@ def process_camt_document(
 
 			if len(transaction) == 0:
 				if skip_unresolved_batch_transactions:
-					# camt.054 might become available at a later time than camt.053.
-					# In this case, we want to block the processing of camt.053 until camt.054 is available.
-					raise UnresolvedBatchTransactionError()
+					if not frappe.db.exists(
+						"Bank Transaction", {"transaction_id": transaction_id, "bank_account": bank_account}
+					):
+						# camt.054 might become available at a later time than camt.053.
+						# In this case, we want to block the processing of camt.053 until camt.054 is available.
+						raise UnresolvedBatchTransactionError()
+
+					# Already imported, e.g. split by an intraday sync. camt.054 is not delivered again.
+					continue
 
 			else:
 				for sub_transaction_index, sub_transaction in enumerate(transaction):
