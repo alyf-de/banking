@@ -71,6 +71,19 @@ SEPA Payment Orders enable users to:
 3. Click on _Actions_ → _SEPA Payment Order_
 4. All selected invoices will be combined into a single payment order
 
+### Get Payables
+
+In a draft **SEPA Payment Order**, click _Get Payables_ to add all payables that are due. First, select the _Bank Account_. In the dialog, set these values:
+
+- _Due Until_: The system adds **Purchase Invoices** that are due, or lose their early payment discount, on or before this date. It also adds **Expense Claims** posted on or before this date.
+- _Mode of Payment_: The system adds only **Purchase Invoices** with this _Mode of Payment_ in their **Payment Schedule**. If you leave it empty, the system adds only **Purchase Invoices** without a _Mode of Payment_. You can select only a **Mode of Payment** whose account for this company is the account of the selected _Bank Account_. This filter does not apply to **Expense Claims**.
+
+The system skips payment schedule rows that are already in a **SEPA Payment Order**. It also skips documents that you do not have permission to read, and documents that it cannot map (for example, if the IBAN is missing).
+
+In **Banking Settings**, on the _SEPA Payment Order_ tab, you can set _Ignore Payables Before_. The system does not add payables posted before this date. Use this to skip old invoices that were paid, but not marked as paid.
+
+In the **Bank Account**, you can set a _Default Mode of Payment_. This is the default value for _Mode of Payment_ in the dialog.
+
 ### From an Expense Claim
 
 1. Navigate to an approved **Expense Claim** that has not been fully reimbursed
@@ -96,6 +109,17 @@ SEPA Payment Orders enable users to:
   - _Process as batch_: Multiple payments are grouped as a single booking
   
   > Note about Batch Booking: This setting controls the `BtchBookg` flag in the SEPA XML file. However, some banks may not properly respect this setting and might still process payments as a batch even when _Process individually_ is selected. If you need individual transaction visibility in your bank statements and this setting doesn't work as expected, contact your bank to understand their batch booking policies. This setting's behavior may also relate to the C54 format settings configured in your **EBICS User** profile.
+- _Scheme_: XML schema of the generated payment file. Ask your bank which value they accept. The default is "pain.001.001.09".
+  - "pain.001.001.09": Current ISO 20022 credit transfer format (SEPA). Default.
+  - "pain.001.001.03": Previous ISO 20022 credit transfer format (SEPA). Some banks still require this.
+  - "pain.001.003.03": German national DK variant of pain.001.
+  - "pain.001.001.09.ch.03": Current Swiss Payment Standards credit transfer format.
+  - "pain.001.001.03.ch.02": Previous Swiss Payment Standards credit transfer format.
+  - "CBIPaymentRequest.00.04.01": Current Italian CBI SEPA credit transfer format.
+  - "CBIPaymentRequest.00.04.00": Previous Italian CBI SEPA credit transfer format.
+  - "CBICrossBorderPaymentRequestLogMsg.00.01.01": Italian CBI format for cross-border payments outside SEPA.
+
+  > Note about Scheme: Your bank rejects the file if the scheme does not match a format they support. Use the value from your bank's payment file specification.
 
 ### Adding Recipients
 
@@ -195,7 +219,7 @@ The system can automatically:
 
 After submitting a **SEPA Payment Order**:
 1. Click on _Actions_ → _Download as XML_
-2. The system generates a pain.001 compliant XML file
+2. The system generates an XML file in the selected _Scheme_
 3. _Transmission Type_ is set to "DOWNLOADED"
 4. Upload the file manually to your bank
 
@@ -220,10 +244,10 @@ Direct transmission to bank via EBICS:
 
 ### SEPA Compliance
 
-- Generates pain.001.001.03 format XML files
-- Supports SEPA Credit Transfer (SCT) scheme
+- Generates an XML payment file in the selected _Scheme_
+- Default scheme is "pain.001.001.09" (current EPC pain.001 format)
+- Supports SEPA Credit Transfer (SCT) and country-specific formats for Germany, Switzerland, and Italy
 - Handles both single and batch payments
-- Complies with European Payments Council standards
 
 ### Hooks and Events
 

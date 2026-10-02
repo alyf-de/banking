@@ -159,6 +159,7 @@ def get_bank_transactions(
 		"bank_party_name",
 		"bank_party_account_number",
 		"bank_party_iban",
+		"transaction_type",
 		"reserved_voucher_type",
 		"reserved_voucher",
 	]

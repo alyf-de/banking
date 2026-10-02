@@ -46,6 +46,27 @@ banking.bank_reconciliation.get_allocation_budget = (
 	return budget;
 };
 
+// A return voucher of the opposite type (return PI on a deposit, return SI on a
+// withdrawal) has a negative outstanding, but it settles the bank amount
+// positively - the backend books abs() for it. Mirror that here, so the summary
+// does not show double the amount. Mixed selections (invoice + its return) keep
+// the signed sum: there the negative row really does reduce the allocation.
+banking.bank_reconciliation.get_total_allocated = (
+	transaction,
+	summary_data,
+) => {
+	const entries = Object.values(summary_data || {});
+	const total = entries.reduce((a, entry) => a + flt(entry.amount), 0);
+	const opposite_doctype =
+		flt(transaction.deposit) > 0 ? "Purchase Invoice" : "Sales Invoice";
+	const only_opposite_returns =
+		entries.length &&
+		entries.every(
+			(entry) => flt(entry.amount) < 0 && entry.doctype === opposite_doctype,
+		);
+	return only_opposite_returns ? -total : total;
+};
+
 banking.bank_reconciliation.get_summary_amount = (
 	transaction,
 	summary_data,

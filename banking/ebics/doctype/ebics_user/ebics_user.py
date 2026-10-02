@@ -38,8 +38,8 @@ class EBICSUser(Document):
 		split_batch_transactions: DF.Check
 		start_date: DF.Date | None
 		user_id: DF.Data | None
-
 	# end: auto-generated types
+
 	def validate(self):
 		if self.country:
 			self.validate_country_code()

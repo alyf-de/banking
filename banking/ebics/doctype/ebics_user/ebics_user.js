@@ -68,12 +68,11 @@ frappe.ui.form.on("EBICS User", {
 			);
 		}
 
-		if (
-			frm.doc.initialized &&
-			(!frm.doc.bank_keys_activated || frappe.boot.developer_mode)
-		) {
+		if (frm.doc.initialized) {
 			frm.add_custom_button(
-				__("Verify Bank Keys"),
+				frm.doc.bank_keys_activated
+					? __("Re-verify Bank Keys")
+					: __("Verify Bank Keys"),
 				async () => {
 					let passphrase = null;
 					if (!frm.doc.passphrase) {

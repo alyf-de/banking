@@ -169,7 +169,7 @@
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2026-05-21 02:05:40.039153",
+ "modified": "2026-09-14 17:59:05.181464",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",
@@ -206,5 +206,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "full_name"
+ "title_field": "full_name",
+ "track_changes": 1
 }

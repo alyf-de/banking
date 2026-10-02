@@ -54,11 +54,8 @@ def make_sepa_payment_order(source_name: str, target_doc: str | Document | None 
 				target.swift_number = swift_number
 				target.bank_name = bank_name
 		else:
-			employee_iban = frappe.db.get_value("Employee", claim.employee, "iban")
-			if employee_iban:
-				target.iban = employee_iban
-			else:
-				frappe.throw(_("No IBAN found for Employee {0}.").format(claim.employee))
+			# May be empty. The missing IBAN is then visible in the SEPA Payment Order.
+			target.iban = frappe.db.get_value("Employee", claim.employee, "iban")
 
 		target.currency = frappe.db.get_value("Company", claim.company, "default_currency")
 		target.eref = target.reference_name

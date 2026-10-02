@@ -148,6 +148,15 @@ def get_custom_fields():
 				depends_on="eval:doc.is_company_account && doc.account",
 				insert_after="account_subtype",
 			),
+			dict(
+				fieldname="default_mode_of_payment",
+				fieldtype="Link",
+				label=_("Default Mode of Payment"),
+				options="Mode of Payment",
+				description=_("Default Mode of Payment for fetching payables into a SEPA Payment Order."),
+				depends_on="eval:doc.is_company_account && doc.account",
+				insert_after="bank_fee_account",
+			),
 		],
 	}
 

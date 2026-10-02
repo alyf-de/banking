@@ -56,6 +56,16 @@ class SEPAPaymentOrder(Document):
 		iban: DF.Data
 		payments: DF.Table[SEPAPayment]
 		reference_number: DF.Data | None
+		scheme: DF.Literal[
+			"pain.001.003.03",
+			"pain.001.001.03",
+			"pain.001.001.09",
+			"pain.001.001.03.ch.02",
+			"pain.001.001.09.ch.03",
+			"CBIPaymentRequest.00.04.00",
+			"CBIPaymentRequest.00.04.01",
+			"CBICrossBorderPaymentRequestLogMsg.00.01.01",
+		]
 		swift_number: DF.Data | None
 		transmission_datetime: DF.Datetime | None
 		transmission_type: DF.Literal["", "DOWNLOADED", "SENT_VIA_EBICS"]
@@ -76,6 +86,70 @@ class SEPAPaymentOrder(Document):
 	def validate(self):
 		self.validate_ibans()
 		self.validate_account_currency()
+
+	@frappe.whitelist(methods=["POST"])
+	def fetch_payables(self, date: str, mode_of_payment: str | None = None):
+		"""Add all Purchase Invoices and Expense Claims that are payable by `date`.
+
+		Payable means: due on or before `date`, or losing an early payment discount
+		on or before `date`.
+
+		Only Payment Schedule rows with exactly this `mode_of_payment` qualify. Without
+		`mode_of_payment`, only rows without a Mode of Payment qualify. Expense Claims are
+		never filtered: their Mode of Payment only exists for claims paid on submission.
+
+		Documents posted before _Ignore Payables Before_ in Banking Settings are skipped.
+		They are likely paid already, but were not marked as paid.
+		"""
+		from banking.custom.expense_claim import make_sepa_payment_order as claim_to_order
+		from banking.custom.purchase_invoice import make_sepa_payment_order as invoice_to_order
+
+		if mode_of_payment:
+			self.validate_mode_of_payment(mode_of_payment)
+
+		mapped_rows = {(p.reference_doctype, p.reference_row_name) for p in self.payments}
+		mapped_docs = {(p.reference_doctype, p.reference_name) for p in self.payments}
+		account_currency = self.get_account_currency()
+		# Without the setting, fetch payables of any age
+		posted_from = frappe.db.get_single_value("Banking Settings", "ignore_payables_before") or "1900-01-01"
+
+		rows_by_invoice: dict[str, list[str]] = {}
+		for row in get_payable_invoice_rows(
+			self.company, account_currency, date, posted_from, mode_of_payment
+		):
+			if ("Purchase Invoice", row.payment_schedule_row) not in mapped_rows:
+				rows_by_invoice.setdefault(row.name, []).append(row.payment_schedule_row)
+
+		# One unpayable (e.g. missing IBAN) or unreadable document must not abort the whole batch.
+		skipped = []
+		inaccessible = 0
+		for invoice, rows in rows_by_invoice.items():
+			try:
+				invoice_to_order(invoice, self, payment_schedule_rows=rows)
+			except frappe.PermissionError:
+				inaccessible += 1
+			except frappe.ValidationError as e:
+				skipped.append(f"{invoice}: {e}")
+
+		for claim in get_payable_expense_claims(self.company, account_currency, date, posted_from):
+			if ("Expense Claim", claim) in mapped_docs:
+				continue
+
+			try:
+				claim_to_order(claim, self)
+			except frappe.PermissionError:
+				inaccessible += 1
+			except frappe.ValidationError as e:
+				skipped.append(f"{claim}: {e}")
+
+		if inaccessible:
+			# No names: the user is not allowed to read these documents.
+			skipped.append(_("{0} document(s) you have no permission to read.").format(inaccessible))
+
+		if skipped:
+			frappe.msgprint(skipped, title=_("Skipped"), indicator="orange", as_list=True)
+
+		self.update_payment_amounts()
 
 	@frappe.whitelist(methods=["POST"])
 	def update_payment_amounts(self):
@@ -101,10 +175,27 @@ class SEPAPaymentOrder(Document):
 			if not kontocheck.check_iban(payment.iban):
 				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
 
+	def validate_mode_of_payment(self, mode_of_payment: str):
+		"""Payables of this Mode of Payment must be paid from this order's bank account."""
+		own_account = frappe.db.get_value("Bank Account", self.bank_account, "account")
+		books_to_own_account = frappe.db.exists(
+			"Mode of Payment Account",
+			{"parent": mode_of_payment, "company": self.company, "default_account": own_account},
+		)
+		if not books_to_own_account:
+			frappe.throw(
+				_("Mode of Payment {0} does not book to the account of Bank Account {1}.").format(
+					frappe.bold(mode_of_payment), frappe.bold(self.bank_account)
+				)
+			)
+
+	def get_account_currency(self) -> str:
+		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
+		return frappe.db.get_value("Account", account_name, "account_currency")
+
 	def validate_account_currency(self):
 		"""Validate that each payment currency is the same as the account currency."""
-		account_name = frappe.db.get_value("Bank Account", self.bank_account, "account")
-		account_currency = frappe.db.get_value("Account", account_name, "account_currency")
+		account_currency = self.get_account_currency()
 		for payment in self.payments:
 			if payment.currency != account_currency:
 				frappe.throw(
@@ -117,6 +208,7 @@ class SEPAPaymentOrder(Document):
 		self.notify_reference_docs(status=PaymentOrderStatus.DRAFT)
 
 	def on_submit(self):
+		self.verify_xml_render()
 		self.notify_reference_docs(status=PaymentOrderStatus.APPROVED)
 
 	def on_update_after_submit(self):
@@ -135,6 +227,11 @@ class SEPAPaymentOrder(Document):
 				doc = frappe.get_doc(payment.reference_doctype, payment.reference_name)
 				doc.run_method("sepa_payment_order_status_changed", payment.reference_row_name, status)
 
+	def verify_xml_render(self):
+		"""Verify that the XML render is successful."""
+		register_fintech()
+		self.to_sepa_credit_transfer().render()
+
 	def to_sepa_credit_transfer(self) -> SEPACreditTransfer:
 		"""
 		NOTE: call register_fintech() before calling this method.
@@ -149,11 +246,13 @@ class SEPAPaymentOrder(Document):
 		transfer = SEPACreditTransfer(
 			account=debtor_account,
 			batch=self.batch_booking == "Process as batch",
+			scheme=self.scheme,
 		)
 		for payment in self.payments:
+			iban = payment.iban.replace(" ", "")
 			transfer.add_transaction(
 				account=Account(
-					iban=payment.iban.replace(" ", ""),
+					iban=(iban, payment.swift_number) if payment.swift_number else iban,
 					name=payment.recipient,
 				),
 				amount=Amount(
@@ -166,6 +265,73 @@ class SEPAPaymentOrder(Document):
 			)
 
 		return transfer
+
+
+def get_payable_invoice_rows(
+	company: str, currency: str, date: str, posted_from: str, mode_of_payment: str | None
+) -> list[frappe._dict]:
+	"""Return Payment Schedule rows whose due date, or early payment discount deadline,
+	falls on or before `date`, and whose Mode of Payment is `mode_of_payment` (empty if not given).
+
+	Only invoices posted on or after `posted_from` qualify."""
+	if not frappe.has_permission("Purchase Invoice"):
+		return []
+
+	return frappe.get_list(
+		"Purchase Invoice",
+		filters=[
+			["Purchase Invoice", "docstatus", "=", 1],
+			["Purchase Invoice", "company", "=", company],
+			["Purchase Invoice", "currency", "=", currency],
+			["Purchase Invoice", "status", "!=", "Paid"],
+			["Purchase Invoice", "on_hold", "=", 0],
+			["Purchase Invoice", "outstanding_amount", ">", 0],
+			["Purchase Invoice", "posting_date", ">=", posted_from],
+			["Payment Schedule", "outstanding", ">", 0],
+			["Payment Schedule", "sepa_payment_order_status", "in", ["", None]],
+			[
+				"Payment Schedule",
+				"mode_of_payment",
+				"in",
+				[mode_of_payment] if mode_of_payment else ["", None],
+			],
+		],
+		or_filters=[
+			["Payment Schedule", "due_date", "<=", date],
+			# "<=" would also match rows without a discount date, because Frappe
+			# reads an empty date as very old. "between" ignores them.
+			["Payment Schedule", "discount_date", "between", ["1900-01-01", date]],
+		],
+		fields=["name", "`tabPayment Schedule`.name as payment_schedule_row"],
+		order_by="`tabPayment Schedule`.due_date asc",
+	)
+
+
+def get_payable_expense_claims(company: str, currency: str, date: str, posted_from: str) -> list[str]:
+	"""Return Expense Claims posted between `posted_from` and `date`. They have no due date."""
+	if "hrms" not in frappe.get_installed_apps():
+		return []
+
+	if not frappe.has_permission("Expense Claim"):
+		return []
+
+	if currency != frappe.db.get_value("Company", company, "default_currency"):
+		# Expense Claims are reimbursed in the company currency
+		return []
+
+	return frappe.get_list(
+		"Expense Claim",
+		filters={
+			"docstatus": 1,
+			"company": company,
+			"approval_status": "Approved",
+			"status": ["!=", "Paid"],
+			"sepa_payment_order_status": ["in", ["", None]],
+			"posting_date": ["between", [posted_from, date]],
+		},
+		order_by="posting_date asc",
+		pluck="name",
+	)
 
 
 @frappe.whitelist()
