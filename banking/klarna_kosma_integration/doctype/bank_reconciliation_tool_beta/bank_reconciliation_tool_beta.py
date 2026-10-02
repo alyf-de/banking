@@ -20,7 +20,16 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
-from frappe.utils import add_days, cint, flt, nowdate, sbool, validate_email_address
+from frappe.utils import (
+	add_days,
+	cint,
+	flt,
+	format_date,
+	fmt_money,
+	nowdate,
+	sbool,
+	validate_email_address,
+)
 from pypika import Order
 from pypika.terms import ExistsCriterion
 
@@ -226,16 +235,52 @@ def request_invoice(
 
 	validate_email_address(recipient_email, throw=True)
 
+	email = get_invoice_request_email(transaction)
 	frappe.sendmail(
 		recipients=[recipient_email],
-		subject=_("Invoice request for Bank Transaction {0}").format(transaction.name),
-		message=_("Please provide the invoice for Bank Transaction {0}.").format(transaction.name),
+		subject=email["subject"],
+		message=email["message"],
 		reference_doctype=transaction.doctype,
 		reference_name=transaction.name,
 	)
 
 	if on_hold_until:
 		transaction.db_set("on_hold_until", on_hold_until, update_modified=True)
+
+
+def get_invoice_request_email(transaction: Document) -> dict[str, str]:
+	template_name = frappe.db.get_single_value("Banking Settings", "invoice_request_email_template")
+	if not template_name or not frappe.db.exists("Email Template", template_name):
+		frappe.throw(
+			_("Please set {0} in {1}.").format(
+				_("Invoice Request Email Template"),
+				_("Banking Settings"),
+			)
+		)
+
+	email_template = frappe.get_doc("Email Template", template_name)
+	return email_template.get_formatted_email(get_invoice_request_email_context(transaction))
+
+
+def get_invoice_request_email_context(transaction: Document) -> dict:
+	"""Template context for invoice request emails.
+
+	Formats date, deposit, and withdrawal on standard Bank Transaction field names so
+	Email Template Jinja can use {{ date }} / {{ deposit }} / {{ withdrawal }}.
+	"""
+	context = transaction.as_dict()
+	currency = context.get("currency")
+	deposit = flt(context.get("deposit"))
+	withdrawal = flt(context.get("withdrawal"))
+
+	if context.get("date"):
+		context["date"] = format_date(context["date"])
+	if deposit:
+		context["deposit"] = fmt_money(deposit, currency=currency)
+	elif withdrawal:
+		context["withdrawal"] = fmt_money(withdrawal, currency=currency)
+
+	return context
 
 
 def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) -> None:

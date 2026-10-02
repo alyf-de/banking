@@ -21,6 +21,9 @@ from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
+from banking.patches.create_invoice_request_email_template import (
+	execute as create_invoice_request_email_template,
+)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
 	_get_valid_accounting_dimensions,
 	auto_reconcile_vouchers,
@@ -76,6 +79,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 
 		cls.branch = "_Test Bank Reco Branch"
 		frappe.get_doc({"doctype": "Branch", "branch": cls.branch}).insert(ignore_if_duplicate=True)
+		create_invoice_request_email_template()
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	@classmethod
@@ -1825,7 +1829,12 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertIn(bt.name, [transaction.name for transaction in transactions])
 
 	def test_request_invoice_sends_email_and_sets_on_hold(self):
-		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+		bt = create_bank_transaction(
+			deposit=100,
+			bank_account=self.bank_account,
+			description="Office supplies",
+			bank_party_name="Acme GmbH",
+		)
 		hold_until = add_days(getdate(), 3)
 
 		with patch(
@@ -1834,8 +1843,34 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 			request_invoice(bt.name, "test@example.com", hold_until)
 
 		sendmail.assert_called_once()
-		self.assertEqual(sendmail.call_args.kwargs["recipients"], ["test@example.com"])
+		kwargs = sendmail.call_args.kwargs
+		self.assertEqual(kwargs["recipients"], ["test@example.com"])
+		self.assertIn(bt.name, kwargs["subject"])
+		self.assertIn("Office supplies", kwargs["message"])
+		self.assertIn("Acme GmbH", kwargs["message"])
+		self.assertIn("100", kwargs["message"])
 		self.assertEqual(frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"), hold_until)
+
+	def test_request_invoice_omits_party_name_when_not_set(self):
+		bt = create_bank_transaction(
+			deposit=50,
+			bank_account=self.bank_account,
+			description="Rent payment",
+		)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
+		) as sendmail:
+			request_invoice(bt.name, "test@example.com")
+
+		self.assertNotIn("Party Name:", sendmail.call_args.kwargs["message"])
+
+	def test_request_invoice_requires_email_template_in_banking_settings(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+		frappe.db.set_single_value("Banking Settings", "invoice_request_email_template", "Missing Template")
+
+		with self.assertRaises(frappe.ValidationError):
+			request_invoice(bt.name, "test@example.com")
 
 	def test_request_invoice_without_hold_date_leaves_on_hold_until_unset(self):
 		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
@@ -2136,6 +2171,7 @@ def create_bank_transaction(
 	reference_date: str | None = None,
 	bank_account: str | None = None,
 	description: str | None = None,
+	bank_party_name: str | None = None,
 	currency: str = "INR",
 	included_fee: float | None = None,
 ):
@@ -2150,6 +2186,8 @@ def create_bank_transaction(
 		"bank_account": bank_account,
 		"reference_number": reference_no,
 	}
+	if bank_party_name is not None:
+		values["bank_party_name"] = bank_party_name
 	if included_fee is not None:
 		values["included_fee"] = included_fee
 

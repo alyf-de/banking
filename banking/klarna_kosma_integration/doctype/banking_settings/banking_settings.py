@@ -42,6 +42,7 @@ class BankingSettings(Document):
 		fintech_license_key: DF.Password | None
 		fintech_licensee_name: DF.Data | None
 		ignore_payables_before: DF.Date | None
+		invoice_request_email_template: DF.Link | None
 		on_hold_threshold_after_invoice_request: DF.Int
 		reference_fields: DF.Table[BankingReferenceMapping]
 		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
