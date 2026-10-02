@@ -28,7 +28,14 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	create_journal_entry_bts,
 	create_payment_entry_bts,
 	get_bank_transactions,
+	get_default_invoice_request_hold_date,
+	get_invoice_request_defaults,
 	get_linked_payments,
+	request_invoice,
+	set_bank_transaction_on_hold,
+)
+from banking.patches.create_invoice_request_email_template import (
+	execute as create_invoice_request_email_template,
 )
 
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
@@ -72,6 +79,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 
 		cls.branch = "_Test Bank Reco Branch"
 		frappe.get_doc({"doctype": "Branch", "branch": cls.branch}).insert(ignore_if_duplicate=True)
+		create_invoice_request_email_template()
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	@classmethod
@@ -1808,6 +1816,93 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
+	def test_on_hold_transaction_is_hidden_until_the_following_day(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		set_bank_transaction_on_hold(bt.name, getdate())
+
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		self.assertNotIn(bt.name, [transaction.name for transaction in transactions])
+
+		frappe.db.set_value("Bank Transaction", bt.name, "on_hold_until", add_days(getdate(), -1))
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		self.assertIn(bt.name, [transaction.name for transaction in transactions])
+
+	def test_request_invoice_sends_email_and_sets_on_hold(self):
+		bt = create_bank_transaction(
+			deposit=100,
+			bank_account=self.bank_account,
+			description="Office supplies",
+			bank_party_name="Acme GmbH",
+		)
+		hold_until = add_days(getdate(), 3)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
+		) as sendmail:
+			request_invoice(bt.name, "test@example.com", hold_until)
+
+		sendmail.assert_called_once()
+		kwargs = sendmail.call_args.kwargs
+		self.assertEqual(kwargs["recipients"], ["test@example.com"])
+		self.assertIn(bt.name, kwargs["subject"])
+		self.assertIn("Office supplies", kwargs["message"])
+		self.assertIn("Acme GmbH", kwargs["message"])
+		self.assertIn("100", kwargs["message"])
+		self.assertEqual(frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"), hold_until)
+
+	def test_request_invoice_omits_party_name_when_not_set(self):
+		bt = create_bank_transaction(
+			deposit=50,
+			bank_account=self.bank_account,
+			description="Rent payment",
+		)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
+		) as sendmail:
+			request_invoice(bt.name, "test@example.com")
+
+		self.assertNotIn("Party Name:", sendmail.call_args.kwargs["message"])
+
+	def test_request_invoice_requires_email_template_in_banking_settings(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+		frappe.db.set_single_value("Banking Settings", "invoice_request_email_template", "Missing Template")
+
+		with self.assertRaises(frappe.ValidationError):
+			request_invoice(bt.name, "test@example.com")
+
+	def test_request_invoice_without_hold_date_leaves_on_hold_until_unset(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
+		):
+			request_invoice(bt.name, "test@example.com")
+
+		self.assertIsNone(frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"))
+
+	def test_request_invoice_rejects_invalid_email(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		with self.assertRaises(frappe.InvalidEmailAddressError):
+			request_invoice(bt.name, "not-an-email")
+
+	def test_get_default_invoice_request_hold_date_follows_banking_settings(self):
+		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 0)
+		self.assertIsNone(get_default_invoice_request_hold_date())
+
+		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 1)
+		frappe.db.set_single_value("Banking Settings", "on_hold_threshold_after_invoice_request", 5)
+		self.assertEqual(get_default_invoice_request_hold_date(), add_days(getdate(), 5))
+
+	def test_get_invoice_request_defaults_uses_recipient_type_from_banking_settings(self):
+		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "Contact")
+		self.assertEqual(get_invoice_request_defaults()["recipient_type"], "Contact")
+
+		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "")
+		self.assertEqual(get_invoice_request_defaults()["recipient_type"], "User")
+
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {
 			"bank_transaction_name": bt.name,
@@ -2076,6 +2171,7 @@ def create_bank_transaction(
 	reference_date: str | None = None,
 	bank_account: str | None = None,
 	description: str | None = None,
+	bank_party_name: str | None = None,
 	currency: str = "INR",
 	included_fee: float | None = None,
 ):
@@ -2090,6 +2186,8 @@ def create_bank_transaction(
 		"bank_account": bank_account,
 		"reference_number": reference_no,
 	}
+	if bank_party_name is not None:
+		values["bank_party_name"] = bank_party_name
 	if included_fee is not None:
 		values["included_fee"] = included_fee
 
