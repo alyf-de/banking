@@ -23,7 +23,8 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 			doc: this.transaction,
 		});
 		this.field_group.make();
-		this.set_default_invoice_on_hold_until();
+		this.field_group.set_value("recipient_type", "User");
+		this.set_invoice_request_defaults();
 	}
 
 	get_fields() {
@@ -58,7 +59,7 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 				label: __("Recipient"),
 				fieldname: "recipient",
 				fieldtype: "Dynamic Link",
-				options: "recipient_type",
+				get_options: () => this.field_group.get_value("recipient_type"),
 				onchange: () => this.fetch_recipient_email(),
 			},
 			{
@@ -83,14 +84,10 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 	}
 
 	on_recipient_type_change() {
-		const recipient_type = this.field_group.get_value("recipient_type");
-		const recipient_field = this.field_group.get_field("recipient");
-		recipient_field.df.options = recipient_type;
-		this.field_group.set_value({
+		this.field_group.set_values({
 			recipient: "",
 			recipient_email: "",
 		});
-		recipient_field.refresh();
 	}
 
 	async fetch_recipient_email() {
@@ -121,13 +118,20 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 		}
 	}
 
-	set_default_invoice_on_hold_until() {
+	set_invoice_request_defaults() {
 		frappe.call({
 			method:
-				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_default_invoice_request_hold_date",
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_invoice_request_defaults",
 			callback: (response) => {
-				if (response.message) {
-					this.field_group.set_value("invoice_on_hold_until", response.message);
+				const defaults = response.message || {};
+				if (defaults.recipient_type) {
+					this.field_group.set_value("recipient_type", defaults.recipient_type);
+				}
+				if (defaults.on_hold_until) {
+					this.field_group.set_value(
+						"invoice_on_hold_until",
+						defaults.on_hold_until,
+					);
 				}
 			},
 		});

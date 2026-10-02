@@ -29,6 +29,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	create_payment_entry_bts,
 	get_bank_transactions,
 	get_default_invoice_request_hold_date,
+	get_invoice_request_defaults,
 	get_linked_payments,
 	request_invoice,
 	set_bank_transaction_on_hold,
@@ -1859,6 +1860,13 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 1)
 		frappe.db.set_single_value("Banking Settings", "on_hold_threshold_after_invoice_request", 5)
 		self.assertEqual(get_default_invoice_request_hold_date(), add_days(getdate(), 5))
+
+	def test_get_invoice_request_defaults_uses_recipient_type_from_banking_settings(self):
+		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "Contact")
+		self.assertEqual(get_invoice_request_defaults()["recipient_type"], "Contact")
+
+		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "")
+		self.assertEqual(get_invoice_request_defaults()["recipient_type"], "User")
 
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {

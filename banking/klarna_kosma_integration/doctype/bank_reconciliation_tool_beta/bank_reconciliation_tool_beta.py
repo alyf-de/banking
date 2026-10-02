@@ -186,6 +186,17 @@ def set_bank_transaction_on_hold(bank_transaction_name: str, on_hold_until: str)
 
 
 @frappe.whitelist()
+def get_invoice_request_defaults() -> dict[str, str | None]:
+	"""Defaults for the invoice request form in Bank Reconciliation Tool Beta."""
+	frappe.has_permission("Bank Transaction", "write", throw=True)
+
+	return {
+		"on_hold_until": get_default_invoice_request_hold_date(),
+		"recipient_type": get_default_invoice_request_recipient_type(),
+	}
+
+
+@frappe.whitelist()
 def get_default_invoice_request_hold_date() -> str | None:
 	"""Default on-hold date for invoice requests when Banking Settings enable it."""
 	frappe.has_permission("Bank Transaction", "write", throw=True)
@@ -197,6 +208,10 @@ def get_default_invoice_request_hold_date() -> str | None:
 		frappe.db.get_single_value("Banking Settings", "on_hold_threshold_after_invoice_request")
 	)
 	return add_days(nowdate(), threshold)
+
+
+def get_default_invoice_request_recipient_type() -> str:
+	return frappe.db.get_single_value("Banking Settings", "default_recipient_type") or "User"
 
 
 @frappe.whitelist(methods=["POST"])

@@ -23,6 +23,7 @@
   "reference_fields",
   "voucher_matching_defaults",
   "invoice_request_section",
+  "default_recipient_type",
   "automatically_set_on_hold_after_invoice_request",
   "on_hold_threshold_after_invoice_request",
   "sepa_payment_order_tab",
@@ -134,13 +135,20 @@
    "label": "Invoice Requests"
   },
   {
-   "default": "0",
+   "default": "User",
+   "fieldname": "default_recipient_type",
+   "fieldtype": "Select",
+   "label": "Default Recipient Type",
+   "options": "User\nContact\nEmployee"
+  },
+  {
+   "default": "1",
    "fieldname": "automatically_set_on_hold_after_invoice_request",
    "fieldtype": "Check",
    "label": "Automatically Set On Hold after Invoice Request"
   },
   {
-   "default": "7",
+   "default": "3",
    "depends_on": "automatically_set_on_hold_after_invoice_request",
    "fieldname": "on_hold_threshold_after_invoice_request",
    "fieldtype": "Int",
@@ -163,7 +171,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-02 15:05:00.000000",
+ "modified": "2026-10-02 16:22:09.000000",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",
