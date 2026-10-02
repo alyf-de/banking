@@ -21,9 +21,6 @@ from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
-from banking.patches.create_invoice_request_email_template import (
-	execute as create_invoice_request_email_template,
-)
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
 	_get_valid_accounting_dimensions,
 	auto_reconcile_vouchers,
@@ -36,6 +33,9 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	get_linked_payments,
 	request_invoice,
 	set_bank_transaction_on_hold,
+)
+from banking.patches.create_invoice_request_email_template import (
+	execute as create_invoice_request_email_template,
 )
 
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
