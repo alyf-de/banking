@@ -150,10 +150,10 @@ banking.bank_reconciliation.ActionsPanelManager = class ActionsPanelManager {
 				message: with_new_voucher
 					? __("Bank Transaction {0} partially reconciled.", [
 							this.transaction.name,
-						])
+					  ])
 					: __("Bank Transaction {0} partially matched.", [
 							this.transaction.name,
-						]),
+					  ]),
 				indicator: "blue",
 			});
 			this.panel_manager.refresh_transaction(unallocated_amount);
