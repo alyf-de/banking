@@ -127,10 +127,7 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_default_invoice_request_hold_date",
 			callback: (response) => {
 				if (response.message) {
-					this.field_group.set_value(
-						"invoice_on_hold_until",
-						response.message,
-					);
+					this.field_group.set_value("invoice_on_hold_until", response.message);
 				}
 			},
 		});
