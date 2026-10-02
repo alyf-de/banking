@@ -1,5 +1,13 @@
 frappe.provide("banking.bank_reconciliation");
 
+const INVOICE_REQUEST_RECIPIENT_TYPES = ["User", "Contact", "Employee"];
+
+const INVOICE_REQUEST_EMAIL_FIELD = {
+	User: "email",
+	Contact: "email_id",
+	Employee: "user_id",
+};
+
 banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 	constructor(opts) {
 		$.extend(this, opts);
@@ -15,6 +23,7 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 			doc: this.transaction,
 		});
 		this.field_group.make();
+		this.set_default_invoice_on_hold_until();
 	}
 
 	get_fields() {
@@ -36,17 +45,33 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 			{
 				label: __("Recipient Type"),
 				fieldname: "recipient_type",
-				fieldtype: "Select",
-				options: "User\nContact\nEmployee",
-				default: "Employee",
-				reqd: 1,
+				fieldtype: "Link",
+				options: "DocType",
+				get_query: () => ({
+					filters: {
+						name: ["in", INVOICE_REQUEST_RECIPIENT_TYPES],
+					},
+				}),
+				onchange: () => this.on_recipient_type_change(),
 			},
 			{
 				label: __("Recipient"),
 				fieldname: "recipient",
 				fieldtype: "Dynamic Link",
 				options: "recipient_type",
+				onchange: () => this.fetch_recipient_email(),
+			},
+			{
+				label: __("Email"),
+				fieldname: "recipient_email",
+				fieldtype: "Data",
+				options: "Email",
 				reqd: 1,
+			},
+			{
+				label: __("On Hold Until"),
+				fieldname: "invoice_on_hold_until",
+				fieldtype: "Date",
 			},
 			{
 				label: __("Request Invoice"),
@@ -57,6 +82,60 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 		];
 	}
 
+	on_recipient_type_change() {
+		const recipient_type = this.field_group.get_value("recipient_type");
+		const recipient_field = this.field_group.get_field("recipient");
+		recipient_field.df.options = recipient_type;
+		this.field_group.set_value({
+			recipient: "",
+			recipient_email: "",
+		});
+		recipient_field.refresh();
+	}
+
+	async fetch_recipient_email() {
+		const recipient_type = this.field_group.get_value("recipient_type");
+		const recipient = this.field_group.get_value("recipient");
+		if (!recipient_type || !recipient) {
+			return;
+		}
+
+		const email_fieldname = INVOICE_REQUEST_EMAIL_FIELD[recipient_type];
+		if (!email_fieldname) {
+			return;
+		}
+
+		const { message } = await frappe.db.get_value(
+			recipient_type,
+			recipient,
+			email_fieldname,
+		);
+		let email = message?.[email_fieldname];
+		if (recipient_type === "Employee" && email) {
+			const user = await frappe.db.get_value("User", email, "email");
+			email = user.message?.email || email;
+		}
+
+		if (email) {
+			this.field_group.set_value("recipient_email", email);
+		}
+	}
+
+	set_default_invoice_on_hold_until() {
+		frappe.call({
+			method:
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_default_invoice_request_hold_date",
+			callback: (response) => {
+				if (response.message) {
+					this.field_group.set_value(
+						"invoice_on_hold_until",
+						response.message,
+					);
+				}
+			},
+		});
+	}
+
 	set_on_hold() {
 		const on_hold_until = this.field_group.get_value("on_hold_until");
 		if (on_hold_until) {
@@ -65,11 +144,22 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 	}
 
 	request_invoice() {
-		const recipient_type = this.field_group.get_value("recipient_type");
-		const recipient = this.field_group.get_value("recipient");
-		if (recipient_type && recipient) {
-			this.call("request_invoice", { recipient_type, recipient });
+		const recipient_email = this.field_group.get_value("recipient_email");
+		if (!recipient_email) {
+			frappe.msgprint({
+				message: __("Email is required."),
+				indicator: "orange",
+			});
+			return;
 		}
+
+		const invoice_on_hold_until = this.field_group.get_value(
+			"invoice_on_hold_until",
+		);
+		this.call("request_invoice", {
+			recipient_email,
+			on_hold_until: invoice_on_hold_until || null,
+		});
 	}
 
 	call(method, args) {

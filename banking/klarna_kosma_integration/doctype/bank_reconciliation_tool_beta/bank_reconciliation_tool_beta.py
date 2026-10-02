@@ -20,7 +20,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Sum
-from frappe.utils import add_days, cint, flt, nowdate, sbool
+from frappe.utils import add_days, cint, flt, nowdate, sbool, validate_email_address
 from pypika import Order
 from pypika.terms import ExistsCriterion
 
@@ -186,14 +186,30 @@ def set_bank_transaction_on_hold(bank_transaction_name: str, on_hold_until: str)
 
 
 @frappe.whitelist()
-def request_invoice(bank_transaction_name: str, recipient_type: str, recipient: str) -> None:
+def get_default_invoice_request_hold_date() -> str | None:
+	"""Default on-hold date for invoice requests when Banking Settings enable it."""
+	frappe.has_permission("Bank Transaction", "write", throw=True)
+
+	if not frappe.db.get_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request"):
+		return None
+
+	threshold = cint(
+		frappe.db.get_single_value("Banking Settings", "on_hold_threshold_after_invoice_request")
+	)
+	return add_days(nowdate(), threshold)
+
+
+@frappe.whitelist()
+def request_invoice(
+	bank_transaction_name: str,
+	recipient_email: str,
+	on_hold_until: str | None = None,
+) -> None:
 	"""Request an invoice and optionally put its Bank Transaction on hold."""
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
 	frappe.has_permission("Bank Transaction", "write", transaction, throw=True)
 
-	recipient_email = get_invoice_request_recipient_email(recipient_type, recipient)
-	if not recipient_email:
-		frappe.throw(_("The selected {0} has no email address.").format(_(recipient_type)))
+	validate_email_address(recipient_email, throw=True)
 
 	frappe.sendmail(
 		recipients=[recipient_email],
@@ -203,25 +219,8 @@ def request_invoice(bank_transaction_name: str, recipient_type: str, recipient: 
 		reference_name=transaction.name,
 	)
 
-	if frappe.db.get_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request"):
-		threshold = cint(
-			frappe.db.get_single_value("Banking Settings", "on_hold_threshold_after_invoice_request")
-		)
-		transaction.db_set("on_hold_until", add_days(nowdate(), threshold), update_modified=True)
-
-
-def get_invoice_request_recipient_email(recipient_type: str, recipient: str) -> str | None:
-	"""Return the primary email address for a supported invoice-request recipient."""
-	field_map = {
-		"User": ("User", "email"),
-		"Contact": ("Contact", "email_id"),
-		"Employee": ("Employee", "company_email"),
-	}
-	if recipient_type not in field_map:
-		frappe.throw(_("Recipient type must be User, Contact, or Employee."))
-
-	doctype, fieldname = field_map[recipient_type]
-	return frappe.db.get_value(doctype, recipient, fieldname)
+	if on_hold_until:
+		transaction.db_set("on_hold_until", on_hold_until, update_modified=True)
 
 
 def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) -> None:
