@@ -199,7 +199,7 @@ def get_default_invoice_request_hold_date() -> str | None:
 	return add_days(nowdate(), threshold)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def request_invoice(
 	bank_transaction_name: str,
 	recipient_email: str,
