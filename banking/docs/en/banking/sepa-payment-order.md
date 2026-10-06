@@ -24,10 +24,10 @@ SEPA Payment Orders enable users to:
 - Ensures compliance with IBAN standards before submission
 
 ### 2. Automatic BIC and Bank Name Resolution
-- For German IBANs (starting with "DE"), the system automatically:
-  - Determines the BIC/SWIFT code
-  - Populates the bank name
-- Reduces manual data entry and errors
+- EUR payments from an EEA IBAN to an EEA IBAN do not need a BIC. The system removes the BIC from these payments.
+- All other payments (e.g. from or to Switzerland) keep the BIC. If the BIC does not belong to the IBAN, submit fails and the error shows the row.
+- For German IBANs (starting with "DE"), the system populates the bank name.
+- A **Bank Account** with a German IBAN can only link to a **Bank** whose _SWIFT Number_ belongs to that IBAN.
 
 ### 3. Currency Validation
 - Validates that payment currency matches the bank account currency
@@ -135,7 +135,7 @@ The system automatically fills in the recipient's name and IBAN from their defau
 Each payment row contains:
 - _Recipient_: Name of the payee (supplier or employee)
 - _IBAN_: Recipient's bank account number
-- _SWIFT Number_: Recipient's bank BIC (auto-populated for German banks)
+- _SWIFT Number_: Recipient's bank BIC (not used for EUR payments within the EEA)
 - _Bank Name_: Recipient's bank name
 - _Amount_: Payment amount in the specified currency
 - _Currency_: Payment currency (must match bank account currency)
