@@ -1,7 +1,8 @@
 import frappe
-import kontocheck
 from frappe import _
 from frappe.utils import cint
+
+from banking.ebics.utils import register_fintech
 
 
 def before_validate(doc, method):
@@ -76,10 +77,12 @@ def validate_bank_bic(doc):
 	if not bank_bic:
 		return
 
-	kontocheck.lut_load()
+	register_fintech()
+	from fintech import iban
+
 	try:
-		iban_bic = kontocheck.get_bic(doc.iban)
-	except kontocheck.KontoCheckError:
+		iban_bic = iban.get_bic(doc.iban)
+	except ValueError:
 		return  # unknown bank code, nothing to compare
 
 	# "XXX" is the default branch code, so "ABCDEFGH" equals "ABCDEFGHXXX"

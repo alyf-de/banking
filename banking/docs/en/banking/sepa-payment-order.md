@@ -20,7 +20,7 @@ SEPA Payment Orders enable users to:
 ## Key Features
 
 ### 1. Automated IBAN Validation
-- All IBANs are validated using the `kontocheck` library
+- All IBANs are validated using the `fintech` library
 - Ensures compliance with IBAN standards before submission
 
 ### 2. Automatic BIC and Bank Name Resolution
@@ -238,7 +238,7 @@ Direct transmission to bank via EBICS:
 
 ### Data Validation
 
-- IBAN Validation: Uses the `kontocheck` library for comprehensive IBAN verification
+- IBAN Validation: Uses the `fintech` library for comprehensive IBAN verification
 - Currency Matching: Ensures payment currency matches the linked GL account currency
 - Required Fields: Enforces all mandatory fields for SEPA compliance
 
