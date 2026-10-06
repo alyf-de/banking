@@ -205,8 +205,25 @@ class TestSEPAPaymentOrder(FrappeTestCase):
 
 		order.run_method("before_validate")
 
-		self.assertFalse(order.payments[0].swift_number)
+		# Stored BIC is kept, in case the payment later needs it
+		self.assertEqual(order.payments[0].swift_number, "DEUTDEFF")
 		order.verify_xml_render()
+
+	def test_bank_name_follows_iban(self):
+		order = self.new_payment_order(execution_date=today())
+		self.add_payment(order, SUPPLIER_IBAN, swift_number=None)
+		order.run_method("before_validate")
+		self.assertEqual(order.payments[0].bank_name, "BSK 1818 AG")
+
+		# Unsupported country without BIC: stale name is cleared
+		order.payments[0].iban = "FR1420041010050500013M02606"
+		order.run_method("before_validate")
+		self.assertIsNone(order.payments[0].bank_name)
+
+		# Falls back to the BIC
+		order.payments[0].swift_number = "BNPAFRPP"
+		order.run_method("before_validate")
+		self.assertEqual(order.payments[0].bank_name, "BNP PARIBAS SA")
 
 	def test_bic_mismatch_names_row(self):
 		order = self.new_payment_order(execution_date=today())
