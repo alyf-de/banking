@@ -80,11 +80,12 @@ class SEPAPaymentOrder(Document):
 	def before_validate(self):
 		kontocheck.lut_load()
 
+		debtor_in_eea = (self.iban or "")[:2].upper() in EEA_COUNTRIES
 		for payment in self.payments:
 			country = (payment.iban or "")[:2].upper()
-			if country in EEA_COUNTRIES:
-				# Payments within the EEA are IBAN-only. A BIC copied from the Bank can belong
-				# to another branch, which makes the payment fail.
+			if debtor_in_eea and country in EEA_COUNTRIES and payment.currency == "EUR":
+				# SEPA payments within the EEA are IBAN-only. A BIC copied from the Bank can
+				# belong to another branch, which makes the payment fail.
 				payment.swift_number = None
 			if country == "DE" and not payment.bank_name:
 				with contextlib.suppress(Exception):
@@ -264,11 +265,13 @@ class SEPAPaymentOrder(Document):
 					name=payment.recipient,
 				)
 			except ValueError:
-				invalid_rows.append(
-					_(
+				if payment.swift_number:
+					message = _(
 						"Row {0}: BIC {1} does not belong to IBAN {2}. Please correct or remove the BIC."
 					).format(payment.idx, payment.swift_number, iban)
-				)
+				else:
+					message = _("Row {0}: IBAN {1} is invalid.").format(payment.idx, iban)
+				invalid_rows.append(message)
 				continue
 
 			transfer.add_transaction(

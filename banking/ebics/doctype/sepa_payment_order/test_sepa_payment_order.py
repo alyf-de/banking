@@ -19,6 +19,7 @@ from banking.testing_utils import create_mode_of_payment
 COMPANY_IBAN = "DE02120300000000202051"
 SUPPLIER_IBAN = "DE02100500000054540402"
 NON_EEA_IBAN = "CH9300762011623852957"
+OTHER_NON_EEA_IBAN = "GB29NWBK60161331926819"
 
 
 class TestSEPAPaymentOrder(IntegrationTestCase):
@@ -206,8 +207,22 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order = self.new_payment_order(execution_date=today())
 		self.add_payment(order, SUPPLIER_IBAN, swift_number=None)
 		self.add_payment(order, NON_EEA_IBAN, swift_number="DEUTDEFF")
+		self.add_payment(order, OTHER_NON_EEA_IBAN, swift_number="DEUTDEFF")
 
 		order.run_method("before_validate")
 
-		with self.assertRaisesRegex(frappe.ValidationError, f"Row 2: BIC DEUTDEFF .*{NON_EEA_IBAN}"):
+		with self.assertRaisesRegex(
+			frappe.ValidationError,
+			f"Row 2: BIC DEUTDEFF .*{NON_EEA_IBAN}.*Row 3: BIC DEUTDEFF .*{OTHER_NON_EEA_IBAN}",
+		):
 			order.verify_xml_render()
+
+	def test_non_eea_debtor_keeps_bic(self):
+		"""IBAN-only applies only when debtor and creditor are in the EEA."""
+		order = self.new_payment_order(execution_date=today())
+		order.iban = NON_EEA_IBAN
+		self.add_payment(order, SUPPLIER_IBAN, swift_number="BELADEBEXXX")
+
+		order.run_method("before_validate")
+
+		self.assertEqual(order.payments[0].swift_number, "BELADEBEXXX")
