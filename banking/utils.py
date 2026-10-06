@@ -77,12 +77,13 @@ def create_party_bank_account(
 
 
 def create_bank(iban: str) -> str:
-	import kontocheck
+	from banking.ebics.utils import register_fintech
 
-	kontocheck.lut_load()
+	register_fintech()
+	from fintech import iban as fintech_iban
 
-	bank_name = kontocheck.get_bankname(iban)
-	swift_number = kontocheck.get_bic(iban)
+	bank_name = fintech_iban.get_bankname(iban)
+	swift_number = fintech_iban.get_bic(iban)
 
 	existing_bank = frappe.db.exists("Bank", {"swift_number": swift_number})
 	if existing_bank:
