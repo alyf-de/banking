@@ -4,6 +4,9 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
+	create_bank,
+)
 from banking.testing_utils import (
 	create_bank_account,
 	create_currency_account,
@@ -72,3 +75,21 @@ class TestBankAccount(FrappeTestCase):
 		bank_account.account = self.account_fee.name
 		with self.assertRaises(frappe.ValidationError):
 			bank_account.save()
+
+	def test_german_iban_must_match_bank_bic(self):
+		"""A Bank with the BIC of another branch must not be linked to a German IBAN."""
+		create_bank("_Test Other Branch Bank", swift_number="DEUTDEFF")
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+
+		def new_bank_account(bank: str):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank=bank,
+				iban="DE02100500000054540402",
+			)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "BELADEBEXXX"):
+			new_bank_account("_Test Other Branch Bank").insert()
+
+		new_bank_account("_Test Same Branch Bank").insert()
