@@ -5,7 +5,6 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 import frappe
-import kontocheck
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils.data import fmt_money, getdate, now_datetime
@@ -76,7 +75,8 @@ class SEPAPaymentOrder(Document):
 	# end: auto-generated types
 
 	def before_validate(self):
-		kontocheck.lut_load()
+		register_fintech()
+		from fintech import iban
 
 		debtor_in_eea = (self.iban or "")[:2].upper() in EEA_COUNTRIES
 		for payment in self.payments:
@@ -87,7 +87,7 @@ class SEPAPaymentOrder(Document):
 				payment.swift_number = None
 			if country == "DE" and not payment.bank_name:
 				with contextlib.suppress(Exception):
-					payment.bank_name = kontocheck.get_bankname(payment.iban)
+					payment.bank_name = iban.get_bankname(payment.iban)
 
 	def validate(self):
 		self.validate_ibans()
@@ -172,13 +172,14 @@ class SEPAPaymentOrder(Document):
 			)
 
 	def validate_ibans(self):
-		kontocheck.lut_load()
+		register_fintech()
+		from fintech import iban
 
-		if not kontocheck.check_iban(self.iban):
+		if not iban.check_iban(self.iban):
 			frappe.throw(_("IBAN {0} is invalid.").format(self.iban))
 
 		for payment in self.payments:
-			if not kontocheck.check_iban(payment.iban):
+			if not iban.check_iban(payment.iban):
 				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
 
 	def validate_mode_of_payment(self, mode_of_payment: str):
