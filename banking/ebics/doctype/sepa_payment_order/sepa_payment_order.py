@@ -21,6 +21,12 @@ if TYPE_CHECKING:
 
 	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
 
+# EU member states plus Iceland, Liechtenstein and Norway
+EEA_COUNTRIES = {
+	"AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE",
+	"IS", "IT", "LI", "LT", "LU", "LV", "MT", "NL", "NO", "PL", "PT", "RO", "SE", "SI", "SK",
+}  # fmt: skip
+
 
 class PaymentOrderStatus(StrEnum):
 	"""
@@ -75,13 +81,14 @@ class SEPAPaymentOrder(Document):
 		kontocheck.lut_load()
 
 		for payment in self.payments:
-			if payment.iban and payment.iban.startswith("DE"):
-				if not payment.swift_number:
-					with contextlib.suppress(Exception):
-						payment.swift_number = kontocheck.get_bic(payment.iban)
-				if not payment.bank_name and payment.swift_number:
-					with contextlib.suppress(Exception):
-						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
+			country = (payment.iban or "")[:2].upper()
+			if country in EEA_COUNTRIES:
+				# Payments within the EEA are IBAN-only. A BIC copied from the Bank can belong
+				# to another branch, which makes the payment fail.
+				payment.swift_number = None
+			if country == "DE" and not payment.bank_name:
+				with contextlib.suppress(Exception):
+					payment.bank_name = kontocheck.get_bankname(payment.iban)
 
 	def validate(self):
 		self.validate_ibans()
@@ -248,13 +255,24 @@ class SEPAPaymentOrder(Document):
 			batch=self.batch_booking == "Process as batch",
 			scheme=self.scheme,
 		)
+		invalid_rows = []
 		for payment in self.payments:
 			iban = payment.iban.replace(" ", "")
-			transfer.add_transaction(
-				account=Account(
+			try:
+				account = Account(
 					iban=(iban, payment.swift_number) if payment.swift_number else iban,
 					name=payment.recipient,
-				),
+				)
+			except ValueError:
+				invalid_rows.append(
+					_(
+						"Row {0}: BIC {1} does not belong to IBAN {2}. Please correct or remove the BIC."
+					).format(payment.idx, payment.swift_number, iban)
+				)
+				continue
+
+			transfer.add_transaction(
+				account=account,
 				amount=Amount(
 					value=payment.amount,
 					currency=payment.currency,
@@ -263,6 +281,9 @@ class SEPAPaymentOrder(Document):
 				eref=payment.eref,
 				charges=payment.charges,
 			)
+
+		if invalid_rows:
+			frappe.throw("<br>".join(invalid_rows), title=_("Invalid BIC"))
 
 		return transfer
 

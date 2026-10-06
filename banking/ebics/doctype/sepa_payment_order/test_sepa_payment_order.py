@@ -18,6 +18,7 @@ from banking.testing_utils import create_mode_of_payment
 
 COMPANY_IBAN = "DE02120300000000202051"
 SUPPLIER_IBAN = "DE02100500000054540402"
+NON_EEA_IBAN = "CH9300762011623852957"
 
 
 class TestSEPAPaymentOrder(IntegrationTestCase):
@@ -32,13 +33,14 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		)
 		frappe.db.set_value("Bank Account", cls.bank_account, "iban", COMPANY_IBAN)
 
+		create_bank("SEPA Supplier Bank", swift_number="BELADEBEXXX")
 		cls.supplier = create_supplier("_Test SEPA Supplier")
 		if not frappe.db.exists("Bank Account", {"party_type": "Supplier", "party": cls.supplier}):
 			frappe.get_doc(
 				{
 					"doctype": "Bank Account",
 					"account_name": "SEPA Supplier Account",
-					"bank": "SEPA Test Bank",
+					"bank": "SEPA Supplier Bank",
 					"party_type": "Supplier",
 					"party": cls.supplier,
 					"iban": SUPPLIER_IBAN,
@@ -175,3 +177,37 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order = self.new_payment_order(execution_date=today())
 		with self.assertRaises(frappe.ValidationError):
 			order.fetch_payables(add_days(today(), 10), other_mode)
+
+	def add_payment(self, order, iban: str, swift_number: str):
+		order.append(
+			"payments",
+			{
+				"recipient": "_Test SEPA Recipient",
+				"purpose": "Test",
+				"iban": iban,
+				"swift_number": swift_number,
+				"amount": 100,
+				"currency": "EUR",
+				"charges": "SHAR",
+			},
+		)
+
+	def test_eea_payment_has_no_bic(self):
+		"""EEA payments are IBAN-only, so a BIC of another branch cannot break the order."""
+		order = self.new_payment_order(execution_date=today())
+		self.add_payment(order, SUPPLIER_IBAN, swift_number="DEUTDEFF")
+
+		order.run_method("before_validate")
+
+		self.assertFalse(order.payments[0].swift_number)
+		order.verify_xml_render()
+
+	def test_bic_mismatch_names_row(self):
+		order = self.new_payment_order(execution_date=today())
+		self.add_payment(order, SUPPLIER_IBAN, swift_number=None)
+		self.add_payment(order, NON_EEA_IBAN, swift_number="DEUTDEFF")
+
+		order.run_method("before_validate")
+
+		with self.assertRaisesRegex(frappe.ValidationError, f"Row 2: BIC DEUTDEFF .*{NON_EEA_IBAN}"):
+			order.verify_xml_render()
