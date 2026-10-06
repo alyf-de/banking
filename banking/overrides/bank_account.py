@@ -1,7 +1,8 @@
 import frappe
-import kontocheck
 from frappe import _
 from frappe.utils import cint
+
+from banking.ebics.utils import register_fintech
 
 
 def before_validate(doc, method):
@@ -68,18 +69,20 @@ def get_company_bank_accounts_without_fee_account() -> list[str]:
 
 
 def validate_bank_bic(doc):
-	"""The BIC of the linked Bank must belong to a German IBAN."""
-	if not (doc.iban and doc.iban.startswith("DE") and doc.bank):
+	"""The BIC of the linked Bank must belong to the IBAN. fintech knows the bank codes of DE, AT and CH."""
+	if not (doc.iban and doc.iban[:2] in ("DE", "AT", "CH") and doc.bank):
 		return
 
 	bank_bic = frappe.db.get_value("Bank", doc.bank, "swift_number")
 	if not bank_bic:
 		return
 
-	kontocheck.lut_load()
+	register_fintech()
+	from fintech import iban
+
 	try:
-		iban_bic = kontocheck.get_bic(doc.iban)
-	except kontocheck.KontoCheckError:
+		iban_bic = iban.get_bic(doc.iban)
+	except ValueError:
 		return  # unknown bank code, nothing to compare
 
 	# "XXX" is the default branch code, so "ABCDEFGH" equals "ABCDEFGHXXX"
