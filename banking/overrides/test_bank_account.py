@@ -93,3 +93,19 @@ class TestBankAccount(IntegrationTestCase):
 			new_bank_account("_Test Other Branch Bank").insert()
 
 		new_bank_account("_Test Same Branch Bank").insert()
+
+	def test_austrian_and_swiss_iban_must_match_bank_bic(self):
+		create_bank("_Test Other Branch Bank", swift_number="DEUTDEFF")
+
+		for iban, iban_bic in (
+			("AT483200000012345864", "RLNWATWWXXX"),
+			("CH5604835012345678009", "CRESCHZZ80A"),
+		):
+			bank_account = frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank="_Test Other Branch Bank",
+				iban=iban,
+			)
+			with self.assertRaisesRegex(frappe.ValidationError, iban_bic):
+				bank_account.insert()
