@@ -200,7 +200,8 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 
 		order.run_method("before_validate")
 
-		self.assertFalse(order.payments[0].swift_number)
+		# Stored BIC is kept, in case the payment later needs it
+		self.assertEqual(order.payments[0].swift_number, "DEUTDEFF")
 		order.verify_xml_render()
 
 	def test_bic_mismatch_names_row(self):

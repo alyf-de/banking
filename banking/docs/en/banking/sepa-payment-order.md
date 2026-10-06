@@ -24,7 +24,7 @@ SEPA Payment Orders enable users to:
 - Ensures compliance with IBAN standards before submission
 
 ### 2. Automatic BIC and Bank Name Resolution
-- EUR payments from an EEA IBAN to an EEA IBAN do not need a BIC. The system removes the BIC from these payments.
+- EUR payments from an EEA IBAN to an EEA IBAN do not need a BIC. The system leaves out the BIC from the XML file for these payments.
 - All other payments (e.g. from or to Switzerland) keep the BIC. If the BIC does not belong to the IBAN, submit fails and the error shows the row.
 - For German IBANs (starting with "DE"), the system populates the bank name.
 - A **Bank Account** with a German IBAN can only link to a **Bank** whose _SWIFT Number_ belongs to that IBAN.
