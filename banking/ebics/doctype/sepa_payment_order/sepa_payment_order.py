@@ -78,12 +78,9 @@ class SEPAPaymentOrder(Document):
 
 	def before_validate(self):
 		register_fintech()
-		from fintech import iban
-
 		for payment in self.payments:
-			if (payment.iban or "")[:2].upper() == "DE" and not payment.bank_name:
-				with contextlib.suppress(Exception):
-					payment.bank_name = iban.get_bankname(payment.iban)
+			# Read-only, so always derive it from the current IBAN or BIC. Else it goes stale.
+			payment.bank_name = get_bank_name(payment.iban, payment.swift_number)
 
 	def validate(self):
 		self.validate_ibans()
@@ -359,6 +356,23 @@ def get_payable_expense_claims(company: str, currency: str, date: str, posted_fr
 		order_by="posting_date asc",
 		pluck="name",
 	)
+
+
+def get_bank_name(iban: str | None, bic: str | None) -> str | None:
+	"""Return the bank name for a DE, AT or CH IBAN, or for a European BIC.
+
+	NOTE: call register_fintech() before calling this function.
+	"""
+	from fintech import iban as fintech_iban
+
+	for iban_or_bic in (iban, bic):
+		if not iban_or_bic:
+			continue
+		# Unsupported country or unknown BIC
+		with contextlib.suppress(ValueError, NotImplementedError):
+			return fintech_iban.get_bankname(iban_or_bic)
+
+	return None
 
 
 @frappe.whitelist()
