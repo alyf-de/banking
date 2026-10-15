@@ -13,8 +13,8 @@ def before_validate(doc, method):
 
 def validate(doc, method):
 	validate_account_currencies(doc)
-	validate_default_mode_of_payment(doc)
 	validate_required_bank_fee_account(doc)
+	validate_default_mode_of_payment(doc)
 	validate_unique_iban(doc)
 	validate_bank_bic(doc)
 
