@@ -4,9 +4,22 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from frappe.tests import UnitTestCase
+import frappe
+from frappe.tests import IntegrationTestCase, UnitTestCase
 
-from banking.ebics.utils import UnresolvedBatchTransactionError, import_ebics_json, process_camt_document
+from banking.ebics.utils import (
+	UnresolvedBatchTransactionError,
+	create_bank_transaction,
+	get_bank_account,
+	import_ebics_json,
+	process_camt_document,
+)
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
+	create_bank,
+)
+from banking.testing_utils import create_currency_account, get_bank_parent_account
+
+EXTRA_TEST_RECORD_DEPENDENCIES = ["Company"]
 
 
 class TestEBICSUtils(UnitTestCase):
@@ -91,3 +104,39 @@ class TestEBICSUtils(UnitTestCase):
 		)
 
 		create_sepa_bank_transaction.assert_not_called()
+
+
+class TestEBICSMultipleCompanies(IntegrationTestCase):
+	def test_one_bank_imports_for_several_companies(self):
+		"""One EBICS User (one bank) finds Bank Accounts of any company by IBAN."""
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+
+		for company, currency, iban in (
+			("_Test Company", "INR", "DE02100500000054540402"),
+			("_Test Company 1", "USD", "DE65100500000001234567"),
+		):
+			account = create_currency_account(
+				currency, get_bank_parent_account(company), f"_Test_EBICS_{currency}", company
+			)
+			frappe.new_doc(
+				"Bank Account",
+				account_name=f"_Test_EBICS_{currency}",
+				bank="_Test Same Branch Bank",
+				iban=iban,
+				is_company_account=1,
+				company=company,
+				account=account.name,
+			).insert()
+
+			bank_account = get_bank_account(iban, "_Test Same Branch Bank")
+			create_bank_transaction(
+				bank_account,
+				transaction_id=f"_Test_EBICS_{iban}",
+				date=frappe.utils.today(),
+				deposit=100,
+				currency=currency,
+			)
+
+			self.assertEqual(
+				frappe.db.get_value("Bank Transaction", {"bank_account": bank_account}, "company"), company
+			)
