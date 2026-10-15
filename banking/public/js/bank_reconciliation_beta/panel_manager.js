@@ -1,6 +1,91 @@
-frappe.provide("erpnext.accounts.bank_reconciliation");
+frappe.provide("banking.bank_reconciliation");
 
-erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
+// Unpaid invoices are the only Match path that books deposit included fees.
+// Expense Claims are excluded: they are only matched for withdrawals, never fee deposits.
+banking.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES = [
+	"Sales Invoice",
+	"Purchase Invoice",
+];
+
+// The doctype alone cannot tell an unpaid invoice from a paid/POS one: both query
+// variants report the same doctype. Only the "unpaid_invoices" filter distinguishes them.
+banking.bank_reconciliation.selection_uses_deposit_fee = (
+	summary_data,
+	unpaid_invoices_only,
+) => {
+	if (!cint(unpaid_invoices_only)) {
+		return false;
+	}
+
+	const entries = Object.values(summary_data || {});
+	if (!entries.length) {
+		return false;
+	}
+	return entries.every((entry) =>
+		banking.bank_reconciliation.DEPOSIT_FEE_VOUCHER_TYPES.includes(
+			entry.doctype,
+		),
+	);
+};
+
+banking.bank_reconciliation.get_allocation_budget = (
+	transaction,
+	summary_data,
+	unpaid_invoices_only,
+) => {
+	let budget = flt(transaction.unallocated_amount);
+	if (
+		flt(transaction.included_fee_for_reconciliation) &&
+		banking.bank_reconciliation.selection_uses_deposit_fee(
+			summary_data,
+			unpaid_invoices_only,
+		)
+	) {
+		budget += flt(transaction.included_fee_for_reconciliation);
+	}
+	return budget;
+};
+
+// A return voucher of the opposite type (return PI on a deposit, return SI on a
+// withdrawal) has a negative outstanding, but it settles the bank amount
+// positively - the backend books abs() for it. Mirror that here, so the summary
+// does not show double the amount. Mixed selections (invoice + its return) keep
+// the signed sum: there the negative row really does reduce the allocation.
+banking.bank_reconciliation.get_total_allocated = (
+	transaction,
+	summary_data,
+) => {
+	const entries = Object.values(summary_data || {});
+	const total = entries.reduce((a, entry) => a + flt(entry.amount), 0);
+	const opposite_doctype =
+		flt(transaction.deposit) > 0 ? "Purchase Invoice" : "Sales Invoice";
+	const only_opposite_returns =
+		entries.length &&
+		entries.every(
+			(entry) => flt(entry.amount) < 0 && entry.doctype === opposite_doctype,
+		);
+	return only_opposite_returns ? -total : total;
+};
+
+banking.bank_reconciliation.get_summary_amount = (
+	transaction,
+	summary_data,
+	unpaid_invoices_only,
+) => {
+	let amount = flt(transaction.withdrawal || transaction.deposit);
+	if (
+		flt(transaction.included_fee_for_reconciliation) &&
+		banking.bank_reconciliation.selection_uses_deposit_fee(
+			summary_data,
+			unpaid_invoices_only,
+		)
+	) {
+		amount += flt(transaction.included_fee_for_reconciliation);
+	}
+	return amount;
+};
+
+banking.bank_reconciliation.PanelManager = class PanelManager {
 	constructor(opts) {
 		Object.assign(this, opts);
 		this.make();
@@ -151,6 +236,10 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		this.actions_filters.exact_match = 0;
 		this.actions_filters.exact_party_match = 0;
 		this.actions_filters.unpaid_invoices = 1;
+		// Sticky Create Voucher fields across transaction switches
+		this.create_preferences = {
+			document_type: "Payment Entry",
+		};
 	}
 
 	render_no_transactions() {
@@ -176,13 +265,12 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 	}
 
 	render_actions_panel() {
-		this.actions_panel =
-			new erpnext.accounts.bank_reconciliation.ActionsPanelManager({
-				$wrapper: this.$panel_wrapper,
-				transaction: this.active_transaction,
-				frm: this.frm,
-				panel_manager: this,
-			});
+		this.actions_panel = new banking.bank_reconciliation.ActionsPanelManager({
+			$wrapper: this.$panel_wrapper,
+			transaction: this.active_transaction,
+			frm: this.frm,
+			panel_manager: this,
+		});
 	}
 
 	/**
@@ -512,6 +600,12 @@ erpnext.accounts.bank_reconciliation.PanelManager = class PanelManager {
 		if (updated_amount) {
 			// update amount is > 0 always [src: `after_transaction_reconcile()`]
 			this.transactions[current_index]["unallocated_amount"] = updated_amount;
+			// Prior allocations mean deposit fee can no longer be booked
+			if (
+				flt(updated_amount) !== flt(this.transactions[current_index].deposit)
+			) {
+				this.transactions[current_index]["included_fee_for_reconciliation"] = 0;
+			}
 		} else {
 			this.transactions[current_index] = {
 				...transaction,

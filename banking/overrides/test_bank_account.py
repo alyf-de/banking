@@ -2,17 +2,21 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
+	create_bank,
+)
 from banking.testing_utils import (
 	create_bank_account,
 	create_currency_account,
+	create_mode_of_payment,
 	get_bank_parent_account,
 	set_automatic_bank_fee_entries,
 )
 
 
-class TestBankAccount(FrappeTestCase):
+class TestBankAccount(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -58,3 +62,56 @@ class TestBankAccount(FrappeTestCase):
 			frappe.db.get_value("Bank Account", self.bank_account_with_fee.name, "bank_fee_account"),
 			self.account_fee.name,
 		)
+
+	def test_default_mode_of_payment_must_book_to_account(self):
+		"""Changing the account must not keep a Default Mode of Payment of the old account."""
+		mode = create_mode_of_payment("_Test Bank Account Transfer", self.account_eur.name)
+
+		bank_account = frappe.get_doc("Bank Account", self.bank_account_with_fee.name)
+		bank_account.flags.ignore_links = True  # the test Bank does not exist
+		bank_account.default_mode_of_payment = mode
+		bank_account.save()
+
+		bank_account.account = self.account_fee.name
+		with self.assertRaises(frappe.ValidationError):
+			bank_account.save()
+
+	def test_german_iban_must_match_bank_bic(self):
+		"""A Bank with the BIC of another branch must not be linked to a German IBAN."""
+		create_bank("_Test Other Branch Bank", swift_number="DEUTDEFF")
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+
+		def new_bank_account(bank: str):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank=bank,
+				iban="DE02100500000054540402",
+			)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "BELADEBEXXX"):
+			new_bank_account("_Test Other Branch Bank").insert()
+
+		new_bank_account("_Test Same Branch Bank").insert()
+
+	def test_austrian_and_swiss_iban_must_match_bank_bic(self):
+		create_bank("_Test Other Branch Bank", swift_number="DEUTDEFF")
+		create_bank("_Test Austrian Bank", swift_number="RLNWATWW")  # without the default "XXX"
+		create_bank("_Test Swiss Bank", swift_number="CRESCHZZ80A")
+
+		def new_bank_account(bank: str, iban: str):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank=bank,
+				iban=iban,
+			)
+
+		for iban, iban_bic, matching_bank in (
+			("AT483200000012345864", "RLNWATWWXXX", "_Test Austrian Bank"),
+			("CH5604835012345678009", "CRESCHZZ80A", "_Test Swiss Bank"),
+		):
+			with self.assertRaisesRegex(frappe.ValidationError, iban_bic):
+				new_bank_account("_Test Other Branch Bank", iban).insert()
+
+			new_bank_account(matching_bank, iban).insert()

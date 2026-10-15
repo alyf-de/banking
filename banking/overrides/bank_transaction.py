@@ -7,6 +7,11 @@ from frappe.core.utils import find
 from frappe.utils import flt, getdate
 from frappe.utils.data import evaluate_filters, get_link_to_form
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_rule.bank_reconciliation_rule import (
+	get_party_account_type,
+	party_type_matches_account_type,
+)
+
 
 class CustomBankTransaction(BankTransaction):
 	"""Mixin applied to **Bank Transaction** via the `extend_doctype_class` hook.
@@ -309,13 +314,105 @@ def on_cancel(doc, method):
 		frappe.get_doc("Journal Entry", journal_entry).cancel()
 
 
+def get_party_error(doc, account_type: str, target_account: str) -> str | None:
+	"""Explain why the Bank Transaction cannot supply a party for `target_account`.
+
+	The transaction is the only source for the party of the automatic Journal Entry,
+	so a rule pointing at a Receivable or Payable account is not applicable to
+	transactions without a fitting party. Returns None if the party fits.
+	"""
+	if not (doc.party_type and doc.party):
+		return _("Bank Transaction {0} has no party, but target account {1} is a {2} account.").format(
+			doc.name, target_account, _(account_type)
+		)
+
+	if not party_type_matches_account_type(doc.party_type, account_type):
+		return _(
+			"Bank Transaction {0} has party type {1}, which cannot be booked against the {2} account {3}."
+		).format(doc.name, _(doc.party_type), _(account_type), target_account)
+
+	return None
+
+
+def apply_bank_reconciliation_rule(
+	doc,
+	rule_name: str,
+	target_account: str,
+	filters: list,
+	*,
+	cost_center: str | None = None,
+	date: str | None = None,
+	account: str | None = None,
+) -> str:
+	"""Apply one Bank Reconciliation Rule to a Bank Transaction.
+
+	Mutates `doc` (payment entries, amounts, status) on success. Caller must
+	`save()` when the transaction is already submitted.
+
+	Returns "applied", "no_match", or "party_mismatch".
+	"""
+	allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+	remaining_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - allocated_amount
+	if remaining_amount <= 0:
+		return "no_match"
+
+	if not evaluate_filters(doc, filters):
+		return "no_match"
+
+	debit, credit = (remaining_amount, 0.0) if flt(doc.deposit) else (0.0, remaining_amount)
+	date = date or doc.date or frappe.utils.nowdate()
+	cost_center = cost_center or frappe.get_cached_value("Company", doc.company, "cost_center")
+	account = account or frappe.get_cached_value("Bank Account", doc.bank_account, "account")
+
+	party = {}
+	if party_account_type := get_party_account_type(target_account):
+		if reason := get_party_error(doc, party_account_type, target_account):
+			# Stop instead of raising, which would abort a whole statement import,
+			# and instead of falling through to the next rule, which would book the
+			# amount to an account the highest-priority match did not intend.
+			frappe.log_error(
+				title="Bank Reconciliation Rule not applied",
+				message=reason,
+				reference_doctype="Bank Reconciliation Rule",
+				reference_name=rule_name,
+			)
+			return "party_mismatch"
+
+		party = {"party_type": doc.party_type, "party": doc.party}
+
+	je_auto_name = create_automatic_journal_entry(
+		company=doc.company,
+		bank_account=doc.bank_account,
+		bank_transaction=doc.name,
+		cost_center=cost_center,
+		date=date,
+		account=account,
+		target_account=target_account,
+		debit=debit,
+		credit=credit,
+		rule=rule_name,
+		**party,
+	)
+	doc.append(
+		"payment_entries",
+		{
+			"payment_document": "Journal Entry",
+			"payment_entry": je_auto_name,
+			"allocated_amount": debit + credit,
+		},
+	)
+	doc.allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
+	doc.unallocated_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - doc.allocated_amount
+	if doc.unallocated_amount == 0:
+		doc.status = "Reconciled"
+	return "applied"
+
+
 def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 	allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
 	remaining_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - allocated_amount
 	if remaining_amount <= 0:
 		return
-
-	debit, credit = (remaining_amount, 0.0) if flt(doc.deposit) else (0.0, remaining_amount)
 
 	bank_reconciliation_rules = frappe.get_all(
 		"Bank Reconciliation Rule",
@@ -342,34 +439,19 @@ def create_je_automatic_rules(doc, cost_center, date, account, debit, credit):
 			)
 			continue
 
-		if not evaluate_filters(doc, filters):
-			continue
-
-		je_auto_name = create_automatic_journal_entry(
-			company=doc.company,
-			bank_account=doc.bank_account,
-			bank_transaction=doc.name,
+		result = apply_bank_reconciliation_rule(
+			doc,
+			br_rule_name,
+			target_account,
+			filters,
 			cost_center=cost_center,
 			date=date,
 			account=account,
-			target_account=target_account,
-			debit=debit,
-			credit=credit,
-			rule=br_rule_name,
 		)
-		doc.append(
-			"payment_entries",
-			{
-				"payment_document": "Journal Entry",
-				"payment_entry": je_auto_name,
-				"allocated_amount": debit + credit,
-			},
-		)
-		doc.allocated_amount = sum(flt(entry.allocated_amount) for entry in doc.payment_entries)
-		doc.unallocated_amount = abs(flt(doc.withdrawal) - flt(doc.deposit)) - doc.allocated_amount
-		if doc.unallocated_amount == 0:
-			doc.status = "Reconciled"
-		break
+		if result == "party_mismatch":
+			return
+		if result == "applied":
+			break
 
 
 def create_automatic_journal_entry(
@@ -383,6 +465,8 @@ def create_automatic_journal_entry(
 	debit: float = 0,
 	credit: float = 0,
 	rule: str | None = None,
+	party_type: str | None = None,
+	party: str | None = None,
 ):
 	journal_entry = frappe.new_doc("Journal Entry")
 	journal_entry.voucher_type = "Bank Entry"
@@ -421,6 +505,8 @@ def create_automatic_journal_entry(
 			"debit_in_account_currency": credit,
 			"credit_in_account_currency": debit,
 			"cost_center": cost_center,
+			"party_type": party_type,
+			"party": party,
 		},
 	)
 

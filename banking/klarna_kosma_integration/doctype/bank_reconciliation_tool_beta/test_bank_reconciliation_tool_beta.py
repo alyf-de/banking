@@ -16,7 +16,7 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
 from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
@@ -34,7 +34,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
 
 
-class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
+class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls) -> None:
 		super().setUpClass()
@@ -637,6 +637,126 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si2.outstanding_amount, 100)
+
+	def test_multi_party_reconciliation_of_returns(self):
+		"""Returns of different parties settled by one deposit book a positive Journal Entry.
+
+		BT deposit equals the refunded total of two return Purchase Invoices
+		of different suppliers.
+		"""
+		supplier_a = create_supplier("_Test Reco Return Supplier A")
+		supplier_b = create_supplier("_Test Reco Return Supplier B")
+		return_1 = make_purchase_invoice(
+			supplier=supplier_a,
+			rate=100,
+			qty=-1,
+			is_return=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+		return_2 = make_purchase_invoice(
+			supplier=supplier_b,
+			rate=50,
+			qty=-1,
+			is_return=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+		refund_1 = abs(return_1.outstanding_amount)
+		refund_2 = abs(return_2.outstanding_amount)
+		bt = create_bank_transaction(
+			deposit=refund_1 + refund_2,
+			bank_account=self.bank_account,
+			reference_no="multi-party-returns",
+			reference_date=getdate(),
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{
+						"payment_doctype": "Purchase Invoice",
+						"payment_name": return_1.name,
+						"party": supplier_a,
+					},
+					{
+						"payment_doctype": "Purchase Invoice",
+						"payment_name": return_2.name,
+						"party": supplier_b,
+					},
+				]
+			),
+			reconcile_multi_party=True,
+		)
+		bt.reload()
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.accounts[0].credit, refund_1)
+		self.assertEqual(je.accounts[1].credit, refund_2)
+		self.assertEqual(je.accounts[2].debit, refund_1 + refund_2)
+		self.assertEqual(je.total_debit, refund_1 + refund_2)
+		self.assertEqual(je.total_credit, refund_1 + refund_2)
+
+		self.assertEqual(bt.payment_entries[0].allocated_amount, refund_1 + refund_2)
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(bt.status, "Reconciled")
+
+	def test_multi_party_reconciliation_of_oversized_returns(self):
+		"""Returns exceeding the deposit are capped at the unallocated amount."""
+		supplier_a = create_supplier("_Test Reco Big Return Supplier A")
+		supplier_b = create_supplier("_Test Reco Big Return Supplier B")
+		return_1 = make_purchase_invoice(
+			supplier=supplier_a,
+			rate=100,
+			qty=-1,
+			is_return=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+		return_2 = make_purchase_invoice(
+			supplier=supplier_b,
+			rate=50,
+			qty=-1,
+			is_return=1,
+			cost_center="_Test Cost Center - _TC",
+		)
+		refund_1 = abs(return_1.outstanding_amount)
+		bt = create_bank_transaction(
+			deposit=refund_1,  # covers only the first return
+			bank_account=self.bank_account,
+			reference_no="oversized-multi-party-returns",
+			reference_date=getdate(),
+		)
+
+		bulk_reconcile_vouchers(
+			bt.name,
+			json.dumps(
+				[
+					{
+						"payment_doctype": "Purchase Invoice",
+						"payment_name": return_1.name,
+						"party": supplier_a,
+					},
+					{
+						"payment_doctype": "Purchase Invoice",
+						"payment_name": return_2.name,
+						"party": supplier_b,
+					},
+				]
+			),
+			reconcile_multi_party=True,
+		)
+		bt.reload()
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(je.total_debit, refund_1)
+		self.assertEqual(je.total_credit, refund_1)
+		self.assertEqual(je.accounts[-1].debit, refund_1)  # bank row matches the deposit
+
+		self.assertEqual(bt.payment_entries[0].allocated_amount, refund_1)
+		self.assertEqual(bt.unallocated_amount, 0)
+		self.assertEqual(bt.status, "Reconciled")
+
+		return_2.reload()
+		self.assertEqual(return_2.outstanding_amount, -50)  # untouched
 
 	def test_configurable_reference_field(self):
 		"""Test if configured reference field is considered."""
@@ -1567,6 +1687,126 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		si_with_fee.reload()
 		self.assertEqual(si.outstanding_amount, 0)
 		self.assertEqual(si_with_fee.outstanding_amount, 80)
+
+	def test_get_bank_transactions_exposes_deposit_fee_for_unpaid_invoices_only(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Reco Amount Fee GL")
+		fee_expense_account = create_bank_gl_account("_Test Reco Amount Fee Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Reco Amount Fee Account",
+			bank_fee_account=fee_expense_account,
+		)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
+		self.assertEqual(row.included_fee, 5)
+		self.assertEqual(row.included_fee_for_reconciliation, 5)
+		self.assertIsNone(row.get("reconcilable_amount"))
+
+		# Flag off → fee not exposed for Match unpaid-invoice budget
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
+
+	def test_get_bank_transactions_hides_fee_when_partially_allocated(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Partial Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Partial Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Partial Fee Reco Account",
+			bank_fee_account=fee_expense_account,
+		)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		# Simulate a prior allocation without going through fee reconcile
+		frappe.db.set_value("Bank Transaction", bt.name, "unallocated_amount", 40)
+		bt.reload()
+
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
+		self.assertEqual(row.included_fee, 5)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
+
+	def test_get_bank_transactions_exposes_fee_despite_sub_precision_rounding(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		fee_gl_account = create_bank_gl_account("_Test Rounding Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Rounding Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Rounding Fee Reco Account",
+			bank_fee_account=fee_expense_account,
+		)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_with_fee,
+		)
+		# Sub-precision drift must not count as a prior allocation
+		frappe.db.set_value("Bank Transaction", bt.name, "unallocated_amount", 74.999999)
+
+		transactions = get_bank_transactions(bank_account=bank_account_with_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
+		self.assertEqual(row.included_fee_for_reconciliation, 5)
+
+	def test_get_bank_transactions_hides_fee_for_foreign_currency_bank(self):
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+
+		bank = create_bank("Citi Bank USD Fee UI", swift_number="CITIUS38")
+		gl_account = create_bank_gl_account("_Test USD Bank Fee UI", "USD")
+		fee_account = create_bank_gl_account("_Test USD Bank Fee Expense UI", "USD")
+		usd_bank_account = create_bank_account(
+			bank.name,
+			gl_account,
+			"USD Fee UI Account",
+			bank_fee_account=fee_account,
+		)
+		bt = create_bank_transaction(
+			deposit=100,
+			included_fee=13,
+			bank_account=usd_bank_account,
+			currency="USD",
+		)
+
+		transactions = get_bank_transactions(bank_account=usd_bank_account)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
+		self.assertEqual(row.included_fee, 13)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
+
+	def test_get_bank_transactions_hides_fee_without_bank_fee_account(self):
+		# Create the account while the fee feature is off so bank_fee_account can stay empty,
+		# then enable the flag — enrich must not expose a fee without an expense account.
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 0)
+
+		fee_gl_account = create_bank_gl_account("_Test Missing Fee Account GL")
+		bank_account_without_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Missing Fee Account",
+		)
+		frappe.db.set_value("Bank Account", bank_account_without_fee, "bank_fee_account", None)
+		bt = create_bank_transaction(
+			deposit=75,
+			included_fee=5,
+			bank_account=bank_account_without_fee,
+		)
+
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		transactions = get_bank_transactions(bank_account=bank_account_without_fee)
+		row = next(transaction for transaction in transactions if transaction.name == bt.name)
+		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {

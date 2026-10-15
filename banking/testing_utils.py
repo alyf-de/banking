@@ -55,16 +55,31 @@ def _create_account(
 
 
 def create_currency_account(
-	currency: str, parent_account: str, account_name: str, company: str = "_Test Company"
+	currency: str,
+	parent_account: str,
+	account_name: str,
+	company: str = "_Test Company",
+	account_type: str = "Bank",
 ):
 	account = _create_account(
 		account_name=account_name,
-		account_type="Bank",
+		account_type=account_type,
 		parent_account=parent_account,
 		company=company,
 		account_currency=currency,
 	)
 	return frappe.get_doc("Account", account)
+
+
+def create_supplier(supplier_name: str = "_Test_Banking_Supplier"):
+	if frappe.db.exists("Supplier", supplier_name):
+		return frappe.get_doc("Supplier", supplier_name)
+
+	supplier = frappe.new_doc("Supplier")
+	supplier.supplier_name = supplier_name
+	supplier.supplier_group = frappe.db.get_value("Supplier Group", {"is_group": 0})
+	supplier.insert(ignore_permissions=True)
+	return supplier
 
 
 def create_bank_account(
@@ -115,3 +130,21 @@ def create_bank_transaction(
 	)
 	doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_links=True)
 	return doc
+
+
+def create_mode_of_payment(name: str, account: str) -> str:
+	if frappe.db.exists("Mode of Payment", name):
+		return name
+
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Mode of Payment",
+				"mode_of_payment": name,
+				"type": "Bank",
+				"accounts": [{"company": "_Test Company", "default_account": account}],
+			}
+		)
+		.insert()
+		.name
+	)

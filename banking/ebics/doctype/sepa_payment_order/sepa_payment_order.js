@@ -32,6 +32,9 @@ frappe.ui.form.on("SEPA Payment Order", {
 		}
 
 		if (frm.doc.docstatus === 0 && frm.has_perm("write")) {
+			frm.add_custom_button(__("Get Payables"), () => {
+				frm.trigger("fetch_payables");
+			});
 			frm.add_custom_button(__("Add Recipient"), () => {
 				frm.trigger("add_recipient");
 			});
@@ -39,6 +42,67 @@ frappe.ui.form.on("SEPA Payment Order", {
 				frm.trigger("update_amounts");
 			});
 		}
+	},
+
+	async fetch_payables(frm) {
+		if (!frm.doc.bank_account) {
+			frappe.show_alert({
+				message: __("Please select a Bank Account first."),
+				indicator: "orange",
+			});
+			frm.scroll_to_field("bank_account");
+			return;
+		}
+
+		const { message: bank_account } = await frappe.db.get_value(
+			"Bank Account",
+			frm.doc.bank_account,
+			["account", "default_mode_of_payment"],
+		);
+		frappe.prompt(
+			[
+				{
+					fieldname: "date",
+					label: __("Due Until"),
+					fieldtype: "Date",
+					reqd: 1,
+					default: frm.doc.execution_date || frappe.datetime.get_today(),
+					description: __(
+						"Fetch Purchase Invoices and Expense Claims that are due, or lose their early payment discount, on or before this date.",
+					),
+				},
+				{
+					fieldname: "mode_of_payment",
+					label: __("Mode of Payment"),
+					fieldtype: "Link",
+					options: "Mode of Payment",
+					default: bank_account.default_mode_of_payment,
+					// Only modes that book to the account of this order's bank account
+					get_query: () => ({
+						filters: [
+							["Mode of Payment Account", "company", "=", frm.doc.company],
+							[
+								"Mode of Payment Account",
+								"default_account",
+								"=",
+								bank_account.account,
+							],
+						],
+					}),
+					description: __(
+						"Fetch Purchase Invoices with this Mode of Payment in their Payment Schedule. If empty, fetch those without a Mode of Payment. Expense Claims are always fetched.",
+					),
+				},
+			],
+			({ date, mode_of_payment }) => {
+				frm.call("fetch_payables", { date, mode_of_payment }).then(() => {
+					frm.refresh_field("payments");
+					frm.dirty();
+				});
+			},
+			__("Get Payables"),
+			__("Fetch"),
+		);
 	},
 
 	add_recipient(frm) {

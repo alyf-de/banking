@@ -18,7 +18,16 @@ if TYPE_CHECKING:
 
 
 @frappe.whitelist(methods=["POST"])
-def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | None = None):
+def make_sepa_payment_order(
+	source_name: str,
+	target_doc: SEPAPaymentOrder | None = None,
+	payment_schedule_rows: list[str] | None = None,
+):
+	"""Map a Purchase Invoice into a SEPA Payment Order.
+
+	If `payment_schedule_rows` is given, only those Payment Schedule rows are mapped.
+	"""
+
 	def set_missing_values(source, target):
 		if not target.bank_account:
 			bank_account = frappe.db.get_value(
@@ -83,7 +92,10 @@ def make_sepa_payment_order(source_name: str, target_doc: SEPAPaymentOrder | Non
 					"parent": "reference_name",
 					"parenttype": "reference_doctype",
 				},
-				"condition": lambda payment: round(payment.outstanding, 2) > 0,
+				"condition": lambda payment: (
+					round(payment.outstanding, 2) > 0
+					and (payment_schedule_rows is None or payment.name in payment_schedule_rows)
+				),
 				"postprocess": process_payment,
 			},
 		},
@@ -169,13 +181,32 @@ def get_sepa_payment_amount(
 		# No Payment Schedule to check.
 		return 0
 
+	# Cap by invoice outstanding minus other SEPA Payments for this PI
+	# (e.g. returns reduced outstanding, or another schedule row already has a SEPA Payment).
+	# Exclude the current schedule row so recalculating an existing payment does not subtract itself.
+	already_covered = _get_existing_sepa_payment_amount(doc.name, exclude_row=payment_schedule_row_name)
+	payable_cap = max(doc.outstanding_amount - already_covered, 0)
+	outstanding = min(scheduled_payment.outstanding, payable_cap)
 	if not scheduled_payment.discount_date or getdate(scheduled_payment.discount_date) < execution_date:
 		# If no discount is given or it's too late for the discount: Use the outstanding amount
 		# This is default, but needs to be reset (in case expected_transaction_date changed etc.)
-		return scheduled_payment.outstanding
+		return outstanding
 	else:
 		# Use the discounted amount
 		return round(
-			scheduled_payment.outstanding * ((100 - scheduled_payment.discount) / 100),
+			outstanding * ((100 - scheduled_payment.discount) / 100),
 			scheduled_payment.precision("outstanding"),
 		)
+
+
+def _get_existing_sepa_payment_amount(purchase_invoice: str, exclude_row: str | None = None) -> float:
+	"""Sum amounts of non-cancelled SEPA Payments linked to this Purchase Invoice."""
+	filters: dict = {
+		"reference_doctype": "Purchase Invoice",
+		"reference_name": purchase_invoice,
+		"docstatus": ["<", 2],
+	}
+	if exclude_row:
+		filters["reference_row_name"] = ["!=", exclude_row]
+
+	return sum(frappe.get_all("SEPA Payment", filters=filters, pluck="amount"))

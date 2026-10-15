@@ -39,6 +39,7 @@ class BankingSettings(Document):
 		enabled: DF.Check
 		fintech_license_key: DF.Password | None
 		fintech_licensee_name: DF.Data | None
+		ignore_payables_before: DF.Date | None
 		reference_fields: DF.Table[BankingReferenceMapping]
 		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
 	# end: auto-generated types
@@ -155,7 +156,7 @@ def successful_request_exists(ebics_user: str | None, order_type: str, request_d
 				and date.fromisoformat(start_date) <= request_date <= date.fromisoformat(end_date)
 			):
 				return True
-		except json.JSONDecodeError:
+		except json.JSONDecodeError, TypeError, ValueError:
 			pass  # If we can't parse, let the sync attempt
 
 	return False

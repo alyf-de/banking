@@ -2,12 +2,12 @@ import frappe
 from erpnext.accounts.doctype.journal_entry.journal_entry import (
 	get_default_bank_cash_account,
 )
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from banking.klarna_kosma_integration.admin import Admin
 
 
-class TestKosma(FrappeTestCase):
+class TestKosma(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		doc = frappe.get_single("Banking Settings")

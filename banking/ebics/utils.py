@@ -223,6 +223,8 @@ def sync_ebics_transactions(
 		manager.confirm_download(success=False)
 		return
 
+	# Commit before acknowledging, so the bank never marks unsaved data as delivered.
+	frappe.db.commit()
 	manager.confirm_download(success=True)
 
 
@@ -254,7 +256,8 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 			camt_document,
 			bank_account,
 			earliest_date=user.start_date,
-			split_batch_transactions=user.split_batch_transactions,
+			split_batch_transactions=bool(user.split_batch_transactions),
+			skip_unresolved_batch_transactions=bool(user.download_batch_transactions),
 		)
 
 
@@ -297,6 +300,7 @@ def process_camt_document(
 	bank_account: str,
 	earliest_date: date | None = None,
 	split_batch_transactions: bool = False,
+	skip_unresolved_batch_transactions: bool = True,
 ):
 	for transaction in camt_document:
 		if transaction.status and transaction.status != "BOOK":
@@ -309,26 +313,35 @@ def process_camt_document(
 			# Split batch transactions into sub-transactions, based on info from camt.054.
 
 			if len(transaction) == 0:
-				# camt.054 might become available at a later time than camt.053.
-				# In this case, we want to block the processing of camt.053 until camt.054 is available.
-				raise UnresolvedBatchTransactionError()
+				if skip_unresolved_batch_transactions:
+					if not frappe.db.exists(
+						"Bank Transaction", {"transaction_id": transaction_id, "bank_account": bank_account}
+					):
+						# camt.054 might become available at a later time than camt.053.
+						# In this case, we want to block the processing of camt.053 until camt.054 is available.
+						raise UnresolvedBatchTransactionError()
 
-			for sub_transaction_index, sub_transaction in enumerate(transaction):
-				sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
-				create_sepa_bank_transaction(
-					bank_account,
-					sub_transaction,
-					transaction_id=transaction_id,
-					subtransaction_id=sub_transaction_id,
-					start_date=earliest_date,
-				)
-		else:
-			create_sepa_bank_transaction(
-				bank_account,
-				transaction,
-				transaction_id=transaction_id,
-				start_date=earliest_date,
-			)
+					# Already imported, e.g. split by an intraday sync. camt.054 is not delivered again.
+					continue
+
+			else:
+				for sub_transaction_index, sub_transaction in enumerate(transaction):
+					sub_transaction_id = get_transaction_id(sub_transaction, sub_transaction_index)
+					create_sepa_bank_transaction(
+						bank_account,
+						sub_transaction,
+						transaction_id=transaction_id,
+						subtransaction_id=sub_transaction_id,
+						start_date=earliest_date,
+					)
+				continue
+
+		create_sepa_bank_transaction(
+			bank_account,
+			transaction,
+			transaction_id=transaction_id,
+			start_date=earliest_date,
+		)
 
 
 def create_sepa_bank_transaction(
