@@ -538,9 +538,7 @@ def process_mt940_statement(statement: MT940Statement, bank_account: str):
 		create_mt940_bank_transaction(bank_account, transaction, currency)
 
 
-def create_mt940_bank_transaction(
-	bank_account: str, transaction: MT940Transaction, currency: str
-):
+def create_mt940_bank_transaction(bank_account: str, transaction: MT940Transaction, currency: str):
 	"""Create a bank transaction from MT940 transaction data"""
 	transaction_date = transaction.get("date") or transaction["valuta"]
 	party_iban = transaction.get("iban") or transaction.get("account")
