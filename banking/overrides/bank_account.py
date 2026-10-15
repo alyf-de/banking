@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, get_link_to_form
 
 from banking.ebics.utils import register_fintech
 
@@ -15,6 +15,7 @@ def validate(doc, method):
 	validate_account_currencies(doc)
 	validate_required_bank_fee_account(doc)
 	validate_default_mode_of_payment(doc)
+	validate_unique_iban(doc)
 	validate_bank_bic(doc)
 
 
@@ -52,6 +53,25 @@ def validate_required_bank_fee_account(doc):
 			"Bank Fee Account is mandatory for company Bank Accounts while automatic journal entries for bank fees are enabled in Banking Settings."
 		)
 	)
+
+
+def validate_unique_iban(doc):
+	"""EBICS imports find the company account by IBAN. Party accounts may share an IBAN."""
+	if not doc.iban or not doc.is_company_account or doc.disabled:
+		return
+
+	existing = frappe.db.get_value(
+		"Bank Account",
+		{"iban": doc.iban, "is_company_account": 1, "disabled": 0, "name": ["!=", doc.name]},
+		"name",
+	)
+
+	if existing:
+		frappe.throw(
+			_("A Bank Account with IBAN {0} already exists: {1}").format(
+				doc.iban, get_link_to_form("Bank Account", existing)
+			)
+		)
 
 
 def automatic_fee_entries_enabled() -> bool:

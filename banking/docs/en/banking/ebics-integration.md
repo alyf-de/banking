@@ -85,13 +85,14 @@ If you already have a suitable **Bank Account** record, just make sure it matche
 Please create a new **EBICS User** in ERPNext and enter the following information:
 
 - _Full Name_: The name of the person in whose name the EBICS access was granted
-- _Company_: The company that owns the bank account
-- _Bank Account_: The bank account you created above
+- _Organization Name_: The name of your organization. The system uses it in the user certificates. It is only required if _Needs Certificate_ is enabled.
 - _Bank_: The bank you created above
 - _Partner ID_: The _Partner ID_ from the bank's letter
 - _User ID_: The _User ID_ from the bank's letter
 - _Needs Certificate_: This is untested and should usually be left unchecked. If you are based in France, you may need to activate this option.
 - _Download Batch Transactions_: If enabled, camt.054 files are downloaded alongside the regular camt.052/053 files and merged with them. This provides detailed line items for bulk transfers. Existing users who had _Split Batch Transactions_ enabled will have this activated automatically.
+
+One **EBICS User** can import transactions for **Bank Accounts** of different companies. The system finds the **Bank Account** by the IBAN in the bank statement. Each IBAN can belong to only one enabled company **Bank Account**.
 
 Please save the **EBICS User** record and click the "Initialize" button. You will be prompted to enter a _Passphrase_ and a _Signature Passphrase_. The _Passphrase_ is required to decrypt your keyring for any communication with the bank. The _Signature Passphrase_ is only required when uploading data to your bank.
 You can optionally store the _Passphrase_ in ERPNext to enabled automated regular downloads of your bank statements. If you do not want to store your password, you'll be prompted every time it is required.
