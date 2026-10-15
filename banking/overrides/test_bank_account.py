@@ -115,3 +115,28 @@ class TestBankAccount(FrappeTestCase):
 				new_bank_account("_Test Other Branch Bank", iban).insert()
 
 			new_bank_account(matching_bank, iban).insert()
+
+	def test_iban_unique_among_company_accounts(self):
+		"""Only company accounts must have a unique IBAN. Party accounts may share it."""
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+		iban = "DE02100500000054540402"
+
+		def new_bank_account(**values):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank="_Test Same Branch Bank",
+				iban=iban,
+				**values,
+			)
+
+		def new_company_account(account_name: str):
+			# ERPNext allows each GL account in only one company Bank Account
+			account = create_currency_account("EUR", get_bank_parent_account(), account_name)
+			return new_bank_account(is_company_account=1, company="_Test Company", account=account.name)
+
+		new_company_account("_Test_Account_IBAN_1").insert()
+		new_bank_account(party_type="Supplier", party="_Test Supplier").insert(ignore_links=True)
+
+		with self.assertRaisesRegex(frappe.ValidationError, iban):
+			new_company_account("_Test_Account_IBAN_2").insert()
