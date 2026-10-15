@@ -280,11 +280,12 @@ def get_bank_account(iban: str, bank: str) -> str | None:
 		"Bank Account",
 		filters={"iban": iban, "disabled": 0, "bank": bank, "is_company_account": 1},
 		pluck="name",
+		order_by="creation",
 	)
 
 	if len(bank_accounts) > 1:
-		# This actually is prevented by a unique IBAN validation in bank_account.py
-		# historically, this was possible though. So we handle it with an Error Log.
+		# New duplicates are prevented by validate_unique_iban in bank_account.py,
+		# but older data may still contain them. Use the oldest account and log it.
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_("Found {0} Bank Accounts for IBAN {1}. Using {2}.").format(
