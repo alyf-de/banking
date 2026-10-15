@@ -56,12 +56,13 @@ def validate_required_bank_fee_account(doc):
 
 
 def validate_unique_iban(doc):
-	if not doc.iban:
+	"""EBICS imports find the company account by IBAN. Party accounts may share an IBAN."""
+	if not doc.iban or not doc.is_company_account or doc.disabled:
 		return
 
 	existing = frappe.db.get_value(
 		"Bank Account",
-		{"iban": doc.iban, "name": ["!=", doc.name]},
+		{"iban": doc.iban, "is_company_account": 1, "disabled": 0, "name": ["!=", doc.name]},
 		"name",
 	)
 
