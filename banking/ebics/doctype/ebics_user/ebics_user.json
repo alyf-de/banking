@@ -200,14 +200,8 @@
   }
  ],
  "row_format": "Dynamic",
-<<<<<<< HEAD
- "search_fields": "full_name,bank,company",
- "sort_field": "modified",
-=======
- "rows_threshold_for_grid_search": 20,
  "search_fields": "full_name,bank,organization_name",
- "sort_field": "creation",
->>>>>>> 7c071ca (fix!: handle multiple companies' bank accounts with one EBICS User (#405))
+ "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
  "title_field": "full_name",

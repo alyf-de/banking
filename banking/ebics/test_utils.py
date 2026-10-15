@@ -4,12 +4,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-<<<<<<< HEAD
-from frappe.tests.utils import FrappeTestCase
-=======
 import frappe
-from frappe.tests import IntegrationTestCase, UnitTestCase
->>>>>>> 7c071ca (fix!: handle multiple companies' bank accounts with one EBICS User (#405))
+from frappe.tests.utils import FrappeTestCase
 
 from banking.ebics.utils import (
 	UnresolvedBatchTransactionError,
@@ -23,7 +19,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test
 )
 from banking.testing_utils import create_currency_account, get_bank_parent_account
 
-EXTRA_TEST_RECORD_DEPENDENCIES = ["Company"]
+test_dependencies = ["Company"]
 
 
 class TestEBICSUtils(FrappeTestCase):
@@ -110,7 +106,7 @@ class TestEBICSUtils(FrappeTestCase):
 		create_sepa_bank_transaction.assert_not_called()
 
 
-class TestEBICSMultipleCompanies(IntegrationTestCase):
+class TestEBICSMultipleCompanies(FrappeTestCase):
 	def test_one_bank_imports_for_several_companies(self):
 		"""One EBICS User (one bank) finds Bank Accounts of any company by IBAN."""
 		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")

@@ -297,12 +297,7 @@ def get_bank_account(iban: str, bank: str) -> str | None:
 def process_camt_document(
 	camt_document: "CAMTDocument",
 	bank_account: str,
-<<<<<<< HEAD
-	company: "str | None" = None,
 	earliest_date: "date | None" = None,
-=======
-	earliest_date: date | None = None,
->>>>>>> 7c071ca (fix!: handle multiple companies' bank accounts with one EBICS User (#405))
 	split_batch_transactions: bool = False,
 	skip_unresolved_batch_transactions: bool = True,
 ):
@@ -350,12 +345,7 @@ def process_camt_document(
 
 def create_sepa_bank_transaction(
 	bank_account: str,
-<<<<<<< HEAD
-	company: str,
 	sepa_transaction: "SEPATransaction",
-=======
-	sepa_transaction: SEPATransaction,
->>>>>>> 7c071ca (fix!: handle multiple companies' bank accounts with one EBICS User (#405))
 	transaction_id: str,
 	subtransaction_id: str | None = None,
 	start_date: "date | None" = None,
