@@ -152,6 +152,7 @@ class TestBankAccount(IntegrationTestCase):
 
 		usd_ledger_account.account_currency = "CHF"
 		usd_ledger_account.save()
+		usd_ledger_account.reload()
 		usd_ledger_account.account_currency = "USD"
 		usd_ledger_account.save()
 

@@ -111,7 +111,7 @@ class TestEBICSUtils(UnitTestCase):
 class TestEBICSMultipleCompanies(IntegrationTestCase):
 	def test_shared_iban_matches_account_currency(self):
 		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
-		iban = "DE02100500000054540402"
+		iban = "DE19100500000012345678"
 		bank_accounts = {}
 		for currency in ("EUR", "USD"):
 			account = create_currency_account(
