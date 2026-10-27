@@ -242,11 +242,13 @@ def import_ebics_json(user: EBICSUser, main_data: dict, batch_data: dict | None 
 
 	for name in sorted(main_data):
 		camt_document = CAMTDocument(xml=main_data[name], camt54=batch_data)
-		bank_account = get_bank_account(camt_document.iban, user.bank)
+		bank_account = get_bank_account(camt_document.iban, user.bank, camt_document.currency)
 		if not bank_account:
 			frappe.log_error(
 				title=_("Banking Error"),
-				message=_("Bank Account not found for IBAN {0}").format(camt_document.iban),
+				message=_("Bank Account not found for IBAN {0} and currency {1}").format(
+					camt_document.iban, camt_document.currency
+				),
 				reference_doctype="EBICS User",
 				reference_name=user.name,
 			)
@@ -275,17 +277,31 @@ def validated_perms(ebics_user, permitted_types, required_type):
 		)
 
 
-def get_bank_account(iban: str, bank: str) -> str | None:
-	bank_accounts = frappe.get_all(
-		"Bank Account",
-		filters={"iban": iban, "disabled": 0, "bank": bank, "is_company_account": 1},
-		pluck="name",
-		order_by="creation",
+def get_bank_account(iban: str, bank: str, currency: str | None = None) -> str | None:
+	bank_account = frappe.qb.DocType("Bank Account")
+	query = (
+		frappe.qb.from_(bank_account)
+		.select(bank_account.name)
+		.where(
+			(bank_account.iban == iban)
+			& (bank_account.disabled == 0)
+			& (bank_account.bank == bank)
+			& (bank_account.is_company_account == 1)
+		)
+		.orderby(bank_account.creation)
 	)
+	if currency:
+		account = frappe.qb.DocType("Account")
+		query = (
+			query.join(account)
+			.on(bank_account.account == account.name)
+			.where(account.account_currency == currency)
+		)
+	bank_accounts = query.run(pluck=True)
 
 	if len(bank_accounts) > 1:
-		# New duplicates are prevented by validate_unique_iban in bank_account.py,
-		# but older data may still contain them. Use the oldest account and log it.
+		# Older data or statements without currency may still match multiple accounts.
+		# Use the oldest account and log it.
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_("Found {0} Bank Accounts for IBAN {1}. Using {2}.").format(
