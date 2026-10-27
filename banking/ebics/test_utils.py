@@ -138,6 +138,7 @@ class TestEBICSMultipleCompanies(IntegrationTestCase):
 		self.assertIsNone(get_bank_account(iban, "_Test Other Bank", "EUR"))
 		frappe.get_doc("Bank Account", bank_accounts["USD"]).db_set("disabled", 1)
 		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "USD"))
+		self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank"), bank_accounts["EUR"])
 
 	def test_one_bank_imports_for_several_companies(self):
 		"""One EBICS User (one bank) finds Bank Accounts of any company by IBAN."""

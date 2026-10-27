@@ -118,6 +118,9 @@ extend_doctype_class = {
 # Hook on document methods and events
 
 doc_events = {
+	"Account": {
+		"validate": "banking.overrides.bank_account.validate_linked_account_currency",
+	},
 	"Bank Transaction": {
 		"on_update_after_submit": "banking.overrides.bank_transaction.on_update_after_submit",
 		"before_submit": "banking.overrides.bank_transaction.before_submit",

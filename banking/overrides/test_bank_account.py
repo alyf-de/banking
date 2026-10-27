@@ -144,6 +144,17 @@ class TestBankAccount(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, iban):
 			new_company_account("_Test_Account_IBAN_2").insert()
 
+		usd_ledger_account = frappe.get_doc("Account", usd_account.account)
+		usd_ledger_account.account_currency = "EUR"
+		with self.assertRaisesRegex(frappe.ValidationError, iban):
+			usd_ledger_account.save()
+		self.assertEqual(frappe.db.get_value("Account", usd_account.account, "account_currency"), "USD")
+
+		usd_ledger_account.account_currency = "CHF"
+		usd_ledger_account.save()
+		usd_ledger_account.account_currency = "USD"
+		usd_ledger_account.save()
+
 		usd_eur_account = create_currency_account(
 			"EUR", get_bank_parent_account(), "_Test_Account_IBAN_USD_EUR"
 		)

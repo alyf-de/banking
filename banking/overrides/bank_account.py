@@ -55,12 +55,20 @@ def validate_required_bank_fee_account(doc):
 	)
 
 
-def validate_unique_iban(doc):
+def validate_linked_account_currency(doc, method):
+	if doc.is_new() or not doc.has_value_changed("account_currency"):
+		return
+
+	for bank_account in frappe.get_all("Bank Account", filters={"account": doc.name}, pluck="name"):
+		validate_unique_iban(frappe.get_doc("Bank Account", bank_account), currency=doc.account_currency)
+
+
+def validate_unique_iban(doc, currency: str | None = None):
 	"""EBICS imports find company accounts by IBAN and currency. Party accounts may share both."""
 	if not doc.iban or not doc.is_company_account or not doc.account or doc.disabled:
 		return
 
-	currency = frappe.db.get_value("Account", doc.account, "account_currency")
+	currency = currency or frappe.db.get_value("Account", doc.account, "account_currency")
 	bank_account = frappe.qb.DocType("Bank Account")
 	account = frappe.qb.DocType("Account")
 	existing = (
