@@ -1,0 +1,154 @@
+
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission. If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
+      contents: read
+
+    services:
+      redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3 --tmpfs=/var/lib/mysql:rw,noexec,nosuid,size=2g
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
+
+      - name: Find versions
+        id: versions
+        run: |
+          # pyproject.toml pins e.g. frappe = ">=16.15.0,<17.0.0", so we use version-16.
+          # A "-dev" pin like ">=17.0.0-dev,<18.0.0" means the develop branch.
+          FRAPPE_MIN_VERSION=$(grep -oP '^frappe = ">=\K[^,"]+' pyproject.toml)
+          FRAPPE_MAJOR=${FRAPPE_MIN_VERSION%%.*}
+          if [[ $FRAPPE_MIN_VERSION == *-dev ]]; then
+            echo "frappe-branch=develop" >> $GITHUB_OUTPUT
+          else
+            echo "frappe-branch=version-$FRAPPE_MAJOR" >> $GITHUB_OUTPUT
+          fi
+
+          case $FRAPPE_MAJOR in
+            15) PYTHON_VERSION=3.10; NODE_VERSION=18 ;;
+            *)  PYTHON_VERSION=3.14; NODE_VERSION=24 ;;
+          esac
+          echo "python=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+          echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.versions.outputs.node }}
+          check-latest: true
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          # Copilot sessions can't restore caches from PR runs and don't save their own
+          enable-cache: false
+
+      - name: Install MariaDB Client
+        run: |
+          sudo apt update
+          sudo apt-get install mariadb-client libcups2-dev
+
+      - name: Setup
+        run: |
+          uv tool install frappe-bench
+          bench init --skip-redis-config-generation --skip-assets --frappe-branch ${{ steps.versions.outputs.frappe-branch }} --python "$(which python)" ~/frappe-bench
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
+          # The database is thrown away after the session, so skip the fsync on every commit
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL innodb_flush_log_at_trx_commit = 0"
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL sync_binlog = 0"
+
+      - name: Get apps
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench get-app --branch ${{ steps.versions.outputs.frappe-branch }} --skip-assets payments
+          bench get-app --branch ${{ steps.versions.outputs.frappe-branch }} --skip-assets erpnext
+          bench get-app --branch ${{ steps.versions.outputs.frappe-branch }} --skip-assets hrms
+          bench get-app --soft-link --skip-assets banking $GITHUB_WORKSPACE
+        env:
+          CI: 'Yes'
+
+      - name: Setup requirements
+        working-directory: /home/runner/frappe-bench
+        run: bench setup requirements --dev
+        env:
+          CI: 'Yes'
+
+      - name: Build assets
+        working-directory: /home/runner/frappe-bench
+        run: bench build
+        env:
+          CI: 'Yes'
+
+      - name: Create site
+        working-directory: /home/runner/frappe-bench
+        run: bench new-site --db-root-password root --admin-password admin test_site
+        env:
+          CI: 'Yes'
+
+      - name: Install apps
+        working-directory: /home/runner/frappe-bench
+        run: |
+          # Same order as the server tests: hrms after banking
+          bench --site test_site install-app erpnext
+          bench --site test_site install-app payments
+          bench --site test_site install-app banking
+          bench --site test_site install-app hrms
+          bench --site test_site set-config allow_tests true
+        env:
+          CI: 'Yes'
+
+      - name: Install pre-commit
+        run: uv tool install pre-commit
+
+      - name: Activate pre-commit
+        working-directory: /home/runner/frappe-bench/apps/banking
+        run: |
+          pre-commit --version
+          pre-commit install
+
+      - name: Install skills
+        run: |
+          # Pin to a commit, skill text goes straight into the agent's context
+          SKILLS_SHA=5dc2f984081f6d8e23559af03b0e7c2799245d79
+          for skill in frappe-app-dev frappe-code-review code-style technical-writing; do
+            gh skill install frappe/skills skills/$skill --pin $SKILLS_SHA
+          done
+          # Keep the installed skills out of Copilot's commits
+          echo ".agents/skills/" >> .git/info/exclude
+        env:
+          GH_TOKEN: ${{ github.token }}
