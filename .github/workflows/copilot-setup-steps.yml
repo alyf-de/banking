@@ -129,6 +129,7 @@ jobs:
           bench --site test_site install-app banking
           bench --site test_site install-app hrms
           bench --site test_site set-config allow_tests true
+          bench --site test_site set-config developer_mode 1
         env:
           CI: 'Yes'
 
