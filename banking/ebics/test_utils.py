@@ -37,6 +37,7 @@ class TestEBICSUtils(UnitTestCase):
 		camt_document_class = MagicMock()
 		camt_document = camt_document_class.return_value
 		camt_document.iban = "DE89370400440532013000"
+		camt_document.currency = "EUR"
 		user = SimpleNamespace(
 			bank="Test Bank",
 			start_date=None,
@@ -47,6 +48,7 @@ class TestEBICSUtils(UnitTestCase):
 		with patch.dict("sys.modules", {"fintech.sepa": MagicMock(CAMTDocument=camt_document_class)}):
 			import_ebics_json(user, {"camt053.xml": b"<Document />"})
 
+		_get_bank_account.assert_called_once_with(camt_document.iban, user.bank, "EUR")
 		process_camt_document.assert_called_once_with(
 			camt_document,
 			"Test Bank Account",
@@ -107,6 +109,37 @@ class TestEBICSUtils(UnitTestCase):
 
 
 class TestEBICSMultipleCompanies(IntegrationTestCase):
+	def test_shared_iban_matches_account_currency(self):
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+		iban = "DE19100500000012345678"
+		bank_accounts = {}
+		for currency in ("EUR", "USD"):
+			account = create_currency_account(
+				currency, get_bank_parent_account(), f"_Test_EBICS_Shared_IBAN_{currency}"
+			)
+			bank_accounts[currency] = (
+				frappe.new_doc(
+					"Bank Account",
+					account_name=f"_Test_EBICS_Shared_IBAN_{currency}",
+					bank="_Test Same Branch Bank",
+					iban=iban,
+					is_company_account=1,
+					company="_Test Company",
+					account=account.name,
+				)
+				.insert()
+				.name
+			)
+
+		for currency, bank_account in bank_accounts.items():
+			self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank", currency), bank_account)
+
+		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "CHF"))
+		self.assertIsNone(get_bank_account(iban, "_Test Other Bank", "EUR"))
+		frappe.get_doc("Bank Account", bank_accounts["USD"]).db_set("disabled", 1)
+		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "USD"))
+		self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank"), bank_accounts["EUR"])
+
 	def test_one_bank_imports_for_several_companies(self):
 		"""One EBICS User (one bank) finds Bank Accounts of any company by IBAN."""
 		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
@@ -128,7 +161,7 @@ class TestEBICSMultipleCompanies(IntegrationTestCase):
 				account=account.name,
 			).insert()
 
-			bank_account = get_bank_account(iban, "_Test Same Branch Bank")
+			bank_account = get_bank_account(iban, "_Test Same Branch Bank", currency)
 			create_bank_transaction(
 				bank_account,
 				transaction_id=f"_Test_EBICS_{iban}",

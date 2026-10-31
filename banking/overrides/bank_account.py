@@ -55,21 +55,42 @@ def validate_required_bank_fee_account(doc):
 	)
 
 
-def validate_unique_iban(doc):
-	"""EBICS imports find the company account by IBAN. Party accounts may share an IBAN."""
-	if not doc.iban or not doc.is_company_account or doc.disabled:
+def validate_linked_account_currency(doc, method):
+	if doc.is_new() or not doc.has_value_changed("account_currency"):
 		return
 
-	existing = frappe.db.get_value(
-		"Bank Account",
-		{"iban": doc.iban, "is_company_account": 1, "disabled": 0, "name": ["!=", doc.name]},
-		"name",
+	for bank_account in frappe.get_all("Bank Account", filters={"account": doc.name}, pluck="name"):
+		validate_unique_iban(frappe.get_doc("Bank Account", bank_account), currency=doc.account_currency)
+
+
+def validate_unique_iban(doc, currency: str | None = None):
+	"""EBICS imports find company accounts by IBAN and currency. Party accounts may share both."""
+	if not doc.iban or not doc.is_company_account or not doc.account or doc.disabled:
+		return
+
+	currency = currency or frappe.db.get_value("Account", doc.account, "account_currency")
+	bank_account = frappe.qb.DocType("Bank Account")
+	account = frappe.qb.DocType("Account")
+	existing = (
+		frappe.qb.from_(bank_account)
+		.join(account)
+		.on(bank_account.account == account.name)
+		.select(bank_account.name)
+		.where(
+			(bank_account.iban == doc.iban)
+			& (bank_account.is_company_account == 1)
+			& (bank_account.disabled == 0)
+			& (bank_account.name != doc.name)
+			& (account.account_currency == currency)
+		)
+		.limit(1)
+		.run(pluck=True)
 	)
 
 	if existing:
 		frappe.throw(
-			_("A Bank Account with IBAN {0} already exists: {1}").format(
-				doc.iban, get_link_to_form("Bank Account", existing)
+			_("A Bank Account with IBAN {0} and currency {1} already exists: {2}").format(
+				doc.iban, currency, get_link_to_form("Bank Account", existing[0])
 			)
 		)
 
