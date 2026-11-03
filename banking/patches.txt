@@ -12,4 +12,5 @@ execute:from banking.install import insert_custom_records; insert_custom_records
 banking.patches.set_voucher_matching_defaults
 banking.patches.download_batch_transactions
 banking.patches.add_voucher_reservation_fields
+banking.patches.ebics_user_organization_name
 execute:from banking.install import make_property_setters; make_property_setters()

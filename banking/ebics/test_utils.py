@@ -4,9 +4,22 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from banking.ebics.utils import UnresolvedBatchTransactionError, import_ebics_json, process_camt_document
+from banking.ebics.utils import (
+	UnresolvedBatchTransactionError,
+	create_bank_transaction,
+	get_bank_account,
+	import_ebics_json,
+	process_camt_document,
+)
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
+	create_bank,
+)
+from banking.testing_utils import create_currency_account, get_bank_parent_account
+
+test_dependencies = ["Company"]
 
 
 class TestEBICSUtils(FrappeTestCase):
@@ -24,9 +37,9 @@ class TestEBICSUtils(FrappeTestCase):
 		camt_document_class = MagicMock()
 		camt_document = camt_document_class.return_value
 		camt_document.iban = "DE89370400440532013000"
+		camt_document.currency = "EUR"
 		user = SimpleNamespace(
 			bank="Test Bank",
-			company="Test Company",
 			start_date=None,
 			split_batch_transactions=True,
 			download_batch_transactions=False,
@@ -35,11 +48,11 @@ class TestEBICSUtils(FrappeTestCase):
 		with patch.dict("sys.modules", {"fintech.sepa": MagicMock(CAMTDocument=camt_document_class)}):
 			import_ebics_json(user, {"camt053.xml": b"<Document />"})
 
+		_get_bank_account.assert_called_once_with(camt_document.iban, user.bank, "EUR")
 		process_camt_document.assert_called_once_with(
 			camt_document,
 			"Test Bank Account",
-			"Test Company",
-			None,
+			earliest_date=None,
 			split_batch_transactions=True,
 			skip_unresolved_batch_transactions=False,
 		)
@@ -54,14 +67,12 @@ class TestEBICSUtils(FrappeTestCase):
 		process_camt_document(
 			[transaction],
 			"Test Bank Account",
-			"Test Company",
 			split_batch_transactions=True,
 			skip_unresolved_batch_transactions=False,
 		)
 
 		create_sepa_bank_transaction.assert_called_once_with(
 			"Test Bank Account",
-			"Test Company",
 			transaction,
 			transaction_id="batch-id",
 			start_date=None,
@@ -74,7 +85,6 @@ class TestEBICSUtils(FrappeTestCase):
 			process_camt_document(
 				[self.EmptyBatchTransaction()],
 				"Test Bank Account",
-				"Test Company",
 				split_batch_transactions=True,
 				skip_unresolved_batch_transactions=True,
 			)
@@ -91,9 +101,76 @@ class TestEBICSUtils(FrappeTestCase):
 		process_camt_document(
 			[transaction],
 			"Test Bank Account",
-			"Test Company",
 			split_batch_transactions=True,
 			skip_unresolved_batch_transactions=True,
 		)
 
 		create_sepa_bank_transaction.assert_not_called()
+
+
+class TestEBICSMultipleCompanies(FrappeTestCase):
+	def test_shared_iban_matches_account_currency(self):
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+		iban = "DE19100500000012345678"
+		bank_accounts = {}
+		for currency in ("EUR", "USD"):
+			account = create_currency_account(
+				currency, get_bank_parent_account(), f"_Test_EBICS_Shared_IBAN_{currency}"
+			)
+			bank_accounts[currency] = (
+				frappe.new_doc(
+					"Bank Account",
+					account_name=f"_Test_EBICS_Shared_IBAN_{currency}",
+					bank="_Test Same Branch Bank",
+					iban=iban,
+					is_company_account=1,
+					company="_Test Company",
+					account=account.name,
+				)
+				.insert()
+				.name
+			)
+
+		for currency, bank_account in bank_accounts.items():
+			self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank", currency), bank_account)
+
+		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "CHF"))
+		self.assertIsNone(get_bank_account(iban, "_Test Other Bank", "EUR"))
+		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank"))
+		frappe.get_doc("Bank Account", bank_accounts["USD"]).db_set("disabled", 1)
+		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "USD"))
+		self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank"), bank_accounts["EUR"])
+
+	def test_one_bank_imports_for_several_companies(self):
+		"""One EBICS User (one bank) finds Bank Accounts of any company by IBAN."""
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+
+		for company, currency, iban in (
+			("_Test Company", "INR", "DE02100500000054540402"),
+			("_Test Company 1", "USD", "DE65100500000001234567"),
+		):
+			account = create_currency_account(
+				currency, get_bank_parent_account(company), f"_Test_EBICS_{currency}", company
+			)
+			frappe.new_doc(
+				"Bank Account",
+				account_name=f"_Test_EBICS_{currency}",
+				bank="_Test Same Branch Bank",
+				iban=iban,
+				is_company_account=1,
+				company=company,
+				account=account.name,
+			).insert()
+
+			bank_account = get_bank_account(iban, "_Test Same Branch Bank", currency)
+			create_bank_transaction(
+				bank_account,
+				transaction_id=f"_Test_EBICS_{iban}",
+				date=frappe.utils.today(),
+				deposit=100,
+				currency=currency,
+			)
+
+			self.assertEqual(
+				frappe.db.get_value("Bank Transaction", {"bank_account": bank_account}, "company"), company
+			)
