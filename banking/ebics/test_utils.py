@@ -136,6 +136,7 @@ class TestEBICSMultipleCompanies(IntegrationTestCase):
 
 		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "CHF"))
 		self.assertIsNone(get_bank_account(iban, "_Test Other Bank", "EUR"))
+		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank"))
 		frappe.get_doc("Bank Account", bank_accounts["USD"]).db_set("disabled", 1)
 		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "USD"))
 		self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank"), bank_accounts["EUR"])

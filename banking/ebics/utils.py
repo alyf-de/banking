@@ -299,9 +299,19 @@ def get_bank_account(iban: str, bank: str, currency: str | None = None) -> str |
 		)
 	bank_accounts = query.run(pluck=True)
 
+	if len(bank_accounts) > 1 and not currency:
+		# Accounts with one IBAN in different currencies are valid. Without a
+		# currency, we cannot select the correct account. Do not guess.
+		frappe.log_error(
+			title=_("Banking Error"),
+			message=_("Found {0} Bank Accounts for IBAN {1}, but the statement has no currency.").format(
+				len(bank_accounts), iban
+			),
+		)
+		return None
+
 	if len(bank_accounts) > 1:
-		# Older data or statements without currency may still match multiple accounts.
-		# Use the oldest account and log it.
+		# Older data may still contain duplicates. Use the oldest account and log it.
 		frappe.log_error(
 			title=_("Banking Error"),
 			message=_("Found {0} Bank Accounts for IBAN {1}. Using {2}.").format(
