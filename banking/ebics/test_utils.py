@@ -108,10 +108,7 @@ class TestEBICSUtils(FrappeTestCase):
 		create_sepa_bank_transaction.assert_not_called()
 
 
-<<<<<<< HEAD
 class TestEBICSMultipleCompanies(FrappeTestCase):
-=======
-class TestEBICSMultipleCompanies(IntegrationTestCase):
 	def test_shared_iban_matches_account_currency(self):
 		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
 		iban = "DE19100500000012345678"
@@ -144,7 +141,6 @@ class TestEBICSMultipleCompanies(IntegrationTestCase):
 		self.assertIsNone(get_bank_account(iban, "_Test Same Branch Bank", "USD"))
 		self.assertEqual(get_bank_account(iban, "_Test Same Branch Bank"), bank_accounts["EUR"])
 
->>>>>>> 9f328e4 (fix: allow shared IBANs across currencies without ambiguous EBICS matching (#463))
 	def test_one_bank_imports_for_several_companies(self):
 		"""One EBICS User (one bank) finds Bank Accounts of any company by IBAN."""
 		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
