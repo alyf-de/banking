@@ -78,6 +78,8 @@ If you don't have one already, please create a new **Bank Account** in ERPNext a
 - _Bank_: Select the **Bank** you created in the previous step
 - _IBAN_: The IBAN of the bank account, without spaces. This is important for the EBICS communication, as it's used to identify the account from the data received from the bank.
 
+If your bank keeps more than one currency under one IBAN, create one **Bank Account** for each currency. Each **Bank Account** needs its own _Company Account_ in the applicable currency.
+
 If you already have a suitable **Bank Account** record, just make sure it matches the above requirements.
 
 ## Create a new EBICS User
@@ -85,13 +87,14 @@ If you already have a suitable **Bank Account** record, just make sure it matche
 Please create a new **EBICS User** in ERPNext and enter the following information:
 
 - _Full Name_: The name of the person in whose name the EBICS access was granted
-- _Company_: The company that owns the bank account
-- _Bank Account_: The bank account you created above
+- _Organization Name_: The name of your organization. The system uses it in the user certificates. It is only required if _Needs Certificate_ is enabled.
 - _Bank_: The bank you created above
 - _Partner ID_: The _Partner ID_ from the bank's letter
 - _User ID_: The _User ID_ from the bank's letter
 - _Needs Certificate_: This is untested and should usually be left unchecked. If you are based in France, you may need to activate this option.
 - _Download Batch Transactions_: If enabled, camt.054 files are downloaded alongside the regular camt.052/053 files and merged with them. This provides detailed line items for bulk transfers. Existing users who had _Split Batch Transactions_ enabled will have this activated automatically.
+
+One **EBICS User** can import transactions for **Bank Accounts** of different companies. The system finds the **Bank Account** by the IBAN and the currency in the bank statement. The currency of a **Bank Account** is the currency of its _Company Account_. Each combination of IBAN and currency can belong to only one enabled company **Bank Account**.
 
 Please save the **EBICS User** record and click the "Initialize" button. You will be prompted to enter a _Passphrase_ and a _Signature Passphrase_. The _Passphrase_ is required to decrypt your keyring for any communication with the bank. The _Signature Passphrase_ is only required when uploading data to your bank.
 You can optionally store the _Passphrase_ in ERPNext to enabled automated regular downloads of your bank statements. If you do not want to store your password, you'll be prompted every time it is required.
@@ -163,6 +166,10 @@ This means that your bank has not made any account statements available, for the
 - You're trying to download transactions for the current day, but the account statements are only made available for completed days. Try downloading bank statements for past dates.
 - You have a staging site that uses the same EBICS User. Both sites try to download the data but the Bank responds only to the first request. If you want to use EBICS on your staging site, you need a second EBICS User. Otherwise, you should disable EBICS for your staging site via **Banking Settings** or (`common_`)`site_config.json`: `"disable_ebics": true`.
 
-### Bank Account not found for IBAN
+### Bank Account not found for IBAN and currency
 
-This message in you error log means that we received transactions from your bank, but a corresponding **Bank Account** has not been configured in ERPNext. See [Set up the Bank Account](/app/docs/en/banking/ebics-integration#set-up-the-bank-account).
+This message in you error log means that we received transactions from your bank, but a corresponding **Bank Account** has not been configured in ERPNext. Make sure that the IBAN and the currency of the _Company Account_ match the bank statement. See [Set up the Bank Account](/app/docs/en/banking/ebics-integration#set-up-the-bank-account).
+
+### Found several Bank Accounts for IBAN, but the statement has no currency
+
+More than one enabled company **Bank Account** has the IBAN of the bank statement, and the statement does not specify a currency. The system cannot select the correct **Bank Account**, so it skips the statement. Ask your bank to include the currency in the statement, or disable the **Bank Accounts** that you do not use.

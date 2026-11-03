@@ -24,7 +24,6 @@ class EBICSUser(Document):
 
 		bank: DF.Link | None
 		bank_keys_activated: DF.Check
-		company: DF.Link | None
 		country: DF.Link | None
 		download_batch_transactions: DF.Check
 		full_name: DF.Data | None
@@ -32,6 +31,7 @@ class EBICSUser(Document):
 		intraday_sync: DF.Check
 		keyring: DF.Code | None
 		needs_certificates: DF.Check
+		organization_name: DF.Data | None
 		partner_id: DF.Data | None
 		passphrase: DF.Password | None
 		protocol_version: DF.Literal["H004", "H005"]
@@ -197,7 +197,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 			raise e
 
 	if user.needs_certificates:
-		manager.create_user_certificates(user.full_name, user.company)
+		manager.create_user_certificates(user.full_name, user.organization_name)
 
 	manager.send_keys_to_bank()
 
@@ -275,7 +275,7 @@ def change_protocol_version(ebics_user: str, protocol_version: str, passphrase: 
 
 	if user.needs_certificates:
 		manager = get_ebics_manager(user, passphrase=passphrase)
-		manager.create_user_certificates(user.full_name, user.company)
+		manager.create_user_certificates(user.full_name, user.organization_name)
 
 
 def ensure_ebics_is_enabled():
