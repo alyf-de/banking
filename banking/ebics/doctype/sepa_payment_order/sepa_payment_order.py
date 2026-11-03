@@ -1,7 +1,7 @@
 # Copyright (c) 2025, ALYF GmbH and contributors
 # For license information, please see license.txt
 import contextlib
-from enum import StrEnum
+from enum import Enum
 from typing import TYPE_CHECKING
 
 import frappe
@@ -25,7 +25,7 @@ EEA_COUNTRIES = {
 }  # fmt: skip
 
 
-class PaymentOrderStatus(StrEnum):
+class PaymentOrderStatus(str, Enum):
 	"""
 	Single source of truth for payment order status values.
 	Used to determine select field options and communicate changes via hooks.
