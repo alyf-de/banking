@@ -116,8 +116,8 @@ class TestBankAccount(IntegrationTestCase):
 
 			new_bank_account(matching_bank, iban).insert()
 
-	def test_iban_unique_among_company_accounts(self):
-		"""Only company accounts must have a unique IBAN. Party accounts may share it."""
+	def test_iban_and_currency_unique_among_company_accounts(self):
+		"""Company accounts may share an IBAN only in different currencies."""
 		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
 		iban = "DE02100500000054540402"
 
@@ -130,13 +130,27 @@ class TestBankAccount(IntegrationTestCase):
 				**values,
 			)
 
-		def new_company_account(account_name: str):
+		def new_company_account(account_name: str, currency: str = "EUR"):
 			# ERPNext allows each GL account in only one company Bank Account
-			account = create_currency_account("EUR", get_bank_parent_account(), account_name)
+			account = create_currency_account(currency, get_bank_parent_account(), account_name)
 			return new_bank_account(is_company_account=1, company="_Test Company", account=account.name)
 
-		new_company_account("_Test_Account_IBAN_1").insert()
+		eur_account = new_company_account("_Test_Account_IBAN_1").insert()
+		usd_account = new_company_account("_Test_Account_IBAN_USD", "USD").insert()
+		eur_account.save()
+		usd_account.save()
 		new_bank_account(party_type="Supplier", party="_Test Supplier").insert(ignore_links=True)
 
 		with self.assertRaisesRegex(frappe.ValidationError, iban):
 			new_company_account("_Test_Account_IBAN_2").insert()
+
+		usd_eur_account = create_currency_account(
+			"EUR", get_bank_parent_account(), "_Test_Account_IBAN_USD_EUR"
+		)
+		usd_account.account = usd_eur_account.name
+		with self.assertRaisesRegex(frappe.ValidationError, iban):
+			usd_account.save()
+
+		eur_account.disabled = 1
+		eur_account.save()
+		new_company_account("_Test_Account_IBAN_3").insert()
