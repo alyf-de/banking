@@ -176,7 +176,7 @@ class TestEBICSMultipleCompanies(FrappeTestCase):
 			)
 
 
-class TestEBICSDuplicateDetection(IntegrationTestCase):
+class TestEBICSDuplicateDetection(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
