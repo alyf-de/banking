@@ -174,3 +174,75 @@ class TestEBICSMultipleCompanies(IntegrationTestCase):
 			self.assertEqual(
 				frappe.db.get_value("Bank Transaction", {"bank_account": bank_account}, "company"), company
 			)
+
+
+class TestEBICSDuplicateDetection(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+		account = create_currency_account("INR", get_bank_parent_account(), "_Test_EBICS_Duplicates")
+		cls.bank_account = (
+			frappe.new_doc(
+				"Bank Account",
+				account_name="_Test_EBICS_Duplicates",
+				bank="_Test Same Branch Bank",
+				is_company_account=1,
+				company="_Test Company",
+				account=account.name,
+			)
+			.insert()
+			.name
+		)
+
+	def test_reused_reference_is_not_a_duplicate(self):
+		"""A bank can use the same reference for recurring entries, e.g. monthly fees."""
+		for date, withdrawal in (
+			("2025-09-30", 34.9),
+			("2025-10-31", 34.9),  # another date
+			("2025-10-31", 35),  # another amount
+			("2025-10-31", 34.9),  # the same entry, delivered again
+		):
+			create_bank_transaction(
+				self.bank_account,
+				transaction_id="_Test_Reused_Reference",
+				date=date,
+				withdrawal=withdrawal,
+				currency="INR",
+			)
+
+		self.assertEqual(
+			frappe.db.count(
+				"Bank Transaction",
+				{"transaction_id": "_Test_Reused_Reference", "bank_account": self.bank_account},
+			),
+			3,
+		)
+
+	def test_split_batch_is_not_imported_again(self):
+		"""A batch that was split into subtransactions must not come back as a single transaction."""
+		for subtransaction_id, withdrawal in (("1", 10), ("2", 20)):
+			create_bank_transaction(
+				self.bank_account,
+				transaction_id="_Test_Split_Batch",
+				subtransaction_id=subtransaction_id,
+				date="2025-10-31",
+				withdrawal=withdrawal,
+				currency="INR",
+			)
+
+		create_bank_transaction(
+			self.bank_account,
+			transaction_id="_Test_Split_Batch",
+			date="2025-10-31",
+			withdrawal=30,
+			currency="INR",
+		)
+
+		self.assertEqual(
+			frappe.db.count(
+				"Bank Transaction",
+				{"transaction_id": "_Test_Split_Batch", "bank_account": self.bank_account},
+			),
+			2,
+		)
