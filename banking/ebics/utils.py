@@ -661,10 +661,20 @@ def create_bank_transaction(
 			return
 	elif frappe.db.exists(
 		"Bank Transaction",
-		{"transaction_id": transaction_id, "bank_account": bank_account},
+		{"transaction_id": transaction_id, "bank_account": bank_account, "subtransaction_id": ("is", "set")},
+	) or frappe.db.exists(
+		"Bank Transaction",
+		{
+			"transaction_id": transaction_id,
+			"bank_account": bank_account,
+			"date": kwargs.get("date"),
+			"deposit": kwargs.get("deposit", 0),
+			"withdrawal": kwargs.get("withdrawal", 0),
+		},
 	):
-		# This is not a subtransaction and we have already created a transaction with this ID.
+		# This is not a subtransaction and we have already created this transaction or split it.
 		# We should only allow additional subtransactions.
+		# The ID alone is not enough: banks can reuse a reference for recurring entries, e.g. fees.
 		return
 
 	bt: CustomBankTransaction = frappe.new_doc("Bank Transaction")
