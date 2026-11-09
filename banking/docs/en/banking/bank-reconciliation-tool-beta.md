@@ -61,6 +61,32 @@ Finally, after checking the desired rows, click on the **Reconcile** at the bott
 
 > The tool helps you reconcile with **unpaid invoices** by automatically creating a payment against the invoice and reconciling said payment against the Bank Transaction.
 
+## Early Payment Discounts
+
+An invoice can have an early payment discount in its **Payment Schedule**. If the payment uses the discounted amount (for example, from a [SEPA Payment Order](/app/docs/en/banking/sepa-payment-order)), the **Bank Transaction** is smaller than the outstanding amount of the invoice. **To Allocate** then shows the discount as a negative amount.
+
+### Known Limitation
+
+Do not reconcile the **Bank Transaction** directly against the unpaid invoice. The tool does not allocate the discount to the invoice:
+
+- If the date of the **Bank Transaction** is on or before the _Discount Date_, the **Payment Entry** books the discount as a deduction. But the invoice gets only the bank amount. The discount stays as an unallocated amount on the **Payment Entry**, and the invoice stays "Partly Paid".
+- If the date of the **Bank Transaction** is after the _Discount Date_, the **Payment Entry** has no discount. The discount stays as an outstanding amount on the invoice. This can occur when the bank books the payment some days after the _Execution Date_ of the **SEPA Payment Order**.
+
+### Workaround
+
+1. Open the invoice and click _Create_ → _Payment_.
+2. Set the _Posting Date_ to the date of the **Bank Transaction**.
+3. Set the _Reference Date_ on or before the _Discount Date_ (for example, the _Execution Date_ of the **SEPA Payment Order**). ERPNext applies the discount: the _Paid Amount_ is the bank amount, the invoice gets the full outstanding amount, and the discount is a deduction.
+4. Submit the **Payment Entry**.
+5. In the **Match Voucher** tab, enable the **Payment Entry** filter and reconcile the **Bank Transaction** against this **Payment Entry**.
+
+If you already reconciled against the invoice and the discount deduction exists, open **Payment Reconciliation**. Allocate the unallocated amount of the **Payment Entry** to the invoice.
+
+### Required Settings
+
+- **Company**: set the _Default Payment Discount Account_. ERPNext books the discount on this account. ERPNext uses the same account for discounts that you receive (from suppliers) and discounts that you allow (to customers).
+- **Accounts Settings**: enable _Book Tax Loss on Early Payment Discount_ to correct the tax. If you do not enable it, ERPNext books the gross discount (including tax) on the discount account and does not correct the tax.
+
 ## Create a Voucher
 
 If there are no matching vouchers against your Bank Transaction you can also create a **Payment Entry** or **Journal Entry** against it.

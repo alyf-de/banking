@@ -320,6 +320,8 @@ When a **Purchase Invoice** has a payment schedule with discount terms, the **SE
 - If no execution date is set, or it falls after the discount date, the full outstanding amount applies
 - Before submitting, the system warns if amounts have changed and prompts you to update them
 
+To reconcile the **Bank Transaction** of a discounted payment, see [Early Payment Discounts](/app/docs/en/banking/bank-reconciliation-tool-beta#early-payment-discounts) in **Bank Reconciliation Tool Beta**.
+
 ### Security
 
 - **System Manager** and **Accounts Manager**: Full access to all **SEPA Payment Orders**
