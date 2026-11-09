@@ -74,9 +74,12 @@ Do not reconcile the **Bank Transaction** directly against the unpaid invoice. T
 
 ### Workaround
 
-1. Open the invoice and click _Create_ → _Payment_.
-2. Set the _Posting Date_ to the date of the **Bank Transaction**.
-3. Set the _Reference Date_ on or before the _Discount Date_ (for example, the _Execution Date_ of the **SEPA Payment Order**). ERPNext applies the discount: the _Paid Amount_ is the bank amount, the invoice gets the full outstanding amount, and the discount is a deduction.
+1. Open the invoice and click _Create_ → _Payment_. The dialog "Reference Date for Early Payment Discount" opens.
+2. In _Cheque/Reference Date_, enter a date on or before the _Discount Date_ (for example, the _Execution Date_ of the **SEPA Payment Order**). Click _Continue_. ERPNext applies the discount: the _Paid Amount_ is the bank amount, the invoice gets the full outstanding amount, and the discount is a deduction.
+
+   > ERPNext calculates the discount only in this dialog. If you change the _Reference Date_ in the **Payment Entry** later, ERPNext does not calculate the discount again.
+
+3. Set the _Posting Date_ to the date of the **Bank Transaction**.
 4. Submit the **Payment Entry**.
 5. In the **Match Voucher** tab, enable the **Payment Entry** filter and reconcile the **Bank Transaction** against this **Payment Entry**.
 
