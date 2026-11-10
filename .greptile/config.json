@@ -9,5 +9,6 @@
             "frappe/hrms",
             "frappe/lending"
         ]
-    }
+    },
+    "autoReview": ["open", "push", "rebase"]
 }
