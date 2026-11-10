@@ -2240,6 +2240,51 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(pe.unallocated_amount, 0)
 		self.assertEqual(pe.deductions[0].amount, 10.20)
 
+	def test_unpaid_invoice_matches_amount_after_early_payment_discount(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT: withdrawal of 499.80 before the discount date
+		The invoice is an exact amount match and shows the discount of 10.20.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=self.bank_account)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices", "exact_match"],
+		)
+		match = next(voucher for voucher in matched_vouchers if voucher["name"] == pi.name)
+
+		self.assertEqual(match["paid_amount"], 510)
+		self.assertEqual(match["early_payment_discount"], 10.20)
+		self.assertEqual(match["amount_match"], 1)
+
+	def test_unpaid_invoice_has_no_early_payment_discount_after_discount_date(self):
+		"""
+		PI: 510 with 2 % early payment discount, posted 20 days ago
+		BT: withdrawal of 499.80 after the discount date
+		The discount is not valid any more, so the invoice is no amount match.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(
+			rate=510, posting_date=add_days(getdate(), -20)
+		)
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=self.bank_account)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices"],
+		)
+		match = next(voucher for voucher in matched_vouchers if voucher["name"] == pi.name)
+
+		self.assertEqual(match["early_payment_discount"], 0)
+		self.assertEqual(match["amount_match"], 0)
+
+		exact_matches = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices", "exact_match"],
+		)
+		self.assertNotIn(pi.name, [voucher["name"] for voucher in exact_matches])
+
 
 EARLY_PAYMENT_DISCOUNT_TEMPLATE = "_Test 2% Early Payment Discount"
 
