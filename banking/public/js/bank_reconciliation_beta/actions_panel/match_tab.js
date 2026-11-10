@@ -211,7 +211,9 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 		);
 		let early_payment_discount =
 			banking.bank_reconciliation.get_early_payment_discount(
+				this.transaction,
 				this.summary_data,
+				unpaid_invoices_only,
 				allocation_budget,
 				selected_total,
 			);

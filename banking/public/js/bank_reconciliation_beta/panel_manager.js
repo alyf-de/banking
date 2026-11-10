@@ -69,14 +69,23 @@ banking.bank_reconciliation.get_total_allocated = (
 
 // Same rule as the backend: the early payment discount only applies when the bank
 // amount is exactly the outstanding amount minus the discount. Only for a single
-// invoice, because the backend can book the discount of one invoice only.
+// invoice, because the backend can book the discount of one invoice only. Not with
+// an included bank fee, because the Journal Entry for the fee does not book it.
 banking.bank_reconciliation.get_early_payment_discount = (
+	transaction,
 	summary_data,
+	unpaid_invoices_only,
 	allocation_budget,
 	total_allocated,
 ) => {
 	const entries = Object.values(summary_data || {});
-	if (entries.length !== 1) {
+	const uses_included_fee =
+		flt(transaction.included_fee_for_reconciliation) &&
+		banking.bank_reconciliation.selection_uses_deposit_fee(
+			summary_data,
+			unpaid_invoices_only,
+		);
+	if (entries.length !== 1 || uses_included_fee) {
 		return 0;
 	}
 
