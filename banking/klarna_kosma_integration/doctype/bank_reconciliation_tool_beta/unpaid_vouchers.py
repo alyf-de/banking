@@ -318,10 +318,17 @@ def make_pe_against_invoices(
 		# At this point, the only deductions are ERPNext's early payment discount (in company
 		# currency). The discount settles the rest of the invoice, together with the bank amount.
 		precision = payment_entry.precision("paid_amount")
-		early_payment_discount = flt(
-			abs(sum(row.amount for row in payment_entry.deductions)) / payment_entry.get_exchange_rate(),
-			precision,
-		)
+		early_payment_discount = abs(sum(row.amount for row in payment_entry.deductions))
+		if early_payment_discount and invoice_details.party_account_currency != get_company_currency(
+			bt.company
+		):
+			# ERPNext books the discount in company currency at the rate of the invoice. Book it
+			# at the rate of this payment instead, else the difference amount is not zero.
+			early_payment_discount /= invoice_details.conversion_rate
+			rate_factor = payment_entry.get_exchange_rate() / invoice_details.conversion_rate
+			for row in payment_entry.deductions:
+				row.amount = flt(row.amount * rate_factor, row.precision("amount"))
+		early_payment_discount = flt(early_payment_discount, precision)
 		total_outstanding = sum(invoice.outstanding_amount for invoice in invoices)
 		discounted_outstanding = flt(total_outstanding - early_payment_discount, precision)
 		if flt(bank_unallocated, precision) != discounted_outstanding:
