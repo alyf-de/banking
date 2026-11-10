@@ -2303,29 +2303,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 			bank_fee_account=fee_expense_account,
 		)
 
-		create_payment_terms_template_with_early_payment_discount()
-		si = create_sales_invoice(
-			rate=500,
-			warehouse="Finished Goods - _TC",
-			customer=self.customer,
-			cost_center="Main - _TC",
-			item="Reco Item",
-			do_not_submit=1,
-		)
-		si.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
-		si.set("payment_schedule", [])
-		si.append(
-			"taxes",
-			{
-				"charge_type": "On Net Total",
-				"account_head": "_Test Account Service Tax - _TC",
-				"cost_center": "Main - _TC",
-				"description": "Service Tax",
-				"rate": 18,
-			},
-		)
-		si.save()
-		si.submit()
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=500)
 		bt = create_bank_transaction(deposit=573.20, included_fee=5, bank_account=bank_account_with_fee)
 
 		bulk_reconcile_vouchers(
@@ -2342,6 +2320,64 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 10)
 		self.assertEqual(accounts["_Test Account Service Tax - _TC"].debit_in_account_currency, 1.80)
 		self.assertEqual(accounts[si.debit_to].credit_in_account_currency, 590)
+
+	def test_included_fee_deposit_with_early_payment_discount_and_tax_loss_rounding(self):
+		"""
+		SI: 101.46 + 18 % tax = 119.72 with 2 % early payment discount of 2.39
+		BT: deposit of 112.33 with an included fee of 5, before the discount date
+		The rounded income and tax loss (2.03 + 0.37) must not exceed the discount of 2.39.
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=101.46)
+		bt = create_bank_transaction(deposit=112.33, included_fee=5, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		discount = (
+			accounts["Write Off - _TC"].debit_in_account_currency
+			+ accounts["_Test Account Service Tax - _TC"].debit_in_account_currency
+		)
+		self.assertAlmostEqual(discount, 2.39)
+
+	def test_deposit_with_early_payment_discount_and_tax_loss_rounding(self):
+		"""
+		SI: 101.46 + 18 % tax = 119.72 with 2 % early payment discount of 2.39
+		BT: deposit of 117.33, before the discount date
+		The rounded income and tax loss (2.03 + 0.37) must not exceed the discount of 2.39.
+		"""
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=101.46)
+		bt = create_bank_transaction(deposit=117.33, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 117.33)
+		self.assertAlmostEqual(sum(row.amount for row in pe.deductions), 2.39)
 
 	def test_usd_purchase_invoice_with_early_payment_discount_at_changed_rate(self):
 		"""
@@ -2440,6 +2476,35 @@ def create_payment_terms_template_with_early_payment_discount():
 	create_payment_terms_template_with_discount(
 		name=EARLY_PAYMENT_DISCOUNT_TEMPLATE, discount=2, template_name=EARLY_PAYMENT_DISCOUNT_TEMPLATE
 	)
+
+
+def make_sales_invoice_with_tax_and_early_payment_discount(customer: str, rate: float):
+	"""Sales Invoice with 18 % tax and a 2 % early payment discount."""
+	create_payment_terms_template_with_early_payment_discount()
+	si = create_sales_invoice(
+		rate=rate,
+		warehouse="Finished Goods - _TC",
+		customer=customer,
+		cost_center="Main - _TC",
+		item="Reco Item",
+		do_not_submit=1,
+	)
+	si.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+	si.set("payment_schedule", [])
+	si.disable_rounded_total = 1
+	si.append(
+		"taxes",
+		{
+			"charge_type": "On Net Total",
+			"account_head": "_Test Account Service Tax - _TC",
+			"cost_center": "Main - _TC",
+			"description": "Service Tax",
+			"rate": 18,
+		},
+	)
+	si.save()
+	si.submit()
+	return si
 
 
 def make_purchase_invoice_with_early_payment_discount(rate: float, posting_date: str | None = None):

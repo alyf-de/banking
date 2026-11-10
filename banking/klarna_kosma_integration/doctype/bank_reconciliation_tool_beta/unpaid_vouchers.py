@@ -257,12 +257,24 @@ def get_included_fee_early_payment_discount_rows(
 	)
 
 	precision = invoice.precision("outstanding_amount")
-	discount = flt(sum(row.amount for row in payment_entry.deductions), precision)
+	discount = flt(discount, precision)
+	round_off_early_payment_discount(payment_entry.deductions, discount)
 	total_outstanding = sum(row.outstanding_amount for row in invoices)
 	if flt(bank_unallocated, precision) != flt(total_outstanding - discount, precision):
 		return []
 
 	return payment_entry.deductions
+
+
+def round_off_early_payment_discount(deductions: list, discount: float) -> None:
+	"""Make the deduction rows add up to the discount (in company currency).
+
+	ERPNext rounds the income and tax loss rows on their own. Their sum can then differ from
+	the rounded discount by a cent. Book this difference on the first row.
+	"""
+	precision = deductions[0].precision("amount")
+	difference = flt(discount - sum(row.amount for row in deductions), precision)
+	deductions[0].amount = flt(deductions[0].amount + difference, precision)
 
 
 def make_pe_against_invoices(
@@ -388,17 +400,32 @@ def make_pe_against_invoices(
 		# At this point, the only deductions are ERPNext's early payment discount (in company
 		# currency). The discount settles the rest of the invoice, together with the bank amount.
 		precision = payment_entry.precision("paid_amount")
-		early_payment_discount = abs(sum(row.amount for row in payment_entry.deductions))
-		if early_payment_discount and invoice_details.party_account_currency != get_company_currency(
-			bt.company
-		):
-			# ERPNext books the discount in company currency at the rate of the invoice. Book it
-			# at the rate of this payment instead, else the difference amount is not zero.
-			early_payment_discount /= invoice_details.conversion_rate
-			rate_factor = payment_entry.get_exchange_rate() / invoice_details.conversion_rate
-			for row in payment_entry.deductions:
-				row.amount = flt(row.amount * rate_factor, row.precision("amount"))
-		early_payment_discount = flt(early_payment_discount, precision)
+		early_payment_discount = 0.0
+		if payment_entry.deductions:
+			invoice = frappe.get_doc(first_invoice[DOCTYPE], first_invoice[DOCNAME])
+			# `get_payment_entry()` already showed ERPNext's alert about the discount
+			mute_messages = frappe.flags.mute_messages
+			frappe.flags.mute_messages = True
+			_paid_amount, _received_amount, early_payment_discount, _valid_discounts = (
+				apply_early_payment_discount(
+					0.0, 0.0, invoice, invoice.party_account_currency, getdate(bt.date)
+				)
+			)
+			frappe.flags.mute_messages = mute_messages
+			early_payment_discount = flt(early_payment_discount, precision)
+
+			exchange_rate = payment_entry.get_exchange_rate()
+			if invoice.party_account_currency != invoice.company_currency:
+				# ERPNext books the discount in company currency at the rate of the invoice. Book it
+				# at the rate of this payment instead, else the difference amount is not zero.
+				rate_factor = exchange_rate / invoice.conversion_rate
+				for row in payment_entry.deductions:
+					row.amount = flt(row.amount * rate_factor, row.precision("amount"))
+
+			sign = -1 if payment_entry.payment_type == "Pay" else 1
+			round_off_early_payment_discount(
+				payment_entry.deductions, sign * flt(early_payment_discount * exchange_rate, precision)
+			)
 		total_outstanding = sum(invoice.outstanding_amount for invoice in invoices)
 		discounted_outstanding = flt(total_outstanding - early_payment_discount, precision)
 		if flt(bank_unallocated, precision) != discounted_outstanding:
