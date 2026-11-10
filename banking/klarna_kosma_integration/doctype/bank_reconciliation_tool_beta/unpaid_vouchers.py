@@ -311,21 +311,38 @@ def make_pe_against_invoices(
 		invoices = split_refdocs_based_on_payment_terms(
 			prepare_invoices_to_split(invoices_to_bill), bt.company
 		)
-		effective_unallocated = (
-			bt.unallocated_amount + included_fee if requires_payment_entry_for_included_fee else None
+		bank_unallocated = bt.unallocated_amount
+		if requires_payment_entry_for_included_fee:
+			bank_unallocated += included_fee
+
+		# At this point, the only deductions are ERPNext's early payment discount (in company
+		# currency). The discount settles the rest of the invoice, together with the bank amount.
+		precision = payment_entry.precision("paid_amount")
+		early_payment_discount = flt(
+			abs(sum(row.amount for row in payment_entry.deductions)) / payment_entry.get_exchange_rate(),
+			precision,
 		)
+		total_outstanding = sum(invoice.outstanding_amount for invoice in invoices)
+		discounted_outstanding = flt(total_outstanding - early_payment_discount, precision)
+		if flt(bank_unallocated, precision) != discounted_outstanding:
+			# The party did not pay exactly the discounted amount, so they did not take the discount.
+			payment_entry.deductions = []
+			early_payment_discount = 0.0
+
 		adjust_and_allocate_invoices(
 			bt,
 			invoices,
 			payment_entry,
 			action=_attach_invoice,
-			effective_unallocated=effective_unallocated,
+			effective_unallocated=bank_unallocated + early_payment_discount,
 		)
 
 		total_allocated_amount = sum(row.allocated_amount for row in payment_entry.references)
-		payment_entry.paid_amount = abs(total_allocated_amount)  # should not be negative
+		payment_entry.paid_amount = abs(total_allocated_amount) - early_payment_discount
+		# ERPNext subtracted its discount from the full outstanding, which can be negative.
+		payment_entry.received_amount = payment_entry.paid_amount
 		if requires_payment_entry_for_included_fee:
-			bank_amount = total_allocated_amount - included_fee
+			bank_amount = total_allocated_amount - early_payment_discount - included_fee
 			validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 			payment_entry.paid_amount = abs(bank_amount)
 			payment_entry.received_amount = abs(bank_amount)
