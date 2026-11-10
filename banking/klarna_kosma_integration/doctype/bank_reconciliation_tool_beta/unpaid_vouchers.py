@@ -8,13 +8,14 @@ from typing import TYPE_CHECKING
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
+	apply_early_payment_discount,
 	get_payment_entry,
 	split_refdocs_based_on_payment_terms,
 )
 from erpnext.setup.utils import get_exchange_rate
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, getdate
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
 
@@ -155,17 +156,34 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 	journal_entry.user_remark = bt.description
 
 	effective_unallocated = bt.unallocated_amount + included_fee
-	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
+	prepared_invoices = prepare_invoices_to_split(invoices_to_bill)
+	invoices = split_refdocs_based_on_payment_terms(prepared_invoices, bt.company)
+	# The split by payment terms drops the party, which the Journal Entry needs
+	parties = {(invoice.voucher_type, invoice.voucher_no): invoice for invoice in prepared_invoices}
+	for row in invoices:
+		prepared_invoice = parties[(row.voucher_type, row.voucher_no)]
+		row.party_type = prepared_invoice.party_type
+		row.party = prepared_invoice.party
+
 	# A selection of only opposite-side returns (e.g. return Purchase Invoices settled by a
 	# deposit) allocates negative amounts, but it settles the bank positively. Flip the sign,
 	# like the Payment Entry path does with abs(), so the entry is not booked inverted.
 	sign = -1 if all(invoice.outstanding_amount < 0 for invoice in invoices) else 1
+	early_payment_discount = (
+		get_included_fee_early_payment_discount(bt, invoices_to_bill[0], invoices, effective_unallocated)
+		if included_fee
+		else 0.0
+	)
 	adjust_and_allocate_invoices(
-		bt, invoices, journal_entry, action=_attach_invoice, effective_unallocated=effective_unallocated
+		bt,
+		invoices,
+		journal_entry,
+		action=_attach_invoice,
+		effective_unallocated=effective_unallocated + early_payment_discount,
 	)
 
 	total_allocated_amount = sign * sum(row.allocated_amount for row in invoices)
-	bank_amount = total_allocated_amount - included_fee
+	bank_amount = total_allocated_amount - included_fee - early_payment_discount
 	validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 
 	journal_entry.append(
@@ -191,8 +209,40 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 			},
 		)
 
+	if early_payment_discount:
+		journal_entry.append(
+			"accounts",
+			{
+				"account": frappe.get_cached_value("Company", company, "default_discount_account"),
+				"debit_in_account_currency": early_payment_discount,
+				"credit_in_account_currency": 0.0,
+				"cost_center": get_default_cost_center(company),
+			},
+		)
+
 	journal_entry.submit()
 	return journal_entry
+
+
+def get_included_fee_early_payment_discount(
+	bt: CustomBankTransaction, first_invoice: tuple, invoices: list, bank_unallocated: float
+) -> float:
+	"""Return the early payment discount of the first invoice for a deposit with an included fee.
+
+	Same rule as in `make_pe_against_invoices()`: the discount applies only if the bank amount
+	(including the fee) is exactly the outstanding amount minus the discount.
+	"""
+	invoice = frappe.get_doc(first_invoice[DOCTYPE], first_invoice[DOCNAME])
+	_paid_amount, _received_amount, discount, _valid_discounts = apply_early_payment_discount(
+		0.0, 0.0, invoice, invoice.party_account_currency, getdate(bt.date)
+	)
+	precision = invoice.precision("outstanding_amount")
+	discount = flt(discount, precision)
+	total_outstanding = sum(row.outstanding_amount for row in invoices)
+	if flt(bank_unallocated, precision) != flt(total_outstanding - discount, precision):
+		return 0.0
+
+	return discount
 
 
 def make_pe_against_invoices(
