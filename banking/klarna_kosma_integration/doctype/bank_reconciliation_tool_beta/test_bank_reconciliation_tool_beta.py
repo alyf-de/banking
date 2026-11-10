@@ -2287,6 +2287,62 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 10.20)
 		self.assertEqual(accounts[si.debit_to].credit_in_account_currency, 510)
 
+	def test_included_fee_deposit_with_early_payment_discount_and_tax_loss(self):
+		"""
+		SI: 500 + 18 % tax = 590 with 2 % early payment discount, tax discount loss is booked
+		BT: deposit of 573.20 with an included fee of 5, before the discount date
+		Expected JE: Dr Discount 10 (income), Dr Tax 1.80, Cr Receivable 590
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		create_payment_terms_template_with_early_payment_discount()
+		si = create_sales_invoice(
+			rate=500,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			do_not_submit=1,
+		)
+		si.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+		si.set("payment_schedule", [])
+		si.append(
+			"taxes",
+			{
+				"charge_type": "On Net Total",
+				"account_head": "_Test Account Service Tax - _TC",
+				"cost_center": "Main - _TC",
+				"description": "Service Tax",
+				"rate": 18,
+			},
+		)
+		si.save()
+		si.submit()
+		bt = create_bank_transaction(deposit=573.20, included_fee=5, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 10)
+		self.assertEqual(accounts["_Test Account Service Tax - _TC"].debit_in_account_currency, 1.80)
+		self.assertEqual(accounts[si.debit_to].credit_in_account_currency, 590)
+
 	def test_usd_purchase_invoice_with_early_payment_discount_at_changed_rate(self):
 		"""
 		PI: 510 USD at 80 INR/USD with 2 % early payment discount, USD payable account
