@@ -6,6 +6,7 @@ from unittest.mock import patch
 import frappe
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
 	create_payment_entry,
+	create_payment_terms_template_with_discount,
 )
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import (
 	make_purchase_invoice,
@@ -2057,6 +2058,487 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(journal_entry.docstatus, 0)
 		self.assertFalse(bt.payment_entries)
 		self.assertEqual(journal_entry.created_from_bank_transaction, bt.name)
+
+	def test_purchase_invoice_with_early_payment_discount(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT: withdrawal of 499.80 before the discount date
+		The discount of 10.20 settles the rest of the invoice.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+		)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 0)
+		self.assertEqual(pi.status, "Paid")
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 499.80)
+		self.assertEqual(pe.references[0].allocated_amount, 510)
+		self.assertEqual(pe.unallocated_amount, 0)
+		self.assertEqual(len(pe.deductions), 1)
+		self.assertEqual(pe.deductions[0].amount, -10.20)
+
+	def test_purchase_invoice_paid_in_full_within_early_payment_discount_period(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT: withdrawal of 510 before the discount date
+		The full amount was paid, so no discount is booked.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		bt = create_bank_transaction(withdrawal=510, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+		)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 510)
+		self.assertEqual(pe.references[0].allocated_amount, 510)
+		self.assertEqual(pe.unallocated_amount, 0)
+		self.assertFalse(pe.deductions)
+
+	def test_purchase_invoice_partially_paid_within_early_payment_discount_period(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT: withdrawal of 300 before the discount date
+		The bank amount does not settle the discounted amount, so no discount is booked.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		bt = create_bank_transaction(withdrawal=300, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+		)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 210)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 300)
+		self.assertEqual(pe.references[0].allocated_amount, 300)
+		self.assertEqual(pe.unallocated_amount, 0)
+		self.assertFalse(pe.deductions)
+
+	def test_purchase_invoice_underpaid_within_early_payment_discount_period(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT: withdrawal of 505 before the discount date
+		The bank amount is between the discounted and the full amount, so no discount is booked.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		bt = create_bank_transaction(withdrawal=505, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+		)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 5)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 505)
+		self.assertEqual(pe.references[0].allocated_amount, 505)
+		self.assertFalse(pe.deductions)
+
+	def test_purchase_invoice_remaining_outstanding_smaller_than_early_payment_discount(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT 1: withdrawal of 502, BT 2: withdrawal of 5, both before the discount date
+		The remaining outstanding (8) is smaller than the discount (10.20), so no discount is booked.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		for amount in (502, 5):
+			bt = create_bank_transaction(withdrawal=amount, bank_account=self.bank_account)
+			bulk_reconcile_vouchers(
+				bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+			)
+			bt.reload()
+			self.assertEqual(bt.status, "Reconciled")
+
+		pi.reload()
+		self.assertEqual(pi.outstanding_amount, 3)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 5)
+		self.assertFalse(pe.deductions)
+
+	def test_purchase_invoice_paid_after_early_payment_discount_date(self):
+		"""
+		PI: 510 with 2 % early payment discount, posted 20 days ago
+		BT: withdrawal of 499.80 after the discount date
+		No discount is applied, the invoice keeps an outstanding amount.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(
+			rate=510, posting_date=add_days(getdate(), -20)
+		)
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+		)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 10.20)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 499.80)
+		self.assertEqual(pe.references[0].allocated_amount, 499.80)
+		self.assertEqual(pe.unallocated_amount, 0)
+		self.assertFalse(pe.deductions)
+
+	def test_sales_invoice_with_early_payment_discount(self):
+		"""
+		SI: 510 with 2 % early payment discount
+		BT: deposit of 499.80 before the discount date
+		"""
+		create_payment_terms_template_with_early_payment_discount()
+		si = create_sales_invoice(
+			rate=510,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			do_not_submit=1,
+		)
+		si.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+		si.set("payment_schedule", [])
+		si.save()
+		si.submit()
+		bt = create_bank_transaction(deposit=499.80, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.payment_type, "Receive")
+		self.assertEqual(pe.paid_amount, 499.80)
+		self.assertEqual(pe.references[0].allocated_amount, 510)
+		self.assertEqual(pe.unallocated_amount, 0)
+		self.assertEqual(pe.deductions[0].amount, 10.20)
+
+	def test_included_fee_deposit_with_early_payment_discount(self):
+		"""
+		SI: 510 with 2 % early payment discount
+		BT: deposit of 494.80 with an included fee of 5, before the discount date
+		Expected JE: Dr Bank 494.80, Dr Bank Fees 5, Dr Discount 10.20, Cr Receivable 510
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		create_payment_terms_template_with_early_payment_discount()
+		si = create_sales_invoice(
+			rate=510,
+			warehouse="Finished Goods - _TC",
+			customer=self.customer,
+			cost_center="Main - _TC",
+			item="Reco Item",
+			do_not_submit=1,
+		)
+		si.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+		si.set("payment_schedule", [])
+		si.save()
+		si.submit()
+		bt = create_bank_transaction(deposit=494.80, included_fee=5, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(bt.payment_entries[0].payment_document, "Journal Entry")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		self.assertEqual(accounts[fee_gl_account].debit_in_account_currency, 494.80)
+		self.assertEqual(accounts[fee_expense_account].debit_in_account_currency, 5)
+		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 10.20)
+		self.assertEqual(accounts[si.debit_to].credit_in_account_currency, 510)
+
+	def test_included_fee_deposit_with_early_payment_discount_and_tax_loss(self):
+		"""
+		SI: 500 + 18 % tax = 590 with 2 % early payment discount, tax discount loss is booked
+		BT: deposit of 573.20 with an included fee of 5, before the discount date
+		Expected JE: Dr Discount 10 (income), Dr Tax 1.80, Cr Receivable 590
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=500)
+		bt = create_bank_transaction(deposit=573.20, included_fee=5, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 10)
+		self.assertEqual(accounts["_Test Account Service Tax - _TC"].debit_in_account_currency, 1.80)
+		self.assertEqual(accounts[si.debit_to].credit_in_account_currency, 590)
+
+	def test_included_fee_deposit_with_early_payment_discount_and_tax_loss_rounding(self):
+		"""
+		SI: 101.46 + 18 % tax = 119.72 with 2 % early payment discount of 2.39
+		BT: deposit of 112.33 with an included fee of 5, before the discount date
+		The rounded income and tax loss (2.03 + 0.37) must not exceed the discount of 2.39.
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=101.46)
+		bt = create_bank_transaction(deposit=112.33, included_fee=5, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		discount = (
+			accounts["Write Off - _TC"].debit_in_account_currency
+			+ accounts["_Test Account Service Tax - _TC"].debit_in_account_currency
+		)
+		self.assertAlmostEqual(discount, 2.39)
+
+	def test_included_fee_deposit_with_early_payment_discount_rounded_to_zero(self):
+		"""
+		SI: 0.10 + 18 % tax = 0.12 with 2 % early payment discount, which rounds to 0
+		BT: deposit of 0.07 with an included fee of 0.05 (full payment)
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=0.10)
+		bt = create_bank_transaction(deposit=0.07, included_fee=0.05, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+	def test_deposit_with_early_payment_discount_and_tax_loss_rounding(self):
+		"""
+		SI: 101.46 + 18 % tax = 119.72 with 2 % early payment discount of 2.39
+		BT: deposit of 117.33, before the discount date
+		The rounded income and tax loss (2.03 + 0.37) must not exceed the discount of 2.39.
+		"""
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=101.46)
+		bt = create_bank_transaction(deposit=117.33, bank_account=self.bank_account)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 117.33)
+		self.assertAlmostEqual(sum(row.amount for row in pe.deductions), 2.39)
+
+	def test_usd_purchase_invoice_with_early_payment_discount_at_changed_rate(self):
+		"""
+		PI: 510 USD at 80 INR/USD with 2 % early payment discount, USD payable account
+		BT: withdrawal of 499.80 USD from a USD bank account, the rate is now 90 INR/USD
+		The discount of 10.20 USD settles the rest of the invoice.
+		"""
+		_gl_account, usd_bank_account = setup_usd_bank()
+		supplier = create_supplier("USD Payable Supplier Inc.", "USD")
+		create_currency_exchange("USD", "INR", 90)
+		create_payment_terms_template_with_early_payment_discount()
+
+		pi = make_purchase_invoice(
+			supplier=supplier,
+			currency="USD",
+			conversion_rate=80,
+			rate=510,
+			qty=1,
+			cost_center="_Test Cost Center - _TC",
+			do_not_save=1,
+		)
+		pi.credit_to = "_Test Payable USD - _TC"
+		pi.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+		pi.save()
+		pi.submit()
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=usd_bank_account, currency="USD")
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+		)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 499.80)
+		self.assertEqual(pe.references[0].allocated_amount, 510)
+		self.assertEqual(pe.unallocated_amount, 0)
+		# 10.20 USD at the rate of the payment, in company currency
+		self.assertEqual(pe.deductions[0].amount, -918)
+
+	def test_unpaid_invoice_matches_amount_after_early_payment_discount(self):
+		"""
+		PI: 510 with 2 % early payment discount
+		BT: withdrawal of 499.80 before the discount date
+		The invoice is an exact amount match and shows the discount of 10.20.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(rate=510)
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=self.bank_account)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices", "exact_match"],
+		)
+		match = next(voucher for voucher in matched_vouchers if voucher["name"] == pi.name)
+
+		self.assertEqual(match["paid_amount"], 510)
+		self.assertEqual(match["early_payment_discount"], 10.20)
+		self.assertEqual(match["amount_match"], 1)
+
+	def test_unpaid_invoice_has_no_early_payment_discount_after_discount_date(self):
+		"""
+		PI: 510 with 2 % early payment discount, posted 20 days ago
+		BT: withdrawal of 499.80 after the discount date
+		The discount is not valid any more, so the invoice is no amount match.
+		"""
+		pi = make_purchase_invoice_with_early_payment_discount(
+			rate=510, posting_date=add_days(getdate(), -20)
+		)
+		bt = create_bank_transaction(withdrawal=499.80, bank_account=self.bank_account)
+
+		matched_vouchers = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices"],
+		)
+		match = next(voucher for voucher in matched_vouchers if voucher["name"] == pi.name)
+
+		self.assertEqual(match["early_payment_discount"], 0)
+		self.assertEqual(match["amount_match"], 0)
+
+		exact_matches = get_linked_payments(
+			bank_transaction_name=bt.name,
+			document_types=["purchase_invoice", "unpaid_invoices", "exact_match"],
+		)
+		self.assertNotIn(pi.name, [voucher["name"] for voucher in exact_matches])
+
+
+EARLY_PAYMENT_DISCOUNT_TEMPLATE = "_Test 2% Early Payment Discount"
+
+
+def create_payment_terms_template_with_early_payment_discount():
+	"""One term: 100 %, 2 % discount valid for 1 day after the invoice date."""
+	frappe.db.set_value("Company", "_Test Company", "default_discount_account", "Write Off - _TC")
+	create_payment_terms_template_with_discount(
+		name=EARLY_PAYMENT_DISCOUNT_TEMPLATE, discount=2, template_name=EARLY_PAYMENT_DISCOUNT_TEMPLATE
+	)
+
+
+def make_sales_invoice_with_tax_and_early_payment_discount(customer: str, rate: float):
+	"""Sales Invoice with 18 % tax and a 2 % early payment discount."""
+	create_payment_terms_template_with_early_payment_discount()
+	si = create_sales_invoice(
+		rate=rate,
+		warehouse="Finished Goods - _TC",
+		customer=customer,
+		cost_center="Main - _TC",
+		item="Reco Item",
+		do_not_submit=1,
+	)
+	si.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+	si.set("payment_schedule", [])
+	si.disable_rounded_total = 1
+	si.append(
+		"taxes",
+		{
+			"charge_type": "On Net Total",
+			"account_head": "_Test Account Service Tax - _TC",
+			"cost_center": "Main - _TC",
+			"description": "Service Tax",
+			"rate": 18,
+		},
+	)
+	si.save()
+	si.submit()
+	return si
+
+
+def make_purchase_invoice_with_early_payment_discount(rate: float, posting_date: str | None = None):
+	create_payment_terms_template_with_early_payment_discount()
+	pi = make_purchase_invoice(rate=rate, qty=1, posting_date=posting_date, do_not_save=1)
+	pi.set_posting_time = 1
+	pi.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+	pi.save()
+	return pi.submit()
 
 
 def get_pe_references(vouchers: list):
