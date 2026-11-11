@@ -258,6 +258,10 @@ def get_included_fee_early_payment_discount_rows(
 
 	precision = invoice.precision("outstanding_amount")
 	discount = flt(discount, precision)
+	if not discount:
+		# ERPNext adds no deduction row for a discount that rounds to zero
+		return []
+
 	round_off_early_payment_discount(payment_entry.deductions, discount)
 	total_outstanding = sum(row.outstanding_amount for row in invoices)
 	if flt(bank_unallocated, precision) != flt(total_outstanding - discount, precision):
