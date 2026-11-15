@@ -195,12 +195,20 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order.submit()
 		self.assertEqual(invoice_status(), "Approved")
 
-		accounts_manager = frappe.get_doc("User", "test@example.com")
-		accounts_manager.add_roles("Accounts Manager")
+		# A new user, because ERPNext's test users have more roles
+		accounts_manager = frappe.get_doc(
+			doctype="User",
+			email="sepa-accounts-manager@example.com",
+			first_name="SEPA Accounts Manager",
+			send_welcome_email=0,
+			roles=[{"role": "Accounts Manager"}],
+		).insert()
 		with self.set_user(accounts_manager.name):
 			order.cancel()
 			self.assertEqual(invoice_status(), "")
 
+			# Insert does not check this permission, it only controls the Amend button
+			self.assertTrue(frappe.has_permission("SEPA Payment Order", "amend", doc=order))
 			amended_order = frappe.copy_doc(order)
 			amended_order.amended_from = order.name
 			# In tests, copy_doc keeps the docstatus
