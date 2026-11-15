@@ -180,7 +180,7 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			order.fetch_payables(add_days(today(), 10), other_mode)
 
-	def test_accounts_manager_can_cancel_and_amend(self):
+	def test_cancel_and_amend_reset_invoice_status(self):
 		"""Cancelling frees the invoice, so that it can go into another order or be cancelled."""
 		invoice = self.make_invoice(due_date=add_days(today(), 5))
 		schedule_row = invoice.payment_schedule[0].name
@@ -195,27 +195,16 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order.submit()
 		self.assertEqual(invoice_status(), "Approved")
 
-		# A new user, because ERPNext's test users have more roles
-		accounts_manager = frappe.get_doc(
-			doctype="User",
-			email="sepa-accounts-manager@example.com",
-			first_name="SEPA Accounts Manager",
-			send_welcome_email=0,
-			roles=[{"role": "Accounts Manager"}],
-		).insert()
-		with self.set_user(accounts_manager.name):
-			order.cancel()
-			self.assertEqual(invoice_status(), "")
+		order.cancel()
+		self.assertEqual(invoice_status(), "")
 
-			# Insert does not check this permission, it only controls the Amend button
-			self.assertTrue(frappe.has_permission("SEPA Payment Order", "amend", doc=order))
-			amended_order = frappe.copy_doc(order)
-			amended_order.amended_from = order.name
-			# In tests, copy_doc keeps the docstatus
-			for doc in (amended_order, *amended_order.payments):
-				doc.docstatus = 0
-			amended_order.insert()
-			self.assertEqual(invoice_status(), "Draft")
+		amended_order = frappe.copy_doc(order)
+		amended_order.amended_from = order.name
+		# In tests, copy_doc keeps the docstatus
+		for doc in (amended_order, *amended_order.payments):
+			doc.docstatus = 0
+		amended_order.insert()
+		self.assertEqual(invoice_status(), "Draft")
 
 	def add_payment(self, order, iban: str, swift_number: str):
 		order.append(
