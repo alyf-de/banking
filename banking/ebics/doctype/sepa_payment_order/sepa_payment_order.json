@@ -153,8 +153,9 @@
  ],
  "grid_page_length": 50,
  "is_submittable": 1,
+ "link_display_mode": "Search",
  "links": [],
- "modified": "2026-09-14 15:41:57.707778",
+ "modified": "2026-11-16 03:30:37.515322",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "SEPA Payment Order",
@@ -162,6 +163,8 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -175,6 +178,8 @@
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
