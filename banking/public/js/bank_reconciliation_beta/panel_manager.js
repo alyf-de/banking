@@ -73,7 +73,7 @@ banking.bank_reconciliation.get_total_allocated = (
 banking.bank_reconciliation.get_early_payment_discount = (
 	summary_data,
 	allocation_budget,
-	total_allocated,
+	total_allocated
 ) => {
 	const entries = Object.values(summary_data || {});
 	if (entries.length !== 1) {

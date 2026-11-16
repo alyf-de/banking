@@ -213,7 +213,7 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 			banking.bank_reconciliation.get_early_payment_discount(
 				this.summary_data,
 				allocation_budget,
-				selected_total,
+				selected_total
 			);
 		let total_allocated = selected_total - early_payment_discount;
 		let max_allocated = Math.min(total_allocated, allocation_budget);
@@ -230,12 +230,8 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 			flt(transaction_amount),
 			unallocated,
 			actual_unallocated,
-<<<<<<< HEAD
-			this.transaction.currency
-=======
 			this.transaction.currency,
-			early_payment_discount,
->>>>>>> eb684db (fix(Bank Reconciliation Tool Beta): allocate early payment discount to invoice (#474))
+			early_payment_discount
 		);
 	}
 
@@ -260,12 +256,8 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 		total_amount,
 		unallocated_amount,
 		actual_unallocated,
-<<<<<<< HEAD
-		currency
-=======
 		currency,
-		early_payment_discount = 0,
->>>>>>> eb684db (fix(Bank Reconciliation Tool Beta): allocate early payment discount to invoice (#474))
+		early_payment_discount = 0
 	) {
 		let summary_field = this.match_field_group.get_field(
 			"transaction_amount_summary"
@@ -287,30 +279,14 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 			unallocated_amount < 0
 				? "text-danger"
 				: unallocated_amount > 0
-				  ? "text-blue"
-				  : "text-success",
+				? "text-blue"
+				: "text-success",
 			actual_unallocated,
 		];
 
 		new banking.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
-<<<<<<< HEAD
-			values: {
-				Amount: [total_amount],
-				"Allocated Amount": [allocated_amount, ""],
-				"To Allocate": [
-					unallocated_amount,
-					unallocated_amount < 0
-						? "text-danger"
-						: unallocated_amount > 0
-						? "text-blue"
-						: "text-success",
-					actual_unallocated,
-				],
-			},
-=======
 			values: values,
->>>>>>> eb684db (fix(Bank Reconciliation Tool Beta): allocate early payment discount to invoice (#474))
 			currency: currency,
 			wrapper_class: "reconciliation-summary",
 		});

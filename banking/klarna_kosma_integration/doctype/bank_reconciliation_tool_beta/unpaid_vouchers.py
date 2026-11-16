@@ -8,13 +8,9 @@ from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
 	apply_early_payment_discount,
 	get_payment_entry,
-<<<<<<< HEAD
-	split_invoices_based_on_payment_terms,
-=======
 	set_pending_discount_loss,
 	split_early_payment_discount_loss,
-	split_refdocs_based_on_payment_terms,
->>>>>>> eb684db (fix(Bank Reconciliation Tool Beta): allocate early payment discount to invoice (#474))
+	split_invoices_based_on_payment_terms,
 )
 from erpnext.setup.utils import get_exchange_rate
 from frappe import _
@@ -160,11 +156,8 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 	journal_entry.user_remark = bt.description
 
 	effective_unallocated = bt.unallocated_amount + included_fee
-<<<<<<< HEAD
-	invoices = split_invoices_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
-=======
 	prepared_invoices = prepare_invoices_to_split(invoices_to_bill)
-	invoices = split_refdocs_based_on_payment_terms(prepared_invoices, bt.company)
+	invoices = split_invoices_based_on_payment_terms(prepared_invoices, bt.company)
 	# The split by payment terms drops the party, which the Journal Entry needs
 	parties = {(invoice.voucher_type, invoice.voucher_no): invoice for invoice in prepared_invoices}
 	for row in invoices:
@@ -172,7 +165,6 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 		row.party_type = prepared_invoice.party_type
 		row.party = prepared_invoice.party
 
->>>>>>> eb684db (fix(Bank Reconciliation Tool Beta): allocate early payment discount to invoice (#474))
 	# A selection of only opposite-side returns (e.g. return Purchase Invoices settled by a
 	# deposit) allocates negative amounts, but it settles the bank positively. Flip the sign,
 	# like the Payment Entry path does with abs(), so the entry is not booked inverted.
@@ -234,7 +226,7 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 
 
 def get_included_fee_early_payment_discount_rows(
-	bt: CustomBankTransaction, first_invoice: tuple, invoices: list, bank_unallocated: float
+	bt: "CustomBankTransaction", first_invoice: tuple, invoices: list, bank_unallocated: float
 ) -> list:
 	"""Return the early payment discount of the first invoice for a deposit with an included fee.
 
