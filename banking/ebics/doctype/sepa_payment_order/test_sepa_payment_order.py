@@ -67,8 +67,9 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 			qty=1,
 			rate=100,
 			do_not_submit=True,
-			bill_no=frappe.generate_hash(length=8),
 		)
+		# Becomes the purpose of the payment. ERPNext's helper has no argument for it.
+		invoice.bill_no = frappe.generate_hash(length=8)
 		# ERPNext creates the payment schedule on insert, we only adjust its dates
 		schedule = invoice.payment_schedule[0]
 		schedule.due_date = due_date
@@ -178,6 +179,32 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order = self.new_payment_order(execution_date=today())
 		with self.assertRaises(frappe.ValidationError):
 			order.fetch_payables(add_days(today(), 10), other_mode)
+
+	def test_cancel_and_amend_reset_invoice_status(self):
+		"""Cancelling frees the invoice, so that it can go into another order or be cancelled."""
+		invoice = self.make_invoice(due_date=add_days(today(), 5))
+		schedule_row = invoice.payment_schedule[0].name
+
+		def invoice_status():
+			return frappe.db.get_value("Payment Schedule", schedule_row, "sepa_payment_order_status")
+
+		order = self.new_payment_order(execution_date=today())
+		order.fetch_payables(add_days(today(), 10))
+		order.payments = [p for p in order.payments if p.reference_name == invoice.name]
+		order.insert()
+		order.submit()
+		self.assertEqual(invoice_status(), "Approved")
+
+		order.cancel()
+		self.assertEqual(invoice_status(), "")
+
+		amended_order = frappe.copy_doc(order)
+		amended_order.amended_from = order.name
+		# In tests, copy_doc keeps the docstatus
+		for doc in (amended_order, *amended_order.payments):
+			doc.docstatus = 0
+		amended_order.insert()
+		self.assertEqual(invoice_status(), "Draft")
 
 	def add_payment(self, order, iban: str, swift_number: str):
 		order.append(
