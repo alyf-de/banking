@@ -2478,6 +2478,55 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		# 10.20 USD at the rate of the payment, in company currency
 		self.assertEqual(pe.deductions[0].amount, -918)
 
+	def test_usd_purchase_invoice_with_early_payment_discount_and_currency_number_format(self):
+		"""
+		PI: 500 USD at 80 INR/USD with 2 % early payment discount, USD payable account
+		BT: withdrawal of 490 USD from a USD bank account, the rate is now 90.55 INR/USD
+		USD has no decimals. The discount in company currency (905.50 INR) must keep its decimals.
+		"""
+		_gl_account, usd_bank_account = setup_usd_bank()
+		supplier = create_supplier("USD Payable Supplier Inc.", "USD")
+		create_currency_exchange("USD", "INR", 90.55)
+		create_payment_terms_template_with_early_payment_discount()
+
+		pi = make_purchase_invoice(
+			supplier=supplier,
+			currency="USD",
+			conversion_rate=80,
+			rate=500,
+			qty=1,
+			cost_center="_Test Cost Center - _TC",
+			do_not_save=1,
+		)
+		pi.credit_to = "_Test Payable USD - _TC"
+		pi.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+		pi.save()
+		pi.submit()
+		bt = create_bank_transaction(withdrawal=490, bank_account=usd_bank_account, currency="USD")
+
+		def get_precision_from_currency_format(currency: str) -> int:
+			return 0 if currency == "USD" else 2
+
+		# Unsaved documents of earlier tests leave their field currencies in this cache
+		frappe.local.field_currency = frappe._dict()
+		with patch(
+			"frappe.model.meta.get_precision_from_currency_format",
+			side_effect=get_precision_from_currency_format,
+		):
+			bulk_reconcile_vouchers(
+				bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+			)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 490)
+		# 10 USD at the rate of the payment, in company currency
+		self.assertEqual(pe.deductions[0].amount, -905.50)
+
 	def test_unpaid_invoice_matches_amount_after_early_payment_discount(self):
 		"""
 		PI: 510 with 2 % early payment discount
