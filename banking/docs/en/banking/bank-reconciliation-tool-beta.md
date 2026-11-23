@@ -6,9 +6,7 @@ roles:
   - Accounts Manager
 ---
 
-Once all your Bank Transactions are synced into ERPNext, you can reconcile them with your existing vouchers. On your workspace sidebar, **go to**:
-
-> Accounting > ALYF Banking > Bank Reconciliation
+Once all your Bank Transactions are synced into ERPNext, you can reconcile them with your existing vouchers. In the ERPNext dock, open **ALYF Banking** (`/desk/alyf-banking`) and select **Bank Reconciliation** in the sidebar.
 
 Or simply search for **Bank Reconciliation Tool Beta** in the awesomebar.
 
