@@ -1,0 +1,24 @@
+{
+ "app": "banking",
+ "creation": "2026-11-23 12:31:47.861540",
+ "docstatus": 0,
+ "doctype": "Dock",
+ "idx": 0,
+ "items": [
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "income",
+   "link_to": "ALYF Banking",
+   "link_type": "Workspace",
+   "title": "ALYF Banking"
+  }
+ ],
+ "modified": "2026-11-23 12:31:47.861540",
+ "modified_by": "Administrator",
+ "mount_on": "erpnext",
+ "name": "banking",
+ "owner": "Administrator",
+ "standard": 1,
+ "user": ""
+}
