@@ -2381,6 +2381,38 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(si.outstanding_amount, 0)
 
+	def test_included_fee_deposit_with_early_payment_discount_and_tax_loss_rounded_to_zero(self):
+		"""
+		SI: 0.50 + 18 % tax = 0.59 with 2 % early payment discount of 0.01, tax discount loss is booked
+		BT: deposit of 0.53 with an included fee of 0.05, before the discount date
+		The income loss is 0.01 and the tax loss rounds to 0. The JE must not get a zero row.
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=0.50)
+		bt = create_bank_transaction(deposit=0.53, included_fee=0.05, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 0.01)
+		self.assertNotIn("_Test Account Service Tax - _TC", accounts)
+
 	def test_deposit_with_early_payment_discount_and_tax_loss_rounding(self):
 		"""
 		SI: 101.46 + 18 % tax = 119.72 with 2 % early payment discount of 2.39
@@ -2445,6 +2477,55 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		self.assertEqual(pe.unallocated_amount, 0)
 		# 10.20 USD at the rate of the payment, in company currency
 		self.assertEqual(pe.deductions[0].amount, -918)
+
+	def test_usd_purchase_invoice_with_early_payment_discount_and_currency_number_format(self):
+		"""
+		PI: 500 USD at 80 INR/USD with 2 % early payment discount, USD payable account
+		BT: withdrawal of 490 USD from a USD bank account, the rate is now 90.55 INR/USD
+		USD has no decimals. The discount in company currency (905.50 INR) must keep its decimals.
+		"""
+		_gl_account, usd_bank_account = setup_usd_bank()
+		supplier = create_supplier("USD Payable Supplier Inc.", "USD")
+		create_currency_exchange("USD", "INR", 90.55)
+		create_payment_terms_template_with_early_payment_discount()
+
+		pi = make_purchase_invoice(
+			supplier=supplier,
+			currency="USD",
+			conversion_rate=80,
+			rate=500,
+			qty=1,
+			cost_center="_Test Cost Center - _TC",
+			do_not_save=1,
+		)
+		pi.credit_to = "_Test Payable USD - _TC"
+		pi.payment_terms_template = EARLY_PAYMENT_DISCOUNT_TEMPLATE
+		pi.save()
+		pi.submit()
+		bt = create_bank_transaction(withdrawal=490, bank_account=usd_bank_account, currency="USD")
+
+		def get_precision_from_currency_format(currency: str) -> int:
+			return 0 if currency == "USD" else 2
+
+		# Unsaved documents of earlier tests leave their field currencies in this cache
+		frappe.local.field_currency = frappe._dict()
+		with patch(
+			"frappe.model.meta.get_precision_from_currency_format",
+			side_effect=get_precision_from_currency_format,
+		):
+			bulk_reconcile_vouchers(
+				bt.name, json.dumps([{"payment_doctype": "Purchase Invoice", "payment_name": pi.name}])
+			)
+
+		bt.reload()
+		pi.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(pi.outstanding_amount, 0)
+
+		pe = frappe.get_doc("Payment Entry", bt.payment_entries[0].payment_entry)
+		self.assertEqual(pe.paid_amount, 490)
+		# 10 USD at the rate of the payment, in company currency
+		self.assertEqual(pe.deductions[0].amount, -905.50)
 
 	def test_unpaid_invoice_matches_amount_after_early_payment_discount(self):
 		"""

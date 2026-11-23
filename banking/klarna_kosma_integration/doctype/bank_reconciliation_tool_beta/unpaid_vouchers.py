@@ -213,6 +213,10 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 		)
 
 	for row in discount_rows:
+		if not row.amount:
+			# A tax loss can round to zero. A Journal Entry does not accept zero rows.
+			continue
+
 		journal_entry.append(
 			"accounts",
 			{
@@ -426,10 +430,11 @@ def make_pe_against_invoices(
 				for row in payment_entry.deductions:
 					row.amount = flt(row.amount * rate_factor, row.precision("amount"))
 
+			# The deductions are in company currency, which can have more decimals than `paid_amount`
 			sign = -1 if payment_entry.payment_type == "Pay" else 1
-			round_off_early_payment_discount(
-				payment_entry.deductions, sign * flt(early_payment_discount * exchange_rate, precision)
-			)
+			company_precision = payment_entry.deductions[0].precision("amount")
+			base_early_payment_discount = flt(early_payment_discount * exchange_rate, company_precision)
+			round_off_early_payment_discount(payment_entry.deductions, sign * base_early_payment_discount)
 		total_outstanding = sum(invoice.outstanding_amount for invoice in invoices)
 		discounted_outstanding = flt(total_outstanding - early_payment_discount, precision)
 		if flt(bank_unallocated, precision) != discounted_outstanding:
