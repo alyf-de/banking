@@ -2366,6 +2366,38 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, FrappeTestCase):
 		self.assertEqual(bt.status, "Reconciled")
 		self.assertEqual(si.outstanding_amount, 0)
 
+	def test_included_fee_deposit_with_early_payment_discount_and_tax_loss_rounded_to_zero(self):
+		"""
+		SI: 0.50 + 18 % tax = 0.59 with 2 % early payment discount of 0.01, tax discount loss is booked
+		BT: deposit of 0.53 with an included fee of 0.05, before the discount date
+		The income loss is 0.01 and the tax loss rounds to 0. The JE must not get a zero row.
+		"""
+		frappe.db.set_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees", 1)
+		frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+		fee_gl_account = create_bank_gl_account("_Test Bank Fee Reco GL")
+		fee_expense_account = create_bank_gl_account("_Test Bank Fee Reco Expense")
+		bank_account_with_fee = create_bank_account(
+			gl_account=fee_gl_account,
+			bank_account_name="Personal Account With Fee",
+			bank_fee_account=fee_expense_account,
+		)
+		si = make_sales_invoice_with_tax_and_early_payment_discount(self.customer, rate=0.50)
+		bt = create_bank_transaction(deposit=0.53, included_fee=0.05, bank_account=bank_account_with_fee)
+
+		bulk_reconcile_vouchers(
+			bt.name, json.dumps([{"payment_doctype": "Sales Invoice", "payment_name": si.name}])
+		)
+
+		bt.reload()
+		si.reload()
+		self.assertEqual(bt.status, "Reconciled")
+		self.assertEqual(si.outstanding_amount, 0)
+
+		je = frappe.get_doc("Journal Entry", bt.payment_entries[0].payment_entry)
+		accounts = {row.account: row for row in je.accounts}
+		self.assertEqual(accounts["Write Off - _TC"].debit_in_account_currency, 0.01)
+		self.assertNotIn("_Test Account Service Tax - _TC", accounts)
+
 	def test_deposit_with_early_payment_discount_and_tax_loss_rounding(self):
 		"""
 		SI: 101.46 + 18 % tax = 119.72 with 2 % early payment discount of 2.39

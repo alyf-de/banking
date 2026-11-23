@@ -211,6 +211,10 @@ def make_jv_against_invoices(bt: "CustomBankTransaction", invoices_to_bill: list
 		)
 
 	for row in discount_rows:
+		if not row.amount:
+			# A tax loss can round to zero. A Journal Entry does not accept zero rows.
+			continue
+
 		journal_entry.append(
 			"accounts",
 			{
