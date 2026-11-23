@@ -2656,7 +2656,7 @@ def create_supplier(supplier_name="_Test Supplier", currency=None):
 	if not frappe.db.exists("Supplier", supplier_name):
 		supplier = frappe.new_doc("Supplier")
 		supplier.supplier_name = supplier_name
-		supplier.supplier_group = "All Supplier Groups"
+		supplier.supplier_group = frappe.db.get_value("Supplier Group", {"is_group": 0})
 		supplier.supplier_type = "Individual"
 		if currency:
 			supplier.default_currency = currency
