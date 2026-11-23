@@ -6,9 +6,7 @@ roles:
   - Accounts Manager
 ---
 
-Once all your Bank Transactions are synced into ERPNext, you can reconcile them with your existing vouchers. On your workspace sidebar, **go to**:
-
-> Accounting > ALYF Banking > Bank Reconciliation
+Once all your Bank Transactions are synced into ERPNext, you can reconcile them with your existing vouchers. In the ERPNext dock, open **ALYF Banking** (`/desk/alyf-banking`) and select **Bank Reconciliation** in the sidebar.
 
 Or simply search for **Bank Reconciliation Tool Beta** in the awesomebar.
 
@@ -63,7 +61,7 @@ Finally, after checking the desired rows, click on the **Reconcile** at the bott
 
 ## Early Payment Discounts
 
-An invoice can have an early payment discount in its **Payment Schedule**. If the payment uses the discounted amount (for example, from a [SEPA Payment Order](/app/docs/en/banking/sepa-payment-order)), the **Bank Transaction** is smaller than the outstanding amount of the invoice. **To Allocate** then shows the discount as a negative amount.
+An invoice can have an early payment discount in its **Payment Schedule**. If the payment uses the discounted amount (for example, from a [SEPA Payment Order](sepa-payment-order.md)), the **Bank Transaction** is smaller than the outstanding amount of the invoice. **To Allocate** then shows the discount as a negative amount.
 
 ### Known Limitation
 

@@ -19,10 +19,11 @@ from erpnext.setup.utils import get_exchange_rate
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Cast, Coalesce, Sum
+from frappe.query_builder.functions import Cast, Coalesce, Round, Sum
 from frappe.utils import flt, sbool
 from pypika import Order
-from pypika.terms import ExistsCriterion
+from pypika.queries import Table
+from pypika.terms import ExistsCriterion, Term
 
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.unpaid_vouchers import (
 	get_deposit_included_fee,
@@ -1371,7 +1372,16 @@ def get_unpaid_si_matching_query(
 	party_filter = sales_invoice.customer == common_filters.party
 	party_rank = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	base_amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	# The backend books the discount only for invoices without currency conversion.
+	early_payment_discount = (
+		frappe.qb.terms.Case()
+		.when(is_converted, 0)
+		.else_(get_early_payment_discount(sales_invoice, "Sales Invoice", common_filters.date))
+	)
+	amount_condition = (invoice_outstanding == common_filters.amount) | (
+		invoice_outstanding - early_payment_discount == common_filters.amount
+	)
+	base_amount_rank = frappe.qb.terms.Case().when(amount_condition, 1).else_(0)
 	amount_rank = frappe.qb.terms.Case().when(currency_match_condition, base_amount_rank).else_(0)
 
 	# Check reference field equality with common_filters.reference_no
@@ -1404,6 +1414,7 @@ def get_unpaid_si_matching_query(
 			ConstantColumn("Sales Invoice").as_("doctype"),
 			sales_invoice.name.as_("name"),
 			invoice_outstanding.as_("paid_amount"),
+			early_payment_discount.as_("early_payment_discount"),
 			sales_invoice[reference_field or "name"].as_("reference_no"),
 			sales_invoice.posting_date.as_("reference_date"),
 			sales_invoice.customer.as_("party"),
@@ -1429,7 +1440,7 @@ def get_unpaid_si_matching_query(
 	if include_only_returns:
 		query = query.where(sales_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(currency_match_condition).where(invoice_outstanding == common_filters.amount)
+		query = query.where(currency_match_condition).where(amount_condition)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
@@ -1564,7 +1575,16 @@ def get_unpaid_pi_matching_query(
 	party_filter = purchase_invoice.supplier == common_filters.party
 	party_match = frappe.qb.terms.Case().when(party_filter, 1).else_(0)
 
-	base_amount_rank = amount_rank_condition(invoice_outstanding, common_filters.amount)
+	# The backend books the discount only for invoices without currency conversion.
+	early_payment_discount = (
+		frappe.qb.terms.Case()
+		.when(is_converted, 0)
+		.else_(get_early_payment_discount(purchase_invoice, "Purchase Invoice", common_filters.date))
+	)
+	amount_condition = (invoice_outstanding == common_filters.amount) | (
+		invoice_outstanding - early_payment_discount == common_filters.amount
+	)
+	base_amount_rank = frappe.qb.terms.Case().when(amount_condition, 1).else_(0)
 	amount_rank = frappe.qb.terms.Case().when(currency_match_condition, base_amount_rank).else_(0)
 
 	# Check reference field equality with common_filters.reference_no
@@ -1599,6 +1619,7 @@ def get_unpaid_pi_matching_query(
 			ConstantColumn("Purchase Invoice").as_("doctype"),
 			purchase_invoice.name.as_("name"),
 			invoice_outstanding.as_("paid_amount"),
+			early_payment_discount.as_("early_payment_discount"),
 			purchase_invoice[reference_field].as_("reference_no"),
 			purchase_invoice.bill_date.as_("reference_date"),
 			purchase_invoice.supplier.as_("party"),
@@ -1625,11 +1646,43 @@ def get_unpaid_pi_matching_query(
 	if include_only_returns:
 		query = query.where(purchase_invoice.is_return == 1)
 	if exact_match:
-		query = query.where(currency_match_condition).where(invoice_outstanding == common_filters.amount)
+		query = query.where(currency_match_condition).where(amount_condition)
 	if common_filters.exact_party_match:
 		query = query.where(party_filter)
 
 	return query
+
+
+def get_early_payment_discount(invoice: Table, doctype: str, date: str | datetime.date) -> Term:
+	"""Sum the early payment discounts of all payment terms that are valid on `date`.
+
+	Same rules as ERPNext's `apply_early_payment_discount()`, which books the discount
+	when the invoice is paid.
+	"""
+	payment_schedule = frappe.qb.DocType("Payment Schedule")
+	# A percentage applies to the grand total in the currency of the party account
+	discount_base = (
+		frappe.qb.terms.Case()
+		.when(invoice.currency == invoice.party_account_currency, invoice.grand_total)
+		.else_(invoice.base_grand_total)
+	)
+	term_discount = (
+		frappe.qb.terms.Case()
+		.when(payment_schedule.discount_type == "Percentage", discount_base * payment_schedule.discount / 100)
+		.else_(payment_schedule.discount)
+	)
+	precision = frappe.get_precision(doctype, "outstanding_amount")
+	discount = (
+		frappe.qb.from_(payment_schedule)
+		.select(Round(Sum(term_discount), precision))
+		.where(payment_schedule.parenttype == doctype)
+		.where(payment_schedule.parent == invoice.name)
+		.where(payment_schedule.outstanding != 0)
+		.where(payment_schedule.discounted_amount == 0)
+		.where(payment_schedule.discount != 0)
+		.where(payment_schedule.discount_date >= date)
+	)
+	return Coalesce(discount, 0)
 
 
 def get_unpaid_ec_matching_query(

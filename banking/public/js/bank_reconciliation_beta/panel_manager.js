@@ -67,6 +67,29 @@ banking.bank_reconciliation.get_total_allocated = (
 	return only_opposite_returns ? -total : total;
 };
 
+// Same rule as the backend: the early payment discount only applies when the bank
+// amount is exactly the outstanding amount minus the discount. Only for a single
+// invoice, because the backend can book the discount of one invoice only.
+banking.bank_reconciliation.get_early_payment_discount = (
+	summary_data,
+	allocation_budget,
+	total_allocated,
+) => {
+	const entries = Object.values(summary_data || {});
+	if (entries.length !== 1) {
+		return 0;
+	}
+
+	const discount = flt(entries[0].early_payment_discount);
+	const currency_precision = frappe.meta.get_field_precision({
+		fieldtype: "Currency",
+	});
+	const pays_discounted_amount =
+		flt(total_allocated - discount, currency_precision) ===
+		flt(allocation_budget, currency_precision);
+	return pays_discounted_amount ? discount : 0;
+};
+
 banking.bank_reconciliation.get_summary_amount = (
 	transaction,
 	summary_data,

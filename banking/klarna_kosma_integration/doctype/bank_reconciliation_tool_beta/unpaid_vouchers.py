@@ -8,13 +8,16 @@ from typing import TYPE_CHECKING
 import frappe
 from erpnext import get_company_currency, get_default_cost_center
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
+	apply_early_payment_discount,
 	get_payment_entry,
+	set_pending_discount_loss,
+	split_early_payment_discount_loss,
 	split_refdocs_based_on_payment_terms,
 )
 from erpnext.setup.utils import get_exchange_rate
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, getdate
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
 
@@ -155,17 +158,35 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 	journal_entry.user_remark = bt.description
 
 	effective_unallocated = bt.unallocated_amount + included_fee
-	invoices = split_refdocs_based_on_payment_terms(prepare_invoices_to_split(invoices_to_bill), bt.company)
+	prepared_invoices = prepare_invoices_to_split(invoices_to_bill)
+	invoices = split_refdocs_based_on_payment_terms(prepared_invoices, bt.company)
+	# The split by payment terms drops the party, which the Journal Entry needs
+	parties = {(invoice.voucher_type, invoice.voucher_no): invoice for invoice in prepared_invoices}
+	for row in invoices:
+		prepared_invoice = parties[(row.voucher_type, row.voucher_no)]
+		row.party_type = prepared_invoice.party_type
+		row.party = prepared_invoice.party
+
 	# A selection of only opposite-side returns (e.g. return Purchase Invoices settled by a
 	# deposit) allocates negative amounts, but it settles the bank positively. Flip the sign,
 	# like the Payment Entry path does with abs(), so the entry is not booked inverted.
 	sign = -1 if all(invoice.outstanding_amount < 0 for invoice in invoices) else 1
+	discount_rows = (
+		get_included_fee_early_payment_discount_rows(bt, invoices_to_bill[0], invoices, effective_unallocated)
+		if included_fee
+		else []
+	)
+	early_payment_discount = sum(row.amount for row in discount_rows)
 	adjust_and_allocate_invoices(
-		bt, invoices, journal_entry, action=_attach_invoice, effective_unallocated=effective_unallocated
+		bt,
+		invoices,
+		journal_entry,
+		action=_attach_invoice,
+		effective_unallocated=effective_unallocated + early_payment_discount,
 	)
 
 	total_allocated_amount = sign * sum(row.allocated_amount for row in invoices)
-	bank_amount = total_allocated_amount - included_fee
+	bank_amount = total_allocated_amount - included_fee - early_payment_discount
 	validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 
 	journal_entry.append(
@@ -191,8 +212,73 @@ def make_jv_against_invoices(bt: CustomBankTransaction, invoices_to_bill: list, 
 			},
 		)
 
+	for row in discount_rows:
+		journal_entry.append(
+			"accounts",
+			{
+				"account": row.account,
+				"debit_in_account_currency": row.amount,
+				"credit_in_account_currency": 0.0,
+				"cost_center": row.cost_center,
+			},
+		)
+
 	journal_entry.submit()
 	return journal_entry
+
+
+def get_included_fee_early_payment_discount_rows(
+	bt: CustomBankTransaction, first_invoice: tuple, invoices: list, bank_unallocated: float
+) -> list:
+	"""Return the early payment discount of the first invoice for a deposit with an included fee.
+
+	Same rule as in `make_pe_against_invoices()`: the discount applies only if the bank amount
+	(including the fee) is exactly the outstanding amount minus the discount.
+
+	Returns the discount as Payment Entry deduction rows, split into income and tax loss
+	like ERPNext does it in `get_payment_entry()`.
+	"""
+	invoice = frappe.get_doc(first_invoice[DOCTYPE], first_invoice[DOCNAME])
+	_paid_amount, _received_amount, discount, valid_discounts = apply_early_payment_discount(
+		0.0, 0.0, invoice, invoice.party_account_currency, getdate(bt.date)
+	)
+	if not discount:
+		return []
+
+	# Unsaved Payment Entry, only to let ERPNext calculate the deduction rows
+	payment_entry = frappe.new_doc("Payment Entry")
+	payment_entry.company = bt.company
+	payment_entry.payment_type = "Receive"
+	base_total_discount_loss = 0.0
+	if frappe.get_single_value("Accounts Settings", "book_tax_discount_loss"):
+		base_total_discount_loss = split_early_payment_discount_loss(payment_entry, invoice, valid_discounts)
+	set_pending_discount_loss(
+		payment_entry, invoice, discount, base_total_discount_loss, invoice.party_account_currency
+	)
+
+	precision = invoice.precision("outstanding_amount")
+	discount = flt(discount, precision)
+	if not discount:
+		# ERPNext adds no deduction row for a discount that rounds to zero
+		return []
+
+	round_off_early_payment_discount(payment_entry.deductions, discount)
+	total_outstanding = sum(row.outstanding_amount for row in invoices)
+	if flt(bank_unallocated, precision) != flt(total_outstanding - discount, precision):
+		return []
+
+	return payment_entry.deductions
+
+
+def round_off_early_payment_discount(deductions: list, discount: float) -> None:
+	"""Make the deduction rows add up to the discount (in company currency).
+
+	ERPNext rounds the income and tax loss rows on their own. Their sum can then differ from
+	the rounded discount by a cent. Book this difference on the first row.
+	"""
+	precision = deductions[0].precision("amount")
+	difference = flt(discount - sum(row.amount for row in deductions), precision)
+	deductions[0].amount = flt(deductions[0].amount + difference, precision)
 
 
 def make_pe_against_invoices(
@@ -311,21 +397,60 @@ def make_pe_against_invoices(
 		invoices = split_refdocs_based_on_payment_terms(
 			prepare_invoices_to_split(invoices_to_bill), bt.company
 		)
-		effective_unallocated = (
-			bt.unallocated_amount + included_fee if requires_payment_entry_for_included_fee else None
-		)
+		bank_unallocated = bt.unallocated_amount
+		if requires_payment_entry_for_included_fee:
+			bank_unallocated += included_fee
+
+		# At this point, the only deductions are ERPNext's early payment discount (in company
+		# currency). The discount settles the rest of the invoice, together with the bank amount.
+		precision = payment_entry.precision("paid_amount")
+		early_payment_discount = 0.0
+		if payment_entry.deductions:
+			invoice = frappe.get_doc(first_invoice[DOCTYPE], first_invoice[DOCNAME])
+			# `get_payment_entry()` already showed ERPNext's alert about the discount
+			mute_messages = frappe.flags.mute_messages
+			frappe.flags.mute_messages = True
+			_paid_amount, _received_amount, early_payment_discount, _valid_discounts = (
+				apply_early_payment_discount(
+					0.0, 0.0, invoice, invoice.party_account_currency, getdate(bt.date)
+				)
+			)
+			frappe.flags.mute_messages = mute_messages
+			early_payment_discount = flt(early_payment_discount, precision)
+
+			exchange_rate = payment_entry.get_exchange_rate()
+			if invoice.party_account_currency != invoice.company_currency:
+				# ERPNext books the discount in company currency at the rate of the invoice. Book it
+				# at the rate of this payment instead, else the difference amount is not zero.
+				rate_factor = exchange_rate / invoice.conversion_rate
+				for row in payment_entry.deductions:
+					row.amount = flt(row.amount * rate_factor, row.precision("amount"))
+
+			sign = -1 if payment_entry.payment_type == "Pay" else 1
+			round_off_early_payment_discount(
+				payment_entry.deductions, sign * flt(early_payment_discount * exchange_rate, precision)
+			)
+		total_outstanding = sum(invoice.outstanding_amount for invoice in invoices)
+		discounted_outstanding = flt(total_outstanding - early_payment_discount, precision)
+		if flt(bank_unallocated, precision) != discounted_outstanding:
+			# The party did not pay exactly the discounted amount, so they did not take the discount.
+			payment_entry.deductions = []
+			early_payment_discount = 0.0
+
 		adjust_and_allocate_invoices(
 			bt,
 			invoices,
 			payment_entry,
 			action=_attach_invoice,
-			effective_unallocated=effective_unallocated,
+			effective_unallocated=bank_unallocated + early_payment_discount,
 		)
 
 		total_allocated_amount = sum(row.allocated_amount for row in payment_entry.references)
-		payment_entry.paid_amount = abs(total_allocated_amount)  # should not be negative
+		payment_entry.paid_amount = abs(total_allocated_amount) - early_payment_discount
+		# ERPNext subtracted its discount from the full outstanding, which can be negative.
+		payment_entry.received_amount = payment_entry.paid_amount
 		if requires_payment_entry_for_included_fee:
-			bank_amount = total_allocated_amount - included_fee
+			bank_amount = total_allocated_amount - early_payment_discount - included_fee
 			validate_included_fee_bank_allocation(bt, included_fee, bank_amount)
 			payment_entry.paid_amount = abs(bank_amount)
 			payment_entry.received_amount = abs(bank_amount)
