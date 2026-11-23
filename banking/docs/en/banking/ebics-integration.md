@@ -168,7 +168,7 @@ This means that your bank has not made any account statements available, for the
 
 ### Bank Account not found for IBAN and currency
 
-This message in you error log means that we received transactions from your bank, but a corresponding **Bank Account** has not been configured in ERPNext. Make sure that the IBAN and the currency of the _Company Account_ match the bank statement. See [Set up the Bank Account](/app/docs/en/banking/ebics-integration#set-up-the-bank-account).
+This message in you error log means that we received transactions from your bank, but a corresponding **Bank Account** has not been configured in ERPNext. Make sure that the IBAN and the currency of the _Company Account_ match the bank statement. See [Set up the Bank Account](ebics-integration.md#set-up-the-bank-account).
 
 ### Found several Bank Accounts for IBAN, but the statement has no currency
 

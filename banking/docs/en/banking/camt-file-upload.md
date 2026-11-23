@@ -14,7 +14,7 @@ The CAMT file upload feature provides a manual alternative to automated EBICS ba
 
 Use the CAMT file upload feature when:
 
-- Your bank doesn't support [EBICS integration](/app/docs/en/banking/ebics-integration)
+- Your bank doesn't support [EBICS integration](ebics-integration.md)
 - Temporary connectivity or authentication problems with EBICS
 - You prefer to manually control when transactions are imported
 - As a fallback when automated synchronization fails
