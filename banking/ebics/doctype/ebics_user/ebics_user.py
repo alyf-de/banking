@@ -199,7 +199,14 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 	if user.needs_certificates:
 		manager.create_user_certificates(user.full_name, user.organization_name)
 
-	manager.send_keys_to_bank()
+	# Commit passphrase and generated keys so they are not lost if INI or HIA fails.
+	frappe.db.commit()
+
+	manager.send_ini()
+	# Commit the INI state in the keyring so a failed HIA does not trigger a duplicate INI.
+	frappe.db.commit()
+
+	manager.send_hia()
 
 	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
 	language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"

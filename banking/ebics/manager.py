@@ -78,10 +78,17 @@ class EBICSManager:
 		return self.client
 
 	def send_keys_to_bank(self):
+		self.send_ini()
+		self.send_hia()
+
+	def send_ini(self):
+		"""Send the public electronic signature key to the bank."""
 		client = self.get_client()
-		# Send the public electronic signature key to the bank.
 		client.INI()
-		# Send the public authentication and encryption keys to the bank.
+
+	def send_hia(self):
+		"""Send the public authentication and encryption keys to the bank."""
+		client = self.get_client()
 		client.HIA()
 
 	def create_ini_letter(self, bank_name: str, language: str | None = None) -> bytes:

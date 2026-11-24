@@ -21,6 +21,7 @@ frappe.ui.form.on("EBICS User", {
 								fieldname: "passphrase",
 								label: __("Passphrase"),
 								fieldtype: "Password",
+								reqd: true,
 								description: __(
 									"Set a new password for downloading bank statements from your bank.",
 								),
@@ -38,6 +39,7 @@ frappe.ui.form.on("EBICS User", {
 								fieldname: "signature_passphrase",
 								label: __("Signature Passphrase"),
 								fieldtype: "Password",
+								reqd: true,
 								description: __(
 									"Set a new password for uploading transactions to your bank.",
 								),
