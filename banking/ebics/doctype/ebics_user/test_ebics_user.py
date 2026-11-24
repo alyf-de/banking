@@ -17,6 +17,8 @@ EBICS_USER_MODULE = "banking.ebics.doctype.ebics_user.ebics_user"
 # The tests create their own Bank. They do not need the test records of ERPNext.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Bank"]
 
+KEYRING = '{"keys": "created by the first try"}'
+
 
 class TestEBICSUser(IntegrationTestCase):
 	@classmethod
@@ -26,16 +28,26 @@ class TestEBICSUser(IntegrationTestCase):
 		cls.user = create_ebics_user()
 
 	def setUp(self):
-		self.user.db_set({"initialized": 0, "ini_sent": 0})
+		self.user.db_set({"initialized": 0, "ini_sent": 0, "keyring": None})
 		self.manager = MagicMock()
+		self.manager.create_user_keys.side_effect = self.store_keys
 		self.manager.create_ini_letter.return_value = make_pdf()
 
+	def store_keys(self):
+		frappe.db.set_value("EBICS User", self.user.name, "keyring", KEYRING)
+
 	def call(self, method, **kwargs):
+		"""Call `method` like a request: if it fails, roll back to the last commit."""
+		frappe.db.savepoint("last_commit")
 		with (
 			patch(f"{EBICS_USER_MODULE}.get_ebics_manager", return_value=self.manager),
-			patch.object(frappe.db, "commit"),
+			patch.object(frappe.db, "commit", side_effect=lambda: frappe.db.savepoint("last_commit")),
 		):
-			return method(ebics_user=self.user.name, **kwargs)
+			try:
+				return method(ebics_user=self.user.name, **kwargs)
+			except Exception:
+				frappe.db.rollback(save_point="last_commit")
+				raise
 
 	def initialize(self):
 		self.call(initialize, passphrase="secret", signature_passphrase="secret", store_passphrase=0)
@@ -44,6 +56,9 @@ class TestEBICSUser(IntegrationTestCase):
 		self.manager.send_authentication_keys.side_effect = ConnectionError("HIA failed")
 		self.assertRaises(ConnectionError, self.initialize)
 		self.assertEqual(self.manager.send_signature_key.call_count, 1)
+		self.user.reload()
+		self.assertTrue(self.user.ini_sent)
+		self.assertEqual(self.user.keyring, KEYRING)
 
 		self.manager.send_authentication_keys.side_effect = None
 		self.initialize()
@@ -56,6 +71,9 @@ class TestEBICSUser(IntegrationTestCase):
 	def test_retry_after_failed_ini_sends_ini_again(self):
 		self.manager.send_signature_key.side_effect = ConnectionError("INI failed")
 		self.assertRaises(ConnectionError, self.initialize)
+		self.user.reload()
+		self.assertFalse(self.user.ini_sent)
+		self.assertEqual(self.user.keyring, KEYRING)
 
 		self.manager.send_signature_key.side_effect = None
 		self.initialize()
