@@ -1,6 +1,7 @@
 # Copyright (c) 2024, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from contextlib import contextmanager
 
 import frappe
 from frappe import _
@@ -27,6 +28,7 @@ class EBICSUser(Document):
 		country: DF.Link | None
 		download_batch_transactions: DF.Check
 		full_name: DF.Data | None
+		ini_sent: DF.Check
 		initialized: DF.Check
 		intraday_sync: DF.Check
 		keyring: DF.Code | None
@@ -190,16 +192,26 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase)
 
-	try:
-		manager.create_user_keys()
-	except RuntimeError as e:
-		if e.args[0] != "keys already present":
-			raise e
+	# After INI, the bank has the signature key. Keep the keys and do not send INI again,
+	# because the bank rejects a second INI for the same user.
+	if not user.ini_sent:
+		try:
+			manager.create_user_keys()
+		except RuntimeError as e:
+			if e.args[0] != "keys already present":
+				raise e
 
-	if user.needs_certificates:
-		manager.create_user_certificates(user.full_name, user.organization_name)
+		if user.needs_certificates:
+			manager.create_user_certificates(user.full_name, user.organization_name)
 
-	manager.send_keys_to_bank()
+		frappe.db.commit()
+
+	with explain_ebics_errors(user):
+		if not user.ini_sent:
+			manager.send_signature_key()
+			user.db_set("ini_sent", 1, commit=True)
+
+		manager.send_authentication_keys()
 
 	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
 	language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
@@ -217,7 +229,8 @@ def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 
 	manager = get_ebics_manager(user, passphrase=passphrase)
 
-	return manager.download_bank_keys()
+	with explain_ebics_errors(user):
+		return manager.download_bank_keys()
 
 
 @frappe.whitelist(methods=["POST"])
@@ -292,3 +305,36 @@ def ensure_ebics_is_enabled():
 				get_link_to_form("Banking Settings", "Banking Settings")
 			)
 		)
+
+
+@contextmanager
+def explain_ebics_errors(user: EBICSUser):
+	"""Turn common EBICS errors from the bank into messages that tell the user what to check."""
+	from fintech.ebics import EbicsTechnicalError
+
+	try:
+		yield
+	except EbicsTechnicalError as error:
+		messages = {
+			EbicsTechnicalError.EBICS_INVALID_USER_OR_USER_STATE: _(
+				"The bank does not accept this EBICS User in its current state. Please check the Partner ID and the User ID. If both are correct, ask your bank about the state of this user. For example, the bank may already have keys from an earlier initialization."
+			),
+			EbicsTechnicalError.EBICS_USER_UNKNOWN: _(
+				"The bank does not know this EBICS User. Please check the Partner ID and the User ID."
+			),
+			EbicsTechnicalError.EBICS_INVALID_USER_STATE: _(
+				"The bank has not activated this EBICS User yet. Please wait until your bank has processed the INI letter."
+			),
+			EbicsTechnicalError.EBICS_INVALID_HOST_ID: _(
+				"The bank does not know this EBICS Host ID. Please check the EBICS Host ID of bank {0}."
+			).format(get_link_to_form("Bank", user.bank)),
+			EbicsTechnicalError.EBICS_AUTHENTICATION_FAILED: _(
+				"The bank could not verify the keys of this EBICS User. The keys in this system may not match the keys at the bank. Please contact your bank."
+			),
+		}
+		message = messages.get(error.code)
+		if not message:
+			raise
+
+		bank_response = _("Bank response: {0}").format(error)
+		frappe.throw(f"{message}<br><br>{bank_response}", title=_("EBICS Error"))
