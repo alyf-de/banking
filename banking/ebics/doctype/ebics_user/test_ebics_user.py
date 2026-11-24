@@ -15,7 +15,7 @@ REMOVE = "banking_admin.ebics_api.remove_ebics_user"
 HOST_ID = "_TESTHOST"
 
 # The tests create their own Bank. ERPNext's Bank test records need more setup.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Bank"]
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Bank", "Country"]
 
 
 def make_response(status_code: int, message: str | None = None) -> Response:
@@ -176,3 +176,39 @@ class TestEBICSUser(IntegrationTestCase):
 		bank.ebics_host_id = HOST_ID
 		with self.assertRaises(frappe.ValidationError):
 			bank.save()
+
+
+class TestValidateBank(IntegrationTestCase):
+	def setUp(self):
+		# Not inserted, so that the user does not get registered with the license backend
+		self.ebics_user = frappe.get_doc(
+			{"doctype": "EBICS User", "bank": create_ebics_bank(), "protocol_version": "H004"}
+		)
+		frappe.clear_messages()
+
+	@patch(
+		"banking.ebics.doctype.ebics_user.ebics_user.get_protocol_versions",
+		side_effect=Exception("Connection refused"),
+	)
+	def test_warn_when_bank_does_not_answer_hev(self, _):
+		self.ebics_user.validate()
+
+		messages = frappe.get_message_log()
+		self.assertEqual(len(messages), 1)
+		self.assertIn("EBICS URL", messages[0]["message"])
+
+	@patch(
+		"banking.ebics.doctype.ebics_user.ebics_user.get_protocol_versions",
+		return_value={"H005": "03.00"},
+	)
+	def test_unsupported_protocol_version(self, _):
+		self.assertRaises(frappe.ValidationError, self.ebics_user.validate)
+
+	@patch(
+		"banking.ebics.doctype.ebics_user.ebics_user.get_protocol_versions",
+		return_value={"H004": "02.50", "H005": "03.00"},
+	)
+	def test_supported_protocol_version(self, _):
+		self.ebics_user.validate()
+
+		self.assertEqual(frappe.get_message_log(), [])
