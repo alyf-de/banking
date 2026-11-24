@@ -7,7 +7,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 from frappe.utils.data import comma_and, getdate
-from requests import HTTPError
+from requests import Response
 
 from banking.ebics.utils import get_ebics_manager, get_protocol_versions, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
@@ -41,6 +41,12 @@ class EBICSUser(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if self.partner_id:
+			self.partner_id = self.partner_id.strip()
+
+		if self.user_id:
+			self.user_id = self.user_id.strip()
+
 		if self.country:
 			self.validate_country_code()
 
@@ -49,60 +55,55 @@ class EBICSUser(Document):
 
 		self.validate_protocol_version()
 
-	def before_insert(self):
-		self.register_user()
-
 	def on_update(self):
+		previous = self.get_doc_before_save()
+		if previous and get_ebics_ids(previous) != get_ebics_ids(self):
+			previous.remove_user()
+
 		self.register_user()
 
 	def on_trash(self):
 		self.remove_user()
 
 	def register_user(self):
-		"""Indempotent method to register the user with the admin backend."""
+		"""Idempotent method to register the user with the admin backend."""
+		if not all(get_ebics_ids(self)):
+			return
+
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
-		try:
-			r = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
-			r.raise_for_status()
-		except HTTPError as e:
-			if e.response.status_code == 402:
-				# User already exists for this customer
-				return
-			elif e.response.status_code == 403:
-				title = _("Banking Error")
-				msg = _("EBICS User limit exceeded.")
-				frappe.log_error(
-					title=_("Banking Error"),
-					message=msg,
-					reference_doctype="EBICS User",
-					reference_name=self.name,
-				)
-				frappe.throw(title=title, msg=msg)
-			elif e.response.status_code == 409:
-				title = _("Banking Error")
-				msg = _("User ID not available.")
-				frappe.log_error(
-					title=_("Banking Error"),
-					message=msg,
-					reference_doctype="EBICS User",
-					reference_name=self.name,
-				)
-				frappe.throw(title=title, msg=msg)
+		response = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
+		self.throw_on_admin_error(response, _("Failed to register EBICS User."))
 
 	def remove_user(self):
-		"""Indempotent method to remove the user from the admin backend."""
+		"""Idempotent method to remove the user from the admin backend."""
+		if not all(get_ebics_ids(self)):
+			return
+
 		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		response = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id, remove=True)
+		self.throw_on_admin_error(response, _("Failed to remove EBICS user registration."))
+
+	def throw_on_admin_error(self, response: Response, title: str):
+		"""Throw the reason from the admin backend if the response is not 2xx."""
+		is_success = 200 <= response.status_code < 300
+		if is_success:
+			return
+
 		try:
-			r = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id, remove=True)
-			r.raise_for_status()
-		except HTTPError:
-			title = _("Failed to remove EBICS user registration.")
-			frappe.log_error(
-				title=title,
-				reference_doctype="EBICS User",
-				reference_name=self.name,
-			)
-			frappe.throw(title)
+			message = response.json().get("message")
+		except ValueError:  # Gateway errors have no JSON body
+			message = None
+
+		message = message or _("The license server responded with status code {0}.").format(
+			response.status_code
+		)
+		frappe.log_error(
+			title=title,
+			message=message,
+			reference_doctype="EBICS User",
+			reference_name=self.name,
+		)
+		frappe.throw(title=title, msg=message)
 
 	def validate_country_code(self):
 		country_code = self.get_country_code()
@@ -171,6 +172,11 @@ class EBICSUser(Document):
 
 	def get_keyring(self) -> dict:
 		return json.loads(self.keyring) if self.keyring else {}
+
+
+def get_ebics_ids(user: EBICSUser) -> tuple:
+	"""Return the combination of IDs that is registered with the admin backend."""
+	return user.bank, user.partner_id, user.user_id
 
 
 def on_doctype_update():
