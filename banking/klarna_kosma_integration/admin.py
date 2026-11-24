@@ -43,3 +43,18 @@ class Admin:
 			return url.json().get("message")
 		except Exception as exc:
 			ExceptionHandler(exc)
+
+	def get_ebics_users(self) -> list[dict]:
+		try:
+			response = self.request.get_ebics_users()
+			response.raise_for_status()
+			return response.json()["message"]
+		except Exception as exc:
+			ExceptionHandler(exc)
+
+	def remove_ebics_user(self, host_id: str, partner_id: str, user_id: str):
+		try:
+			response = self.request.register_ebics_user(host_id, partner_id, user_id, remove=True)
+			response.raise_for_status()
+		except Exception as exc:
+			ExceptionHandler(exc)
