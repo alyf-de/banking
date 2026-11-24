@@ -126,7 +126,13 @@ class EBICSUser(Document):
 		try:
 			supported_protocol_versions = get_protocol_versions(host_id, url)
 		except Exception:
-			supported_protocol_versions = {}
+			frappe.msgprint(
+				_(
+					"The bank did not answer. Please check the EBICS URL and EBICS Host ID of bank {0}."
+				).format(get_link_to_form("Bank", self.bank)),
+				indicator="orange",
+			)
+			return
 
 		if supported_protocol_versions and self.protocol_version not in supported_protocol_versions:
 			frappe.throw(
