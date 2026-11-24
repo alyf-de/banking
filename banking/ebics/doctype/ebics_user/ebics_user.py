@@ -57,10 +57,18 @@ class EBICSUser(Document):
 
 	def on_update(self):
 		previous = self.get_doc_before_save()
-		if previous and get_ebics_ids(previous) != get_ebics_ids(self):
-			previous.remove_user()
+		if not previous or get_ebics_ids(previous) == get_ebics_ids(self):
+			self.register_user()
+			return
 
-		self.register_user()
+		# Remove first, so that a plan without a free slot can register the new IDs.
+		previous.remove_user()
+		try:
+			self.register_user()
+		except Exception:
+			# The save rolls back and keeps the old IDs, so register them again.
+			previous.register_user()
+			raise
 
 	def on_trash(self):
 		self.remove_user()

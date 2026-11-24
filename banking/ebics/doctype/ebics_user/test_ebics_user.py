@@ -94,6 +94,28 @@ class TestEBICSUser(IntegrationTestCase):
 			[(REMOVE, "PARTNER3X", "USER3"), (REGISTER, "PARTNER3", "USER3")],
 		)
 
+	def test_failed_registration_of_changed_ids_restores_old_registration(self):
+		with mock_admin_backend():
+			user = new_ebics_user(self.bank, "PARTNER11X", "USER11").insert()
+
+		user.partner_id = "PARTNER11"
+		with (
+			mock_admin_backend(
+				make_response(204), make_response(429, "Too many requests"), make_response(204)
+			) as backend,
+			self.assertRaisesRegex(frappe.ValidationError, "Too many requests"),
+		):
+			user.save()
+
+		self.assertEqual(
+			get_calls(backend),
+			[
+				(REMOVE, "PARTNER11X", "USER11"),
+				(REGISTER, "PARTNER11", "USER11"),
+				(REGISTER, "PARTNER11X", "USER11"),
+			],
+		)
+
 	def test_unchanged_ids_keep_registration(self):
 		with mock_admin_backend():
 			user = new_ebics_user(self.bank, "PARTNER4", "USER4").insert()
