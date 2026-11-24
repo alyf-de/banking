@@ -2,23 +2,14 @@
 # See license.txt
 from unittest.mock import patch
 
-<<<<<<< HEAD
-# import frappe
-from frappe.tests.utils import FrappeTestCase
-=======
 import frappe
-from frappe.tests import IntegrationTestCase
->>>>>>> 5ab8e64 (fix(EBICS User): warn when bank does not answer HEV (#497))
+from frappe.tests.utils import FrappeTestCase
 
 # The tests create their own Bank
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Bank", "Country"]
+test_ignore = ["Bank", "Country"]
 
 
-<<<<<<< HEAD
 class TestEBICSUser(FrappeTestCase):
-	pass
-=======
-class TestEBICSUser(IntegrationTestCase):
 	def setUp(self):
 		if not frappe.db.exists("Bank", "_Test EBICS Bank"):
 			bank = frappe.new_doc("Bank")
@@ -59,4 +50,3 @@ class TestEBICSUser(IntegrationTestCase):
 		self.ebics_user.validate()
 
 		self.assertEqual(frappe.get_message_log(), [])
->>>>>>> 5ab8e64 (fix(EBICS User): warn when bank does not answer HEV (#497))
