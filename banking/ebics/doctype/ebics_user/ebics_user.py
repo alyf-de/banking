@@ -192,8 +192,9 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 
 	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase)
 
-	# After INI, the bank has the signature key. Keep the keys and do not send INI again,
-	# because the bank rejects a second INI for the same user.
+	# After INI, the bank has the signature key. Keep the keys and do not send INI again.
+	# Some banks reject a second INI. Others replace the keys until they process the INI letter.
+	# Skipping INI works with both, because the keys stay the same.
 	if not user.ini_sent:
 		try:
 			manager.create_user_keys()
