@@ -8,12 +8,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase
 from frappe.utils.password import set_encrypted_password
->>>>>>> 63d1b54 (feat(Banking Settings): show and remove unmatched EBICS registrations (#498))
 
 from banking.klarna_kosma_integration.doctype.banking_settings.banking_settings import (
 	get_unmatched_ebics_registrations,
@@ -91,7 +87,7 @@ class TestBankingSettings(FrappeTestCase):
 					self.assertTrue(successful_request_exists(None, "C53", date(2025, 1, 1)))
 
 
-class TestUnmatchedEBICSRegistrations(IntegrationTestCase):
+class TestUnmatchedEBICSRegistrations(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
