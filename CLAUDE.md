@@ -161,8 +161,8 @@ For complex matching queries, use pypika in `utils.py`:
 ```python
 from pypika import CustomFunction
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.utils import (
-    amount_rank_condition,
-    get_description_match_condition,
+	amount_rank_condition,
+	get_description_match_condition,
 )
 ```
 
