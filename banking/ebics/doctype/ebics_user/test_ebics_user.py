@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils.file_lock import LockTimeoutError
+from frappe.utils.synchronization import filelock
 from pypdf import PdfWriter
 
 from banking.ebics.doctype.ebics_user.ebics_user import download_bank_keys, initialize
@@ -60,6 +62,13 @@ class TestEBICSUser(IntegrationTestCase):
 
 		self.assertEqual(self.manager.send_signature_key.call_count, 2)
 		self.assertEqual(self.manager.send_authentication_keys.call_count, 1)
+
+	def test_second_initialization_at_the_same_time_fails(self):
+		with filelock(f"initialize_ebics_user_{self.user.name}", timeout=0):
+			self.assertRaises(LockTimeoutError, self.initialize)
+
+		self.manager.create_user_keys.assert_not_called()
+		self.manager.send_signature_key.assert_not_called()
 
 	def test_known_ebics_error_explains_what_to_check(self):
 		error = get_ebics_technical_error()

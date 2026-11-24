@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 from frappe.utils.data import comma_and, getdate
+from frappe.utils.synchronization import filelock
 from requests import HTTPError
 
 from banking.ebics.utils import get_ebics_manager, get_protocol_versions, sync_ebics_transactions
@@ -183,42 +184,47 @@ def on_doctype_update():
 def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
 	ensure_ebics_is_enabled()
 
-	user = frappe.get_doc("EBICS User", ebics_user)
-	user.check_permission("write")
+	# The steps below commit, so a failed request keeps its keys. A second request must not
+	# create other keys at the same time. `for_update` reads the latest committed values.
+	with filelock(f"initialize_ebics_user_{ebics_user}", timeout=0):
+		user = frappe.get_doc("EBICS User", ebics_user, for_update=True)
+		user.check_permission("write")
 
-	if store_passphrase:
-		user.passphrase = passphrase
-		user.save()
+		if store_passphrase:
+			user.passphrase = passphrase
+			user.save()
 
-	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase)
+		manager = get_ebics_manager(
+			ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
+		)
 
-	# After INI, the bank has the signature key. Keep the keys and do not send INI again.
-	# Some banks reject a second INI. Others replace the keys until they process the INI letter.
-	# Skipping INI works with both, because the keys stay the same.
-	if not user.ini_sent:
-		try:
-			manager.create_user_keys()
-		except RuntimeError as e:
-			if e.args[0] != "keys already present":
-				raise e
-
-		if user.needs_certificates:
-			manager.create_user_certificates(user.full_name, user.organization_name)
-
-		frappe.db.commit()
-
-	with explain_ebics_errors(user):
+		# After INI, the bank has the signature key. Keep the keys and do not send INI again.
+		# Some banks reject a second INI. Others replace the keys until they process the INI letter.
+		# Skipping INI works with both, because the keys stay the same.
 		if not user.ini_sent:
-			manager.send_signature_key()
-			user.db_set("ini_sent", 1, commit=True)
+			try:
+				manager.create_user_keys()
+			except RuntimeError as e:
+				if e.args[0] != "keys already present":
+					raise e
 
-		manager.send_authentication_keys()
+			if user.needs_certificates:
+				manager.create_user_certificates(user.full_name, user.organization_name)
 
-	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
-	language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
-	ini_bytes = manager.create_ini_letter(bank_name, language=language)
-	user.attach_ini_letter(ini_bytes)
-	user.db_set("initialized", 1)
+			frappe.db.commit()
+
+		with explain_ebics_errors(user):
+			if not user.ini_sent:
+				manager.send_signature_key()
+				user.db_set("ini_sent", 1, commit=True)
+
+			manager.send_authentication_keys()
+
+		bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
+		language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
+		ini_bytes = manager.create_ini_letter(bank_name, language=language)
+		user.attach_ini_letter(ini_bytes)
+		user.db_set("initialized", 1)
 
 
 @frappe.whitelist(methods=["POST"])
