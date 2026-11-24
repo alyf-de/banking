@@ -287,27 +287,27 @@ To implement this in your custom DocType, you have two options:
 **Option 1: Add a method directly to your DocType class:**
 ```python
 def sepa_payment_order_status_changed(self, payment_schedule_row_name, status):
-    # Update your doctype's fields based on the new status
-    # status will be one of: "", "Draft", "Approved", "Transmitted"
-    pass
+	# Update your doctype's fields based on the new status
+	# status will be one of: "", "Draft", "Approved", "Transmitted"
+	pass
 ```
 
 **Option 2: Use hooks (recommended for apps):**
 In your app's `hooks.py`, add an entry to `doc_events`:
 ```python
 doc_events = {
-    "Your DocType Name": {
-        "sepa_payment_order_status_changed": "your_app.path.to.module.function_name",
-    },
+	"Your DocType Name": {
+		"sepa_payment_order_status_changed": "your_app.path.to.module.function_name",
+	},
 }
 ```
 
 Then implement the handler function:
 ```python
 def sepa_payment_order_status_changed(doc, method, payment_schedule_row_name, status):
-    # doc is the instance of your DocType
-    # Update your doctype's fields based on the new status
-    pass
+	# doc is the instance of your DocType
+	# Update your doctype's fields based on the new status
+	pass
 ```
 
 The banking app itself uses the hooks approach for **Purchase Invoice** (see `banking/hooks.py`).
