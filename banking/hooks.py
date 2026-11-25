@@ -131,6 +131,10 @@ doc_events = {
 		"on_submit": "banking.overrides.voucher_reconciliation.reconcile_created_from_bank_transaction",
 		"on_trash": "banking.overrides.voucher_reconciliation.release_bank_transaction_reservation",
 	},
+	"Bank": {
+		"validate": "banking.custom.bank.validate",
+		"on_update": "banking.custom.bank.on_update",
+	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",
 		"validate": "banking.overrides.bank_account.validate",
