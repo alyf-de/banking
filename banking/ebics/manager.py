@@ -75,12 +75,13 @@ class EBICSManager:
 		self.client = EbicsClient(self.bank, self.user, self.protocol_version)
 		return self.client
 
-	def send_keys_to_bank(self):
-		client = self.get_client()
-		# Send the public electronic signature key to the bank.
-		client.INI()
-		# Send the public authentication and encryption keys to the bank.
-		client.HIA()
+	def send_signature_key(self):
+		"""Send the public electronic signature key to the bank (INI)."""
+		self.get_client().INI()
+
+	def send_authentication_keys(self):
+		"""Send the public authentication and encryption keys to the bank (HIA)."""
+		self.get_client().HIA()
 
 	def create_ini_letter(self, bank_name: str, language: str | None = None) -> bytes:
 		"""Return the PDF data as byte string."""
