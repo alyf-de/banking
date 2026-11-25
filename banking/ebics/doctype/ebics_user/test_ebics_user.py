@@ -37,6 +37,11 @@ def get_calls(mock) -> list[tuple]:
 	return [(c.args[1], c.args[2]["partner_id"], c.args[2]["user_id"]) for c in mock.call_args_list]
 
 
+def get_host_calls(mock) -> list[tuple]:
+	"""Return (endpoint, host_id, partner_id) for each call to the license backend."""
+	return [(c.args[1], c.args[2]["host_id"], c.args[2]["partner_id"]) for c in mock.call_args_list]
+
+
 def create_ebics_bank(bank_name: str = "_Test EBICS Bank") -> str:
 	if not frappe.db.exists("Bank", bank_name):
 		bank = frappe.new_doc("Bank")
@@ -165,17 +170,60 @@ class TestEBICSUser(IntegrationTestCase):
 
 		self.assertEqual(get_calls(backend), [(REMOVE, "PARTNER8", "USER8")])
 
-	def test_bank_host_id_is_locked_while_used(self):
-		bank = frappe.get_doc("Bank", create_ebics_bank("_Test EBICS Bank Locked"))
-		bank.ebics_host_id = "_OTHERHOST"
-		bank.save()  # no EBICS User links to this bank yet
-
+	def test_new_bank_host_id_moves_registrations(self):
+		bank = frappe.get_doc("Bank", create_ebics_bank("_Test EBICS Bank Move"))
 		with mock_admin_backend():
 			new_ebics_user(bank.name, "PARTNER9", "USER9").insert()
 
-		bank.ebics_host_id = HOST_ID
-		with self.assertRaises(frappe.ValidationError):
+		bank.ebics_host_id = "_NEWHOST"
+		with mock_admin_backend() as backend:
 			bank.save()
+
+		self.assertEqual(
+			get_host_calls(backend),
+			[(REMOVE, HOST_ID, "PARTNER9"), (REGISTER, "_NEWHOST", "PARTNER9")],
+		)
+
+	def test_failed_move_restores_old_bank_host_id_registrations(self):
+		bank = frappe.get_doc("Bank", create_ebics_bank("_Test EBICS Bank Move Failure"))
+		with mock_admin_backend():
+			new_ebics_user(bank.name, "PARTNER12", "USER12").insert()
+			new_ebics_user(bank.name, "PARTNER13", "USER13").insert()
+
+		# Same order as the move
+		first, second = frappe.get_all("EBICS User", filters={"bank": bank.name}, pluck="partner_id")
+		bank.ebics_host_id = "_NEWHOST"
+		ok = make_response(204)
+		with (
+			mock_admin_backend(ok, ok, ok, make_response(429, "Too many requests"), ok, ok, ok) as backend,
+			self.assertRaisesRegex(frappe.ValidationError, "Too many requests"),
+		):
+			bank.save()
+
+		self.assertEqual(
+			get_host_calls(backend),
+			[
+				(REMOVE, HOST_ID, first),
+				(REGISTER, "_NEWHOST", first),
+				(REMOVE, HOST_ID, second),
+				(REGISTER, "_NEWHOST", second),
+				(REGISTER, HOST_ID, second),
+				(REMOVE, "_NEWHOST", first),
+				(REGISTER, HOST_ID, first),
+			],
+		)
+
+	def test_bank_host_id_is_locked_after_initialization(self):
+		bank = frappe.get_doc("Bank", create_ebics_bank("_Test EBICS Bank Locked"))
+		with mock_admin_backend():
+			user = new_ebics_user(bank.name, "PARTNER14", "USER14").insert()
+		user.db_set("initialized", 1)
+
+		bank.ebics_host_id = "_NEWHOST"
+		with mock_admin_backend() as backend, self.assertRaises(frappe.ValidationError):
+			bank.save()
+
+		self.assertEqual(get_calls(backend), [])
 
 
 class TestValidateBank(IntegrationTestCase):

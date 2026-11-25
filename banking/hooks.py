@@ -133,6 +133,7 @@ doc_events = {
 	},
 	"Bank": {
 		"validate": "banking.custom.bank.validate",
+		"on_update": "banking.custom.bank.on_update",
 	},
 	"Bank Account": {
 		"before_validate": "banking.overrides.bank_account.before_validate",

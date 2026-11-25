@@ -9,18 +9,50 @@ def validate(doc, method):
 	validate_ebics_host_id_change(doc)
 
 
+def on_update(doc, method):
+	move_ebics_registrations(doc)
+
+
 def validate_ebics_host_id_change(doc):
-	"""The license backend registers each EBICS User with the host ID. It must not change while in use."""
+	"""Allow a new host ID until the bank knows the keys of an EBICS User."""
 	if not doc.has_value_changed("ebics_host_id"):
 		return
 
-	ebics_user = frappe.db.exists("EBICS User", {"bank": doc.name})
+	ebics_user = frappe.db.exists("EBICS User", {"bank": doc.name, "initialized": 1})
 	if ebics_user:
 		frappe.throw(
-			_("You cannot change the EBICS Host ID of bank {0}, because EBICS User {1} uses it.").format(
+			_(
+				"You cannot change the EBICS Host ID of bank {0}, because EBICS User {1} is initialized."
+			).format(frappe.bold(doc.name), get_link_to_form("EBICS User", ebics_user))
+		)
+
+	ebics_user = frappe.db.exists("EBICS User", {"bank": doc.name})
+	if ebics_user and not doc.ebics_host_id:
+		frappe.throw(
+			_("You cannot remove the EBICS Host ID of bank {0}, because EBICS User {1} uses it.").format(
 				frappe.bold(doc.name), get_link_to_form("EBICS User", ebics_user)
 			)
 		)
+
+
+def move_ebics_registrations(doc):
+	"""The license backend registers each EBICS User with the host ID. Register them under the new one."""
+	previous = doc.get_doc_before_save()
+	if not previous or previous.ebics_host_id == doc.ebics_host_id:
+		return
+
+	old_host_id = previous.ebics_host_id
+	moved_users = []
+	try:
+		for name in frappe.get_all("EBICS User", filters={"bank": doc.name}, pluck="name"):
+			ebics_user = frappe.get_doc("EBICS User", name)
+			ebics_user.move_registration(old_host_id, doc.ebics_host_id)
+			moved_users.append(ebics_user)
+	except Exception:
+		# The save rolls back and keeps the old host ID, so register the moved users under it again.
+		for ebics_user in moved_users:
+			ebics_user.move_registration(doc.ebics_host_id, old_host_id)
+		raise
 
 
 @frappe.whitelist()

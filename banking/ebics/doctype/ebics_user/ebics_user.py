@@ -73,23 +73,39 @@ class EBICSUser(Document):
 	def on_trash(self):
 		self.remove_user()
 
-	def register_user(self):
-		"""Idempotent method to register the user with the admin backend."""
+	def register_user(self, host_id: str | None = None):
+		"""Idempotent method to register the user with the admin backend.
+
+		Uses the host ID of the bank, unless `host_id` is given.
+		"""
 		if not all(get_ebics_ids(self)):
 			return
 
-		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		host_id = host_id or frappe.db.get_value("Bank", self.bank, "ebics_host_id")
 		response = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
 		self.throw_on_admin_error(response, _("Failed to register EBICS User."))
 
-	def remove_user(self):
-		"""Idempotent method to remove the user from the admin backend."""
+	def remove_user(self, host_id: str | None = None):
+		"""Idempotent method to remove the user from the admin backend.
+
+		Uses the host ID of the bank, unless `host_id` is given.
+		"""
 		if not all(get_ebics_ids(self)):
 			return
 
-		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		host_id = host_id or frappe.db.get_value("Bank", self.bank, "ebics_host_id")
 		response = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id, remove=True)
 		self.throw_on_admin_error(response, _("Failed to remove EBICS user registration."))
+
+	def move_registration(self, old_host_id: str, new_host_id: str):
+		"""Register the user under the new host ID of the bank instead of the old one."""
+		# Remove first, so that a plan without a free slot can register the new host ID.
+		self.remove_user(old_host_id)
+		try:
+			self.register_user(new_host_id)
+		except Exception:
+			self.register_user(old_host_id)
+			raise
 
 	def throw_on_admin_error(self, response: Response, title: str):
 		"""Throw the reason from the admin backend if the response is not 2xx."""
