@@ -246,6 +246,7 @@ class TestInitializeEBICSUser(IntegrationTestCase):
 
 	def setUp(self):
 		self.user.db_set({"initialized": 0, "ini_sent": 0, "keyring": None, "partner_id": "TESTPARTNER"})
+		frappe.db.set_value("Bank", self.user.bank, "ebics_host_id", "TESTHOST")
 		self.manager = MagicMock()
 		self.manager.create_user_keys.side_effect = self.store_keys
 		self.manager.create_ini_letter.return_value = make_pdf()
@@ -306,6 +307,20 @@ class TestInitializeEBICSUser(IntegrationTestCase):
 		self.user.partner_id = "OTHERPARTNER"
 		with mock_external_services():
 			self.user.save()
+
+		self.manager.send_authentication_keys.side_effect = None
+		self.initialize()
+
+		self.assertEqual(self.manager.send_signature_key.call_count, 2)
+
+	def test_changed_bank_host_id_sends_ini_again(self):
+		self.manager.send_authentication_keys.side_effect = ConnectionError("HIA failed")
+		self.assertRaises(ConnectionError, self.initialize)
+
+		bank = frappe.get_doc("Bank", self.user.bank)
+		bank.ebics_host_id = "OTHERHOST"
+		with mock_admin_backend():
+			bank.save()
 
 		self.manager.send_authentication_keys.side_effect = None
 		self.initialize()
