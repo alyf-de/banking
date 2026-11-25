@@ -209,8 +209,8 @@ function render_unmatched_ebics_registrations(frm, dialog, registrations) {
 	if (!registrations.length) {
 		wrapper.html(
 			`<p>${__(
-				"Each EBICS registration of your subscription has an EBICS User on this site.",
-			)}</p>`,
+				"Each EBICS registration of your subscription has an EBICS User on this site."
+			)}</p>`
 		);
 		return;
 	}
@@ -226,13 +226,13 @@ function render_unmatched_ebics_registrations(frm, dialog, registrations) {
 						<button class="btn btn-xs btn-danger" data-idx="${idx}">${__("Remove")}</button>
 					</td>
 				</tr>
-			`,
+			`
 		)
 		.join("");
 
 	wrapper.html(`
 		<p>${__(
-			"These EBICS registrations count towards the EBICS User limit of your subscription, but no EBICS User on this site matches them.",
+			"These EBICS registrations count towards the EBICS User limit of your subscription, but no EBICS User on this site matches them."
 		)}</p>
 		<table class="table table-bordered">
 			<thead>
@@ -257,7 +257,7 @@ function confirm_ebics_registration_removal(frm, dialog, registrations, idx) {
 	const registration = registrations[idx];
 	const message = __(
 		"The EBICS User {0} can belong to another site of your subscription, for example your production site. If you remove this registration, that site can no longer download bank transactions with this EBICS User. Do you want to remove it?",
-		[`<b>${frappe.utils.escape_html(registration.user_id)}</b>`],
+		[`<b>${frappe.utils.escape_html(registration.user_id)}</b>`]
 	);
 
 	frappe.confirm(message, async () => {
