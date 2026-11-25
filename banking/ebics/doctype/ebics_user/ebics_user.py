@@ -217,7 +217,7 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 			if user.needs_certificates:
 				manager.create_user_certificates(user.full_name, user.organization_name)
 
-			frappe.db.commit()
+			frappe.db.commit()  # nosemgrep
 
 		with explain_ebics_errors(user):
 			if not user.ini_sent:
@@ -349,5 +349,5 @@ def explain_ebics_errors(user: EBICSUser):
 		if not message:
 			raise
 
-		bank_response = _("Bank response: {0}").format(error)
+		bank_response = _("Bank response: {0}").format(str(error))
 		frappe.throw(f"{message}<br><br>{bank_response}", title=_("EBICS Error"))

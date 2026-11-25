@@ -1,14 +1,18 @@
 # Copyright (c) 2024, ALYF GmbH and Contributors
 # See license.txt
+from contextlib import contextmanager
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils.file_lock import LockTimeoutError
+from frappe.utils.password import set_encrypted_password
 from frappe.utils.synchronization import filelock
 from pypdf import PdfWriter
+from requests import Response
 
+from banking.connectors.admin_request import AdminRequest
 from banking.ebics.doctype.ebics_user.ebics_user import download_bank_keys, initialize
 from banking.ebics.utils import register_fintech
 
@@ -25,6 +29,8 @@ class TestEBICSUser(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		frappe.db.set_single_value("Banking Settings", {"enabled": 1, "enable_ebics": 1})
+		# Usually `get_ebics_manager` registers fintech, but the tests mock it.
+		register_fintech()
 		cls.user = create_ebics_user()
 
 	def setUp(self):
@@ -120,6 +126,19 @@ def get_ebics_technical_error():
 	return EbicsTechnicalError
 
 
+@contextmanager
+def mock_external_services():
+	"""Registration with the license backend and the protocol check talk to external services."""
+	set_encrypted_password("Banking Settings", "Banking Settings", "_test_token", "api_token")
+	registered = Response()
+	registered.status_code = 204
+	with (
+		patch.object(AdminRequest, "request", return_value=registered),
+		patch(f"{EBICS_USER_MODULE}.get_protocol_versions", return_value={}),
+	):
+		yield
+
+
 def create_ebics_user():
 	bank = frappe.get_doc(
 		{
@@ -130,11 +149,7 @@ def create_ebics_user():
 		}
 	).insert()
 
-	# Registration with the license backend and the protocol check talk to external services.
-	with (
-		patch("banking.connectors.admin_request.requests.request"),
-		patch(f"{EBICS_USER_MODULE}.get_protocol_versions", return_value={}),
-	):
+	with mock_external_services():
 		return frappe.get_doc(
 			{
 				"doctype": "EBICS User",
