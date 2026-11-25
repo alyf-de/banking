@@ -12,6 +12,10 @@ def validate(doc, method):
 def on_update(doc, method):
 	move_ebics_registrations(doc)
 
+	if doc.has_value_changed("ebics_host_id"):
+		# The old host received INI, so the new host needs INI as well.
+		frappe.db.set_value("EBICS User", {"bank": doc.name}, "ini_sent", 0)
+
 
 def validate_ebics_host_id_change(doc):
 	"""Allow a new host ID until the bank knows the keys of an EBICS User."""

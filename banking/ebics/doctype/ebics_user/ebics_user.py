@@ -1,12 +1,14 @@
 # Copyright (c) 2024, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from contextlib import contextmanager
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 from frappe.utils.data import comma_and, getdate
+from frappe.utils.synchronization import filelock
 from requests import Response
 
 from banking.ebics.utils import get_ebics_manager, get_protocol_versions, sync_ebics_transactions
@@ -27,6 +29,7 @@ class EBICSUser(Document):
 		country: DF.Link | None
 		download_batch_transactions: DF.Check
 		full_name: DF.Data | None
+		ini_sent: DF.Check
 		initialized: DF.Check
 		intraday_sync: DF.Check
 		keyring: DF.Code | None
@@ -46,6 +49,10 @@ class EBICSUser(Document):
 
 		if self.user_id:
 			self.user_id = self.user_id.strip()
+
+		if any(self.has_value_changed(field) for field in ("bank", "partner_id", "user_id")):
+			# The bank received INI for the old IDs, so the new IDs need INI as well.
+			self.ini_sent = 0
 
 		if self.country:
 			self.validate_country_code()
@@ -217,31 +224,62 @@ def on_doctype_update():
 def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
 	ensure_ebics_is_enabled()
 
-	user = frappe.get_doc("EBICS User", ebics_user)
-	user.check_permission("write")
+	# The steps below commit, so a failed request keeps its keys. A second request must not
+	# create other keys at the same time. `for_update` reads the latest committed values.
+	with filelock(f"initialize_ebics_user_{ebics_user}", timeout=0):
+		user = frappe.get_doc("EBICS User", ebics_user, for_update=True)
+		user.check_permission("write")
 
-	if store_passphrase:
-		user.passphrase = passphrase
-		user.save()
+		if store_passphrase:
+			user.passphrase = passphrase
+			user.save()
 
-	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase)
+		try:
+			manager = get_ebics_manager(
+				ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
+			)
+		except ValueError as e:
+			# Keys from an earlier try are encrypted with the passphrases of that try.
+			if "wrong passphrase" not in str(e):
+				raise
 
-	try:
-		manager.create_user_keys()
-	except RuntimeError as e:
-		if e.args[0] != "keys already present":
-			raise e
+			message = _(
+				"This EBICS User already has keys from an earlier try. Please enter the same passphrases as in that try. If you forgot them, delete this EBICS User and create a new one."
+			)
+			if user.ini_sent:
+				message += " " + _(
+					"The bank already received the old keys, so it may reject the new ones. In that case, ask your bank to reset the user."
+				)
 
-	if user.needs_certificates:
-		manager.create_user_certificates(user.full_name, user.organization_name)
+			frappe.throw(message, title=_("Wrong Passphrase"))
 
-	manager.send_keys_to_bank()
+		# After INI, the bank has the signature key. Keep the keys and do not send INI again.
+		# Some banks reject a second INI. Others replace the keys until they process the INI letter.
+		# Skipping INI works with both, because the keys stay the same.
+		if not user.ini_sent:
+			try:
+				manager.create_user_keys()
+			except RuntimeError as e:
+				if e.args[0] != "keys already present":
+					raise e
 
-	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
-	language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
-	ini_bytes = manager.create_ini_letter(bank_name, language=language)
-	user.attach_ini_letter(ini_bytes)
-	user.db_set("initialized", 1)
+			if user.needs_certificates:
+				manager.create_user_certificates(user.full_name, user.organization_name)
+
+			frappe.db.commit()  # nosemgrep
+
+		with explain_ebics_errors(user):
+			if not user.ini_sent:
+				manager.send_signature_key()
+				user.db_set("ini_sent", 1, commit=True)
+
+			manager.send_authentication_keys()
+
+		bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
+		language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
+		ini_bytes = manager.create_ini_letter(bank_name, language=language)
+		user.attach_ini_letter(ini_bytes)
+		user.db_set("initialized", 1)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -253,7 +291,8 @@ def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 
 	manager = get_ebics_manager(user, passphrase=passphrase)
 
-	return manager.download_bank_keys()
+	with explain_ebics_errors(user):
+		return manager.download_bank_keys()
 
 
 @frappe.whitelist(methods=["POST"])
@@ -328,3 +367,36 @@ def ensure_ebics_is_enabled():
 				get_link_to_form("Banking Settings", "Banking Settings")
 			)
 		)
+
+
+@contextmanager
+def explain_ebics_errors(user: EBICSUser):
+	"""Turn common EBICS errors from the bank into messages that tell the user what to check."""
+	from fintech.ebics import EbicsTechnicalError
+
+	try:
+		yield
+	except EbicsTechnicalError as error:
+		messages = {
+			EbicsTechnicalError.EBICS_INVALID_USER_OR_USER_STATE: _(
+				"The bank does not accept this EBICS User in its current state. Please check the Partner ID and the User ID. If both are correct, ask your bank about the state of this user. For example, the bank may already have keys from an earlier initialization."
+			),
+			EbicsTechnicalError.EBICS_USER_UNKNOWN: _(
+				"The bank does not know this EBICS User. Please check the Partner ID and the User ID."
+			),
+			EbicsTechnicalError.EBICS_INVALID_USER_STATE: _(
+				"The bank has not activated this EBICS User yet. Please wait until your bank has processed the INI letter."
+			),
+			EbicsTechnicalError.EBICS_INVALID_HOST_ID: _(
+				"The bank does not know this EBICS Host ID. Please check the EBICS Host ID of bank {0}."
+			).format(get_link_to_form("Bank", user.bank)),
+			EbicsTechnicalError.EBICS_AUTHENTICATION_FAILED: _(
+				"The bank could not verify the keys of this EBICS User. The keys in this system may not match the keys at the bank. Please contact your bank."
+			),
+		}
+		message = messages.get(error.code)
+		if not message:
+			raise
+
+		bank_response = _("Bank response: {0}").format(str(error))
+		frappe.throw(f"{message}<br><br>{bank_response}", title=_("EBICS Error"))
