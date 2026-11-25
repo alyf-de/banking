@@ -6,12 +6,8 @@ from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase
 from frappe.utils.file_lock import LockTimeoutError
->>>>>>> 5518947 (fix(EBICS User): keep keys after a failed initialization and explain EBICS errors (#499))
 from frappe.utils.password import set_encrypted_password
 from frappe.utils.synchronization import filelock
 from pypdf import PdfWriter
@@ -239,10 +235,7 @@ class TestEBICSUser(FrappeTestCase):
 		self.assertEqual(get_calls(backend), [])
 
 
-<<<<<<< HEAD
-class TestValidateBank(FrappeTestCase):
-=======
-class TestInitializeEBICSUser(IntegrationTestCase):
+class TestInitializeEBICSUser(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -422,8 +415,7 @@ def create_ebics_user():
 		).insert()
 
 
-class TestValidateBank(IntegrationTestCase):
->>>>>>> 5518947 (fix(EBICS User): keep keys after a failed initialization and explain EBICS errors (#499))
+class TestValidateBank(FrappeTestCase):
 	def setUp(self):
 		# Not inserted, so that the user does not get registered with the license backend
 		self.ebics_user = frappe.get_doc(

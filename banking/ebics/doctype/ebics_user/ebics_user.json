@@ -172,11 +172,6 @@
    "read_only": 1
   }
  ],
-<<<<<<< HEAD
-=======
- "grid_page_length": 50,
- "link_display_mode": "Search",
->>>>>>> 5518947 (fix(EBICS User): keep keys after a failed initialization and explain EBICS errors (#499))
  "links": [
   {
    "link_doctype": "EBICS Request",
