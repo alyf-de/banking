@@ -34,7 +34,7 @@ class TestEBICSUser(IntegrationTestCase):
 		cls.user = create_ebics_user()
 
 	def setUp(self):
-		self.user.db_set({"initialized": 0, "ini_sent": 0, "keyring": None})
+		self.user.db_set({"initialized": 0, "ini_sent": 0, "keyring": None, "partner_id": "TESTPARTNER"})
 		self.manager = MagicMock()
 		self.manager.create_user_keys.side_effect = self.store_keys
 		self.manager.create_ini_letter.return_value = make_pdf()
@@ -86,6 +86,20 @@ class TestEBICSUser(IntegrationTestCase):
 
 		self.assertEqual(self.manager.send_signature_key.call_count, 2)
 		self.assertEqual(self.manager.send_authentication_keys.call_count, 1)
+
+	def test_changed_ids_send_ini_again(self):
+		self.manager.send_authentication_keys.side_effect = ConnectionError("HIA failed")
+		self.assertRaises(ConnectionError, self.initialize)
+
+		self.user.reload()
+		self.user.partner_id = "OTHERPARTNER"
+		with mock_external_services():
+			self.user.save()
+
+		self.manager.send_authentication_keys.side_effect = None
+		self.initialize()
+
+		self.assertEqual(self.manager.send_signature_key.call_count, 2)
 
 	def test_second_initialization_at_the_same_time_fails(self):
 		with filelock(f"initialize_ebics_user_{self.user.name}", timeout=0):

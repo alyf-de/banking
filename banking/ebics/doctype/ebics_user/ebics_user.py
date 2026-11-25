@@ -44,6 +44,10 @@ class EBICSUser(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if any(self.has_value_changed(field) for field in ("bank", "partner_id", "user_id")):
+			# The bank received INI for the old IDs, so the new IDs need INI as well.
+			self.ini_sent = 0
+
 		if self.country:
 			self.validate_country_code()
 
