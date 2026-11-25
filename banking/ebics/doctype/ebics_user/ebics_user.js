@@ -67,7 +67,8 @@ frappe.ui.form.on("EBICS User", {
 								args: { ebics_user: frm.doc.name, ...values },
 								freeze: true,
 								freeze_message: __("Initializing..."),
-								callback: () => frm.reload_doc(),
+								// A failed try can keep keys and `ini_sent`, so reload after errors too.
+								always: () => frm.reload_doc(),
 							});
 						},
 						__("Initialize EBICS User"),
