@@ -25,6 +25,9 @@ frappe.ui.form.on("Banking Settings", {
 				frm.add_custom_button(__("View EBICS Users"), () => {
 					frappe.set_route("List", "EBICS User");
 				});
+				frm.add_custom_button(__("Unmatched EBICS Registrations"), () => {
+					show_unmatched_ebics_registrations(frm);
+				});
 			}
 
 			if (frm.doc.customer_id && frm.doc.admin_endpoint && frm.doc.api_token) {
@@ -179,6 +182,102 @@ function set_field_options(frm, cdt, cdn) {
 				.sort((a, b) => a.label.localeCompare(b.label)),
 		);
 		frm.refresh_field("reference_fields");
+	});
+}
+
+const BANKING_SETTINGS_MODULE =
+	"banking.klarna_kosma_integration.doctype.banking_settings.banking_settings";
+
+async function show_unmatched_ebics_registrations(frm) {
+	const response = await frappe.call({
+		method: `${BANKING_SETTINGS_MODULE}.get_unmatched_ebics_registrations`,
+		freeze: true,
+	});
+	const registrations = response.message;
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Unmatched EBICS Registrations"),
+		fields: [{ fieldtype: "HTML", fieldname: "registrations" }],
+		size: "large",
+	});
+	render_unmatched_ebics_registrations(frm, dialog, registrations);
+	dialog.show();
+}
+
+function render_unmatched_ebics_registrations(frm, dialog, registrations) {
+	const wrapper = dialog.get_field("registrations").$wrapper;
+	if (!registrations.length) {
+		wrapper.html(
+			`<p>${__(
+				"Each EBICS registration of your subscription has an EBICS User on this site.",
+			)}</p>`,
+		);
+		return;
+	}
+
+	const rows = registrations
+		.map(
+			(registration, idx) => `
+				<tr>
+					<td>${frappe.utils.escape_html(registration.host_id)}</td>
+					<td>${frappe.utils.escape_html(registration.partner_id)}</td>
+					<td>${frappe.utils.escape_html(registration.user_id)}</td>
+					<td class="text-right">
+						<button class="btn btn-xs btn-danger" data-idx="${idx}">${__("Remove")}</button>
+					</td>
+				</tr>
+			`,
+		)
+		.join("");
+
+	wrapper.html(`
+		<p>${__(
+			"These EBICS registrations count towards the EBICS User limit of your subscription, but no EBICS User on this site matches them.",
+		)}</p>
+		<table class="table table-bordered">
+			<thead>
+				<tr>
+					<th>${__("Host ID")}</th>
+					<th>${__("Partner ID")}</th>
+					<th>${__("User ID")}</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>${rows}</tbody>
+		</table>
+	`);
+
+	wrapper.find("button[data-idx]").on("click", (event) => {
+		const idx = $(event.currentTarget).data("idx");
+		confirm_ebics_registration_removal(frm, dialog, registrations, idx);
+	});
+}
+
+function confirm_ebics_registration_removal(frm, dialog, registrations, idx) {
+	const registration = registrations[idx];
+	const message = __(
+		"The EBICS User {0} can belong to another site of your subscription, for example your production site. If you remove this registration, that site can no longer download bank transactions with this EBICS User. Do you want to remove it?",
+		[`<b>${frappe.utils.escape_html(registration.user_id)}</b>`],
+	);
+
+	frappe.confirm(message, async () => {
+		await frappe.call({
+			method: `${BANKING_SETTINGS_MODULE}.remove_ebics_registration`,
+			args: {
+				host_id: registration.host_id,
+				partner_id: registration.partner_id,
+				user_id: registration.user_id,
+			},
+			freeze: true,
+		});
+		frappe.show_alert({
+			message: __("EBICS registration removed"),
+			indicator: "green",
+		});
+
+		registrations.splice(idx, 1);
+		render_unmatched_ebics_registrations(frm, dialog, registrations);
+		frm.trigger("get_subscription");
 	});
 }
 

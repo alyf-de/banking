@@ -8,6 +8,7 @@
   "full_name",
   "start_date",
   "initialized",
+  "ini_sent",
   "bank_keys_activated",
   "column_break_hlxa",
   "organization_name",
@@ -160,16 +161,26 @@
    "fieldname": "download_batch_transactions",
    "fieldtype": "Check",
    "label": "Download Batch Transactions"
+  },
+  {
+   "default": "0",
+   "fieldname": "ini_sent",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "INI Sent",
+   "no_copy": 1,
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
+ "link_display_mode": "Search",
  "links": [
   {
    "link_doctype": "EBICS Request",
    "link_fieldname": "ebics_user"
   }
  ],
- "modified": "2026-10-15 22:11:46.733159",
+ "modified": "2026-11-25 04:16:51.519774",
  "modified_by": "Administrator",
  "module": "EBICS",
  "name": "EBICS User",

@@ -270,3 +270,50 @@ def get_doctypes_for_bank_reconciliation() -> dict[str, bool]:
 	settings: BankingSettings = frappe.get_single("Banking Settings")
 	default_doctypes = [row.document_type for row in settings.voucher_matching_defaults]
 	return {dt: dt in default_doctypes for dt in all_doctypes}
+
+
+@frappe.whitelist()
+def get_unmatched_ebics_registrations() -> list[dict]:
+	"""Return the EBICS registrations of this customer that have no matching EBICS User on this site."""
+	frappe.has_permission("Banking Settings", "write", throw=True)
+
+	local_registrations = get_local_ebics_registrations()
+	return [
+		registration
+		for registration in Admin().get_ebics_users()
+		if get_registration_key(registration) not in local_registrations
+	]
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_ebics_registration(host_id: str, partner_id: str, user_id: str):
+	"""Remove an EBICS registration that has no matching EBICS User on this site."""
+	frappe.has_permission("Banking Settings", "write", throw=True)
+
+	registration = {"host_id": host_id, "partner_id": partner_id, "user_id": user_id}
+	if get_registration_key(registration) in get_local_ebics_registrations():
+		frappe.throw(_("An EBICS User on this site uses this registration. Delete the EBICS User instead."))
+
+	Admin().remove_ebics_user(host_id, partner_id, user_id)
+
+
+def get_local_ebics_registrations() -> set[tuple[str, str, str]]:
+	ebics_user = frappe.qb.DocType("EBICS User")
+	bank = frappe.qb.DocType("Bank")
+	local_users = (
+		frappe.qb.from_(ebics_user)
+		.join(bank)
+		.on(bank.name == ebics_user.bank)
+		.select(bank.ebics_host_id.as_("host_id"), ebics_user.partner_id, ebics_user.user_id)
+		.run(as_dict=True)
+	)
+	return {get_registration_key(user) for user in local_users}
+
+
+def get_registration_key(registration: dict) -> tuple[str, str, str]:
+	"""Return the IDs in uppercase, because the admin backend stores them in uppercase."""
+	return (
+		(registration["host_id"] or "").upper(),
+		(registration["partner_id"] or "").upper(),
+		(registration["user_id"] or "").upper(),
+	)
