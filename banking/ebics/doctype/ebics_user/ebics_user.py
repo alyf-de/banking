@@ -204,9 +204,24 @@ def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, stor
 			user.passphrase = passphrase
 			user.save()
 
-		manager = get_ebics_manager(
-			ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
-		)
+		try:
+			manager = get_ebics_manager(
+				ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
+			)
+		except ValueError as e:
+			# Keys from an earlier try are encrypted with the passphrases of that try.
+			if "wrong passphrase" not in str(e):
+				raise
+
+			message = _(
+				"This EBICS User already has keys from an earlier try. Please enter the same passphrases as in that try. If you forgot them, delete this EBICS User and create a new one."
+			)
+			if user.ini_sent:
+				message += " " + _(
+					"The bank already received the old keys, so it may reject the new ones. In that case, ask your bank to reset the user."
+				)
+
+			frappe.throw(message, title=_("Wrong Passphrase"))
 
 		# After INI, the bank has the signature key. Keep the keys and do not send INI again.
 		# Some banks reject a second INI. Others replace the keys until they process the INI letter.

@@ -101,6 +101,21 @@ class TestEBICSUser(IntegrationTestCase):
 
 		self.assertEqual(self.manager.send_signature_key.call_count, 2)
 
+	def test_wrong_passphrase_explains_to_use_the_first_one(self):
+		for ini_sent in (0, 1):
+			self.user.db_set("ini_sent", ini_sent)
+			# Message of fintech when the keyring cannot decrypt the stored keys
+			with (
+				patch(
+					f"{EBICS_USER_MODULE}.get_ebics_manager",
+					side_effect=ValueError("key #USER.E002 corrupted or wrong passphrase"),
+				),
+				self.assertRaisesRegex(frappe.ValidationError, "same passphrases") as context,
+			):
+				initialize(self.user.name, "other secret", "other secret", store_passphrase=0)
+
+			self.assertEqual("reset the user" in str(context.exception), bool(ini_sent))
+
 	def test_second_initialization_at_the_same_time_fails(self):
 		with filelock(f"initialize_ebics_user_{self.user.name}", timeout=0):
 			self.assertRaises(LockTimeoutError, self.initialize)

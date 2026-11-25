@@ -18,6 +18,14 @@ frappe.ui.form.on("EBICS User", {
 					frappe.prompt(
 						[
 							{
+								fieldname: "existing_keys_info",
+								fieldtype: "HTML",
+								hidden: frm.doc.keyring ? 0 : 1,
+								options: `<p class="text-warning">${get_existing_keys_info(
+									frm,
+								)}</p>`,
+							},
+							{
 								fieldname: "passphrase",
 								label: __("Passphrase"),
 								fieldtype: "Password",
@@ -297,4 +305,18 @@ function download_bank_statements(ebics_user, needs_passphrase) {
 		__("Download Bank Statements"),
 		__("Download"),
 	);
+}
+
+function get_existing_keys_info(frm) {
+	let info = __(
+		"This EBICS User already has keys from an earlier try. Please enter the same passphrases as in that try. If you forgot them, delete this EBICS User and create a new one.",
+	);
+	if (frm.doc.ini_sent) {
+		info +=
+			" " +
+			__(
+				"The bank already received the old keys, so it may reject the new ones. In that case, ask your bank to reset the user.",
+			);
+	}
+	return info;
 }
