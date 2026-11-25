@@ -4,23 +4,7 @@ import json
 from unittest.mock import patch
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-
-# The tests create their own Bank
-test_ignore = ["Bank", "Country"]
-
-
-class TestEBICSUser(FrappeTestCase):
-	def setUp(self):
-		if not frappe.db.exists("Bank", "_Test EBICS Bank"):
-			bank = frappe.new_doc("Bank")
-			bank.bank_name = "_Test EBICS Bank"
-			bank.ebics_host_id = "TESTHOST"
-			bank.ebics_url = "https://ebics.example.com/ebics"
-			bank.insert()
-=======
-from frappe.tests import IntegrationTestCase
 from frappe.utils.password import set_encrypted_password
 from requests import Response
 
@@ -31,7 +15,7 @@ REMOVE = "banking_admin.ebics_api.remove_ebics_user"
 HOST_ID = "_TESTHOST"
 
 # The tests create their own Bank. ERPNext's Bank test records need more setup.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Bank", "Country"]
+test_ignore = ["Bank", "Country"]
 
 
 def make_response(status_code: int, message: str | None = None) -> Response:
@@ -39,7 +23,6 @@ def make_response(status_code: int, message: str | None = None) -> Response:
 	response.status_code = status_code
 	response._content = json.dumps({"message": message}).encode() if message else b""
 	return response
->>>>>>> 034db3b (fix(EBICS User): keep license registration in sync and show backend errors (#500))
 
 
 def mock_admin_backend(*responses: Response):
@@ -79,7 +62,7 @@ def new_ebics_user(bank: str, partner_id: str, user_id: str, **kwargs):
 	return user
 
 
-class TestEBICSUser(IntegrationTestCase):
+class TestEBICSUser(FrappeTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -243,7 +226,7 @@ class TestEBICSUser(IntegrationTestCase):
 		self.assertEqual(get_calls(backend), [])
 
 
-class TestValidateBank(IntegrationTestCase):
+class TestValidateBank(FrappeTestCase):
 	def setUp(self):
 		# Not inserted, so that the user does not get registered with the license backend
 		self.ebics_user = frappe.get_doc(
