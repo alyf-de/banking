@@ -106,6 +106,7 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 				{
 					content: row.paid_amount,
 					currency: row.currency,
+					early_payment_discount: row.early_payment_discount,
 					format: (value) => {
 						let formatted_value = format_currency(value, row.currency);
 						let match_condition =
@@ -176,7 +177,7 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 
 		let id = row[this.position_of("Voucher")].content;
 		let value = this.get_amount_from_row(row);
-		let currency = row[this.position_of("Outstanding")].currency;
+		let amount_cell = row[this.position_of("Outstanding")];
 
 		// If `id` in summary_data, remove it (row was unchecked), else add it
 		if (id in this.summary_data) {
@@ -184,7 +185,8 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 		} else {
 			this.summary_data[id] = {
 				amount: value,
-				currency: currency,
+				currency: amount_cell.currency,
+				early_payment_discount: amount_cell.early_payment_discount,
 				doctype: row[this.position_of("Voucher")].doctype,
 			};
 		}
@@ -203,10 +205,17 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 			this.summary_data,
 			unpaid_invoices_only,
 		);
-		let total_allocated = banking.bank_reconciliation.get_total_allocated(
+		let selected_total = banking.bank_reconciliation.get_total_allocated(
 			this.transaction,
 			this.summary_data,
 		);
+		let early_payment_discount =
+			banking.bank_reconciliation.get_early_payment_discount(
+				this.summary_data,
+				allocation_budget,
+				selected_total,
+			);
+		let total_allocated = selected_total - early_payment_discount;
 		let max_allocated = Math.min(total_allocated, allocation_budget);
 
 		let transaction_amount = banking.bank_reconciliation.get_summary_amount(
@@ -222,6 +231,7 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 			unallocated,
 			actual_unallocated,
 			this.transaction.currency,
+			early_payment_discount,
 		);
 	}
 
@@ -247,6 +257,7 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 		unallocated_amount,
 		actual_unallocated,
 		currency,
+		early_payment_discount = 0,
 	) {
 		let summary_field = this.match_field_group.get_field(
 			"transaction_amount_summary",
@@ -256,21 +267,26 @@ banking.bank_reconciliation.MatchTab = class MatchTab {
 		// Show the actual allocated amount
 		let allocated_amount = flt(total_amount) - flt(unallocated_amount);
 
+		let values = {
+			Amount: [total_amount],
+			"Allocated Amount": [allocated_amount, ""],
+		};
+		if (early_payment_discount) {
+			values["Early Payment Discount"] = [early_payment_discount, ""];
+		}
+		values["To Allocate"] = [
+			unallocated_amount,
+			unallocated_amount < 0
+				? "text-danger"
+				: unallocated_amount > 0
+				  ? "text-blue"
+				  : "text-success",
+			actual_unallocated,
+		];
+
 		new banking.bank_reconciliation.SummaryCard({
 			$wrapper: summary_field,
-			values: {
-				Amount: [total_amount],
-				"Allocated Amount": [allocated_amount, ""],
-				"To Allocate": [
-					unallocated_amount,
-					unallocated_amount < 0
-						? "text-danger"
-						: unallocated_amount > 0
-						  ? "text-blue"
-						  : "text-success",
-					actual_unallocated,
-				],
-			},
+			values: values,
 			currency: currency,
 			wrapper_class: "reconciliation-summary",
 		});

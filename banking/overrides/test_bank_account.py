@@ -4,6 +4,9 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.test_bank_reconciliation_tool_beta import (
+	create_bank,
+)
 from banking.testing_utils import (
 	create_bank_account,
 	create_currency_account,
@@ -72,3 +75,82 @@ class TestBankAccount(IntegrationTestCase):
 		bank_account.account = self.account_fee.name
 		with self.assertRaises(frappe.ValidationError):
 			bank_account.save()
+
+	def test_german_iban_must_match_bank_bic(self):
+		"""A Bank with the BIC of another branch must not be linked to a German IBAN."""
+		create_bank("_Test Other Branch Bank", swift_number="DEUTDEFF")
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+
+		def new_bank_account(bank: str):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank=bank,
+				iban="DE02100500000054540402",
+			)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "BELADEBEXXX"):
+			new_bank_account("_Test Other Branch Bank").insert()
+
+		new_bank_account("_Test Same Branch Bank").insert()
+
+	def test_austrian_and_swiss_iban_must_match_bank_bic(self):
+		create_bank("_Test Other Branch Bank", swift_number="DEUTDEFF")
+		create_bank("_Test Austrian Bank", swift_number="RLNWATWW")  # without the default "XXX"
+		create_bank("_Test Swiss Bank", swift_number="CRESCHZZ80A")
+
+		def new_bank_account(bank: str, iban: str):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank=bank,
+				iban=iban,
+			)
+
+		for iban, iban_bic, matching_bank in (
+			("AT483200000012345864", "RLNWATWWXXX", "_Test Austrian Bank"),
+			("CH5604835012345678009", "CRESCHZZ80A", "_Test Swiss Bank"),
+		):
+			with self.assertRaisesRegex(frappe.ValidationError, iban_bic):
+				new_bank_account("_Test Other Branch Bank", iban).insert()
+
+			new_bank_account(matching_bank, iban).insert()
+
+	def test_iban_and_currency_unique_among_company_accounts(self):
+		"""Company accounts may share an IBAN only in different currencies."""
+		create_bank("_Test Same Branch Bank", swift_number="BELADEBE")
+		iban = "DE02100500000054540402"
+
+		def new_bank_account(**values):
+			return frappe.new_doc(
+				"Bank Account",
+				account_name=frappe.generate_hash(length=8),
+				bank="_Test Same Branch Bank",
+				iban=iban,
+				**values,
+			)
+
+		def new_company_account(account_name: str, currency: str = "EUR"):
+			# ERPNext allows each GL account in only one company Bank Account
+			account = create_currency_account(currency, get_bank_parent_account(), account_name)
+			return new_bank_account(is_company_account=1, company="_Test Company", account=account.name)
+
+		eur_account = new_company_account("_Test_Account_IBAN_1").insert()
+		usd_account = new_company_account("_Test_Account_IBAN_USD", "USD").insert()
+		eur_account.save()
+		usd_account.save()
+		new_bank_account(party_type="Supplier", party="_Test Supplier").insert(ignore_links=True)
+
+		with self.assertRaisesRegex(frappe.ValidationError, iban):
+			new_company_account("_Test_Account_IBAN_2").insert()
+
+		usd_eur_account = create_currency_account(
+			"EUR", get_bank_parent_account(), "_Test_Account_IBAN_USD_EUR"
+		)
+		usd_account.account = usd_eur_account.name
+		with self.assertRaisesRegex(frappe.ValidationError, iban):
+			usd_account.save()
+
+		eur_account.disabled = 1
+		eur_account.save()
+		new_company_account("_Test_Account_IBAN_3").insert()

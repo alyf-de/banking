@@ -7,7 +7,6 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 import frappe
-import kontocheck
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils.data import fmt_money, getdate, now_datetime
@@ -20,6 +19,12 @@ if TYPE_CHECKING:
 	from fintech.sepa import SEPACreditTransfer
 
 	from banking.ebics.doctype.sepa_payment.sepa_payment import SEPAPayment
+
+# EU member states plus Iceland, Liechtenstein and Norway
+EEA_COUNTRIES = {
+	"AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE",
+	"IS", "IT", "LI", "LT", "LU", "LV", "MT", "NL", "NO", "PL", "PT", "RO", "SE", "SI", "SK",
+}  # fmt: skip
 
 
 class PaymentOrderStatus(StrEnum):
@@ -72,16 +77,10 @@ class SEPAPaymentOrder(Document):
 	# end: auto-generated types
 
 	def before_validate(self):
-		kontocheck.lut_load()
-
+		register_fintech()
 		for payment in self.payments:
-			if payment.iban and payment.iban.startswith("DE"):
-				if not payment.swift_number:
-					with contextlib.suppress(Exception):
-						payment.swift_number = kontocheck.get_bic(payment.iban)
-				if not payment.bank_name and payment.swift_number:
-					with contextlib.suppress(Exception):
-						payment.bank_name = kontocheck.scl_get_bankname(payment.swift_number)
+			# Read-only, so always derive it from the current IBAN or BIC. Else it goes stale.
+			payment.bank_name = get_bank_name(payment.iban, payment.swift_number)
 
 	def validate(self):
 		self.validate_ibans()
@@ -166,13 +165,14 @@ class SEPAPaymentOrder(Document):
 			)
 
 	def validate_ibans(self):
-		kontocheck.lut_load()
+		register_fintech()
+		from fintech import iban
 
-		if not kontocheck.check_iban(self.iban):
+		if not iban.check_iban(self.iban):
 			frappe.throw(_("IBAN {0} is invalid.").format(self.iban))
 
 		for payment in self.payments:
-			if not kontocheck.check_iban(payment.iban):
+			if not iban.check_iban(payment.iban):
 				frappe.throw(_("Row {0}: IBAN {1} is invalid.").format(payment.idx, payment.iban))
 
 	def validate_mode_of_payment(self, mode_of_payment: str):
@@ -248,13 +248,34 @@ class SEPAPaymentOrder(Document):
 			batch=self.batch_booking == "Process as batch",
 			scheme=self.scheme,
 		)
+		debtor_in_eea = self.iban[:2].upper() in EEA_COUNTRIES
+		invalid_rows = []
 		for payment in self.payments:
 			iban = payment.iban.replace(" ", "")
-			transfer.add_transaction(
-				account=Account(
-					iban=(iban, payment.swift_number) if payment.swift_number else iban,
+			bic = payment.swift_number
+			if debtor_in_eea and iban[:2].upper() in EEA_COUNTRIES and payment.currency == "EUR":
+				# SEPA payments within the EEA are IBAN-only. A BIC copied from the Bank can
+				# belong to another branch, which makes the payment fail. Keep the stored BIC,
+				# in case debtor, IBAN or currency change later.
+				bic = None
+
+			try:
+				account = Account(
+					iban=(iban, bic) if bic else iban,
 					name=payment.recipient,
-				),
+				)
+			except ValueError:
+				if bic:
+					message = _(
+						"Row {0}: BIC {1} does not belong to IBAN {2}. Please correct or remove the BIC."
+					).format(payment.idx, bic, iban)
+				else:
+					message = _("Row {0}: IBAN {1} is invalid.").format(payment.idx, iban)
+				invalid_rows.append(message)
+				continue
+
+			transfer.add_transaction(
+				account=account,
 				amount=Amount(
 					value=payment.amount,
 					currency=payment.currency,
@@ -263,6 +284,9 @@ class SEPAPaymentOrder(Document):
 				eref=payment.eref,
 				charges=payment.charges,
 			)
+
+		if invalid_rows:
+			frappe.throw("<br>".join(invalid_rows), title=_("Invalid BIC"))
 
 		return transfer
 
@@ -332,6 +356,23 @@ def get_payable_expense_claims(company: str, currency: str, date: str, posted_fr
 		order_by="posting_date asc",
 		pluck="name",
 	)
+
+
+def get_bank_name(iban: str | None, bic: str | None) -> str | None:
+	"""Return the bank name for a DE, AT or CH IBAN, or for a European BIC.
+
+	NOTE: call register_fintech() before calling this function.
+	"""
+	from fintech import iban as fintech_iban
+
+	for iban_or_bic in (iban, bic):
+		if not iban_or_bic:
+			continue
+		# Unsupported country or unknown BIC
+		with contextlib.suppress(ValueError, NotImplementedError):
+			return fintech_iban.get_bankname(iban_or_bic)
+
+	return None
 
 
 @frappe.whitelist()

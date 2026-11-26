@@ -244,8 +244,7 @@ frappe.ui.form.on("Bank Reconciliation Tool Beta", {
 
 ## External Dependencies
 
-- **fintech**: EBICS protocol implementation and SEPA XML parsing
-- **kontocheck**: German IBAN/BIC validation
+- **fintech**: EBICS protocol implementation, SEPA XML parsing and IBAN/BIC validation
 - **frappe**: Full-stack framework
 - **erpnext**: ERP-System
 

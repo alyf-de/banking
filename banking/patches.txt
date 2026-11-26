@@ -14,4 +14,5 @@ banking.patches.download_batch_transactions
 banking.patches.truncate_legacy_filter_hidden_flag
 banking.patches.add_voucher_reservation_fields
 banking.patches.create_invoice_request_email_template #3
+banking.patches.ebics_user_organization_name
 execute:from banking.install import make_property_setters; make_property_setters()
