@@ -225,6 +225,42 @@ def get_default_invoice_request_recipient_type() -> str:
 	return frappe.db.get_single_value("Banking Settings", "default_recipient_type") or "User"
 
 
+INVOICE_REQUEST_RECIPIENT_TYPES = ("User", "Contact", "Employee")
+
+
+@frappe.whitelist()
+def get_invoice_request_recipient_email(recipient_type: str, recipient: str) -> str | None:
+	"""Email address of an invoice request recipient.
+
+	Only requires "select" permission on the recipient, so that users who can pick
+	a recipient in the Link field can also get its email address.
+	"""
+	frappe.has_permission("Bank Transaction", "write", throw=True)
+
+	if recipient_type not in INVOICE_REQUEST_RECIPIENT_TYPES:
+		frappe.throw(_("Invalid recipient type: {0}").format(recipient_type))
+
+	frappe.has_permission(recipient_type, "select", recipient, throw=True)
+
+	if recipient_type == "User":
+		return frappe.db.get_value("User", recipient, "email")
+
+	if recipient_type == "Contact":
+		return frappe.db.get_value("Contact", recipient, "email_id")
+
+	employee = frappe.db.get_value(
+		"Employee",
+		recipient,
+		["prefered_email", "user_id", "company_email", "personal_email"],
+		as_dict=True,
+	)
+	if not employee:
+		return None
+
+	user_email = frappe.db.get_value("User", employee.user_id, "email") if employee.user_id else None
+	return employee.prefered_email or user_email or employee.company_email or employee.personal_email
+
+
 @frappe.whitelist(methods=["POST"])
 def request_invoice(
 	bank_transaction_name: str,

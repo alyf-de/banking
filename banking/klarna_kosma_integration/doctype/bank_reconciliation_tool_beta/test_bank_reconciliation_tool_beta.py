@@ -32,6 +32,7 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	get_bank_transactions,
 	get_default_invoice_request_hold_date,
 	get_invoice_request_defaults,
+	get_invoice_request_recipient_email,
 	get_linked_payments,
 	request_invoice,
 	set_bank_transaction_on_hold,
@@ -1907,6 +1908,40 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 
 		with self.assertRaises(frappe.InvalidEmailAddressError):
 			request_invoice(bt.name, "not-an-email")
+
+	def test_invoice_request_recipient_email_for_user(self):
+		self.assertEqual(
+			get_invoice_request_recipient_email("User", "Administrator"),
+			frappe.db.get_value("User", "Administrator", "email"),
+		)
+
+	def test_invoice_request_recipient_email_falls_back_to_saved_employee_email(self):
+		employee = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "Invoice Request Employee",
+				"gender": "Male",
+				"date_of_birth": "1990-01-01",
+				"date_of_joining": "2020-01-01",
+				"company": "_Test Company",
+				"company_email": "company@example.com",
+				"personal_email": "personal@example.com",
+			}
+		).insert()
+
+		self.assertEqual(
+			get_invoice_request_recipient_email("Employee", employee.name), "company@example.com"
+		)
+
+		employee.prefered_contact_email = "Personal Email"
+		employee.save()
+		self.assertEqual(
+			get_invoice_request_recipient_email("Employee", employee.name), "personal@example.com"
+		)
+
+	def test_invoice_request_recipient_email_rejects_other_doctypes(self):
+		with self.assertRaises(frappe.ValidationError):
+			get_invoice_request_recipient_email("Customer", "_Test Customer")
 
 	def test_get_default_invoice_request_hold_date_follows_banking_settings(self):
 		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 0)

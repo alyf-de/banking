@@ -2,12 +2,6 @@ frappe.provide("banking.bank_reconciliation");
 
 const INVOICE_REQUEST_RECIPIENT_TYPES = ["User", "Contact", "Employee"];
 
-const INVOICE_REQUEST_EMAIL_FIELD = {
-	User: "email",
-	Contact: "email_id",
-	Employee: "user_id",
-};
-
 banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 	constructor(opts) {
 		$.extend(this, opts);
@@ -97,35 +91,24 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 		// Never keep the previous recipient's email around
 		this.field_group.set_value("recipient_email", "");
 
-		if (!recipient_type || !recipient) {
+		if (
+			!INVOICE_REQUEST_RECIPIENT_TYPES.includes(recipient_type) ||
+			!recipient
+		) {
 			return;
 		}
 
-		const email_fieldname = INVOICE_REQUEST_EMAIL_FIELD[recipient_type];
-		if (!email_fieldname) {
-			return;
-		}
+		const { message: email } = await frappe.call({
+			method:
+				"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.get_invoice_request_recipient_email",
+			args: { recipient_type, recipient },
+		});
 
-		const is_current_recipient = () =>
+		const is_current_recipient =
 			this.field_group.get_value("recipient_type") === recipient_type &&
 			this.field_group.get_value("recipient") === recipient;
-
-		const { message } = await frappe.db.get_value(
-			recipient_type,
-			recipient,
-			email_fieldname,
-		);
-		if (!is_current_recipient()) {
+		if (!is_current_recipient) {
 			return;
-		}
-
-		let email = message?.[email_fieldname];
-		if (recipient_type === "Employee" && email) {
-			const user = await frappe.db.get_value("User", email, "email");
-			if (!is_current_recipient()) {
-				return;
-			}
-			email = user.message?.email || email;
 		}
 
 		if (email) {
