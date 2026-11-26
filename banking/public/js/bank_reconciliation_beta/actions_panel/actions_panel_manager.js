@@ -83,6 +83,17 @@ banking.bank_reconciliation.ActionsPanelManager = class ActionsPanelManager {
 					});
 				},
 			},
+			{
+				tab_name: "on_hold",
+				tab_label: __("On Hold"),
+				make_tab: () => {
+					return new banking.bank_reconciliation.OnHoldTab({
+						actions_panel: this,
+						transaction: this.transaction,
+						panel_manager: this.panel_manager,
+					});
+				},
+			},
 		];
 
 		if (!is_reserved) {

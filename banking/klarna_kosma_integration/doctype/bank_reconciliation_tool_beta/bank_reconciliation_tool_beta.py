@@ -17,10 +17,20 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 from erpnext.accounts.utils import get_account_currency
 from erpnext.setup.utils import get_exchange_rate
 from frappe import _
+from frappe.core.doctype.communication.email import _make as make_communication
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Round, Sum
-from frappe.utils import flt, sbool
+from frappe.utils import (
+	add_days,
+	cint,
+	flt,
+	fmt_money,
+	format_date,
+	nowdate,
+	sbool,
+	validate_email_address,
+)
 from pypika import Order
 from pypika.queries import Table
 from pypika.terms import ExistsCriterion, Term
@@ -120,6 +130,10 @@ def get_bank_transactions(
 		["docstatus", "=", 1],
 		["status", "not in", ["Reconciled", "Cancelled"]],
 	]
+	or_filters = [
+		["on_hold_until", "is", "not set"],
+		["on_hold_until", "<", nowdate()],
+	]
 
 	if bank_account:
 		filters.append(["bank_account", "=", bank_account])
@@ -166,11 +180,157 @@ def get_bank_transactions(
 		"Bank Transaction",
 		fields=fields,
 		filters=filters,
+		or_filters=or_filters,
 		order_by=order_by,
 	)
 	enrich_transactions_with_deposit_fee_for_reconciliation(transactions)
 
 	return transactions
+
+
+@frappe.whitelist()
+def set_bank_transaction_on_hold(bank_transaction_name: str, on_hold_until: str) -> None:
+	"""Hide a submitted Bank Transaction from reconciliation until the given date."""
+	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	frappe.has_permission("Bank Transaction", "write", transaction, throw=True)
+	transaction.db_set("on_hold_until", on_hold_until, update_modified=True)
+
+
+@frappe.whitelist()
+def get_invoice_request_defaults() -> dict[str, str | None]:
+	"""Defaults for the invoice request form in Bank Reconciliation Tool Beta."""
+	frappe.has_permission("Bank Transaction", "write", throw=True)
+
+	return {
+		"on_hold_until": get_default_invoice_request_hold_date(),
+		"recipient_type": get_default_invoice_request_recipient_type(),
+	}
+
+
+@frappe.whitelist()
+def get_default_invoice_request_hold_date() -> str | None:
+	"""Default on-hold date for invoice requests when Banking Settings enable it."""
+	frappe.has_permission("Bank Transaction", "write", throw=True)
+
+	if not frappe.db.get_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request"):
+		return None
+
+	threshold = cint(
+		frappe.db.get_single_value("Banking Settings", "on_hold_threshold_after_invoice_request")
+	)
+	return add_days(nowdate(), threshold)
+
+
+def get_default_invoice_request_recipient_type() -> str:
+	return frappe.db.get_single_value("Banking Settings", "default_recipient_type") or "User"
+
+
+INVOICE_REQUEST_RECIPIENT_TYPES = ("User", "Contact", "Employee")
+
+
+@frappe.whitelist()
+def get_invoice_request_recipient_email(recipient_type: str, recipient: str) -> str | None:
+	"""Email address of an invoice request recipient.
+
+	Only requires "select" permission on the recipient, so that users who can pick
+	a recipient in the Link field can also get its email address.
+	"""
+	frappe.has_permission("Bank Transaction", "write", throw=True)
+
+	if recipient_type not in INVOICE_REQUEST_RECIPIENT_TYPES:
+		frappe.throw(_("Invalid recipient type: {0}").format(recipient_type))
+
+	frappe.has_permission(recipient_type, "select", recipient, throw=True)
+
+	if recipient_type == "User":
+		return frappe.db.get_value("User", recipient, "email")
+
+	if recipient_type == "Contact":
+		return frappe.db.get_value("Contact", recipient, "email_id")
+
+	employee = frappe.db.get_value(
+		"Employee",
+		recipient,
+		["prefered_email", "user_id", "company_email", "personal_email"],
+		as_dict=True,
+	)
+	if not employee:
+		return None
+
+	user_email = frappe.db.get_value("User", employee.user_id, "email") if employee.user_id else None
+
+	# The personal email is private, so it requires "read" permission on the Employee.
+	# "prefered_email" can hold the personal email, if that is the preferred contact.
+	if not frappe.has_permission("Employee", "read", recipient):
+		prefered_email = (
+			employee.prefered_email if employee.prefered_email != employee.personal_email else None
+		)
+		return prefered_email or user_email or employee.company_email
+
+	return employee.prefered_email or user_email or employee.company_email or employee.personal_email
+
+
+@frappe.whitelist(methods=["POST"])
+def request_invoice(
+	bank_transaction_name: str,
+	recipient_email: str,
+	on_hold_until: str | None = None,
+) -> None:
+	"""Request an invoice and optionally put its Bank Transaction on hold."""
+	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	frappe.has_permission("Bank Transaction", "write", transaction, throw=True)
+
+	validate_email_address(recipient_email, throw=True)
+
+	email = get_invoice_request_email(transaction)
+	# Like Notification, sending is governed by write access to the Bank Transaction,
+	# not by "email" permission. The Communication keeps the request in its history.
+	make_communication(
+		doctype=transaction.doctype,
+		name=transaction.name,
+		recipients=[recipient_email],
+		subject=email["subject"],
+		content=email["message"],
+		send_email=True,
+	)
+
+	if on_hold_until:
+		transaction.db_set("on_hold_until", on_hold_until, update_modified=True)
+
+
+def get_invoice_request_email(transaction: Document) -> dict[str, str]:
+	template_name = frappe.db.get_single_value("Banking Settings", "invoice_request_email_template")
+	if not template_name or not frappe.db.exists("Email Template", template_name):
+		frappe.throw(
+			_("Please set {0} in {1}.").format(
+				_("Invoice Request Email Template"),
+				_("Banking Settings"),
+			)
+		)
+
+	email_template = frappe.get_doc("Email Template", template_name)
+	return email_template.get_formatted_email(get_invoice_request_email_context(transaction))
+
+
+def get_invoice_request_email_context(transaction: Document) -> dict:
+	"""Template context for invoice request emails.
+
+	Formats date, deposit, and withdrawal on standard Bank Transaction field names so
+	Email Template Jinja can use {{ date }} / {{ deposit }} / {{ withdrawal }}.
+	"""
+	context = transaction.as_dict()
+	currency = context.get("currency")
+	deposit = flt(context.get("deposit"))
+	withdrawal = flt(context.get("withdrawal"))
+
+	if context.get("date"):
+		context["date"] = format_date(context["date"])
+	if deposit:
+		context["deposit"] = fmt_money(deposit, currency=currency)
+	elif withdrawal:
+		context["withdrawal"] = fmt_money(withdrawal, currency=currency)
+
+	return context
 
 
 def enrich_transactions_with_deposit_fee_for_reconciliation(transactions: list) -> None:

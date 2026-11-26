@@ -18,10 +18,11 @@ from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, getdate, nowdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
+from banking.install import create_invoice_request_email_template
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
 	_get_valid_accounting_dimensions,
 	auto_reconcile_vouchers,
@@ -29,7 +30,12 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	create_journal_entry_bts,
 	create_payment_entry_bts,
 	get_bank_transactions,
+	get_default_invoice_request_hold_date,
+	get_invoice_request_defaults,
+	get_invoice_request_recipient_email,
 	get_linked_payments,
+	request_invoice,
+	set_bank_transaction_on_hold,
 )
 
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
@@ -73,6 +79,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 
 		cls.branch = "_Test Bank Reco Branch"
 		frappe.get_doc({"doctype": "Branch", "branch": cls.branch}).insert(ignore_if_duplicate=True)
+		create_invoice_request_email_template()
 		frappe.db.savepoint(save_point="bank_reco_beta_before_tests")
 
 	@classmethod
@@ -1809,6 +1816,180 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		row = next(transaction for transaction in transactions if transaction.name == bt.name)
 		self.assertEqual(row.included_fee_for_reconciliation, 0)
 
+	def test_on_hold_transaction_is_hidden_until_the_following_day(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		set_bank_transaction_on_hold(bt.name, getdate())
+
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		self.assertNotIn(bt.name, [transaction.name for transaction in transactions])
+
+		frappe.db.set_value("Bank Transaction", bt.name, "on_hold_until", add_days(getdate(), -1))
+		transactions = get_bank_transactions(bank_account=self.bank_account)
+		self.assertIn(bt.name, [transaction.name for transaction in transactions])
+
+	def test_request_invoice_sends_email_and_sets_on_hold(self):
+		bt = create_bank_transaction(
+			deposit=100,
+			bank_account=self.bank_account,
+			description="Office supplies",
+			bank_party_name="Acme GmbH",
+		)
+		hold_until = add_days(getdate(), 3)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		) as make_communication:
+			request_invoice(bt.name, "test@example.com", hold_until)
+
+		make_communication.assert_called_once()
+		kwargs = make_communication.call_args.kwargs
+		self.assertEqual(kwargs["doctype"], "Bank Transaction")
+		self.assertEqual(kwargs["name"], bt.name)
+		self.assertTrue(kwargs["send_email"])
+		self.assertEqual(kwargs["recipients"], ["test@example.com"])
+		self.assertIn(bt.name, kwargs["subject"])
+		self.assertIn("Office supplies", kwargs["content"])
+		self.assertIn("Acme GmbH", kwargs["content"])
+		self.assertIn("100", kwargs["content"])
+		self.assertEqual(frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"), hold_until)
+
+	def test_request_invoice_omits_party_name_when_not_set(self):
+		bt = create_bank_transaction(
+			deposit=50,
+			bank_account=self.bank_account,
+			description="Rent payment",
+		)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		) as make_communication:
+			request_invoice(bt.name, "test@example.com")
+
+		self.assertNotIn("Party Name:", make_communication.call_args.kwargs["content"])
+
+	def test_request_invoice_escapes_bank_supplied_text(self):
+		bt = create_bank_transaction(
+			deposit=50,
+			bank_account=self.bank_account,
+			description='<a href="https://evil.example">Pay here</a>',
+			bank_party_name="<b>Acme</b>",
+		)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		) as make_communication:
+			request_invoice(bt.name, "test@example.com")
+
+		content = make_communication.call_args.kwargs["content"]
+		self.assertNotIn("<a href", content)
+		self.assertNotIn("<b>Acme</b>", content)
+		self.assertIn("&lt;b&gt;Acme&lt;/b&gt;", content)
+
+	def test_request_invoice_requires_email_template_in_banking_settings(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+		frappe.db.set_single_value("Banking Settings", "invoice_request_email_template", "Missing Template")
+
+		with self.assertRaises(frappe.ValidationError):
+			request_invoice(bt.name, "test@example.com")
+
+	def test_request_invoice_without_hold_date_leaves_on_hold_until_unset(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		):
+			request_invoice(bt.name, "test@example.com")
+
+		self.assertIsNone(frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"))
+
+	def test_request_invoice_rejects_invalid_email(self):
+		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
+
+		with self.assertRaises(frappe.InvalidEmailAddressError):
+			request_invoice(bt.name, "not-an-email")
+
+	def test_invoice_request_recipient_email_for_user(self):
+		self.assertEqual(
+			get_invoice_request_recipient_email("User", "Administrator"),
+			frappe.db.get_value("User", "Administrator", "email"),
+		)
+
+	def test_invoice_request_recipient_email_falls_back_to_saved_employee_email(self):
+		employee = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "Invoice Request Employee",
+				"gender": "Male",
+				"date_of_birth": "1990-01-01",
+				"date_of_joining": "2020-01-01",
+				"company": "_Test Company",
+				"company_email": "company@example.com",
+				"personal_email": "personal@example.com",
+			}
+		).insert()
+
+		self.assertEqual(
+			get_invoice_request_recipient_email("Employee", employee.name), "company@example.com"
+		)
+
+		employee.prefered_contact_email = "Personal Email"
+		employee.save()
+		self.assertEqual(
+			get_invoice_request_recipient_email("Employee", employee.name), "personal@example.com"
+		)
+
+	def test_invoice_request_recipient_email_hides_personal_email_without_read_access(self):
+		employee = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "Private Invoice Request Employee",
+				"gender": "Male",
+				"date_of_birth": "1990-01-01",
+				"date_of_joining": "2020-01-01",
+				"company": "_Test Company",
+				"personal_email": "private@example.com",
+				"prefered_contact_email": "Personal Email",
+			}
+		).insert()
+
+		accounts_user = "invoice-request-accounts-user@example.com"
+		if not frappe.db.exists("User", accounts_user):
+			frappe.get_doc(
+				{"doctype": "User", "email": accounts_user, "first_name": "Accounts User"}
+			).insert()
+		frappe.get_doc("User", accounts_user).add_roles("Accounts User")
+
+		with self.set_user(accounts_user):
+			self.assertFalse(frappe.has_permission("Employee", "read", employee.name))
+			self.assertIsNone(get_invoice_request_recipient_email("Employee", employee.name))
+
+		employee.company_email = "company@example.com"
+		employee.save()
+		with self.set_user(accounts_user):
+			self.assertEqual(
+				get_invoice_request_recipient_email("Employee", employee.name), "company@example.com"
+			)
+
+	def test_invoice_request_recipient_email_rejects_other_doctypes(self):
+		with self.assertRaises(frappe.ValidationError):
+			get_invoice_request_recipient_email("Customer", "_Test Customer")
+
+	def test_get_default_invoice_request_hold_date_follows_banking_settings(self):
+		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 0)
+		self.assertIsNone(get_default_invoice_request_hold_date())
+
+		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 1)
+		frappe.db.set_single_value("Banking Settings", "on_hold_threshold_after_invoice_request", 5)
+		self.assertEqual(get_default_invoice_request_hold_date(), add_days(nowdate(), 5))
+
+	def test_get_invoice_request_defaults_uses_recipient_type_from_banking_settings(self):
+		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "Contact")
+		self.assertEqual(get_invoice_request_defaults()["recipient_type"], "Contact")
+
+		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "")
+		self.assertEqual(get_invoice_request_defaults()["recipient_type"], "User")
+
 	def _create_draft_journal_entry(self, bt, **kwargs):
 		defaults = {
 			"bank_transaction_name": bt.name,
@@ -2639,6 +2820,7 @@ def create_bank_transaction(
 	reference_date: str | None = None,
 	bank_account: str | None = None,
 	description: str | None = None,
+	bank_party_name: str | None = None,
 	currency: str = "INR",
 	included_fee: float | None = None,
 ):
@@ -2653,6 +2835,8 @@ def create_bank_transaction(
 		"bank_account": bank_account,
 		"reference_number": reference_no,
 	}
+	if bank_party_name is not None:
+		values["bank_party_name"] = bank_party_name
 	if included_fee is not None:
 		values["included_fee"] = included_fee
 

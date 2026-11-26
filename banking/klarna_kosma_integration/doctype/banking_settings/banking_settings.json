@@ -22,6 +22,11 @@
   "advanced_section",
   "reference_fields",
   "voucher_matching_defaults",
+  "invoice_request_section",
+  "default_recipient_type",
+  "invoice_request_email_template",
+  "automatically_set_on_hold_after_invoice_request",
+  "on_hold_threshold_after_invoice_request",
   "sepa_payment_order_tab",
   "ignore_payables_before"
  ],
@@ -126,6 +131,38 @@
    "label": "Enable Automatic Journal Entries for Bank Fees"
   },
   {
+   "fieldname": "invoice_request_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Requests"
+  },
+  {
+   "default": "User",
+   "fieldname": "default_recipient_type",
+   "fieldtype": "Select",
+   "label": "Default Recipient Type",
+   "options": "User\nContact\nEmployee"
+  },
+  {
+   "fieldname": "invoice_request_email_template",
+   "fieldtype": "Link",
+   "label": "Invoice Request Email Template",
+   "options": "Email Template"
+  },
+  {
+   "default": "1",
+   "fieldname": "automatically_set_on_hold_after_invoice_request",
+   "fieldtype": "Check",
+   "label": "Automatically Set On Hold after Invoice Request"
+  },
+  {
+   "default": "3",
+   "depends_on": "automatically_set_on_hold_after_invoice_request",
+   "fieldname": "on_hold_threshold_after_invoice_request",
+   "fieldtype": "Int",
+   "label": "On Hold Threshold (after Invoice Request)",
+   "non_negative": 1
+  },
+  {
    "fieldname": "sepa_payment_order_tab",
    "fieldtype": "Tab Break",
    "label": "SEPA Payment Order"
@@ -141,7 +178,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-28 19:47:40.027686",
+ "modified": "2026-10-02 16:40:00.000000",
  "modified_by": "Administrator",
  "module": "Klarna Kosma Integration",
  "name": "Banking Settings",

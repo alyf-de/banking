@@ -33,13 +33,17 @@ class BankingSettings(Document):
 
 		admin_endpoint: DF.Data | None
 		api_token: DF.Password | None
+		automatically_set_on_hold_after_invoice_request: DF.Check
 		customer_id: DF.Data | None
+		default_recipient_type: DF.Literal["User", "Contact", "Employee"]
 		enable_automatic_journal_entries_for_bank_fees: DF.Check
 		enable_ebics: DF.Check
 		enabled: DF.Check
 		fintech_license_key: DF.Password | None
 		fintech_licensee_name: DF.Data | None
 		ignore_payables_before: DF.Date | None
+		invoice_request_email_template: DF.Link | None
+		on_hold_threshold_after_invoice_request: DF.Int
 		reference_fields: DF.Table[BankingReferenceMapping]
 		voucher_matching_defaults: DF.TableMultiSelect[VoucherMatchingDefault]
 	# end: auto-generated types
