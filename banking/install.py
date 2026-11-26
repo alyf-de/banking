@@ -104,15 +104,15 @@ def _default_response() -> str:
 {{% if deposit %}}<strong>{_("Deposit:")}</strong> {{{{ deposit }}}}<br>
 {{% elif withdrawal %}}<strong>{_("Withdrawal:")}</strong> {{{{ withdrawal }}}}<br>
 {{% endif %}}
-{{% if description %}}<strong>{_("Description:")}</strong> {{{{ description }}}}<br>
+{{% if description %}}<strong>{_("Description:")}</strong> {{{{ description | e }}}}<br>
 {{% endif %}}
-{{% if bank_party_name %}}<strong>{_("Party Name:")}</strong> {{{{ bank_party_name }}}}<br>
+{{% if bank_party_name %}}<strong>{_("Party Name:")}</strong> {{{{ bank_party_name | e }}}}<br>
 {{% endif %}}
-{{% if party %}}<strong>{_("Party:")}</strong> {{{{ party_type }}}} — {{{{ party }}}}<br>
+{{% if party %}}<strong>{_("Party:")}</strong> {{{{ party_type | e }}}} — {{{{ party | e }}}}<br>
 {{% endif %}}
-{{% if reference_number %}}<strong>{_("Reference Number:")}</strong> {{{{ reference_number }}}}<br>
+{{% if reference_number %}}<strong>{_("Reference Number:")}</strong> {{{{ reference_number | e }}}}<br>
 {{% endif %}}
-{{% if bank_account %}}<strong>{_("Bank Account:")}</strong> {{{{ bank_account }}}}<br>
+{{% if bank_account %}}<strong>{_("Bank Account:")}</strong> {{{{ bank_account | e }}}}<br>
 {{% endif %}}
 </p>
 """
