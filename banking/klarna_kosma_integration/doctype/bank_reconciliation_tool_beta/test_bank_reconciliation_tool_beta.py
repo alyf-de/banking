@@ -1939,6 +1939,38 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 			get_invoice_request_recipient_email("Employee", employee.name), "personal@example.com"
 		)
 
+	def test_invoice_request_recipient_email_hides_personal_email_without_read_access(self):
+		employee = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "Private Invoice Request Employee",
+				"gender": "Male",
+				"date_of_birth": "1990-01-01",
+				"date_of_joining": "2020-01-01",
+				"company": "_Test Company",
+				"personal_email": "private@example.com",
+				"prefered_contact_email": "Personal Email",
+			}
+		).insert()
+
+		accounts_user = "invoice-request-accounts-user@example.com"
+		if not frappe.db.exists("User", accounts_user):
+			frappe.get_doc(
+				{"doctype": "User", "email": accounts_user, "first_name": "Accounts User"}
+			).insert()
+		frappe.get_doc("User", accounts_user).add_roles("Accounts User")
+
+		with self.set_user(accounts_user):
+			self.assertFalse(frappe.has_permission("Employee", "read", employee.name))
+			self.assertIsNone(get_invoice_request_recipient_email("Employee", employee.name))
+
+		employee.company_email = "company@example.com"
+		employee.save()
+		with self.set_user(accounts_user):
+			self.assertEqual(
+				get_invoice_request_recipient_email("Employee", employee.name), "company@example.com"
+			)
+
 	def test_invoice_request_recipient_email_rejects_other_doctypes(self):
 		with self.assertRaises(frappe.ValidationError):
 			get_invoice_request_recipient_email("Customer", "_Test Customer")

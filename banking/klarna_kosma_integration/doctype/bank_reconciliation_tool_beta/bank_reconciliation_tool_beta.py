@@ -258,6 +258,15 @@ def get_invoice_request_recipient_email(recipient_type: str, recipient: str) -> 
 		return None
 
 	user_email = frappe.db.get_value("User", employee.user_id, "email") if employee.user_id else None
+
+	# The personal email is private, so it requires "read" permission on the Employee.
+	# "prefered_email" can hold the personal email, if that is the preferred contact.
+	if not frappe.has_permission("Employee", "read", recipient):
+		prefered_email = (
+			employee.prefered_email if employee.prefered_email != employee.personal_email else None
+		)
+		return prefered_email or user_email or employee.company_email
+
 	return employee.prefered_email or user_email or employee.company_email or employee.personal_email
 
 
