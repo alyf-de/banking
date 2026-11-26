@@ -1837,17 +1837,20 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		hold_until = add_days(getdate(), 3)
 
 		with patch(
-			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
-		) as sendmail:
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		) as make_communication:
 			request_invoice(bt.name, "test@example.com", hold_until)
 
-		sendmail.assert_called_once()
-		kwargs = sendmail.call_args.kwargs
+		make_communication.assert_called_once()
+		kwargs = make_communication.call_args.kwargs
+		self.assertEqual(kwargs["doctype"], "Bank Transaction")
+		self.assertEqual(kwargs["name"], bt.name)
+		self.assertTrue(kwargs["send_email"])
 		self.assertEqual(kwargs["recipients"], ["test@example.com"])
 		self.assertIn(bt.name, kwargs["subject"])
-		self.assertIn("Office supplies", kwargs["message"])
-		self.assertIn("Acme GmbH", kwargs["message"])
-		self.assertIn("100", kwargs["message"])
+		self.assertIn("Office supplies", kwargs["content"])
+		self.assertIn("Acme GmbH", kwargs["content"])
+		self.assertIn("100", kwargs["content"])
 		self.assertEqual(frappe.db.get_value("Bank Transaction", bt.name, "on_hold_until"), hold_until)
 
 	def test_request_invoice_omits_party_name_when_not_set(self):
@@ -1858,11 +1861,29 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		)
 
 		with patch(
-			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
-		) as sendmail:
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		) as make_communication:
 			request_invoice(bt.name, "test@example.com")
 
-		self.assertNotIn("Party Name:", sendmail.call_args.kwargs["message"])
+		self.assertNotIn("Party Name:", make_communication.call_args.kwargs["content"])
+
+	def test_request_invoice_escapes_bank_supplied_text(self):
+		bt = create_bank_transaction(
+			deposit=50,
+			bank_account=self.bank_account,
+			description='<a href="https://evil.example">Pay here</a>',
+			bank_party_name="<b>Acme</b>",
+		)
+
+		with patch(
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
+		) as make_communication:
+			request_invoice(bt.name, "test@example.com")
+
+		content = make_communication.call_args.kwargs["content"]
+		self.assertNotIn("<a href", content)
+		self.assertNotIn("<b>Acme</b>", content)
+		self.assertIn("&lt;b&gt;Acme&lt;/b&gt;", content)
 
 	def test_request_invoice_requires_email_template_in_banking_settings(self):
 		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
@@ -1875,7 +1896,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 		bt = create_bank_transaction(deposit=100, bank_account=self.bank_account)
 
 		with patch(
-			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.frappe.sendmail"
+			"banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta.make_communication"
 		):
 			request_invoice(bt.name, "test@example.com")
 

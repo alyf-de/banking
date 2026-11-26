@@ -17,6 +17,7 @@ from erpnext.accounts.doctype.bank_transaction.bank_transaction import (
 from erpnext.accounts.utils import get_account_currency
 from erpnext.setup.utils import get_exchange_rate
 from frappe import _
+from frappe.core.doctype.communication.email import _make as make_communication
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Cast, Coalesce, Round, Sum
@@ -237,12 +238,15 @@ def request_invoice(
 	validate_email_address(recipient_email, throw=True)
 
 	email = get_invoice_request_email(transaction)
-	frappe.sendmail(
+	# Like Notification, sending is governed by write access to the Bank Transaction,
+	# not by "email" permission. The Communication keeps the request in its history.
+	make_communication(
+		doctype=transaction.doctype,
+		name=transaction.name,
 		recipients=[recipient_email],
 		subject=email["subject"],
-		message=email["message"],
-		reference_doctype=transaction.doctype,
-		reference_name=transaction.name,
+		content=email["message"],
+		send_email=True,
 	)
 
 	if on_hold_until:
