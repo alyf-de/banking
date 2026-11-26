@@ -93,6 +93,10 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 	async fetch_recipient_email() {
 		const recipient_type = this.field_group.get_value("recipient_type");
 		const recipient = this.field_group.get_value("recipient");
+
+		// Never keep the previous recipient's email around
+		this.field_group.set_value("recipient_email", "");
+
 		if (!recipient_type || !recipient) {
 			return;
 		}
@@ -102,14 +106,25 @@ banking.bank_reconciliation.OnHoldTab = class OnHoldTab {
 			return;
 		}
 
+		const is_current_recipient = () =>
+			this.field_group.get_value("recipient_type") === recipient_type &&
+			this.field_group.get_value("recipient") === recipient;
+
 		const { message } = await frappe.db.get_value(
 			recipient_type,
 			recipient,
 			email_fieldname,
 		);
+		if (!is_current_recipient()) {
+			return;
+		}
+
 		let email = message?.[email_fieldname];
 		if (recipient_type === "Employee" && email) {
 			const user = await frappe.db.get_value("User", email, "email");
+			if (!is_current_recipient()) {
+				return;
+			}
 			email = user.message?.email || email;
 		}
 

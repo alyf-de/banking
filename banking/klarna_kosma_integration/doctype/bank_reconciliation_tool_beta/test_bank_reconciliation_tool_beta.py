@@ -17,10 +17,11 @@ from erpnext.accounts.test.accounts_mixin import AccountsTestMixin
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.deprecation_dumpster import PendingFrappeDeprecationWarning
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, getdate, nowdate
 from hrms.hr.doctype.expense_claim.test_expense_claim import make_expense_claim
 
 from banking.exceptions import CurrencyMismatchError, FullReconciliationRequiredError
+from banking.install import create_invoice_request_email_template
 from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank_reconciliation_tool_beta import (
 	_get_valid_accounting_dimensions,
 	auto_reconcile_vouchers,
@@ -33,9 +34,6 @@ from banking.klarna_kosma_integration.doctype.bank_reconciliation_tool_beta.bank
 	get_linked_payments,
 	request_invoice,
 	set_bank_transaction_on_hold,
-)
-from banking.patches.create_invoice_request_email_template import (
-	execute as create_invoice_request_email_template,
 )
 
 test_dependencies = ["Warehouse", "Item", "Account", "Cost Center", "UOM", "Company"]
@@ -1894,7 +1892,7 @@ class TestBankReconciliationToolBeta(AccountsTestMixin, IntegrationTestCase):
 
 		frappe.db.set_single_value("Banking Settings", "automatically_set_on_hold_after_invoice_request", 1)
 		frappe.db.set_single_value("Banking Settings", "on_hold_threshold_after_invoice_request", 5)
-		self.assertEqual(get_default_invoice_request_hold_date(), add_days(getdate(), 5))
+		self.assertEqual(get_default_invoice_request_hold_date(), add_days(nowdate(), 5))
 
 	def test_get_invoice_request_defaults_uses_recipient_type_from_banking_settings(self):
 		frappe.db.set_single_value("Banking Settings", "default_recipient_type", "Contact")
