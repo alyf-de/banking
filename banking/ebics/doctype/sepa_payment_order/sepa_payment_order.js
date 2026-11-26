@@ -241,7 +241,6 @@ frappe.ui.form.on("SEPA Payment Order", {
 					get_query: () => {
 						return {
 							filters: {
-								company: frm.doc.company,
 								bank: frm.doc.bank,
 								initialized: 1,
 								bank_keys_activated: 1,

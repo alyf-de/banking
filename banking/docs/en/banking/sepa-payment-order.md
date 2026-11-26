@@ -20,14 +20,14 @@ SEPA Payment Orders enable users to:
 ## Key Features
 
 ### 1. Automated IBAN Validation
-- All IBANs are validated using the `kontocheck` library
+- All IBANs are validated using the `fintech` library
 - Ensures compliance with IBAN standards before submission
 
 ### 2. Automatic BIC and Bank Name Resolution
-- For German IBANs (starting with "DE"), the system automatically:
-  - Determines the BIC/SWIFT code
-  - Populates the bank name
-- Reduces manual data entry and errors
+- EUR payments from an EEA IBAN to an EEA IBAN do not need a BIC. The system leaves out the BIC from the XML file for these payments.
+- All other payments (e.g. from or to Switzerland) keep the BIC. If the BIC does not belong to the IBAN, submit fails and the error shows the row.
+- The system sets the bank name from the IBAN (German, Austrian and Swiss IBANs) or else from the BIC. When neither is known, the bank name is empty.
+- A **Bank Account** with a German IBAN can only link to a **Bank** whose _SWIFT Number_ belongs to that IBAN.
 
 ### 3. Currency Validation
 - Validates that payment currency matches the bank account currency
@@ -135,7 +135,7 @@ The system automatically fills in the recipient's name and IBAN from their defau
 Each payment row contains:
 - _Recipient_: Name of the payee (supplier or employee)
 - _IBAN_: Recipient's bank account number
-- _SWIFT Number_: Recipient's bank BIC (auto-populated for German banks)
+- _SWIFT Number_: Recipient's bank BIC (not used for EUR payments within the EEA)
 - _Bank Name_: Recipient's bank name
 - _Amount_: Payment amount in the specified currency
 - _Currency_: Payment currency (must match bank account currency)
@@ -238,7 +238,7 @@ Direct transmission to bank via EBICS:
 
 ### Data Validation
 
-- IBAN Validation: Uses the `kontocheck` library for comprehensive IBAN verification
+- IBAN Validation: Uses the `fintech` library for comprehensive IBAN verification
 - Currency Matching: Ensures payment currency matches the linked GL account currency
 - Required Fields: Enforces all mandatory fields for SEPA compliance
 
@@ -319,6 +319,8 @@ When a **Purchase Invoice** has a payment schedule with discount terms, the **SE
 - If the execution date falls on or before the _Discount Date_ of a payment schedule row, the discounted amount is used
 - If no execution date is set, or it falls after the discount date, the full outstanding amount applies
 - Before submitting, the system warns if amounts have changed and prompts you to update them
+
+To reconcile the **Bank Transaction** of a discounted payment, see [Early Payment Discounts](bank-reconciliation-tool-beta.md#early-payment-discounts) in **Bank Reconciliation Tool Beta**.
 
 ### Security
 

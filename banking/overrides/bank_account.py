@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, get_link_to_form
+
+from banking.ebics.utils import register_fintech
 
 
 def before_validate(doc, method):
@@ -13,6 +15,8 @@ def validate(doc, method):
 	validate_account_currencies(doc)
 	validate_required_bank_fee_account(doc)
 	validate_default_mode_of_payment(doc)
+	validate_unique_iban(doc)
+	validate_bank_bic(doc)
 
 
 def validate_account_currencies(doc):
@@ -51,6 +55,38 @@ def validate_required_bank_fee_account(doc):
 	)
 
 
+def validate_unique_iban(doc):
+	"""EBICS imports find company accounts by IBAN and currency. Party accounts may share both."""
+	if not doc.iban or not doc.is_company_account or not doc.account or doc.disabled:
+		return
+
+	currency = frappe.db.get_value("Account", doc.account, "account_currency")
+	bank_account = frappe.qb.DocType("Bank Account")
+	account = frappe.qb.DocType("Account")
+	existing = (
+		frappe.qb.from_(bank_account)
+		.join(account)
+		.on(bank_account.account == account.name)
+		.select(bank_account.name)
+		.where(
+			(bank_account.iban == doc.iban)
+			& (bank_account.is_company_account == 1)
+			& (bank_account.disabled == 0)
+			& (bank_account.name != doc.name)
+			& (account.account_currency == currency)
+		)
+		.limit(1)
+		.run(pluck=True)
+	)
+
+	if existing:
+		frappe.throw(
+			_("A Bank Account with IBAN {0} and currency {1} already exists: {2}").format(
+				doc.iban, currency, get_link_to_form("Bank Account", existing[0])
+			)
+		)
+
+
 def automatic_fee_entries_enabled() -> bool:
 	return bool(
 		cint(frappe.db.get_single_value("Banking Settings", "enable_automatic_journal_entries_for_bank_fees"))
@@ -63,3 +99,29 @@ def get_company_bank_accounts_without_fee_account() -> list[str]:
 		filters={"is_company_account": 1, "bank_fee_account": ["is", "not set"]},
 		pluck="name",
 	)
+
+
+def validate_bank_bic(doc):
+	"""The BIC of the linked Bank must belong to the IBAN. fintech knows the bank codes of DE, AT and CH."""
+	if not (doc.iban and doc.iban[:2] in ("DE", "AT", "CH") and doc.bank):
+		return
+
+	bank_bic = frappe.db.get_value("Bank", doc.bank, "swift_number")
+	if not bank_bic:
+		return
+
+	register_fintech()
+	from fintech import iban
+
+	try:
+		iban_bic = iban.get_bic(doc.iban)
+	except ValueError:
+		return  # unknown bank code, nothing to compare
+
+	# "XXX" is the default branch code, so "ABCDEFGH" equals "ABCDEFGHXXX"
+	if bank_bic.ljust(11, "X") != iban_bic.ljust(11, "X"):
+		frappe.throw(
+			_(
+				"Bank {0} has the BIC {1}, but IBAN {2} belongs to the BIC {3}. Please select a Bank with the BIC {3}."
+			).format(frappe.bold(doc.bank), bank_bic, doc.iban, frappe.bold(iban_bic))
+		)

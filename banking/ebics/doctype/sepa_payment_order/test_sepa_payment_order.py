@@ -18,6 +18,8 @@ from banking.testing_utils import create_mode_of_payment
 
 COMPANY_IBAN = "DE02120300000000202051"
 SUPPLIER_IBAN = "DE02100500000054540402"
+NON_EEA_IBAN = "CH9300762011623852957"
+OTHER_NON_EEA_IBAN = "GB29NWBK60161331926819"
 
 
 class TestSEPAPaymentOrder(IntegrationTestCase):
@@ -32,13 +34,14 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		)
 		frappe.db.set_value("Bank Account", cls.bank_account, "iban", COMPANY_IBAN)
 
+		create_bank("SEPA Supplier Bank", swift_number="BELADEBEXXX")
 		cls.supplier = create_supplier("_Test SEPA Supplier")
 		if not frappe.db.exists("Bank Account", {"party_type": "Supplier", "party": cls.supplier}):
 			frappe.get_doc(
 				{
 					"doctype": "Bank Account",
 					"account_name": "SEPA Supplier Account",
-					"bank": "SEPA Test Bank",
+					"bank": "SEPA Supplier Bank",
 					"party_type": "Supplier",
 					"party": cls.supplier,
 					"iban": SUPPLIER_IBAN,
@@ -64,8 +67,9 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 			qty=1,
 			rate=100,
 			do_not_submit=True,
-			bill_no=frappe.generate_hash(length=8),
 		)
+		# Becomes the purpose of the payment. ERPNext's helper has no argument for it.
+		invoice.bill_no = frappe.generate_hash(length=8)
 		# ERPNext creates the payment schedule on insert, we only adjust its dates
 		schedule = invoice.payment_schedule[0]
 		schedule.due_date = due_date
@@ -175,3 +179,94 @@ class TestSEPAPaymentOrder(IntegrationTestCase):
 		order = self.new_payment_order(execution_date=today())
 		with self.assertRaises(frappe.ValidationError):
 			order.fetch_payables(add_days(today(), 10), other_mode)
+
+	def test_cancel_and_amend_reset_invoice_status(self):
+		"""Cancelling frees the invoice, so that it can go into another order or be cancelled."""
+		invoice = self.make_invoice(due_date=add_days(today(), 5))
+		schedule_row = invoice.payment_schedule[0].name
+
+		def invoice_status():
+			return frappe.db.get_value("Payment Schedule", schedule_row, "sepa_payment_order_status")
+
+		order = self.new_payment_order(execution_date=today())
+		order.fetch_payables(add_days(today(), 10))
+		order.payments = [p for p in order.payments if p.reference_name == invoice.name]
+		order.insert()
+		order.submit()
+		self.assertEqual(invoice_status(), "Approved")
+
+		order.cancel()
+		self.assertEqual(invoice_status(), "")
+
+		amended_order = frappe.copy_doc(order)
+		amended_order.amended_from = order.name
+		# In tests, copy_doc keeps the docstatus
+		for doc in (amended_order, *amended_order.payments):
+			doc.docstatus = 0
+		amended_order.insert()
+		self.assertEqual(invoice_status(), "Draft")
+
+	def add_payment(self, order, iban: str, swift_number: str):
+		order.append(
+			"payments",
+			{
+				"recipient": "_Test SEPA Recipient",
+				"purpose": "Test",
+				"iban": iban,
+				"swift_number": swift_number,
+				"amount": 100,
+				"currency": "EUR",
+				"charges": "SHAR",
+			},
+		)
+
+	def test_eea_payment_has_no_bic(self):
+		"""EEA payments are IBAN-only, so a BIC of another branch cannot break the order."""
+		order = self.new_payment_order(execution_date=today())
+		self.add_payment(order, SUPPLIER_IBAN, swift_number="DEUTDEFF")
+
+		order.run_method("before_validate")
+
+		# Stored BIC is kept, in case the payment later needs it
+		self.assertEqual(order.payments[0].swift_number, "DEUTDEFF")
+		order.verify_xml_render()
+
+	def test_bank_name_follows_iban(self):
+		order = self.new_payment_order(execution_date=today())
+		self.add_payment(order, SUPPLIER_IBAN, swift_number=None)
+		order.run_method("before_validate")
+		self.assertEqual(order.payments[0].bank_name, "BSK 1818 AG")
+
+		# Unsupported country without BIC: stale name is cleared
+		order.payments[0].iban = "FR1420041010050500013M02606"
+		order.run_method("before_validate")
+		self.assertIsNone(order.payments[0].bank_name)
+
+		# Falls back to the BIC
+		order.payments[0].swift_number = "BNPAFRPP"
+		order.run_method("before_validate")
+		self.assertEqual(order.payments[0].bank_name, "BNP PARIBAS SA")
+
+	def test_bic_mismatch_names_row(self):
+		order = self.new_payment_order(execution_date=today())
+		self.add_payment(order, SUPPLIER_IBAN, swift_number=None)
+		self.add_payment(order, NON_EEA_IBAN, swift_number="DEUTDEFF")
+		self.add_payment(order, OTHER_NON_EEA_IBAN, swift_number="DEUTDEFF")
+
+		order.run_method("before_validate")
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError,
+			f"Row 2: BIC DEUTDEFF .*{NON_EEA_IBAN}.*Row 3: BIC DEUTDEFF .*{OTHER_NON_EEA_IBAN}",
+		):
+			order.verify_xml_render()
+
+	def test_non_eea_debtor_keeps_bic(self):
+		"""IBAN-only applies only when debtor and creditor are in the EEA."""
+		order = self.new_payment_order(execution_date=today())
+		order.iban = NON_EEA_IBAN
+		self.add_payment(order, SUPPLIER_IBAN, swift_number="BELADEBEXXX")
+
+		order.run_method("before_validate")
+
+		self.assertEqual(order.payments[0].swift_number, "BELADEBEXXX")

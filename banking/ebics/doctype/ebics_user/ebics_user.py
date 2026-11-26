@@ -1,13 +1,15 @@
 # Copyright (c) 2024, ALYF GmbH and contributors
 # For license information, please see license.txt
 import json
+from contextlib import contextmanager
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 from frappe.utils.data import comma_and, getdate
-from requests import HTTPError
+from frappe.utils.synchronization import filelock
+from requests import Response
 
 from banking.ebics.utils import get_ebics_manager, get_protocol_versions, sync_ebics_transactions
 from banking.klarna_kosma_integration.admin import Admin
@@ -24,14 +26,15 @@ class EBICSUser(Document):
 
 		bank: DF.Link | None
 		bank_keys_activated: DF.Check
-		company: DF.Link | None
 		country: DF.Link | None
 		download_batch_transactions: DF.Check
 		full_name: DF.Data | None
+		ini_sent: DF.Check
 		initialized: DF.Check
 		intraday_sync: DF.Check
 		keyring: DF.Code | None
 		needs_certificates: DF.Check
+		organization_name: DF.Data | None
 		partner_id: DF.Data | None
 		passphrase: DF.Password | None
 		protocol_version: DF.Literal["H004", "H005"]
@@ -41,6 +44,16 @@ class EBICSUser(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if self.partner_id:
+			self.partner_id = self.partner_id.strip()
+
+		if self.user_id:
+			self.user_id = self.user_id.strip()
+
+		if any(self.has_value_changed(field) for field in ("bank", "partner_id", "user_id")):
+			# The bank received INI for the old IDs, so the new IDs need INI as well.
+			self.ini_sent = 0
+
 		if self.country:
 			self.validate_country_code()
 
@@ -49,60 +62,79 @@ class EBICSUser(Document):
 
 		self.validate_protocol_version()
 
-	def before_insert(self):
-		self.register_user()
-
 	def on_update(self):
-		self.register_user()
+		previous = self.get_doc_before_save()
+		if not previous or get_ebics_ids(previous) == get_ebics_ids(self):
+			self.register_user()
+			return
+
+		# Remove first, so that a plan without a free slot can register the new IDs.
+		previous.remove_user()
+		try:
+			self.register_user()
+		except Exception:
+			# The save rolls back and keeps the old IDs, so register them again.
+			previous.register_user()
+			raise
 
 	def on_trash(self):
 		self.remove_user()
 
-	def register_user(self):
-		"""Indempotent method to register the user with the admin backend."""
-		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
-		try:
-			r = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
-			r.raise_for_status()
-		except HTTPError as e:
-			if e.response.status_code == 402:
-				# User already exists for this customer
-				return
-			elif e.response.status_code == 403:
-				title = _("Banking Error")
-				msg = _("EBICS User limit exceeded.")
-				frappe.log_error(
-					title=_("Banking Error"),
-					message=msg,
-					reference_doctype="EBICS User",
-					reference_name=self.name,
-				)
-				frappe.throw(title=title, msg=msg)
-			elif e.response.status_code == 409:
-				title = _("Banking Error")
-				msg = _("User ID not available.")
-				frappe.log_error(
-					title=_("Banking Error"),
-					message=msg,
-					reference_doctype="EBICS User",
-					reference_name=self.name,
-				)
-				frappe.throw(title=title, msg=msg)
+	def register_user(self, host_id: str | None = None):
+		"""Idempotent method to register the user with the admin backend.
 
-	def remove_user(self):
-		"""Indempotent method to remove the user from the admin backend."""
-		host_id = frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		Uses the host ID of the bank, unless `host_id` is given.
+		"""
+		if not all(get_ebics_ids(self)):
+			return
+
+		host_id = host_id or frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		response = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id)
+		self.throw_on_admin_error(response, _("Failed to register EBICS User."))
+
+	def remove_user(self, host_id: str | None = None):
+		"""Idempotent method to remove the user from the admin backend.
+
+		Uses the host ID of the bank, unless `host_id` is given.
+		"""
+		if not all(get_ebics_ids(self)):
+			return
+
+		host_id = host_id or frappe.db.get_value("Bank", self.bank, "ebics_host_id")
+		response = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id, remove=True)
+		self.throw_on_admin_error(response, _("Failed to remove EBICS user registration."))
+
+	def move_registration(self, old_host_id: str, new_host_id: str):
+		"""Register the user under the new host ID of the bank instead of the old one."""
+		# Remove first, so that a plan without a free slot can register the new host ID.
+		self.remove_user(old_host_id)
 		try:
-			r = Admin().request.register_ebics_user(host_id, self.partner_id, self.user_id, remove=True)
-			r.raise_for_status()
-		except HTTPError:
-			title = _("Failed to remove EBICS user registration.")
-			frappe.log_error(
-				title=title,
-				reference_doctype="EBICS User",
-				reference_name=self.name,
-			)
-			frappe.throw(title)
+			self.register_user(new_host_id)
+		except Exception:
+			self.register_user(old_host_id)
+			raise
+
+	def throw_on_admin_error(self, response: Response, title: str):
+		"""Throw the reason from the admin backend if the response is not 2xx."""
+		is_success = 200 <= response.status_code < 300
+		if is_success:
+			return
+
+		try:
+			message = response.json().get("message")
+		except ValueError:  # Gateway errors have no JSON body
+			message = None
+
+		message = message or _("The license server responded with status code {0}.").format(
+			response.status_code
+		)
+		frappe.log_error(
+			title=title,
+			message=message,
+			reference_doctype="EBICS User",
+			reference_name=self.name,
+		)
+		frappe.throw(title=title, msg=message)
 
 	def validate_country_code(self):
 		country_code = self.get_country_code()
@@ -123,7 +155,13 @@ class EBICSUser(Document):
 		try:
 			supported_protocol_versions = get_protocol_versions(host_id, url)
 		except Exception:
-			supported_protocol_versions = {}
+			frappe.msgprint(
+				_(
+					"The bank did not answer. Please check the EBICS URL and EBICS Host ID of bank {0}."
+				).format(get_link_to_form("Bank", self.bank)),
+				indicator="orange",
+			)
+			return
 
 		if supported_protocol_versions and self.protocol_version not in supported_protocol_versions:
 			frappe.throw(
@@ -173,6 +211,11 @@ class EBICSUser(Document):
 		return json.loads(self.keyring) if self.keyring else {}
 
 
+def get_ebics_ids(user: EBICSUser) -> tuple:
+	"""Return the combination of IDs that is registered with the admin backend."""
+	return user.bank, user.partner_id, user.user_id
+
+
 def on_doctype_update():
 	frappe.db.add_unique("EBICS User", ["bank", "partner_id", "user_id"], constraint_name="unique_ebics_user")
 
@@ -181,31 +224,62 @@ def on_doctype_update():
 def initialize(ebics_user: str, passphrase: str, signature_passphrase: str, store_passphrase: int):
 	ensure_ebics_is_enabled()
 
-	user = frappe.get_doc("EBICS User", ebics_user)
-	user.check_permission("write")
+	# The steps below commit, so a failed request keeps its keys. A second request must not
+	# create other keys at the same time. `for_update` reads the latest committed values.
+	with filelock(f"initialize_ebics_user_{ebics_user}", timeout=0):
+		user = frappe.get_doc("EBICS User", ebics_user, for_update=True)
+		user.check_permission("write")
 
-	if store_passphrase:
-		user.passphrase = passphrase
-		user.save()
+		if store_passphrase:
+			user.passphrase = passphrase
+			user.save()
 
-	manager = get_ebics_manager(ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase)
+		try:
+			manager = get_ebics_manager(
+				ebics_user=user, passphrase=passphrase, sig_passphrase=signature_passphrase
+			)
+		except ValueError as e:
+			# Keys from an earlier try are encrypted with the passphrases of that try.
+			if "wrong passphrase" not in str(e):
+				raise
 
-	try:
-		manager.create_user_keys()
-	except RuntimeError as e:
-		if e.args[0] != "keys already present":
-			raise e
+			message = _(
+				"This EBICS User already has keys from an earlier try. Please enter the same passphrases as in that try. If you forgot them, delete this EBICS User and create a new one."
+			)
+			if user.ini_sent:
+				message += " " + _(
+					"The bank already received the old keys, so it may reject the new ones. In that case, ask your bank to reset the user."
+				)
 
-	if user.needs_certificates:
-		manager.create_user_certificates(user.full_name, user.company)
+			frappe.throw(message, title=_("Wrong Passphrase"))
 
-	manager.send_keys_to_bank()
+		# After INI, the bank has the signature key. Keep the keys and do not send INI again.
+		# Some banks reject a second INI. Others replace the keys until they process the INI letter.
+		# Skipping INI works with both, because the keys stay the same.
+		if not user.ini_sent:
+			try:
+				manager.create_user_keys()
+			except RuntimeError as e:
+				if e.args[0] != "keys already present":
+					raise e
 
-	bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
-	language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
-	ini_bytes = manager.create_ini_letter(bank_name, language=language)
-	user.attach_ini_letter(ini_bytes)
-	user.db_set("initialized", 1)
+			if user.needs_certificates:
+				manager.create_user_certificates(user.full_name, user.organization_name)
+
+			frappe.db.commit()  # nosemgrep
+
+		with explain_ebics_errors(user):
+			if not user.ini_sent:
+				manager.send_signature_key()
+				user.db_set("ini_sent", 1, commit=True)
+
+			manager.send_authentication_keys()
+
+		bank_name = frappe.db.get_value("Bank", user.bank, "bank_name")
+		language = frappe.local.lang if frappe.local.lang in ("de", "fr") else "en"
+		ini_bytes = manager.create_ini_letter(bank_name, language=language)
+		user.attach_ini_letter(ini_bytes)
+		user.db_set("initialized", 1)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -217,7 +291,8 @@ def download_bank_keys(ebics_user: str, passphrase: str | None = None):
 
 	manager = get_ebics_manager(user, passphrase=passphrase)
 
-	return manager.download_bank_keys()
+	with explain_ebics_errors(user):
+		return manager.download_bank_keys()
 
 
 @frappe.whitelist(methods=["POST"])
@@ -275,7 +350,7 @@ def change_protocol_version(ebics_user: str, protocol_version: str, passphrase: 
 
 	if user.needs_certificates:
 		manager = get_ebics_manager(user, passphrase=passphrase)
-		manager.create_user_certificates(user.full_name, user.company)
+		manager.create_user_certificates(user.full_name, user.organization_name)
 
 
 def ensure_ebics_is_enabled():
@@ -292,3 +367,36 @@ def ensure_ebics_is_enabled():
 				get_link_to_form("Banking Settings", "Banking Settings")
 			)
 		)
+
+
+@contextmanager
+def explain_ebics_errors(user: EBICSUser):
+	"""Turn common EBICS errors from the bank into messages that tell the user what to check."""
+	from fintech.ebics import EbicsTechnicalError
+
+	try:
+		yield
+	except EbicsTechnicalError as error:
+		messages = {
+			EbicsTechnicalError.EBICS_INVALID_USER_OR_USER_STATE: _(
+				"The bank does not accept this EBICS User in its current state. Please check the Partner ID and the User ID. If both are correct, ask your bank about the state of this user. For example, the bank may already have keys from an earlier initialization."
+			),
+			EbicsTechnicalError.EBICS_USER_UNKNOWN: _(
+				"The bank does not know this EBICS User. Please check the Partner ID and the User ID."
+			),
+			EbicsTechnicalError.EBICS_INVALID_USER_STATE: _(
+				"The bank has not activated this EBICS User yet. Please wait until your bank has processed the INI letter."
+			),
+			EbicsTechnicalError.EBICS_INVALID_HOST_ID: _(
+				"The bank does not know this EBICS Host ID. Please check the EBICS Host ID of bank {0}."
+			).format(get_link_to_form("Bank", user.bank)),
+			EbicsTechnicalError.EBICS_AUTHENTICATION_FAILED: _(
+				"The bank could not verify the keys of this EBICS User. The keys in this system may not match the keys at the bank. Please contact your bank."
+			),
+		}
+		message = messages.get(error.code)
+		if not message:
+			raise
+
+		bank_response = _("Bank response: {0}").format(str(error))
+		frappe.throw(f"{message}<br><br>{bank_response}", title=_("EBICS Error"))
